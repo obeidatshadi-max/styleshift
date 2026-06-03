@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import { useGameData, useT, useBadgeLabel } from '@/lib/i18n'
 import LangToggle from '@/components/LangToggle'
+import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 
 const ALL_BADGES: BadgeName[] = ['First Scan','Crisis Tamer','Drive Whisperer','Boardroom Ace','Style Master']
 const COLOR: Record<string,string> = { driver:'var(--purple)', expressive:'var(--green)', amiable:'var(--pink)', analytical:'var(--cyan)' }
@@ -20,10 +21,12 @@ interface Props {
   reactionCount: number
   confidence: number
   role: string
+  daily: DailyLeaderboard | null
+  onStartDaily: () => void
   onStartLevel: (n: number) => void
 }
 
-export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, onStartLevel }: Props) {
+export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, onStartDaily, onStartLevel }: Props) {
   const unlocked = [1, ...earnedLevels.map(n => n + 1)].filter(n => n <= 4)
   const router = useRouter()
   const t = useT()
@@ -62,6 +65,40 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
       </header>
 
       <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+
+        {daily && panel(t('daily.title'),
+          <>
+            <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5, marginBottom:12 }}>{t('daily.subtitle')}</div>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap', marginBottom:14 }}>
+              <div style={{ fontFamily:'var(--mono)', fontSize:13, letterSpacing:'.05em', color:(daily.self?.streak ?? 0) > 0 ? 'var(--amber)' : 'var(--ink-dim)' }}>
+                {(daily.self?.streak ?? 0) > 0 ? t('daily.streakActive', { n: daily.self!.streak }) : t('daily.streakNone')}
+              </div>
+              {daily.self?.doneToday ? (
+                <div style={{ fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.05em', color:'var(--green)' }}>{t('daily.doneToday')}</div>
+              ) : (
+                <button onClick={onStartDaily}
+                  style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--amber)', color:'#1a1402', background:'var(--amber)', borderRadius:10, padding:'11px 16px', boxShadow:'0 0 18px rgba(255,206,77,.45)', touchAction:'manipulation' }}>
+                  {t('daily.play')}
+                </button>
+              )}
+            </div>
+            <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.2em', textTransform:'uppercase', color:'var(--ink-dim)', marginBottom:8 }}>{t('daily.leaderboard')}</div>
+            {daily.standings.length === 0 ? (
+              <div style={{ color:'var(--ink-dim)', fontSize:12 }}>{t('daily.empty')}</div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                {daily.standings.slice(0, 6).map((st, i) => (
+                  <div key={st.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:10, border:'1px solid var(--line)', background: st.isSelf ? 'rgba(56,214,255,.07)' : 'rgba(0,0,0,.18)' }}>
+                    <span style={{ fontFamily:'var(--mono)', fontSize:12, color:'var(--ink-dim)', width:18, textAlign:'center' }}>{i + 1}</span>
+                    <span style={{ flex:1, fontSize:13, color: st.isSelf ? 'var(--cyan)' : 'var(--ink)' }}>{st.isSelf ? t('daily.you') : (st.name || '—')}</span>
+                    {st.doneToday && <span style={{ color:'var(--green)', fontSize:12 }}>✓</span>}
+                    <span style={{ fontFamily:'var(--mono)', fontSize:12, color: st.streak > 0 ? 'var(--amber)' : 'var(--ink-dim)' }}>🔥 {st.streak}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
 
         {panel(t('home.archetypes'),
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:12 }}>

@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useProfile } from '@/hooks/useProfile'
 import GameHome from './GameHome'
 import LevelOne from './LevelOne'
@@ -7,9 +7,11 @@ import LevelTwo from './LevelTwo'
 import LevelThree from './LevelThree'
 import LevelFour from './LevelFour'
 import LevelResult from './LevelResult'
+import DailyChallenge from './DailyChallenge'
 import type { BadgeName } from '@/types/game'
+import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 
-type Screen = 'home' | 'level' | 'result'
+type Screen = 'home' | 'level' | 'result' | 'daily'
 
 interface LevelState {
   level: number
@@ -20,8 +22,23 @@ interface LevelState {
 }
 
 export default function GameShell() {
-  const { profile, badges, completedLevels, loading, addXp, earnBadge, saveSession } = useProfile()
+  const { profile, badges, completedLevels, loading, addXp, earnBadge, saveSession, recordDaily } = useProfile()
   const [screen, setScreen] = useState<Screen>('home')
+  const [daily, setDaily] = useState<DailyLeaderboard | null>(null)
+
+  const loadDaily = useCallback(async () => {
+    try {
+      const res = await fetch('/api/daily-leaderboard')
+      if (res.ok) setDaily(await res.json())
+    } catch { /* offline — daily panel just won't show */ }
+  }, [])
+  useEffect(() => { loadDaily() }, [loadDaily])
+
+  async function handleDailyComplete(correct: boolean, reactionMs: number) {
+    if (daily) await recordDaily(daily.pick.level, daily.pick.scenarioId, correct, reactionMs)
+    await loadDaily()
+    setScreen('home')
+  }
   const [activeLevel, setActiveLevel] = useState(1)
   const [levelState, setLevelState] = useState<LevelState | null>(null)
   const [sessionEarnedLevels, setSessionEarnedLevels] = useState<number[]>([])
@@ -78,6 +95,10 @@ export default function GameShell() {
     setScreen('home')
   }
 
+  if (screen === 'daily' && daily) {
+    return <DailyChallenge level={daily.pick.level} scenarioId={daily.pick.scenarioId} onComplete={handleDailyComplete} />
+  }
+
   if (screen === 'result' && levelState) {
     return (
       <LevelResult
@@ -108,6 +129,8 @@ export default function GameShell() {
       reactionCount={reactionCount}
       confidence={confidence}
       role={profile?.role ?? 'rep'}
+      daily={daily}
+      onStartDaily={() => setScreen('daily')}
       onStartLevel={startLevel}
     />
   )

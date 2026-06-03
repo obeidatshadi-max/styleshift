@@ -89,6 +89,19 @@ const EN: Dict = {
   'badge.Drive Whisperer': 'Drive Whisperer',
   'badge.Boardroom Ace': 'Boardroom Ace',
   'badge.Style Master': 'Style Master',
+  // daily challenge
+  'daily.title': 'Daily Challenge',
+  'daily.subtitle': 'One scenario. Everyone gets the same. Keep your streak alive.',
+  'daily.play': "Play Today's Challenge",
+  'daily.doneToday': 'Done today — see you tomorrow!',
+  'daily.streakActive': '🔥 {n}-day streak',
+  'daily.streakNone': 'Start your streak today',
+  'daily.leaderboard': 'Team Leaderboard',
+  'daily.you': 'You',
+  'daily.empty': 'No one has played yet today — be first.',
+  'daily.resultCorrect': 'Correct read 🎯',
+  'daily.resultWrong': 'Missed it',
+  'daily.streakNow': '🔥 {n}-day streak!',
   // toggle (label shows the language you switch TO)
   'toggle.switchTo': 'عربي',
 }
@@ -160,6 +173,18 @@ const AR: Dict = {
   'badge.Drive Whisperer': 'همس الدوافع',
   'badge.Boardroom Ace': 'نجم غرفة المفاوضات',
   'badge.Style Master': 'سيد الأسلوب',
+  'daily.title': 'تحدي اليوم',
+  'daily.subtitle': 'سيناريو واحد. الجميع يحصل على نفسه. حافظ على سلسلتك.',
+  'daily.play': 'العب تحدي اليوم',
+  'daily.doneToday': 'أُنجز اليوم — نراك غداً!',
+  'daily.streakActive': '🔥 سلسلة {n} يوم',
+  'daily.streakNone': 'ابدأ سلسلتك اليوم',
+  'daily.leaderboard': 'ترتيب الفريق',
+  'daily.you': 'أنت',
+  'daily.empty': 'لم يلعب أحد اليوم بعد — كن الأول.',
+  'daily.resultCorrect': 'قراءة صحيحة 🎯',
+  'daily.resultWrong': 'لم تُصب',
+  'daily.streakNow': '🔥 سلسلة {n} يوم!',
   'toggle.switchTo': 'EN',
 }
 

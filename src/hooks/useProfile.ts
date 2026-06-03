@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import type { Profile, BadgeName } from '@/types/game'
 import { XP_VALUES } from '@/lib/game-data'
+import { todayKey } from '@/lib/daily'
 
 export function useProfile() {
   const supabase = createClient()
@@ -79,5 +80,21 @@ export function useProfile() {
     setCompletedLevels(prev => [...new Set([...prev, level])])
   }, [profile, supabase])
 
-  return { profile, badges, completedLevels, loading, addXp, earnBadge, saveSession, reload: load }
+  // Records today's Daily Challenge result (one per UTC day; the unique
+  // constraint makes a second attempt a no-op). Awards XP only on first play.
+  const recordDaily = useCallback(async (
+    level: number, scenarioId: number, correct: boolean, reactionMs?: number
+  ): Promise<boolean> => {
+    if (!profile) return false
+    const { error } = await supabase.from('daily_challenges').insert({
+      rep_id: profile.id, challenge_date: todayKey(), level, scenario_id: scenarioId,
+      correct, reaction_ms: reactionMs ?? null,
+    })
+    if (error) return false // already played today (unique violation) or write failed
+    const reward = (correct ? XP_VALUES.correct : 0) + XP_VALUES.dailyStreak
+    await addXp(reward)
+    return true
+  }, [profile, supabase, addXp])
+
+  return { profile, badges, completedLevels, loading, addXp, earnBadge, saveSession, recordDaily, reload: load }
 }

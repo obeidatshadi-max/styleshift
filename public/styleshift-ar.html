@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ستايل شيفت — اقرأ الغرفة. اكسب الزيارة.</title>
+<style>
+  :root{
+    --bg0:#05060f;
+    --bg1:#0a1230;
+    --panel:#0d1838;
+    --panel2:#111f4a;
+    --line:#1f3470;
+    --ink:#dbe6ff;
+    --ink-dim:#8ea3d6;
+    --cyan:#38d6ff;
+    --green:#3ee08f;
+    --purple:#b06cff;
+    --pink:#ff7eb6;
+    --red:#ff5d6c;
+    --amber:#ffce4d;
+    --glow-cyan:0 0 18px rgba(56,214,255,.55);
+    --mono:"SF Mono","Roboto Mono","DejaVu Sans Mono",Menlo,Consolas,monospace;
+    --sans:"Segoe UI",Tahoma,Verdana,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:var(--sans);
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 700px at 50% -10%, #16245e 0%, transparent 60%),
+      radial-gradient(900px 600px at 110% 110%, #1a0f3a 0%, transparent 55%),
+      linear-gradient(160deg,var(--bg0),var(--bg1));
+    min-height:100vh;
+    padding:14px;
+    overflow-x:hidden;
+    direction:rtl;
+    text-align:right;
+  }
+  /* faint grid texture */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:
+      linear-gradient(rgba(56,214,255,.05) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(56,214,255,.05) 1px,transparent 1px);
+    background-size:42px 42px;
+    mask-image:radial-gradient(circle at 50% 30%,#000 0%,transparent 80%);
+  }
+  .wrap{position:relative;z-index:1;max-width:1040px;margin:0 auto}
+
+  /* ---------- Header ---------- */
+  header.app{
+    text-align:center;padding:10px 8px 18px;
+  }
+  header.app .eyebrow{
+    font-family:var(--mono);font-size:11px;letter-spacing:.45em;
+    color:var(--cyan);text-transform:uppercase;opacity:.85;
+  }
+  header.app h1{
+    font-size:clamp(22px,5.4vw,40px);line-height:1.05;margin-top:6px;
+    letter-spacing:.02em;font-weight:800;
+    text-shadow:0 0 24px rgba(56,214,255,.35);
+  }
+  header.app h1 .hl{color:var(--cyan)}
+  header.app .sub{color:var(--ink-dim);font-size:13px;margin-top:8px;letter-spacing:.12em}
+
+  .panel{
+    background:linear-gradient(180deg,var(--panel),#0a1430);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:16px;
+    box-shadow:0 12px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.04);
+    position:relative;
+  }
+  .panel-title{
+    font-family:var(--mono);font-size:12px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--cyan);display:flex;align-items:center;gap:8px;margin-bottom:14px;
+    flex-direction:row-reverse;justify-content:flex-end;
+  }
+  .panel-title::after{content:"";width:9px;height:9px;border-radius:50%;background:var(--cyan);box-shadow:var(--glow-cyan)}
+
+  .stack{display:flex;flex-direction:column;gap:14px}
+
+  /* ---------- Archetype cards ---------- */
+  .arch-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .arch{
+    border:1px solid var(--line);border-radius:14px;padding:14px;
+    background:linear-gradient(180deg,rgba(255,255,255,.025),rgba(0,0,0,.18));
+    position:relative;overflow:hidden;
+    text-align:right;
+  }
+  .arch .ring{
+    width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:24px;margin-bottom:10px;border:2px solid currentColor;
+    box-shadow:0 0 16px currentColor, inset 0 0 12px rgba(255,255,255,.08);
+    margin-right:0;margin-left:auto;
+  }
+  .arch h3{font-size:16px;letter-spacing:.04em;margin-bottom:2px}
+  .arch .role{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--ink-dim);text-transform:uppercase;margin-bottom:8px}
+  .arch p{font-size:12.5px;color:var(--ink-dim);line-height:1.55}
+  .arch .drive{margin-top:10px;font-size:11px;font-family:var(--mono);letter-spacing:.05em;color:var(--ink)}
+  .arch .drive b{color:currentColor;display:block;font-size:9px;letter-spacing:.15em;text-transform:uppercase;opacity:.8;margin-bottom:2px}
+  .c-driver{color:var(--purple)} .c-expressive{color:var(--green)}
+  .c-amiable{color:var(--pink)} .c-analytical{color:var(--cyan)}
+
+  /* ---------- Level ladder ---------- */
+  .ladder{display:flex;flex-direction:column;gap:10px}
+  .level-btn{
+    display:flex;align-items:center;gap:14px;text-align:right;width:100%;cursor:pointer;
+    background:linear-gradient(270deg,rgba(56,214,255,.06),rgba(0,0,0,.15));
+    border:1px solid var(--line);border-radius:12px;padding:14px;color:var(--ink);
+    transition:transform .12s ease,border-color .2s,box-shadow .2s;font-family:var(--sans);
+    touch-action:manipulation;
+    flex-direction:row-reverse;
+  }
+  .level-btn:hover:not(:disabled){transform:translateX(-4px);border-color:var(--cyan);box-shadow:var(--glow-cyan)}
+  .level-btn:disabled{opacity:.4;cursor:not-allowed}
+  .level-btn .num{
+    font-family:var(--mono);font-size:18px;font-weight:700;width:42px;height:42px;flex:none;
+    display:flex;align-items:center;justify-content:center;border-radius:10px;
+    border:1px solid var(--line);background:rgba(0,0,0,.25);color:var(--cyan);
+  }
+  .level-btn .meta b{display:block;font-size:15px;letter-spacing:.02em}
+  .level-btn .meta span{font-size:12px;color:var(--ink-dim)}
+  .level-btn .status{margin-right:auto;margin-left:0;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+  .status.locked{color:var(--ink-dim)} .status.ready{color:var(--cyan)} .status.done{color:var(--green)}
+
+  /* ---------- KPI dashboard ---------- */
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .kpi{border:1px solid var(--line);border-radius:12px;padding:14px;background:rgba(0,0,0,.2);text-align:center}
+  .kpi .label{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
+  .kpi .val{font-family:var(--mono);font-size:26px;font-weight:700;margin:6px 0 2px}
+  .kpi .target{font-size:10px;color:var(--ink-dim)}
+  .kpi.good .val{color:var(--green);text-shadow:0 0 14px rgba(62,224,143,.4)}
+  .kpi.warn .val{color:var(--amber)}
+  .kpi.cy .val{color:var(--cyan);text-shadow:var(--glow-cyan)}
+
+  /* ---------- Gameplay ---------- */
+  .play .topline{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap;flex-direction:row-reverse}
+  .progress-dots{display:flex;gap:6px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--line)}
+  .dot.active{background:var(--cyan);box-shadow:var(--glow-cyan)}
+  .dot.ok{background:var(--green)} .dot.bad{background:var(--red)}
+
+  .stakeholder{
+    display:flex;gap:14px;align-items:flex-start;border:1px solid var(--line);
+    border-radius:14px;padding:16px;background:linear-gradient(180deg,rgba(255,255,255,.025),rgba(0,0,0,.2));margin-bottom:14px;
+    flex-direction:row-reverse;
+  }
+  .stakeholder .av{
+    width:58px;height:58px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:26px;border:2px solid currentColor;box-shadow:0 0 16px currentColor;
+  }
+  .stakeholder .name{font-size:16px;font-weight:700}
+  .stakeholder .persona{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:8px}
+  .cues{list-style:none;display:flex;flex-direction:column;gap:6px}
+  .cues li{font-size:13.5px;color:var(--ink);padding-right:16px;padding-left:0;position:relative;line-height:1.5}
+  .cues li::after{content:"›";position:absolute;right:0;left:auto;color:var(--cyan);font-weight:700}
+  .situation{font-size:14px;line-height:1.6;margin-bottom:14px;color:var(--ink)}
+  .crisis{
+    border:1px solid var(--red);border-radius:10px;padding:10px 12px;margin-bottom:14px;
+    background:rgba(255,93,108,.08);color:#ffd2d6;font-family:var(--mono);font-size:13px;letter-spacing:.04em;
+    animation:pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 rgba(255,93,108,0)}50%{box-shadow:0 0 20px rgba(255,93,108,.45)}}
+
+  .q{font-size:13px;color:var(--ink-dim);letter-spacing:.04em;margin-bottom:10px;font-family:var(--mono)}
+  .options{display:flex;flex-direction:column;gap:10px}
+  .opt{
+    text-align:right;width:100%;cursor:pointer;color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.55;
+    border:1px solid var(--line);border-radius:12px;padding:13px 14px;background:rgba(0,0,0,.18);
+    transition:transform .1s,border-color .2s,box-shadow .2s,background .2s;
+    touch-action:manipulation;
+  }
+  .opt:hover:not(:disabled){border-color:var(--cyan);transform:translateY(-1px);box-shadow:var(--glow-cyan)}
+  .opt:disabled{cursor:default}
+  .opt.correct{border-color:var(--green);background:rgba(62,224,143,.12);box-shadow:0 0 18px rgba(62,224,143,.35)}
+  .opt.wrong{border-color:var(--red);background:rgba(255,93,108,.12)}
+  .opt.muted{opacity:.45}
+
+  .feedback{margin-top:14px;border-radius:12px;padding:13px 14px;font-size:13.5px;line-height:1.6;display:none}
+  .feedback.show{display:block}
+  .feedback.win{border:1px solid var(--green);background:rgba(62,224,143,.1)}
+  .feedback.lose{border:1px solid var(--red);background:rgba(255,93,108,.1)}
+  .feedback b{display:block;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;font-size:11px;margin-bottom:5px}
+  .feedback.win b{color:var(--green)} .feedback.lose b{color:var(--red)}
+
+  /* stress / negotiation meters */
+  .meters{display:flex;flex-direction:column;gap:12px;margin-bottom:14px}
+  .meter .mhead{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:5px;flex-direction:row-reverse}
+  .bar{height:12px;border-radius:8px;background:rgba(0,0,0,.4);border:1px solid var(--line);overflow:hidden}
+  .fill{height:100%;width:50%;border-radius:8px;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+  .fill.stress{background:linear-gradient(90deg,var(--green),var(--amber) 55%,var(--red))}
+  .fill.quota{background:linear-gradient(90deg,#1d7,var(--green))}
+  .fill.morale{background:linear-gradient(90deg,#08c,var(--cyan))}
+  .fill.risk{background:linear-gradient(90deg,var(--green),var(--amber) 50%,var(--red))}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+    font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+    border:1px solid var(--cyan);color:#04121c;background:var(--cyan);border-radius:10px;padding:12px 18px;
+    box-shadow:var(--glow-cyan);transition:transform .1s,filter .2s;
+  }
+  .btn:hover{transform:translateY(-1px);filter:brightness(1.08)}
+  .btn.ghost{background:transparent;color:var(--cyan);box-shadow:none}
+  .btn.ghost:hover{box-shadow:var(--glow-cyan)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;justify-content:flex-end}
+
+  .hidden{display:none!important}
+
+  /* badge */
+  .badge{
+    display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+    text-transform:uppercase;border:1px solid var(--green);color:var(--green);border-radius:20px;padding:5px 11px;
+    background:rgba(62,224,143,.08);margin:4px 4px 0 0;
+  }
+  .badge.locked{border-color:var(--line);color:var(--ink-dim);background:transparent}
+
+  /* results */
+  .result-head{text-align:center;padding:6px 0 14px}
+  .result-head .big{font-family:var(--mono);font-size:44px;font-weight:700;color:var(--cyan);text-shadow:var(--glow-cyan)}
+  .result-head .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim)}
+
+  /* confidence self-assessment */
+  .conf-row{display:flex;align-items:center;gap:12px;margin-top:14px;flex-direction:row-reverse}
+  input[type=range]{flex:1;accent-color:var(--cyan)}
+  .conf-val{font-family:var(--mono);font-size:18px;color:var(--cyan);width:48px;text-align:left}
+
+  footer.note{text-align:center;color:var(--ink-dim);font-size:11px;letter-spacing:.05em;padding:18px 8px 6px;line-height:1.6}
+  /* ---------- XP / Rank bar ---------- */
+  .rank-row{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap;flex-direction:row-reverse}
+  .rank-badge{
+    font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    border:1px solid var(--cyan);color:var(--cyan);border-radius:20px;padding:6px 14px;
+    background:rgba(56,214,255,.08);white-space:nowrap;
+  }
+  .rank-badge.master{border-color:var(--amber);color:var(--amber);background:rgba(255,206,77,.08)}
+  .xp-wrap{flex:1;min-width:160px}
+  .xp-labels{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;
+    letter-spacing:.1em;color:var(--ink-dim);margin-bottom:4px;flex-direction:row-reverse}
+  .xp-bar{height:10px;border-radius:6px;background:rgba(0,0,0,.4);border:1px solid var(--line);overflow:hidden}
+  .xp-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--cyan),var(--purple));
+    transition:width .6s cubic-bezier(.2,.8,.2,1)}
+  @media(max-width:560px){
+    body{padding:10px}
+    .kpis{grid-template-columns:1fr}
+    .stakeholder{flex-direction:column-reverse}
+    .arch-grid{grid-template-columns:1fr 1fr}
+    .kpi .label,.kpi .target,
+    .level-btn .status,.stakeholder .persona,
+    .meter .mhead,.xp-labels,
+    .feedback b,.arch .role{font-size:11px}
+    .arch .drive b{font-size:10px}
+    footer.note{font-size:12px}
+    .dot{width:7px;height:7px}
+    .play .topline{gap:6px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="app">
+    <div class="eyebrow">Social Style Mastery Game</div>
+    <h1>STYLE<span class="hl">SHIFT</span> <span style="font-size:clamp(14px,3vw,24px);font-weight:400;opacity:.7">ستايل شيفت</span></h1>
+    <div class="sub">اقرأ الغرفة · اكسب الزيارة</div>
+  </header>
+
+  <!-- ============ HOME ============ -->
+  <div id="home" class="stack">
+
+    <section class="panel">
+      <div class="panel-title">تعرّف على الأنماط الاجتماعية الأربعة</div>
+      <div class="arch-grid" id="archGrid"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">سلّم التقدّم</div>
+      <div class="ladder" id="ladder"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">تتبّع مستوى إتقانك</div>
+      <div class="kpis" id="kpis"></div>
+      <div id="badges" style="margin-top:14px"></div>
+    </section>
+
+  </div>
+
+  <!-- ============ PLAY ============ -->
+  <div id="play" class="panel play hidden"></div>
+
+  <footer class="note">
+    ستايل شيفت · مبني على نموذج الأسلوب الاجتماعي · <a href="https://psychologytobusiness.com" style="color:var(--cyan);text-decoration:none">psychologytobusiness.com</a>
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   DATA  — Arabic version
+   ============================================================ */
+const STYLES = {
+  driver:     {name:"المسيطر",   cls:"c-driver",     icon:"▲", drive:"التحكم والإنجاز",  blurb:"حازم ومباشر، يركز على النتائج. يقرر بسرعة ويكره إضاعة الوقت."},
+  expressive: {name:"التعبيري", cls:"c-expressive", icon:"✦", drive:"التقدير والأفكار", blurb:"متحمس ومبدع ويحب التعاون. يحب الأفكار الكبيرة ويريد أن يُرى مميزاً."},
+  amiable:    {name:"الودود",   cls:"c-amiable",    icon:"♥", drive:"الأمان والانسجام", blurb:"دافئ وصبور، يهتم بالعلاقات. يتجنب المخاطرة ويبحث عن التوافق."},
+  analytical: {name:"التحليلي",cls:"c-analytical", icon:"◆", drive:"اليقين والدقة",   blurb:"دقيق ومنطقي، يعتمد على البيانات. يريد الأدلة ويأخذ وقته في التقييم."},
+};
+const ORDER = ["driver","expressive","amiable","analytical"];
+
+/* المستوى 1 — قراءة الأسلوب */
+const L1 = [
+  {style:"driver",     name:"المديرة كلارا",     persona:"نمط المسيطر",
+    cues:["تقطع الحديث الجانبي: 'أعطني الخلاصة مباشرة'","تنظر إلى ساعتها مرتين في دقيقتين","تريد خيارين وستقرر على الفور"]},
+  {style:"analytical", name:"المدير المالي علان", persona:"نمط التحليلي",
+    cues:["يطلب المصدر وراء كل رقم تذكره","يدوّن ملاحظات ويراجع الملف","لن يلتزم حتى تُراجَع البيانات بالكامل"]},
+  {style:"expressive", name:"مايك التسويق",       persona:"نمط التعبيري",
+    cues:["يتحدث عن رؤية 'ستغير قواعد اللعبة'","يتحدث بسرعة ويقفز بين ثلاث أفكار","يريد أن تجعل الحملة فريقه يبدو مميزاً"]},
+  {style:"amiable",    name:"سارة الدعم",         persona:"نمط الودود",
+    cues:["تسأل كيف سيؤثر التغيير على فريقها","تريد التحقق من الزملاء قبل الموافقة","تقدّر العلاقة الطويلة الأمد على الصفقة السريعة"]},
+  {style:"analytical", name:"د. ريس",             persona:"نمط التحليلي",
+    cues:["يطلب منهجية الدراسة السريرية لا الملخص","يشكك في حجم عينة الأدلة","منهجي وحذر، يتجنب الاستنتاجات السريعة"]},
+  {style:"driver",     name:"نائب الرئيس أوكافور",persona:"نمط المسيطر",
+    cues:["يقاطع ليسأل: 'ما هو العائد على الاستثمار؟'","لا صبر لديه مع تفاصيل الخلفية","يصيغ كل شيء حول تحقيق الهدف"]},
+];
+
+/* المستوى 2 — إدارة الضغط */
+const L2 = [
+  {style:"analytical", name:"المدير المالي علان",
+   crisis:"'فشل حرج في البيانات — أرقامك لا تتطابق. أصلح الأمر الآن!'",
+   q:"علان (التحليلي) تحت الضغط. اختر مسارك.",
+   opts:[
+     {t:"المسار أ — طمأنه عاطفياً أن الأمور ستكون بخير.", r:"escalate", why:"الطمأنينة العاطفية تتجاهل دافعه لليقين. التحليلي تحت الضغط يحتاج أدلة لا مواساة."},
+     {t:"المسار ب — راجع البيانات سطراً بسطر وحدد التناقض.", r:"win", why:"استراتيجية رابحة. الدقة والتفسير المنطقي يُشبعان مباشرةً دافع التحليلي: اليقين والدقة."},
+     {t:"المسار ج — أخبره أن يتوقف عن القلق وأن يثق بتقديرك.", r:"escalate", why:"تجاهل البيانات يرفع توتر التحليلي ويهدم الثقة."},
+   ]},
+  {style:"driver", name:"المديرة كلارا",
+   crisis:"'نحن متأخرون عن الحصة وأنت تضيع وقتي. ما هي الخطوة؟'",
+   q:"كلارا (المسيطرة) تحت الضغط. اختر مسارك.",
+   opts:[
+     {t:"أعطها خيارين واضحين مع العائد المتوقع لكل منهما ودعها تقرر.", r:"win", why:"استراتيجية رابحة. الإيجاز والخيارات والتحكم تُغذي دافع المسيطر: التحكم والإنجاز."},
+     {t:"ابدأ بعرض خلفية مفصلة من 10 شرائح.", r:"escalate", why:"التفاصيل الطويلة بدون قرار تُصعّد توتر المسيطر."},
+     {t:"اسألها أولاً كيف تشعر تجاه الضغط.", r:"escalate", why:"المسيطر يقرأ هذا كتأخير لا تعاطف."},
+   ]},
+  {style:"amiable", name:"سارة الدعم",
+   crisis:"'هذا التغيير يسير بسرعة كبيرة — فريقي ليس مستعداً وأنا قلقة.'",
+   q:"سارة (الودودة) تحت الضغط. اختر مسارك.",
+   opts:[
+     {t:"اضغط للحصول على الموافقة اليوم للحفاظ على الجدول الزمني.", r:"escalate", why:"الضغط يهاجم دافع الودودة للأمان."},
+     {t:"اعترف بالقلق، وقدم خطة مرحلية مع دعم وشبكة أمان.", r:"win", why:"استراتيجية رابحة. الطمأنينة والمسار قليل المخاطرة يُشبعان دافع الودودة: الأمان والانسجام."},
+     {t:"أخبرها أن البيانات تقول إن كل شيء سيكون بخير وتابع.", r:"escalate", why:"البيانات وحدها لا تطمئن الودودة؛ هي تحتاج أن تشعر بالدعم."},
+   ]},
+  {style:"expressive", name:"مايك التسويق",
+   crisis:"'الإدارة دمّرت فكرتي أمام الجميع. انتهيت.'",
+   q:"مايك (التعبيري) تحت الضغط. اختر مسارك.",
+   opts:[
+     {t:"اعترف بالشرارة الإبداعية في فكرته، ثم ابنوا الإصدار التالي معاً.", r:"win", why:"استراتيجية رابحة. التقدير مع أفكار جديدة يُعيد دافع التعبيري: التقدير والأفكار."},
+     {t:"أرسل له جدولاً بيانياً يشرح سبب فشل الفكرة.", r:"escalate", why:"التحليل البارد يُحبط التعبيري ويرفع توتره."},
+     {t:"أخبره أن يتصلب ويتوقف عن المبالغة.", r:"escalate", why:"إنكار التقدير يُصعّد توتر التعبيري بسرعة."},
+   ]},
+];
+
+/* المستوى 3 — فهم الدوافع */
+const L3 = [
+  {multi:false, style:"driver", name:"المديرة كلارا", persona:"المسيطر — الدافع: التحكم والإنجاز",
+   situation:"كلارا هادئة لكنها تقيّمك. لديها 5 دقائق قبل اجتماعها القادم.",
+   q:"أي افتتاحية تُغذّي دافعها الأساسي بشكل أفضل؟",
+   opts:[
+     {t:"'هذان أفضل مساريْن لتحقيق هدفك للربع الثالث مع العائد المتوقع — القرار لك.'", correct:true, why:"تحكم + إنجاز قابل للقياس. هذا بالضبط دافع المسيطر."},
+     {t:"'دعني أخبرك بكامل القصة من البداية.'", correct:false, why:"سرد العمليات يُنهك مسيطراً يريد التحكم في النتيجة."},
+     {t:"'أود أن أعرف كيف كان عطلة نهاية أسبوعك أولاً.'", correct:false, why:"الدفء في العلاقات هو دافع الودود لا المسيطر."},
+   ]},
+  {multi:false, style:"expressive", name:"مايك التسويق", persona:"التعبيري — الدافع: التقدير والأفكار",
+   situation:"مايك يعرض عليك رؤيته للإطلاق.",
+   q:"أي رد يُغذّي دافعه الأساسي بشكل أفضل؟",
+   opts:[
+     {t:"'هذه زاوية جريئة ومبتكرة — دعنا نبني عليها ونضع اسمك على الإطلاق.'", correct:true, why:"تقدير + مساحة للأفكار. هذا دافع التعبيري."},
+     {t:"'هل يمكنك أن ترسل لي جداول البيانات الداعمة أولاً؟'", correct:false, why:"هذا يُرضي التحليلي لا التعبيري الذي يريد أن يُرى."},
+     {t:"'دعنا نتباطأ ونقلل المخاطر أولاً.'", correct:false, why:"الحذر يخاطب دافع الودود ويُحبط التعبيري."},
+   ]},
+  {multi:false, style:"amiable", name:"سارة الدعم", persona:"الودود — الدافع: الأمان والانسجام",
+   situation:"سارة تحبك لكنها لم تلتزم بالتغيير بعد.",
+   q:"أي رد يُغذّي دافعها الأساسي بشكل أفضل؟",
+   opts:[
+     {t:"'سنطرح الأمر تدريجياً، وسأدعم فريقك شخصياً، ويمكننا التوقف في أي وقت.'", correct:true, why:"أمان + انسجام مع شبكة أمان. هذا دافع الودود."},
+     {t:"'قرري الآن — الصفقة تنتهي الليلة.'", correct:false, why:"الإلحاح يهدد حاجة الودود للأمان."},
+     {t:"'الأرقام محكمة، هذا يجب أن يُحسم الأمر.'", correct:false, why:"البيانات تطمئن التحليلي لا الودود."},
+   ]},
+  {multi:true, name:"مجلس الإدارة: علان + مايك", persona:"متعدد الأطراف — دوافع متنافسة",
+   situation:"المدير المالي التحليلي علان يريد دليلاً؛ مايك التعبيري يريد الاعتراف بجرأة رؤيته. كلاهما في الغرفة.",
+   q:"أي تحرّك وحيد يوازن كلا الدافعين في آنٍ واحد؟",
+   opts:[
+     {t:"'رؤية مايك هي العنوان — وهنا مجموعة البيانات التي تثبت أنها ستُحقق النتائج.'", correct:true, why:"تقدير لمايك (التعبيري) + دليل لعلان (التحليلي). كلا الدافعين تم إشباعهما."},
+     {t:"'دعنا نأخذ الفكرة الأكثر إثارة ونرتب الأرقام لاحقاً.'", correct:false, why:"يُرضي مايك لكن يتجاهل دافع علان لليقين."},
+     {t:"'لن نتحرك إلا بعد التحقق الثلاثي من كل رقم.'", correct:false, why:"يُرضي علان لكن يُجوّع مايك من التقدير."},
+   ]},
+];
+
+/* المستوى 4 — غرفة المفاوضات */
+const L4 = [
+  {q:"الحركة الافتتاحية مع جميع أصحاب المصلحة الأربعة:",
+   opts:[
+     {t:"ابدأ برؤية إطلاق جريئة مدعومة ببيانات رئيسية خفيفة.", quota:+8, morale:+10, risk:+12, why:"ينشّط التعبيري والمسيطر، لكن ضعف البيانات يرفع المخاطرة لدى التحليلي."},
+     {t:"قدّم خطة متوازنة: عائد واضح، طرح تدريجي، حزمة أدلة كاملة.", quota:+10, morale:+6, risk:-8, why:"متوازن. يُحقق هدف المسيطر ودليل التحليلي مع إبقاء المخاطرة منخفضة."},
+     {t:"أمضِ الجلسة في بناء العلاقة والطمأنينة فقط.", quota:-4, morale:+12, risk:-2, why:"الودود يحبه؛ المسيطر لا يرى تقدماً نحو الهدف."},
+   ]},
+  {q:"علان (التحليلي) يتحدى نموذج توقعاتك. أنت:",
+   opts:[
+     {t:"افتح النموذج وراجع الافتراضات سطراً بسطر.", quota:+6, morale:+4, risk:-12, why:"الشفافية تُرضي التحليلي وتقلص المخاطرة بشكل حاد."},
+     {t:"تجاهل الأمر — 'الرؤية أهم من النموذج.'", quota:0, morale:-8, risk:+15, why:"تجاهل البيانات يُنفّر التحليلي ويُضخّم المخاطرة."},
+     {t:"عِد بإرسال الأرقام لاحقاً وادفع نحو الإغلاق.", quota:+4, morale:-2, risk:+8, why:"يكسب الزخم لكن البيانات المعلقة تبقي المخاطرة مرتفعة."},
+   ]},
+  {q:"سارة (الودود) قلقة من أن فريقها لا يستطيع استيعاب الأهداف. أنت:",
+   opts:[
+     {t:"تجاهل المخاوف: 'الحصة هي الحصة.'", quota:+10, morale:-16, risk:+6, why:"مكسب قصير المدى، لكن المعنويات تنهار وثقة الودود تنكسر."},
+     {t:"أضف مسار تصاعدي تدريجي مع دعم — نفس الهدف، مسار أكثر أماناً.", quota:+6, morale:+12, risk:-6, why:"يحمي المعنويات والأمان مع تقديم الحصة."},
+     {t:"خفّض الهدف لتجنب أي احتكاك.", quota:-10, morale:+6, risk:-4, why:"انسجام على حساب هدف المسيطر للإنجاز."},
+   ]},
+  {q:"كلارا (المسيطرة) تطلب الإغلاق الآن. التحرك الأخير:",
+   opts:[
+     {t:"قدّم خيارَيْن جاهزَيْن للقرار مع عائد وتوصية واضحة.", quota:+14, morale:+6, risk:-4, why:"حاسم + مدعوم بالأدلة. يُرضي المسيطرة دون إقلاق الآخرين."},
+     {t:"اطلب أسبوعاً إضافياً لمحاذاة الجميع.", quota:-8, morale:+4, risk:-2, why:"المسيطرة المجهدة تقرأ التأخير كفشل."},
+     {t:"أغلق على السعر وحده، تخطَّ المبررات.", quota:+6, morale:-6, risk:+10, why:"قد يكسب اللحظة لكن يترك التحليلي والودود غير مرتاحَيْن."},
+   ]},
+];
+
+/* ============================================================
+   XP + RANKS — Arabic
+   ============================================================ */
+const XP_VALUES = {
+  correct: 20,
+  fastBonus: 10,
+  levelComplete: 50,
+  perfectLevel: 100,
+  dailyStreak: 30,
+};
+
+const RANKS = [
+  {name:"مبتدئ",          minXp:0},
+  {name:"مندوب ميداني",    minXp:200},
+  {name:"قارئ الأساليب",  minXp:500},
+  {name:"خبير الدوافع",   minXp:1000},
+  {name:"سيد الأسلوب",    minXp:2000},
+];
+
+function getRank(xp){
+  for(let i=RANKS.length-1;i>=0;i--){
+    if(xp>=RANKS[i].minXp) return RANKS[i];
+  }
+  return RANKS[0];
+}
+
+function getNextRank(xp){
+  for(let i=0;i<RANKS.length;i++){
+    if(RANKS[i].minXp>xp) return RANKS[i];
+  }
+  return null;
+}
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const state = {
+  unlocked:{1:true,2:false,3:false,4:false},
+  done:{1:false,2:false,3:false,4:false},
+  decisions:0, correct:0, totalReactionMs:0, reactionCount:0,
+  confidence:0,
+  xp:0,
+  badges:{ "أول قراءة":false, "مُهدِّئ الأزمات":false, "همس الدوافع":false, "نجم غرفة المفاوضات":false, "سيد الأسلوب":false },
+};
+
+/* ============================================================
+   RENDER: HOME
+   ============================================================ */
+const $ = id => document.getElementById(id);
+
+function renderArchetypes(){
+  $("archGrid").innerHTML = ORDER.map(k=>{
+    const s = STYLES[k];
+    return `<div class="arch">
+      <div class="ring ${s.cls}">${s.icon}</div>
+      <h3 class="${s.cls}">${s.name}</h3>
+      <div class="role">الأسلوب الاجتماعي</div>
+      <p>${s.blurb}</p>
+      <div class="drive ${s.cls}"><b>الدافع الأساسي</b>${s.drive}</div>
+    </div>`;
+  }).join("");
+}
+
+const LEVELS = [
+  {n:1, title:"قراءة الأسلوب",    sub:"اقرأ السلوك، حدد الأسلوب"},
+  {n:2, title:"إدارة الضغط",      sub:"تعامل مع مقياس التوتر تحت الضغط"},
+  {n:3, title:"فهم الدوافع",      sub:"أشبع الدافع النفسي الأساسي"},
+  {n:4, title:"غرفة المفاوضات",   sub:"وازن بين الحصة والمعنويات والمخاطرة"},
+];
+
+function renderLadder(){
+  $("ladder").innerHTML = LEVELS.map(l=>{
+    const unlocked = state.unlocked[l.n], done = state.done[l.n];
+    const status = done ? `<span class="status done">مكتمل ✓</span>`
+                 : unlocked ? `<span class="status ready">جاهز</span>`
+                 : `<span class="status locked">مقفل</span>`;
+    return `<button class="level-btn" ${unlocked?"":"disabled"} data-level="${l.n}">
+      <span class="num">${l.n}</span>
+      <span class="meta"><b>${l.title}</b><span>${l.sub}</span></span>
+      ${status}
+    </button>`;
+  }).join("");
+  document.querySelectorAll("[data-level]").forEach(b=>{
+    b.addEventListener("click",()=>startLevel(+b.dataset.level));
+  });
+}
+
+function renderKPIs(){
+  const acc = state.decisions ? Math.round(state.correct/state.decisions*100) : 0;
+  const rt  = state.reactionCount ? (state.totalReactionMs/state.reactionCount/1000) : 0;
+  const accClass = acc>=90 ? "good" : acc>0 ? "warn" : "cy";
+  const rtClass  = (rt>0 && rt<=2.1) ? "good" : rt>0 ? "warn" : "cy";
+  $("kpis").innerHTML = `
+    <div class="kpi ${rtClass}">
+      <div class="label">زمن الاستجابة</div>
+      <div class="val">${rt>0?rt.toFixed(1):"—"}<span style="font-size:13px">${rt>0?" ث":""}</span></div>
+      <div class="target">الهدف: أقل من 2.1 ث</div>
+    </div>
+    <div class="kpi ${accClass}">
+      <div class="label">معدل الدقة</div>
+      <div class="val">${state.decisions?acc:"—"}<span style="font-size:13px">${state.decisions?"%":""}</span></div>
+      <div class="target">الهدف: أكثر من 90%</div>
+    </div>
+    <div class="kpi cy">
+      <div class="label">الثقة بالنفس</div>
+      <div class="val">${state.confidence||"—"}<span style="font-size:13px">${state.confidence?"%":""}</span></div>
+      <div class="target">تقييم ذاتي</div>
+    </div>`;
+}
+
+function renderBadges(){
+  $("badges").innerHTML = Object.entries(state.badges).map(([name,earned])=>
+    `<span class="badge ${earned?"":"locked"}">${earned?"★":"☆"} ${name}</span>`
+  ).join("");
+}
+
+function renderRankBar(){
+  const rank = getRank(state.xp);
+  const next = getNextRank(state.xp);
+  const isMaster = !next;
+  const pct = isMaster ? 100
+    : Math.round((state.xp - rank.minXp) / (next.minXp - rank.minXp) * 100);
+  const nextLabel = isMaster ? "الحد الأقصى" : next.name;
+  const xpLabel   = isMaster ? `${state.xp} XP` : `${state.xp} / ${next.minXp} XP`;
+  return `<div class="rank-row">
+    <div class="rank-badge${isMaster?" master":""}">${rank.name}</div>
+    <div class="xp-wrap">
+      <div class="xp-labels"><span>${xpLabel}</span><span>← ${nextLabel}</span></div>
+      <div class="xp-bar"><div class="xp-fill" style="width:${pct}%"></div></div>
+    </div>
+  </div>`;
+}
+
+function renderMastery(){
+  const kpisEl = $("kpis");
+  const existing = kpisEl.parentNode.querySelector(".rank-row");
+  if(existing) existing.remove();
+  const rankBar = document.createElement("div");
+  rankBar.innerHTML = renderRankBar();
+  kpisEl.parentNode.insertBefore(rankBar.firstElementChild, kpisEl);
+  renderKPIs();
+}
+
+function renderHome(){
+  $("home").classList.remove("hidden");
+  $("play").classList.add("hidden");
+  renderArchetypes(); renderLadder(); renderMastery(); renderBadges();
+}
+
+/* ============================================================
+   GAMEPLAY ENGINE
+   ============================================================ */
+let session = null;
+
+function startLevel(n){
+  $("home").classList.add("hidden");
+  const p = $("play");
+  p.classList.remove("hidden");
+  session = {level:n, idx:0, results:[]};
+  if(n===4){ session.meters={quota:50, morale:60, risk:35}; }
+  renderStep();
+}
+
+function questionCount(){
+  return session.level===1?L1.length : session.level===2?L2.length :
+         session.level===3?L3.length : L4.length;
+}
+
+function topline(){
+  const total = questionCount();
+  let dots="";
+  for(let i=0;i<total;i++){
+    let cls="dot";
+    if(i<session.idx){ cls += session.results[i] ? " ok" : " bad"; }
+    else if(i===session.idx){ cls+=" active"; }
+    dots+=`<span class="${cls}"></span>`;
+  }
+  const titles={
+    1:"المستوى 1 · قراءة الأسلوب",
+    2:"المستوى 2 · إدارة الضغط",
+    3:"المستوى 3 · فهم الدوافع",
+    4:"المستوى 4 · غرفة المفاوضات"
+  };
+  return `<div class="topline">
+    <div class="panel-title" style="margin:0">${titles[session.level]}</div>
+    <div class="progress-dots">${dots}</div>
+  </div>`;
+}
+
+function stakeholderBlock(style,name,persona,cues){
+  const s = STYLES[style];
+  const cueHtml = cues ? `<ul class="cues">${cues.map(c=>`<li>${c}</li>`).join("")}</ul>` : "";
+  return `<div class="stakeholder">
+    <div class="av ${s?s.cls:"c-analytical"}">${s?s.icon:"⚠"}</div>
+    <div><div class="name">${name}</div><div class="persona">${persona}</div>${cueHtml}</div>
+  </div>`;
+}
+
+let stepShownAt = 0;
+function renderStep(){
+  const L = session.level;
+  if(L===1) return renderL1();
+  if(L===2) return renderL2();
+  if(L===3) return renderL3();
+  if(L===4) return renderL4();
+}
+
+/* ---- Level 1 ---- */
+function renderL1(){
+  const item = L1[session.idx];
+  const choices = ORDER.map(k=>({k, label:STYLES[k].name}));
+  const mystery = `<div class="stakeholder">
+      <div class="av" style="color:var(--ink-dim)">?</div>
+      <div><div class="name">${item.name}</div>
+      <div class="persona">ملف غير محدد · اقرأ المؤشرات</div>
+      <ul class="cues">${item.cues.map(c=>`<li>${c}</li>`).join("")}</ul></div>
+    </div>`;
+  $("play").innerHTML = topline()
+    + mystery
+    + `<div class="q">حدّد الأسلوب الاجتماعي لهذا الشخص</div>
+       <div class="options" id="opts">
+         ${choices.map(c=>`<button class="opt" data-k="${c.k}">${c.label}</button>`).join("")}
+       </div>
+       <div class="feedback" id="fb"></div>`;
+  stepShownAt = Date.now();
+  document.querySelectorAll("#opts .opt").forEach(b=>{
+    b.addEventListener("click",()=>{
+      const ok = b.dataset.k===item.style;
+      lockOptions("#opts", el=>{
+        if(el.dataset.k===item.style) el.classList.add("correct");
+        else if(el===b) el.classList.add("wrong");
+        else el.classList.add("muted");
+      });
+      record(ok);
+      const s=STYLES[item.style];
+      showFeedback(ok,
+        ok?"قراءة صحيحة":"أعد قراءة المؤشرات",
+        `هذا <b style="color:var(--ink)">${item.name}</b> — نمط <b style="color:var(--ink)">${s.name}</b>. المؤشر الأساسي: دافعه هو <b style="color:var(--ink)">${s.drive}</b>.`);
+      if(ok && !state.badges["أول قراءة"]){ state.badges["أول قراءة"]=true; }
+      next();
+    });
+  });
+}
+
+/* ---- Level 2 ---- */
+function renderL2(){
+  const item = L2[session.idx];
+  const s = STYLES[item.style];
+  session.stress = (typeof session.stress==="number") ? session.stress : 70;
+  $("play").innerHTML = topline()
+    + stakeholderBlock(item.style, item.name, s.name+" — تحت الضغط")
+    + `<div class="crisis">⚠ ${item.crisis}</div>`
+    + meterBlock("مقياس التوتر","stress",session.stress)
+    + `<div class="q">${item.q}</div><div class="options" id="opts">
+        ${item.opts.map((o,i)=>`<button class="opt" data-i="${i}">${o.t}</button>`).join("")}
+       </div><div class="feedback" id="fb"></div>`;
+  stepShownAt = Date.now();
+  document.querySelectorAll("#opts .opt").forEach(b=>{
+    b.addEventListener("click",()=>{
+      const o = item.opts[+b.dataset.i];
+      const win = o.r==="win";
+      lockOptions("#opts", el=>{
+        const oo=item.opts[+el.dataset.i];
+        if(oo.r==="win") el.classList.add("correct");
+        else if(el===b) el.classList.add("wrong");
+        else el.classList.add("muted");
+      });
+      session.stress = Math.max(0,Math.min(100, session.stress + (win?-45:+22)));
+      setFill("stress",session.stress);
+      record(win);
+      showFeedback(win, win?"استراتيجية رابحة — التوتر انخفض":"تصعيد — التوتر ارتفع", o.why);
+      if(win && !state.badges["مُهدِّئ الأزمات"]) state.badges["مُهدِّئ الأزمات"]=true;
+      next();
+    });
+  });
+}
+
+/* ---- Level 3 ---- */
+function renderL3(){
+  const item = L3[session.idx];
+  let head;
+  if(item.multi){
+    head = `<div class="stakeholder">
+        <div class="av c-expressive">${STYLES.expressive.icon}</div>
+        <div><div class="name">${item.name}</div><div class="persona">${item.persona}</div>
+        <div class="situation" style="margin-top:8px;margin-bottom:0">${item.situation}</div></div>
+      </div>`;
+  } else {
+    head = stakeholderBlock(item.style, item.name, item.persona)
+         + `<div class="situation">${item.situation}</div>`;
+  }
+  $("play").innerHTML = topline() + head
+    + `<div class="q">${item.q}</div><div class="options" id="opts">
+        ${item.opts.map((o,i)=>`<button class="opt" data-i="${i}">${o.t}</button>`).join("")}
+       </div><div class="feedback" id="fb"></div>`;
+  stepShownAt = Date.now();
+  document.querySelectorAll("#opts .opt").forEach(b=>{
+    b.addEventListener("click",()=>{
+      const o = item.opts[+b.dataset.i];
+      lockOptions("#opts", el=>{
+        const oo=item.opts[+el.dataset.i];
+        if(oo.correct) el.classList.add("correct");
+        else if(el===b) el.classList.add("wrong");
+        else el.classList.add("muted");
+      });
+      record(o.correct);
+      showFeedback(o.correct, o.correct?"الدافع أُشبع":"دافع خاطئ", o.why);
+      if(o.correct && item.multi && !state.badges["همس الدوافع"]) state.badges["همس الدوافع"]=true;
+      next();
+    });
+  });
+}
+
+/* ---- Level 4 ---- */
+function renderL4(){
+  const item = L4[session.idx];
+  const m = session.meters;
+  $("play").innerHTML = topline()
+    + `<div class="meters">
+        ${meterRow("الحصة الكلية","quota",m.quota)}
+        ${meterRow("المعنويات","morale",m.morale)}
+        ${meterRow("تقييم المخاطرة","risk",m.risk)}
+       </div>
+       <div class="q">${item.q}</div><div class="options" id="opts">
+        ${item.opts.map((o,i)=>`<button class="opt" data-i="${i}">${o.t}</button>`).join("")}
+       </div><div class="feedback" id="fb"></div>`;
+  stepShownAt = Date.now();
+  document.querySelectorAll("#opts .opt").forEach(b=>{
+    b.addEventListener("click",()=>{
+      const o = item.opts[+b.dataset.i];
+      const best = bestIndex(item);
+      const good = (+b.dataset.i)===best;
+      m.quota  = clamp(m.quota  + o.quota);
+      m.morale = clamp(m.morale + o.morale);
+      m.risk   = clamp(m.risk   + o.risk);
+      setFill("quota",m.quota); setFill("morale",m.morale); setFill("risk",m.risk);
+      lockOptions("#opts", el=>{
+        if((+el.dataset.i)===best) el.classList.add("correct");
+        else if(el===b) el.classList.add("wrong");
+        else el.classList.add("muted");
+      });
+      record(good);
+      showFeedback(good, good?"تحرك متوازن":"اختلال في التوازن", o.why
+        + ` <span style="color:var(--ink-dim)">[الحصة ${sign(o.quota)} · المعنويات ${sign(o.morale)} · المخاطرة ${sign(o.risk)}]</span>`);
+      next();
+    });
+  });
+}
+function bestIndex(item){
+  let bi=0,bs=-1e9;
+  item.opts.forEach((o,i)=>{const sc=o.quota+o.morale-o.risk; if(sc>bs){bs=sc;bi=i;}});
+  return bi;
+}
+
+/* ---- shared meter helpers ---- */
+function meterBlock(label,type,val){
+  return `<div class="meters"><div class="meter">
+    <div class="mhead"><span id="lbl-${type}">${Math.round(val)}%</span><span>${label}</span></div>
+    <div class="bar"><div class="fill ${type}" id="fill-${type}" style="width:${val}%"></div></div>
+  </div></div>`;
+}
+function meterRow(label,type,val){
+  return `<div class="meter">
+    <div class="mhead"><span id="lbl-${type}">${Math.round(val)}%</span><span>${label}</span></div>
+    <div class="bar"><div class="fill ${type}" id="fill-${type}" style="width:${val}%"></div></div>
+  </div>`;
+}
+function setFill(type,val){
+  const f=$("fill-"+type), l=$("lbl-"+type);
+  if(f) f.style.width=val+"%";
+  if(l) l.textContent=Math.round(val)+"%";
+}
+const clamp = v => Math.max(0,Math.min(100,v));
+const sign  = v => (v>=0?"+":"")+v;
+
+/* ---- shared flow helpers ---- */
+function lockOptions(sel, styleEach){
+  document.querySelectorAll(sel+" .opt").forEach(el=>{el.disabled=true; styleEach && styleEach(el);});
+}
+function record(ok){
+  state.decisions++; if(ok) state.correct++;
+  const dt = Date.now()-stepShownAt;
+  if(dt>0 && dt<60000){ state.totalReactionMs+=dt; state.reactionCount++; }
+  session.results[session.idx]=ok;
+  if(ok){
+    state.xp += XP_VALUES.correct;
+    if(dt>0 && dt<2100) state.xp += XP_VALUES.fastBonus;
+  }
+}
+function showFeedback(ok,title,html){
+  const fb=$("fb");
+  fb.className="feedback show "+(ok?"win":"lose");
+  fb.innerHTML=`<b>${title}</b>${html}`;
+}
+function next(){
+  const row=document.createElement("div");
+  row.className="row";
+  const last = session.idx>=questionCount()-1;
+  row.innerHTML=`<button class="btn" id="nextBtn">${last?"عرض النتائج":"التالي ←"}</button>`;
+  $("play").appendChild(row);
+  $("nextBtn").addEventListener("click",()=>{
+    if(last){ finishLevel(); }
+    else { session.idx++; renderStep(); }
+  });
+  $("nextBtn").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+/* ---- end of level ---- */
+function finishLevel(){
+  const n=session.level;
+  const total=questionCount();
+  const got=session.results.filter(Boolean).length;
+  state.done[n]=true;
+  if(n<4) state.unlocked[n+1]=true;
+
+  state.xp += XP_VALUES.levelComplete;
+  if(got===total) state.xp += XP_VALUES.perfectLevel;
+
+  if(n===4){
+    const m=session.meters;
+    const apex = m.quota>=60 && m.morale>=50 && m.risk<=50;
+    if(apex) state.badges["نجم غرفة المفاوضات"]=true;
+  }
+
+  if(state.xp>=2000) state.badges["سيد الأسلوب"]=true;
+
+  saveState();
+
+  const acc=Math.round(got/total*100);
+  $("play").innerHTML = `
+    <div class="result-head">
+      <div class="big">${acc}%</div>
+      <div class="lbl">دقة المستوى ${n} · ${got}/${total} قرار مثالي</div>
+    </div>
+    ${n===4?apexSummary():""}
+    <div class="q" style="margin-top:6px">تقييم الثقة بالنفس — ما مدى استعدادك للتعامل مع هذا الأسلوب فعلياً؟</div>
+    <div class="conf-row">
+      <span class="conf-val" id="confVal">${Math.max(acc, state.confidence)}%</span>
+      <input type="range" id="conf" min="0" max="100" value="${Math.max(acc, state.confidence)}">
+    </div>
+    <div class="row">
+      <button class="btn ghost" id="toHome">الرئيسية</button>
+      <button class="btn" id="saveConf">سجّل وتابع</button>
+    </div>`;
+  const slider=$("conf");
+  slider.addEventListener("input",()=>$("confVal").textContent=slider.value+"%");
+  $("saveConf").addEventListener("click",()=>{ state.confidence=+slider.value; renderHome(); });
+  $("toHome").addEventListener("click",()=>{ state.confidence=+slider.value; renderHome(); });
+}
+
+function apexSummary(){
+  const m=session.meters;
+  const balanced = (m.quota>=60&&m.morale>=50&&m.risk<=50);
+  return `<div class="meters">
+     ${meterRow("الحصة الكلية","quota",m.quota)}
+     ${meterRow("المعنويات","morale",m.morale)}
+     ${meterRow("تقييم المخاطرة","risk",m.risk)}
+   </div>
+   <div class="feedback show ${balanced?"win":"lose"}">
+     <b>${balanced?"صفقة متوازنة":"صفقة مختلة"}</b>
+     المطلوب للنجاح: الحصة ≥ 60، المعنويات ≥ 50، المخاطرة ≤ 50.
+   </div>`;
+}
+
+function saveState(){
+  localStorage.setItem("styleshift_ar_xp", state.xp);
+  localStorage.setItem("styleshift_ar_confidence", state.confidence);
+  localStorage.setItem("styleshift_ar_badges", JSON.stringify(state.badges));
+  localStorage.setItem("styleshift_ar_done", JSON.stringify(state.done));
+  localStorage.setItem("styleshift_ar_unlocked", JSON.stringify(state.unlocked));
+}
+
+/* boot */
+(function loadPersistedState(){
+  const saved = localStorage.getItem("styleshift_ar_xp");
+  if(saved) state.xp = parseInt(saved,10)||0;
+  const savedConf = localStorage.getItem("styleshift_ar_confidence");
+  if(savedConf) state.confidence = parseInt(savedConf,10)||0;
+  const savedBadges = localStorage.getItem("styleshift_ar_badges");
+  if(savedBadges) try{ Object.assign(state.badges, JSON.parse(savedBadges)); }catch(e){}
+  const savedDone = localStorage.getItem("styleshift_ar_done");
+  if(savedDone) try{ Object.assign(state.done, JSON.parse(savedDone)); }catch(e){}
+  const savedUnlocked = localStorage.getItem("styleshift_ar_unlocked");
+  if(savedUnlocked) try{ Object.assign(state.unlocked, JSON.parse(savedUnlocked)); }catch(e){}
+
+  const today = new Date().toISOString().slice(0,10);
+  const lastVisit = localStorage.getItem("styleshift_ar_last_visit");
+  if(lastVisit && lastVisit !== today){
+    state.xp += XP_VALUES.dailyStreak;
+    saveState();
+  }
+  localStorage.setItem("styleshift_ar_last_visit", today);
+})();
+renderHome();
+</script>
+</body>
+</html>

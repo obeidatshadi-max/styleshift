@@ -102,6 +102,12 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
       </div>
 
+      <div style={{ textAlign: 'center', marginBottom: 8 }}>
+        <a href="/dashboard" style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--ink-dim)', textDecoration: 'none' }}>
+          Manager Dashboard →
+        </a>
+      </div>
+
       <footer style={{ textAlign:'center', color:'var(--ink-dim)', fontSize:12, letterSpacing:'.05em', padding:'18px 8px 6px', lineHeight:1.6 }}>
         StyleShift · Built on the Social Style Model (Driver · Expressive · Amiable · Analytical)<br />
         A training game by <a href="https://psychologytobusiness.com" style={{ color:'var(--cyan)', textDecoration:'none' }}>psychologytobusiness.com</a>

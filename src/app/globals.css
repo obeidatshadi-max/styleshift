@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+:root {
+  --bg0:#05060f; --bg1:#0a1230;
+  --panel:#0d1838; --panel2:#111f4a; --line:#1f3470;
+  --ink:#dbe6ff; --ink-dim:#8ea3d6;
+  --cyan:#38d6ff; --green:#3ee08f; --purple:#b06cff;
+  --pink:#ff7eb6; --red:#ff5d6c; --amber:#ffce4d;
+  --glow-cyan:0 0 18px rgba(56,214,255,.55);
+  --mono:"SF Mono","Roboto Mono",Menlo,Consolas,monospace;
+  --sans:"Segoe UI",Tahoma,Verdana,sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  font-family: var(--sans);
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 700px at 50% -10%, #16245e 0%, transparent 60%),
+    radial-gradient(900px 600px at 110% 110%, #1a0f3a 0%, transparent 55%),
+    linear-gradient(160deg, var(--bg0), var(--bg1));
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(rgba(56,214,255,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56,214,255,.05) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(circle at 50% 30%, #000 0%, transparent 80%);
+}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 rgba(255,93,108,0)}50%{box-shadow:0 0 20px rgba(255,93,108,.45)}}

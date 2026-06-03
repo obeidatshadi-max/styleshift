@@ -1,7 +1,8 @@
 'use client'
 import { useState, useRef } from 'react'
-import { L4, XP_VALUES } from '@/lib/game-data'
+import { XP_VALUES } from '@/lib/game-data'
 import { bestL4Index, clamp, sign } from '@/lib/game-logic'
+import { useGameData, useT } from '@/lib/i18n'
 import type { BadgeName } from '@/types/game'
 import { Topline, OptBtn, Feedback, NextRow, Meter } from './helpers'
 
@@ -11,6 +12,8 @@ interface Props {
 }
 
 export default function LevelFour({ onComplete, onBack }: Props) {
+  const t = useT()
+  const { L4 } = useGameData()
   const [idx, setIdx] = useState(0)
   const [results, setResults] = useState<boolean[]>([])
   const [chosen, setChosen] = useState<number | null>(null)
@@ -55,11 +58,11 @@ export default function LevelFour({ onComplete, onBack }: Props) {
   return (
     <div style={{ position:'relative', zIndex:1, maxWidth:1040, margin:'0 auto', padding:14 }}>
       <div style={{ background:'linear-gradient(180deg,var(--panel),#0a1430)', border:'1px solid var(--line)', borderRadius:16, padding:16, boxShadow:'0 12px 40px rgba(0,0,0,.45)' }}>
-        <Topline level={4} title="Level 4 · The Boardroom" total={L4.length} idx={idx} results={results} />
+        <Topline level={4} title={`${t('level.label')} 4 · ${t('l4.title')}`} total={L4.length} idx={idx} results={results} />
         <div style={{ marginBottom:14 }}>
-          <Meter label="Global Quota" type="quota" val={meters.quota} />
-          <Meter label="Team Morale" type="morale" val={meters.morale} />
-          <Meter label="Risk Assessment" type="risk" val={meters.risk} />
+          <Meter label={t('l4.globalQuota')} type="quota" val={meters.quota} />
+          <Meter label={t('l4.teamMorale')} type="morale" val={meters.morale} />
+          <Meter label={t('l4.riskAssessment')} type="risk" val={meters.risk} />
         </div>
         <div style={{ fontFamily:'var(--mono)', fontSize:13, color:'var(--ink-dim)', letterSpacing:'.04em', marginBottom:10 }}>{item.q}</div>
         {item.opts.map((opt, i) => {
@@ -68,8 +71,8 @@ export default function LevelFour({ onComplete, onBack }: Props) {
         })}
         {chosen !== null && (
           <>
-            <Feedback ok={chosen===best} title={chosen===best ? 'Balanced move' : 'Off-balance'}
-              body={`${item.opts[chosen].why} <span style="color:var(--ink-dim)">[Quota ${sign(item.opts[chosen].quota)} · Morale ${sign(item.opts[chosen].morale)} · Risk ${sign(item.opts[chosen].risk)}]</span>`} />
+            <Feedback ok={chosen===best} title={chosen===best ? t('l4.balanced') : t('l4.offBalance')}
+              body={item.opts[chosen].why + t('l4.metersTag', { quota: sign(item.opts[chosen].quota), morale: sign(item.opts[chosen].morale), risk: sign(item.opts[chosen].risk) })} />
             <NextRow onNext={next} onBack={onBack} isLast={idx >= L4.length - 1} />
           </>
         )}

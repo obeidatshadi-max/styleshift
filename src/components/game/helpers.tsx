@@ -1,5 +1,6 @@
 'use client'
 import React from 'react'
+import { useT } from '@/lib/i18n'
 
 export function Topline({ level, title, total, idx, results }: { level: number; title: string; total: number; idx: number; results: boolean[] }) {
   return (
@@ -25,7 +26,7 @@ export function OptBtn({ text, state, disabled, onClick }: { text: string; state
   const bg = state==='correct' ? 'rgba(62,224,143,.12)' : state==='wrong' ? 'rgba(255,93,108,.12)' : 'rgba(0,0,0,.18)'
   return (
     <button disabled={disabled} onClick={onClick}
-      style={{ textAlign:'left', width:'100%', cursor:disabled?'default':'pointer', color:'var(--ink)', fontFamily:'var(--sans)', fontSize:14, lineHeight:1.4, border:`1px solid ${border}`, borderRadius:12, padding:'13px 14px', background:bg, opacity:state==='muted'?.45:1, marginBottom:10, touchAction:'manipulation', display:'block' }}>
+      style={{ textAlign:'start', width:'100%', cursor:disabled?'default':'pointer', color:'var(--ink)', fontFamily:'var(--sans)', fontSize:14, lineHeight:1.4, border:`1px solid ${border}`, borderRadius:12, padding:'13px 14px', background:bg, opacity:state==='muted'?.45:1, marginBottom:10, touchAction:'manipulation', display:'block' }}>
       {text}
     </button>
   )
@@ -41,11 +42,12 @@ export function Feedback({ ok, title, body }: { ok: boolean; title: string; body
 }
 
 export function NextRow({ onNext, onBack, isLast }: { onNext: ()=>void; onBack: ()=>void; isLast: boolean }) {
+  const t = useT()
   const btnBase: React.CSSProperties = { display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.15em', textTransform:'uppercase', borderRadius:10, padding:'12px 18px', touchAction:'manipulation' }
   return (
     <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginTop:14 }}>
-      <button onClick={onNext} style={{ ...btnBase, border:'1px solid var(--cyan)', color:'#04121c', background:'var(--cyan)', boxShadow:'var(--glow-cyan)' }}>{isLast ? 'See Results' : 'Next →'}</button>
-      <button onClick={onBack} style={{ ...btnBase, border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent' }}>Home</button>
+      <button onClick={onNext} style={{ ...btnBase, border:'1px solid var(--cyan)', color:'#04121c', background:'var(--cyan)', boxShadow:'var(--glow-cyan)' }}>{isLast ? t('seeResults') : t('next')}</button>
+      <button onClick={onBack} style={{ ...btnBase, border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent' }}>{t('home')}</button>
     </div>
   )
 }

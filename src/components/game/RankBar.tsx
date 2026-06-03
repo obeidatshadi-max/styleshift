@@ -1,15 +1,20 @@
 'use client'
-import { getRank, getNextRank, calcXpPct } from '@/lib/game-logic'
+import { useGameData, useT, useLang } from '@/lib/i18n'
 
 interface Props { xp: number }
 
 export default function RankBar({ xp }: Props) {
-  const rank = getRank(xp)
-  const next = getNextRank(xp)
+  const t = useT()
+  const { dir } = useLang()
+  const { RANKS } = useGameData()
+  const arrow = dir === 'rtl' ? '←' : '→'
+  // Rank thresholds are identical across languages; only the display name differs.
+  const rank = [...RANKS].reverse().find(r => xp >= r.minXp) ?? RANKS[0]
+  const next = RANKS.find(r => r.minXp > xp) ?? null
   const isMaster = !next
-  const pct = calcXpPct(xp)
+  const pct = isMaster ? 100 : Math.round((xp - rank.minXp) / (next!.minXp - rank.minXp) * 100)
   const xpLabel = isMaster ? `${xp} XP` : `${xp} / ${next!.minXp} XP`
-  const nextLabel = isMaster ? 'MAX' : next!.name
+  const nextLabel = isMaster ? t('rank.max') : next!.name
 
   return (
     <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:14, flexWrap:'wrap' }}>
@@ -25,7 +30,7 @@ export default function RankBar({ xp }: Props) {
       </div>
       <div style={{ flex:1, minWidth:160 }}>
         <div style={{ display:'flex', justifyContent:'space-between', fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.12em', color:'var(--ink-dim)', marginBottom:4 }}>
-          <span>{xpLabel}</span><span>→ {nextLabel}</span>
+          <span>{xpLabel}</span><span>{arrow} {nextLabel}</span>
         </div>
         <div style={{ height:10, borderRadius:6, background:'rgba(0,0,0,.4)', border:'1px solid var(--line)', overflow:'hidden' }}>
           <div style={{ height:'100%', borderRadius:6, background:'linear-gradient(90deg,var(--cyan),var(--purple))', width:`${pct}%`, transition:'width .6s cubic-bezier(.2,.8,.2,1)' }} />

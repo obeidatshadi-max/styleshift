@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
-import { L1, STYLES, STYLE_ORDER, XP_VALUES } from '@/lib/game-data'
+import { XP_VALUES } from '@/lib/game-data'
+import { useGameData, useT } from '@/lib/i18n'
 import type { StyleKey, BadgeName } from '@/types/game'
 import { Topline, OptBtn, Feedback, NextRow } from './helpers'
 
@@ -12,6 +13,8 @@ interface Props {
 const COLOR: Record<string,string> = { driver:'var(--purple)', expressive:'var(--green)', amiable:'var(--pink)', analytical:'var(--cyan)' }
 
 export default function LevelOne({ onComplete, onBack }: Props) {
+  const t = useT()
+  const { L1, STYLES, STYLE_ORDER } = useGameData()
   const [idx, setIdx] = useState(0)
   const [results, setResults] = useState<boolean[]>([])
   const [chosen, setChosen] = useState<StyleKey | null>(null)
@@ -54,25 +57,25 @@ export default function LevelOne({ onComplete, onBack }: Props) {
   return (
     <div style={{ position:'relative', zIndex:1, maxWidth:1040, margin:'0 auto', padding:14 }}>
       <div style={{ background:'linear-gradient(180deg,var(--panel),#0a1430)', border:'1px solid var(--line)', borderRadius:16, padding:16, boxShadow:'0 12px 40px rgba(0,0,0,.45)' }}>
-        <Topline level={1} title="Level 1 · Style Scan" total={L1.length} idx={idx} results={results} />
+        <Topline level={1} title={`${t('level.label')} 1 · ${t('l1.title')}`} total={L1.length} idx={idx} results={results} />
         <div style={{ display:'flex', gap:14, alignItems:'flex-start', border:'1px solid var(--line)', borderRadius:14, padding:16, background:'linear-gradient(180deg,rgba(255,255,255,.025),rgba(0,0,0,.2))', marginBottom:14 }}>
           <div style={{ width:58, height:58, flexShrink:0, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, border:'2px solid var(--ink-dim)', color:'var(--ink-dim)' }}>?</div>
           <div>
             <div style={{ fontSize:16, fontWeight:700 }}>{item.name}</div>
-            <div style={{ fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.15em', textTransform:'uppercase', color:'var(--ink-dim)', marginBottom:8 }}>Unidentified profile · read the cues</div>
+            <div style={{ fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.15em', textTransform:'uppercase', color:'var(--ink-dim)', marginBottom:8 }}>{t('l1.unidentified')}</div>
             <ul style={{ listStyle:'none', display:'flex', flexDirection:'column', gap:6 }}>
               {item.cues.map((c,i) => <li key={i} style={{ fontSize:13.5, paddingLeft:16, position:'relative', lineHeight:1.4 }}><span style={{ position:'absolute', left:0, color:'var(--cyan)', fontWeight:700 }}>›</span>{c}</li>)}
             </ul>
           </div>
         </div>
-        <div style={{ fontFamily:'var(--mono)', fontSize:13, color:'var(--ink-dim)', letterSpacing:'.04em', marginBottom:10 }}>CLASSIFY THIS PERSON&apos;S SOCIAL STYLE</div>
+        <div style={{ fontFamily:'var(--mono)', fontSize:13, color:'var(--ink-dim)', letterSpacing:'.04em', marginBottom:10 }}>{t('l1.classify')}</div>
         {STYLE_ORDER.map(k => {
           const state = !chosen ? 'default' : k===item.style ? 'correct' : k===chosen ? 'wrong' : 'muted'
           return <OptBtn key={k} text={STYLES[k].name} state={state} disabled={!!chosen} onClick={() => choose(k)} />
         })}
         {chosen && (
           <>
-            <Feedback ok={chosen===item.style} title={chosen===item.style ? 'Correct read' : 'Re-read the cues'} body={`This is <b>${item.name}</b> — a <b style="color:var(--ink)">${s.name}</b>. Tell-tale signal: their drive is <b>${s.drive}</b>.`} />
+            <Feedback ok={chosen===item.style} title={chosen===item.style ? t('l1.correct') : t('l1.wrong')} body={t('l1.feedback', { name: item.name, style: s.name, drive: s.drive })} />
             <NextRow onNext={next} onBack={onBack} isLast={idx >= L1.length - 1} />
           </>
         )}

@@ -1,4 +1,5 @@
 'use client'
+import { useT } from '@/lib/i18n'
 
 interface Props {
   decisions: number
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export default function KpiPanel({ decisions, correct, totalReactionMs, reactionCount, confidence }: Props) {
+  const t = useT()
   const acc = decisions ? Math.round(correct / decisions * 100) : null
   const rt = reactionCount ? (totalReactionMs / reactionCount / 1000) : null
   const accCls = acc !== null ? (acc >= 90 ? 'var(--green)' : 'var(--amber)') : 'var(--cyan)'
@@ -26,9 +28,9 @@ export default function KpiPanel({ decisions, correct, totalReactionMs, reaction
 
   return (
     <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12 }}>
-      {kpi('Reaction Time', rt ? rt.toFixed(1) : null, 's', 'target < 2.1s', rtCls)}
-      {kpi('Accuracy Rate', acc !== null ? String(acc) : null, '%', 'target > 90%', accCls)}
-      {kpi('Confidence', confidence ? String(confidence) : null, '%', 'self-assessed', 'var(--cyan)')}
+      {kpi(t('kpi.reactionTime'), rt ? rt.toFixed(1) : null, t('kpi.secondsUnit'), t('kpi.targetRt'), rtCls)}
+      {kpi(t('kpi.accuracyRate'), acc !== null ? String(acc) : null, '%', t('kpi.targetAcc'), accCls)}
+      {kpi(t('kpi.confidence'), confidence ? String(confidence) : null, '%', t('kpi.selfAssessed'), 'var(--cyan)')}
     </div>
   )
 }

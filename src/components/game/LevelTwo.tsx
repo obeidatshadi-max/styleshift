@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
-import { L2, STYLES, XP_VALUES } from '@/lib/game-data'
+import { XP_VALUES } from '@/lib/game-data'
+import { useGameData, useT } from '@/lib/i18n'
 import type { BadgeName } from '@/types/game'
 import { Topline, OptBtn, Feedback, NextRow, Meter } from './helpers'
 
@@ -12,6 +13,8 @@ interface Props {
 const COLOR: Record<string,string> = { driver:'var(--purple)', expressive:'var(--green)', amiable:'var(--pink)', analytical:'var(--cyan)' }
 
 export default function LevelTwo({ onComplete, onBack }: Props) {
+  const t = useT()
+  const { L2, STYLES } = useGameData()
   const [idx, setIdx] = useState(0)
   const [results, setResults] = useState<boolean[]>([])
   const [chosen, setChosen] = useState<number | null>(null)
@@ -57,13 +60,13 @@ export default function LevelTwo({ onComplete, onBack }: Props) {
   return (
     <div style={{ position:'relative', zIndex:1, maxWidth:1040, margin:'0 auto', padding:14 }}>
       <div style={{ background:'linear-gradient(180deg,var(--panel),#0a1430)', border:'1px solid var(--line)', borderRadius:16, padding:16, boxShadow:'0 12px 40px rgba(0,0,0,.45)' }}>
-        <Topline level={2} title="Level 2 · Crisis Mode" total={L2.length} idx={idx} results={results} />
+        <Topline level={2} title={`${t('level.label')} 2 · ${t('l2.title')}`} total={L2.length} idx={idx} results={results} />
         <div style={{ display:'flex', gap:14, alignItems:'flex-start', border:'1px solid var(--line)', borderRadius:14, padding:16, background:'linear-gradient(180deg,rgba(255,255,255,.025),rgba(0,0,0,.2))', marginBottom:14 }}>
           <div style={{ width:58, height:58, flexShrink:0, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, border:`2px solid ${c}`, boxShadow:`0 0 16px ${c}`, color:c }}>{s.icon}</div>
-          <div><div style={{ fontSize:16, fontWeight:700 }}>{item.name}</div><div style={{ fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.15em', textTransform:'uppercase', color:'var(--ink-dim)' }}>{s.name} — under stress</div></div>
+          <div><div style={{ fontSize:16, fontWeight:700 }}>{item.name}</div><div style={{ fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.15em', textTransform:'uppercase', color:'var(--ink-dim)' }}>{t('l2.underStress', { style: s.name })}</div></div>
         </div>
         <div style={{ border:'1px solid var(--red)', borderRadius:10, padding:'10px 12px', marginBottom:14, background:'rgba(255,93,108,.08)', color:'#ffd2d6', fontFamily:'var(--mono)', fontSize:13, letterSpacing:'.04em', animation:'pulse 1.4s ease-in-out infinite' }}>⚠ {item.crisis}</div>
-        <Meter label="Stress Meter" type="stress" val={stress} />
+        <Meter label={t('l2.stressMeter')} type="stress" val={stress} />
         <div style={{ fontFamily:'var(--mono)', fontSize:13, color:'var(--ink-dim)', letterSpacing:'.04em', marginBottom:10 }}>{item.q}</div>
         {item.opts.map((opt, i) => {
           const state = chosen===null ? 'default' : i===winIdx ? 'correct' : i===chosen ? 'wrong' : 'muted'
@@ -71,7 +74,7 @@ export default function LevelTwo({ onComplete, onBack }: Props) {
         })}
         {chosen !== null && (
           <>
-            <Feedback ok={item.opts[chosen].r==='win'} title={item.opts[chosen].r==='win' ? 'Winning Strategy — stress down' : 'Escalation — stress up'} body={item.opts[chosen].why} />
+            <Feedback ok={item.opts[chosen].r==='win'} title={item.opts[chosen].r==='win' ? t('l2.win') : t('l2.lose')} body={item.opts[chosen].why} />
             <NextRow onNext={next} onBack={onBack} isLast={idx >= L2.length - 1} />
           </>
         )}

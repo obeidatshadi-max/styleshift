@@ -2,8 +2,11 @@
 import { useState, useRef } from 'react'
 import { XP_VALUES } from '@/lib/game-data'
 import { useGameData, useT } from '@/lib/i18n'
+import { pickScenarios } from '@/lib/scenario-engine'
 import type { StyleKey, BadgeName } from '@/types/game'
 import { Topline, OptBtn, Feedback, NextRow } from './helpers'
+
+const L1_COUNT = 6
 
 interface Props {
   onComplete: (results: boolean[], xpEarned: number, avgReactionMs: number, badgesEarned: BadgeName[]) => void
@@ -15,6 +18,10 @@ const COLOR: Record<string,string> = { driver:'var(--purple)', expressive:'var(-
 export default function LevelOne({ onComplete, onBack }: Props) {
   const t = useT()
   const { L1, STYLES, STYLE_ORDER } = useGameData()
+  // Draw a fresh, style-balanced subset for this session (same ids across languages).
+  const [sessionIds] = useState<number[]>(() => pickScenarios(L1, L1_COUNT, 1, { balanceStyle: true }).map(s => s.id))
+  const byId = new Map(L1.map(s => [s.id, s]))
+  const scenarios = sessionIds.map(id => byId.get(id)!).filter(Boolean)
   const [idx, setIdx] = useState(0)
   const [results, setResults] = useState<boolean[]>([])
   const [chosen, setChosen] = useState<StyleKey | null>(null)
@@ -23,7 +30,7 @@ export default function LevelOne({ onComplete, onBack }: Props) {
   const msRef = useRef<number[]>([])
   const badgesRef = useRef<BadgeName[]>([])
 
-  const item = L1[idx]
+  const item = scenarios[idx]
 
   function choose(k: StyleKey) {
     if (chosen) return
@@ -40,9 +47,9 @@ export default function LevelOne({ onComplete, onBack }: Props) {
   }
 
   function next() {
-    if (idx >= L1.length - 1) {
+    if (idx >= scenarios.length - 1) {
       const allResults = [...results]
-      if (allResults.filter(Boolean).length === L1.length) xpRef.current += XP_VALUES.perfectLevel
+      if (allResults.filter(Boolean).length === scenarios.length) xpRef.current += XP_VALUES.perfectLevel
       xpRef.current += XP_VALUES.levelComplete
       const avg = msRef.current.length ? Math.round(msRef.current.reduce((a,b)=>a+b,0)/msRef.current.length) : 0
       onComplete(allResults, xpRef.current, avg, badgesRef.current)
@@ -57,7 +64,7 @@ export default function LevelOne({ onComplete, onBack }: Props) {
   return (
     <div style={{ position:'relative', zIndex:1, maxWidth:1040, margin:'0 auto', padding:14 }}>
       <div style={{ background:'linear-gradient(180deg,var(--panel),#0a1430)', border:'1px solid var(--line)', borderRadius:16, padding:16, boxShadow:'0 12px 40px rgba(0,0,0,.45)' }}>
-        <Topline level={1} title={`${t('level.label')} 1 · ${t('l1.title')}`} total={L1.length} idx={idx} results={results} />
+        <Topline level={1} title={`${t('level.label')} 1 · ${t('l1.title')}`} total={scenarios.length} idx={idx} results={results} />
         <div style={{ display:'flex', gap:14, alignItems:'flex-start', border:'1px solid var(--line)', borderRadius:14, padding:16, background:'linear-gradient(180deg,rgba(255,255,255,.025),rgba(0,0,0,.2))', marginBottom:14 }}>
           <div style={{ width:58, height:58, flexShrink:0, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, border:'2px solid var(--ink-dim)', color:'var(--ink-dim)' }}>?</div>
           <div>
@@ -76,7 +83,7 @@ export default function LevelOne({ onComplete, onBack }: Props) {
         {chosen && (
           <>
             <Feedback ok={chosen===item.style} title={chosen===item.style ? t('l1.correct') : t('l1.wrong')} body={t('l1.feedback', { name: item.name, style: s.name, drive: s.drive })} />
-            <NextRow onNext={next} onBack={onBack} isLast={idx >= L1.length - 1} />
+            <NextRow onNext={next} onBack={onBack} isLast={idx >= scenarios.length - 1} />
           </>
         )}
       </div>

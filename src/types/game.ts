@@ -9,25 +9,27 @@ export interface StyleDef {
 }
 
 export interface L1Item {
+  id: number
   style: StyleKey
   name: string
   persona: string
   cues: string[]
+  difficulty?: number
 }
 
 export interface L2Option { t: string; r: 'win' | 'escalate'; why: string }
 export interface L2Item {
-  style: StyleKey; name: string; crisis: string; q: string; opts: L2Option[]
+  id: number; style: StyleKey; name: string; crisis: string; q: string; opts: L2Option[]; difficulty?: number
 }
 
 export interface L3Option { t: string; correct: boolean; why: string }
 export interface L3Item {
-  multi: boolean; style?: StyleKey; name: string; persona: string
-  situation: string; q: string; opts: L3Option[]
+  id: number; multi: boolean; style?: StyleKey; name: string; persona: string
+  situation: string; q: string; opts: L3Option[]; difficulty?: number
 }
 
 export interface L4Option { t: string; quota: number; morale: number; risk: number; why: string }
-export interface L4Item { q: string; opts: L4Option[] }
+export interface L4Item { id: number; q: string; opts: L4Option[]; difficulty?: number }
 
 export interface Rank { name: string; minXp: number }
 

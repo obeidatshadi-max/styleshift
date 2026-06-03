@@ -107,6 +107,7 @@ export default function GameShell() {
       totalReactionMs={totalMs}
       reactionCount={reactionCount}
       confidence={confidence}
+      role={profile?.role ?? 'rep'}
       onStartLevel={startLevel}
     />
   )

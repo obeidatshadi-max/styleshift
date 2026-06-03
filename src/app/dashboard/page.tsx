@@ -1,18 +1,9 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
-import type { TeamStats } from '@/app/api/team-stats/route'
+import { getTeamStatsForUser } from '@/lib/team-stats'
 import Leaderboard from '@/components/dashboard/Leaderboard'
 import SkillHeatmap from '@/components/dashboard/SkillHeatmap'
 import ActivityBar from '@/components/dashboard/ActivityBar'
-
-async function getTeamStats(): Promise<TeamStats | null> {
-  try {
-    const base = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-    const res = await fetch(`${base}/api/team-stats`, { cache: 'no-store' })
-    if (!res.ok) return null
-    return res.json()
-  } catch { return null }
-}
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -31,7 +22,10 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const stats = await getTeamStats()
+  const stats = await getTeamStatsForUser(user.id)
+  // Not a manager (or no company yet) → send them to create a team
+  if (!stats) redirect('/onboarding')
+
   const flagCount = stats?.reps.filter(r => r.flag).length ?? 0
   const avgAccuracy = stats?.reps.length
     ? Math.round(stats.reps.reduce((s, r) => s + r.avg_accuracy, 0) / stats.reps.length)

@@ -3,6 +3,8 @@ import { STYLES, STYLE_ORDER, LEVELS } from '@/lib/game-data'
 import RankBar from './RankBar'
 import KpiPanel from './KpiPanel'
 import type { BadgeName } from '@/types/game'
+import { createClient } from '@/lib/supabase-browser'
+import { useRouter } from 'next/navigation'
 
 const ALL_BADGES: BadgeName[] = ['First Scan','Crisis Tamer','Drive Whisperer','Boardroom Ace','Style Master']
 const COLOR: Record<string,string> = { driver:'var(--purple)', expressive:'var(--green)', amiable:'var(--pink)', analytical:'var(--cyan)' }
@@ -16,11 +18,21 @@ interface Props {
   totalReactionMs: number
   reactionCount: number
   confidence: number
+  role: string
   onStartLevel: (n: number) => void
 }
 
-export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, onStartLevel }: Props) {
+export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, onStartLevel }: Props) {
   const unlocked = [1, ...earnedLevels.map(n => n + 1)].filter(n => n <= 4)
+  const router = useRouter()
+
+  async function signOut() {
+    await createClient().auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
+
+  const navLinkStyle = { fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase' as const, color: 'var(--ink-dim)', textDecoration: 'none', cursor: 'pointer', background: 'none', border: 'none' }
 
   const panel = (title: string, children: React.ReactNode) => (
     <section style={{ background:'linear-gradient(180deg,var(--panel),#0a1430)', border:'1px solid var(--line)', borderRadius:16, padding:16, boxShadow:'0 12px 40px rgba(0,0,0,.45)' }}>
@@ -102,10 +114,13 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
       </div>
 
-      <div style={{ textAlign: 'center', marginBottom: 8 }}>
-        <a href="/dashboard" style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--ink-dim)', textDecoration: 'none' }}>
-          Manager Dashboard →
-        </a>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 8 }}>
+        {role === 'manager' ? (
+          <a href="/dashboard" style={navLinkStyle}>Manager Dashboard →</a>
+        ) : (
+          <a href="/onboarding" style={navLinkStyle}>Create a Team →</a>
+        )}
+        <button onClick={signOut} style={navLinkStyle}>Sign Out</button>
       </div>
 
       <footer style={{ textAlign:'center', color:'var(--ink-dim)', fontSize:12, letterSpacing:'.05em', padding:'18px 8px 6px', lineHeight:1.6 }}>

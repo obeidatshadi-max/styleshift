@@ -195,8 +195,10 @@ const EN: Dict = {
   'prep.aiIntro': "A one-off scenario built from {name}'s own phrases and the objection you anticipate.",
   'prep.aiGenerating': 'Crafting a scenario for {name}…',
   'prep.aiError': "Couldn't generate right now — try the warm-up instead.",
-  'prep.aiNotConfigured': "AI drills aren't enabled yet.",
+  'prep.aiNotConfigured': 'Launching soon — coming to your account.',
   'prep.aiBack': '← Back',
+  'prep.aiSoon': 'Premium · Coming soon',
+  'prep.aiTeaser': "This premium feature generates a brand-new role-play in {name}'s own voice — using the phrases and objection you saved — so you can rehearse the exact call before you walk in.",
   // toggle (label shows the language you switch TO)
   'toggle.switchTo': 'عربي',
 }
@@ -371,8 +373,10 @@ const AR: Dict = {
   'prep.aiIntro': 'سيناريو فريد مبني على عبارات {name} والاعتراض الذي تتوقعه.',
   'prep.aiGenerating': 'نُعدّ سيناريو لـ {name}…',
   'prep.aiError': 'تعذّر التوليد الآن — جرّب الإحماء بدلاً من ذلك.',
-  'prep.aiNotConfigured': 'تمارين الذكاء غير مفعّلة بعد.',
+  'prep.aiNotConfigured': 'سيُطلق قريباً — قادم إلى حسابك.',
   'prep.aiBack': '← رجوع',
+  'prep.aiSoon': 'مميّز · قريباً',
+  'prep.aiTeaser': 'تولّد هذه الميزة المميّزة تمثيلاً جديداً بصوت {name} — باستخدام العبارات والاعتراض الذي حفظته — لتتدرّب على الزيارة الحقيقية قبل دخولها.',
   'toggle.switchTo': 'EN',
 }
 

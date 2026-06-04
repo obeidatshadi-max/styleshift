@@ -384,7 +384,13 @@ function AiDrill({ doctor, onDone }: { doctor: Doctor; onDone: () => void }) {
             </div>
           )}
           {state === 'error' && <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.6, marginBottom:14 }}>{t('prep.aiError')}</div>}
-          {state === 'notconfigured' && <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.6, marginBottom:14 }}>{t('prep.aiNotConfigured')}</div>}
+          {state === 'notconfigured' && (
+            <div style={{ marginBottom:14 }}>
+              <div style={{ display:'inline-block', fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.15em', textTransform:'uppercase', color:'var(--purple)', border:'1px solid var(--purple)', borderRadius:20, padding:'4px 11px', marginBottom:14, background:'rgba(176,108,255,.08)' }}>{t('prep.aiSoon')}</div>
+              <div style={{ fontSize:14.5, lineHeight:1.6, color:'var(--ink)', marginBottom:10 }}>{t('prep.aiTeaser', { name: doctor.name })}</div>
+              <div style={{ fontSize:13, lineHeight:1.6, color:'var(--ink-dim)' }}>{t('prep.aiNotConfigured')}</div>
+            </div>
+          )}
           {state !== 'loading' && <button onClick={onDone} style={ghostBtn}>{t('prep.aiBack')}</button>}
         </>
       )}

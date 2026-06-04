@@ -190,6 +190,13 @@ const EN: Dict = {
   'prep.cheat.analytical.dont1': 'Emotional persuasion or vague claims',
   'prep.cheat.analytical.dont2': 'Rushing the decision',
   'prep.cheat.analytical.opener': "Here's the head-to-head study and the number needed to treat.",
+  'prep.aiDrill': '✨ AI bespoke drill',
+  'prep.aiPremium': 'Premium',
+  'prep.aiIntro': "A one-off scenario built from {name}'s own phrases and the objection you anticipate.",
+  'prep.aiGenerating': 'Crafting a scenario for {name}…',
+  'prep.aiError': "Couldn't generate right now — try the warm-up instead.",
+  'prep.aiNotConfigured': "AI drills aren't enabled yet.",
+  'prep.aiBack': '← Back',
   // toggle (label shows the language you switch TO)
   'toggle.switchTo': 'عربي',
 }
@@ -359,6 +366,13 @@ const AR: Dict = {
   'prep.cheat.analytical.dont1': 'الإقناع العاطفي أو الادعاءات الغامضة',
   'prep.cheat.analytical.dont2': 'استعجال القرار',
   'prep.cheat.analytical.opener': '«إليك دراسة المقارنة المباشرة وعدد المرضى اللازم علاجهم.»',
+  'prep.aiDrill': '✨ تمرين مخصّص بالذكاء',
+  'prep.aiPremium': 'مميّز',
+  'prep.aiIntro': 'سيناريو فريد مبني على عبارات {name} والاعتراض الذي تتوقعه.',
+  'prep.aiGenerating': 'نُعدّ سيناريو لـ {name}…',
+  'prep.aiError': 'تعذّر التوليد الآن — جرّب الإحماء بدلاً من ذلك.',
+  'prep.aiNotConfigured': 'تمارين الذكاء غير مفعّلة بعد.',
+  'prep.aiBack': '← رجوع',
   'toggle.switchTo': 'EN',
 }
 

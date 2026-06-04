@@ -81,3 +81,12 @@ export interface Doctor {
 
 // Fields a rep can set when creating/editing a doctor profile.
 export type DoctorInput = Omit<Doctor, 'id' | 'rep_id' | 'created_at' | 'updated_at'>
+
+// An AI-generated, doctor-specific objection drill (Visit Prep Layer 2).
+export interface GeneratedScenario {
+  name: string
+  style: StyleKey
+  crisis: string
+  q: string
+  opts: { t: string; r: 'win' | 'escalate'; why: string }[]
+}

@@ -1,13 +1,14 @@
 'use client'
-import { useState } from 'react'
-import { useT, useGameData } from '@/lib/i18n'
+import { useState, useEffect } from 'react'
+import { useT, useLang, useGameData } from '@/lib/i18n'
 import { useDoctors } from '@/hooks/useDoctors'
 import { deriveStyle, OBJECTION_CATEGORIES } from '@/lib/social-style'
 import type { Assertiveness, Responsiveness } from '@/lib/social-style'
 import { L2_OBJECTION } from '@/lib/scenario-meta'
 import { shuffle } from '@/lib/scenario-engine'
-import type { Doctor, DoctorInput, StyleKey } from '@/types/game'
+import type { Doctor, DoctorInput, StyleKey, GeneratedScenario } from '@/types/game'
 import DailyChallenge from './DailyChallenge'
+import GeneratedDrill from './GeneratedDrill'
 
 interface Props { onExit: () => void }
 
@@ -19,6 +20,7 @@ type View =
   | { mode: 'form'; doctor?: Doctor }
   | { mode: 'detail'; doctor: Doctor }
   | { mode: 'warmup'; doctor: Doctor }
+  | { mode: 'ai'; doctor: Doctor }
 
 const inputStyle: React.CSSProperties = {
   background:'rgba(0,0,0,.3)', border:'1px solid var(--line)', borderRadius:10,
@@ -57,6 +59,11 @@ export default function VisitPrep({ onExit }: Props) {
   // ───────────────────────── WARM-UP ─────────────────────────
   if (view.mode === 'warmup') {
     return <WarmUp doctor={view.doctor} L1={L1} L2={L2} L3={L3} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
+  }
+
+  // ───────────────────────── AI BESPOKE DRILL ─────────────────────────
+  if (view.mode === 'ai') {
+    return <AiDrill doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
   }
 
   // ───────────────────────── DETAIL / PREP ─────────────────────────
@@ -106,6 +113,10 @@ export default function VisitPrep({ onExit }: Props) {
               <div style={{ fontSize:14, lineHeight:1.55, color:'var(--ink)' }}>“{t(`prep.cheat.${style}.opener`)}”</div>
             </div>
             <button onClick={() => setView({ mode: 'warmup', doctor: d })} style={{ ...primaryBtn, marginTop:2 }}>{t('prep.start')}</button>
+            <button onClick={() => setView({ mode: 'ai', doctor: d })}
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              {t('prep.aiDrill')} · {t('prep.aiPremium')}
+            </button>
           </div>
         )}
         {!style && panel(t('prep.cheatTitle'),
@@ -330,5 +341,53 @@ function WarmUp({ doctor, L1, L2, L3, onDone }: {
       scenarioId={drill.id}
       onComplete={() => setIdx(i => i + 1)}
     />
+  )
+}
+
+// ───────────────────────── AI bespoke drill (Layer 2) ─────────────────────────
+function AiDrill({ doctor, onDone }: { doctor: Doctor; onDone: () => void }) {
+  const t = useT()
+  const { lang } = useLang()
+  const [state, setState] = useState<'loading' | 'ready' | 'error' | 'notconfigured'>('loading')
+  const [scenario, setScenario] = useState<GeneratedScenario | null>(null)
+
+  useEffect(() => {
+    let active = true
+    ;(async () => {
+      try {
+        const res = await fetch('/api/generate-scenario', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ doctorId: doctor.id, lang }),
+        })
+        if (!active) return
+        if (res.status === 503) { setState('notconfigured'); return }
+        if (!res.ok) { setState('error'); return }
+        const data = await res.json().catch(() => null)
+        if (data?.scenario) { setScenario(data.scenario as GeneratedScenario); setState('ready') }
+        else setState('error')
+      } catch { if (active) setState('error') }
+    })()
+    return () => { active = false }
+  }, [doctor.id, lang])
+
+  if (state === 'ready' && scenario) return <GeneratedDrill scenario={scenario} onDone={onDone} />
+
+  return (
+    <div style={{ position:'relative', zIndex:1, maxWidth:560, margin:'0 auto', padding:14 }}>
+      {panel(t('prep.aiDrill'),
+        <>
+          {state === 'loading' && (
+            <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.6 }}>
+              <div style={{ marginBottom:6 }}>{t('prep.aiIntro', { name: doctor.name })}</div>
+              <div style={{ color:'var(--purple)' }}>{t('prep.aiGenerating', { name: doctor.name })}</div>
+            </div>
+          )}
+          {state === 'error' && <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.6, marginBottom:14 }}>{t('prep.aiError')}</div>}
+          {state === 'notconfigured' && <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.6, marginBottom:14 }}>{t('prep.aiNotConfigured')}</div>}
+          {state !== 'loading' && <button onClick={onDone} style={ghostBtn}>{t('prep.aiBack')}</button>}
+        </>
+      )}
+    </div>
   )
 }

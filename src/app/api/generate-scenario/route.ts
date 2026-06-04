@@ -65,8 +65,13 @@ function parseScenario(text: string): GeneratedScenario | null {
 }
 
 export async function POST(req: Request) {
+  // Feature flag: the premium AI drill stays a "coming soon" teaser until BOTH
+  // an explicit enable flag and a valid key are set. Activate later by setting
+  // AI_DRILLS_ENABLED=true (and ANTHROPIC_API_KEY) in the environment.
   const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return NextResponse.json({ error: 'not_configured' }, { status: 503 })
+  if (process.env.AI_DRILLS_ENABLED !== 'true' || !apiKey) {
+    return NextResponse.json({ error: 'not_configured' }, { status: 503 })
+  }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

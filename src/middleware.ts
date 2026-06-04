@@ -65,5 +65,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  // Exclude internals and public metadata assets (the share image, icons,
+  // robots/sitemap) so social crawlers can fetch them without the auth redirect.
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|opengraph-image|twitter-image|icon|apple-icon|robots.txt|sitemap.xml).*)'],
 }

@@ -42,9 +42,14 @@ export default async function DashboardPage() {
             STYLE<span style={{ color: 'var(--cyan)' }}>SHIFT</span>
           </h1>
         </div>
-        <a href="/play" style={{ background: 'transparent', color: 'var(--cyan)', border: '1px solid var(--cyan)', borderRadius: 10, padding: '10px 16px', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
-          ← Game
-        </a>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <a href="/dashboard/report" style={{ background: 'var(--cyan)', color: '#04121f', border: '1px solid var(--cyan)', borderRadius: 10, padding: '10px 16px', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', fontWeight: 700 }}>
+            🖨 Report
+          </a>
+          <a href="/play" style={{ background: 'transparent', color: 'var(--cyan)', border: '1px solid var(--cyan)', borderRadius: 10, padding: '10px 16px', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+            ← Game
+          </a>
+        </div>
       </header>
 
       {/* KPI strip */}

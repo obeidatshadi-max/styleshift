@@ -16,6 +16,7 @@ export interface TeamStats {
   activity: { day: string; count: number }[]
   plan: string
   inviteCode: string
+  companyName: string
 }
 
 const LEVEL_TITLES: Record<number, string> = {
@@ -43,7 +44,7 @@ export async function getTeamStatsForUser(userId: string): Promise<TeamStats | n
 
   const { data: company } = await admin
     .from('companies')
-    .select('plan, invite_code')
+    .select('name, plan, invite_code')
     .eq('id', companyId)
     .single()
 
@@ -63,6 +64,7 @@ export async function getTeamStatsForUser(userId: string): Promise<TeamStats | n
       activity: buildActivity([]),
       plan: company?.plan ?? 'free',
       inviteCode: company?.invite_code ?? '',
+      companyName: company?.name ?? 'Your Team',
     }
   }
 
@@ -103,6 +105,7 @@ export async function getTeamStatsForUser(userId: string): Promise<TeamStats | n
     activity: buildActivity(allSessions),
     plan: company?.plan ?? 'free',
     inviteCode: company?.invite_code ?? '',
+    companyName: company?.name ?? 'Your Team',
   }
 }
 

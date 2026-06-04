@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useLang, useT, useGameData } from '@/lib/i18n'
+import LangToggle from '@/components/LangToggle'
 
 interface Props { onDone: () => void }
 
@@ -110,8 +111,9 @@ export default function HowItWorks({ onDone }: Props) {
     <div style={{ position:'relative', zIndex:1, minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
       <div style={{ width:'100%', maxWidth:460, background:'linear-gradient(180deg,var(--panel),#0a1430)', border:'1px solid var(--line)', borderRadius:18, padding:'18px 20px 20px', boxShadow:'0 16px 50px rgba(0,0,0,.55)' }}>
 
-        {/* Skip */}
-        <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:6 }}>
+        {/* Language toggle + Skip */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
+          <LangToggle />
           <button onClick={onDone} style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.12em', textTransform:'uppercase', color:'var(--ink-dim)' }}>{t('how.skip')}</button>
         </div>
 

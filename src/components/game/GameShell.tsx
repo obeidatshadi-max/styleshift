@@ -9,10 +9,11 @@ import LevelFour from './LevelFour'
 import LevelResult from './LevelResult'
 import DailyChallenge from './DailyChallenge'
 import HowItWorks from './HowItWorks'
+import VisitPrep from './VisitPrep'
 import type { BadgeName } from '@/types/game'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 
-type Screen = 'home' | 'level' | 'result' | 'daily' | 'how'
+type Screen = 'home' | 'level' | 'result' | 'daily' | 'how' | 'prep'
 const INTRO_KEY = 'styleshift_intro_done'
 
 interface LevelState {
@@ -111,6 +112,10 @@ export default function GameShell() {
     return <HowItWorks onDone={finishIntro} />
   }
 
+  if (screen === 'prep') {
+    return <VisitPrep onExit={() => setScreen('home')} />
+  }
+
   if (screen === 'daily' && daily) {
     return <DailyChallenge level={daily.pick.level} scenarioId={daily.pick.scenarioId} onComplete={handleDailyComplete} />
   }
@@ -148,6 +153,7 @@ export default function GameShell() {
       daily={daily}
       onStartDaily={() => setScreen('daily')}
       onShowHow={() => setScreen('how')}
+      onShowPrep={() => setScreen('prep')}
       onStartLevel={startLevel}
     />
   )

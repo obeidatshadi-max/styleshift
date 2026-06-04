@@ -8,11 +8,12 @@ interface Props {
   level: number
   scenarioId: number
   onComplete: (correct: boolean, reactionMs: number) => void
+  title?: string
 }
 
 const COLOR: Record<string, string> = { driver:'var(--purple)', expressive:'var(--green)', amiable:'var(--pink)', analytical:'var(--cyan)' }
 
-export default function DailyChallenge({ level, scenarioId, onComplete }: Props) {
+export default function DailyChallenge({ level, scenarioId, onComplete, title }: Props) {
   const t = useT()
   const { STYLES, STYLE_ORDER, L1, L2, L3 } = useGameData()
   const startedAt = useRef(Date.now())
@@ -31,7 +32,7 @@ export default function DailyChallenge({ level, scenarioId, onComplete }: Props)
       <div style={{ background:'linear-gradient(180deg,var(--panel),#0a1430)', border:'1px solid var(--line)', borderRadius:16, padding:16, boxShadow:'0 12px 40px rgba(0,0,0,.45)' }}>
         <div style={{ fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.3em', textTransform:'uppercase', color:'var(--amber)', display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
           <span style={{ width:9, height:9, borderRadius:'50%', background:'var(--amber)', boxShadow:'0 0 14px var(--amber)', display:'inline-block' }} />
-          {t('daily.title')}
+          {title ?? t('daily.title')}
         </div>
         {children}
       </div>

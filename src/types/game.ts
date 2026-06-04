@@ -61,3 +61,23 @@ export type BadgeName =
   | 'Drive Whisperer'
   | 'Boardroom Ace'
   | 'Style Master'
+
+export interface Doctor {
+  id: string
+  rep_id: string
+  name: string
+  specialty: string | null
+  workplace: string | null
+  style: StyleKey | null
+  assertiveness: 'ask' | 'tell' | null
+  responsiveness: 'controls' | 'emotes' | null
+  key_phrases: string | null
+  objections: string[]
+  objection_notes: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+// Fields a rep can set when creating/editing a doctor profile.
+export type DoctorInput = Omit<Doctor, 'id' | 'rep_id' | 'created_at' | 'updated_at'>

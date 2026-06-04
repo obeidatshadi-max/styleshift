@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { useGameData, useT, useBadgeLabel } from '@/lib/i18n'
 import LangToggle from '@/components/LangToggle'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
+import type { Standings } from '@/lib/standings'
 
 const ALL_BADGES: BadgeName[] = ['First Scan','Crisis Tamer','Drive Whisperer','Boardroom Ace','Style Master']
 const COLOR: Record<string,string> = { driver:'var(--purple)', expressive:'var(--green)', amiable:'var(--pink)', analytical:'var(--cyan)' }
@@ -22,18 +23,23 @@ interface Props {
   confidence: number
   role: string
   daily: DailyLeaderboard | null
+  standings: Standings | null
   onStartDaily: () => void
   onShowHow: () => void
   onShowPrep: () => void
   onStartLevel: (n: number) => void
 }
 
-export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, onStartDaily, onShowHow, onShowPrep, onStartLevel }: Props) {
+export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, onStartDaily, onShowHow, onShowPrep, onStartLevel }: Props) {
   const unlocked = [1, ...earnedLevels.map(n => n + 1)].filter(n => n <= 4)
   const router = useRouter()
   const t = useT()
   const badgeLabel = useBadgeLabel()
-  const { STYLES, STYLE_ORDER, LEVELS } = useGameData()
+  const { STYLES, STYLE_ORDER, LEVELS, RANKS } = useGameData()
+
+  // Localized rank title for a given XP (highest threshold not exceeding xp).
+  const rankTitle = (points: number) =>
+    [...RANKS].reverse().find(r => points >= r.minXp)?.name ?? RANKS[0].name
 
   async function signOut() {
     await createClient().auth.signOut()
@@ -99,6 +105,33 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
                 ))}
               </div>
             )}
+          </>
+        )}
+
+        {standings && standings.standings.length > 0 && panel(t('rank.title'),
+          <>
+            <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5, marginBottom:12 }}>
+              {standings.selfRank
+                ? t('rank.yourPosition', { n: standings.selfRank, total: standings.teamSize })
+                : t('rank.subtitle')}
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              {standings.standings.map((s, i) => {
+                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null
+                return (
+                  <div key={s.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:10, border:'1px solid var(--line)', background: s.isSelf ? 'rgba(56,214,255,.07)' : 'rgba(0,0,0,.18)' }}>
+                    <span style={{ fontFamily:'var(--mono)', fontSize:13, width:24, textAlign:'center' }}>{medal ?? <span style={{ color:'var(--ink-dim)' }}>{i + 1}</span>}</span>
+                    <span style={{ flex:1, minWidth:0 }}>
+                      <span style={{ display:'block', fontSize:13, color: s.isSelf ? 'var(--cyan)' : 'var(--ink)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {s.isSelf ? t('rank.you') : (s.name || '—')}
+                      </span>
+                      <span style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.06em', color:'var(--ink-dim)', textTransform:'uppercase' }}>{rankTitle(s.xp)}</span>
+                    </span>
+                    <span style={{ fontFamily:'var(--mono)', fontSize:13, color: s.isSelf ? 'var(--cyan)' : 'var(--ink-dim)' }}>{s.xp.toLocaleString()} XP</span>
+                  </div>
+                )
+              })}
+            </div>
           </>
         )}
 

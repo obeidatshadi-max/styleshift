@@ -12,6 +12,7 @@ import HowItWorks from './HowItWorks'
 import VisitPrep from './VisitPrep'
 import type { BadgeName } from '@/types/game'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
+import type { Standings } from '@/lib/standings'
 
 type Screen = 'home' | 'level' | 'result' | 'daily' | 'how' | 'prep'
 const INTRO_KEY = 'styleshift_intro_done'
@@ -28,6 +29,7 @@ export default function GameShell() {
   const { profile, badges, completedLevels, loading, addXp, earnBadge, saveSession, recordDaily } = useProfile()
   const [screen, setScreen] = useState<Screen>('home')
   const [daily, setDaily] = useState<DailyLeaderboard | null>(null)
+  const [standings, setStandings] = useState<Standings | null>(null)
 
   const loadDaily = useCallback(async () => {
     try {
@@ -35,7 +37,13 @@ export default function GameShell() {
       if (res.ok) setDaily(await res.json())
     } catch { /* offline — daily panel just won't show */ }
   }, [])
-  useEffect(() => { loadDaily() }, [loadDaily])
+  const loadStandings = useCallback(async () => {
+    try {
+      const res = await fetch('/api/standings')
+      if (res.ok) setStandings(await res.json())
+    } catch { /* offline — ranking panel just won't show */ }
+  }, [])
+  useEffect(() => { loadDaily(); loadStandings() }, [loadDaily, loadStandings])
 
   // Show the intro once for first-time reps; reopenable from the home screen.
   useEffect(() => {
@@ -105,6 +113,7 @@ export default function GameShell() {
 
   function handleHome(conf: number) {
     setConfidence(conf)
+    loadStandings() // XP changed this session — refresh the team ranking
     setScreen('home')
   }
 
@@ -151,6 +160,7 @@ export default function GameShell() {
       confidence={confidence}
       role={profile?.role ?? 'rep'}
       daily={daily}
+      standings={standings}
       onStartDaily={() => setScreen('daily')}
       onShowHow={() => setScreen('how')}
       onShowPrep={() => setScreen('prep')}

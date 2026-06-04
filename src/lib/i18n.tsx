@@ -102,6 +102,11 @@ const EN: Dict = {
   'daily.resultCorrect': 'Correct read 🎯',
   'daily.resultWrong': 'Missed it',
   'daily.streakNow': '🔥 {n}-day streak!',
+  // team ranking (rep-facing)
+  'rank.title': 'Team Ranking',
+  'rank.subtitle': 'How your team stacks up by total XP.',
+  'rank.yourPosition': "You're #{n} of {total} on your team.",
+  'rank.you': 'You',
   // how it works
   'how.reopen': 'How it works',
   'how.skip': 'Skip',
@@ -282,6 +287,11 @@ const AR: Dict = {
   'daily.resultCorrect': 'قراءة صحيحة 🎯',
   'daily.resultWrong': 'لم تُصب',
   'daily.streakNow': '🔥 سلسلة {n} يوم!',
+  // team ranking (rep-facing)
+  'rank.title': 'ترتيب الفريق',
+  'rank.subtitle': 'كيف يتفوّق فريقك بحسب مجموع نقاط الخبرة.',
+  'rank.yourPosition': 'أنت رقم {n} من {total} في فريقك.',
+  'rank.you': 'أنت',
   'how.reopen': 'كيف تلعب',
   'how.skip': 'تخطّي',
   'how.next': 'التالي',

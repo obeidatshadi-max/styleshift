@@ -8,6 +8,7 @@ export interface RepStat {
   total_sessions: number
   avg_accuracy: number
   flag: boolean
+  avatar_url: string | null
 }
 
 export interface TeamStats {
@@ -50,7 +51,7 @@ export async function getTeamStatsForUser(userId: string): Promise<TeamStats | n
 
   const { data: reps } = await admin
     .from('profiles')
-    .select('id, display_name, xp, last_visit')
+    .select('id, display_name, xp, last_visit, avatar_url')
     .eq('company_id', companyId)
     .eq('role', 'rep')
     .order('xp', { ascending: false })
@@ -90,6 +91,7 @@ export async function getTeamStatsForUser(userId: string): Promise<TeamStats | n
       total_sessions: repSessions.length,
       avg_accuracy: avg,
       flag: avg > 0 && avg < 70,
+      avatar_url: rep.avatar_url ?? null,
     }
   })
 

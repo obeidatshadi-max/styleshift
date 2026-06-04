@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import { useGameData, useT, useBadgeLabel } from '@/lib/i18n'
 import LangToggle from '@/components/LangToggle'
+import AvatarUploader from './AvatarUploader'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
 
@@ -24,13 +25,16 @@ interface Props {
   role: string
   daily: DailyLeaderboard | null
   standings: Standings | null
+  avatarUrl: string | null
+  displayName: string | null
+  onUploadAvatar: (file: File) => Promise<string | null>
   onStartDaily: () => void
   onShowHow: () => void
   onShowPrep: () => void
   onStartLevel: (n: number) => void
 }
 
-export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, onStartDaily, onShowHow, onShowPrep, onStartLevel }: Props) {
+export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onStartLevel }: Props) {
   const unlocked = [1, ...earnedLevels.map(n => n + 1)].filter(n => n <= 4)
   const router = useRouter()
   const t = useT()
@@ -198,6 +202,7 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
                 </span>
               ))}
             </div>
+            <AvatarUploader avatarUrl={avatarUrl} name={displayName} onUpload={onUploadAvatar} />
           </>
         )}
 

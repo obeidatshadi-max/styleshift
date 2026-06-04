@@ -107,6 +107,13 @@ const EN: Dict = {
   'rank.subtitle': 'How your team stacks up by total XP.',
   'rank.yourPosition': "You're #{n} of {total} on your team.",
   'rank.you': 'You',
+  // profile photo
+  'avatar.title': 'Your photo',
+  'avatar.hint': 'Add a photo — it appears on your recognition card if you top the team.',
+  'avatar.error': "Couldn't upload — use an image under 5 MB.",
+  'avatar.add': 'Add photo',
+  'avatar.change': 'Change',
+  'avatar.uploading': 'Uploading…',
   // how it works
   'how.reopen': 'How it works',
   'how.skip': 'Skip',
@@ -292,6 +299,13 @@ const AR: Dict = {
   'rank.subtitle': 'كيف يتفوّق فريقك بحسب مجموع نقاط الخبرة.',
   'rank.yourPosition': 'أنت رقم {n} من {total} في فريقك.',
   'rank.you': 'أنت',
+  // profile photo
+  'avatar.title': 'صورتك',
+  'avatar.hint': 'أضف صورة — ستظهر على بطاقة التكريم إذا تصدّرت فريقك.',
+  'avatar.error': 'تعذّر الرفع — استخدم صورة أقل من 5 ميغابايت.',
+  'avatar.add': 'أضف صورة',
+  'avatar.change': 'تغيير',
+  'avatar.uploading': 'جارٍ الرفع…',
   'how.reopen': 'كيف تلعب',
   'how.skip': 'تخطّي',
   'how.next': 'التالي',

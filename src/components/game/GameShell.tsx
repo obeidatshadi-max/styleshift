@@ -26,7 +26,7 @@ interface LevelState {
 }
 
 export default function GameShell() {
-  const { profile, badges, completedLevels, loading, addXp, earnBadge, saveSession, recordDaily } = useProfile()
+  const { profile, badges, completedLevels, loading, addXp, earnBadge, saveSession, recordDaily, updateAvatar } = useProfile()
   const [screen, setScreen] = useState<Screen>('home')
   const [daily, setDaily] = useState<DailyLeaderboard | null>(null)
   const [standings, setStandings] = useState<Standings | null>(null)
@@ -161,6 +161,9 @@ export default function GameShell() {
       role={profile?.role ?? 'rep'}
       daily={daily}
       standings={standings}
+      avatarUrl={profile?.avatar_url ?? null}
+      displayName={profile?.display_name ?? null}
+      onUploadAvatar={updateAvatar}
       onStartDaily={() => setScreen('daily')}
       onShowHow={() => setScreen('how')}
       onShowPrep={() => setScreen('prep')}

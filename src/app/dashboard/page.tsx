@@ -43,6 +43,9 @@ export default async function DashboardPage() {
           </h1>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <a href="/dashboard/recognition" style={{ background: '#e8c060', color: '#1a1402', border: '1px solid #e8c060', borderRadius: 10, padding: '10px 16px', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', fontWeight: 700 }}>
+            🏆 Recognize #1
+          </a>
           <a href="/dashboard/report" style={{ background: 'var(--cyan)', color: '#04121f', border: '1px solid var(--cyan)', borderRadius: 10, padding: '10px 16px', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', fontWeight: 700 }}>
             🖨 Report
           </a>

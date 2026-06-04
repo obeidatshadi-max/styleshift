@@ -63,6 +63,25 @@ export function useProfile() {
     setProfile(prev => prev ? { ...prev, xp: newXp } : prev)
   }, [profile, supabase])
 
+  // Uploads a photo to the rep's own avatars folder and saves its public URL on
+  // the profile. Returns the URL, or null on failure. A cache-busting query is
+  // added so a replaced photo shows immediately.
+  const updateAvatar = useCallback(async (file: File): Promise<string | null> => {
+    if (!profile) return null
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+    const path = `${profile.id}/avatar.${ext}`
+    const { error: upErr } = await supabase.storage
+      .from('avatars')
+      .upload(path, file, { upsert: true, contentType: file.type })
+    if (upErr) return null
+    const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path)
+    const url = `${pub.publicUrl}?v=${Date.now()}`
+    const { error: dbErr } = await supabase.from('profiles').update({ avatar_url: url }).eq('id', profile.id)
+    if (dbErr) return null
+    setProfile(prev => prev ? { ...prev, avatar_url: url } : prev)
+    return url
+  }, [profile, supabase])
+
   const earnBadge = useCallback(async (name: BadgeName) => {
     if (!profile || badges.includes(name)) return
     await supabase.from('badges').insert({ rep_id: profile.id, badge_name: name })
@@ -96,5 +115,5 @@ export function useProfile() {
     return true
   }, [profile, supabase, addXp])
 
-  return { profile, badges, completedLevels, loading, addXp, earnBadge, saveSession, recordDaily, reload: load }
+  return { profile, badges, completedLevels, loading, addXp, earnBadge, saveSession, recordDaily, updateAvatar, reload: load }
 }

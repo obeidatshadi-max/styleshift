@@ -14,7 +14,7 @@ export const STYLES: Record<StyleKey, StyleDef> = {
 
 export const STYLE_ORDER: StyleKey[] = ['driver','expressive','amiable','analytical']
 
-// ───────────────────────── LEVEL 1 · Style Scan (pool of 18) ─────────────────────────
+// ───────────────────────── LEVEL 1 · Style Scan (pool of 45) ─────────────────────────
 export const L1: L1Item[] = [
   { id:101, style:'driver', name:'Dr. Khalid · Surgeon', persona:'Surgeon',
     cues:['Stops you early: "Which patients, what outcome — give me the bottom line."','Glances at the OR schedule twice.','Wants two options and will decide on the spot.'] },
@@ -76,9 +76,39 @@ export const L1: L1Item[] = [
     cues:['Cautious about safety in children.','Wants reassurance before changing anything.','Values a long, trusting relationship.'] },
   { id:130, style:'amiable', name:'Noor · Community Pharmacist', persona:'Community Pharmacist',
     cues:['Cares deeply about her regular customers.','Asks how to counsel patients properly.','Avoids pushy, one-off deals.'] },
+  { id:131, style:'driver', name:'Dr. Wael · Vascular Surgeon', persona:'Vascular Surgeon',
+    cues:['"Bottom line — does it cut my complication rate? Yes or no."','Taps the table waiting for the number.','Wants two options and decides between cases.'] },
+  { id:132, style:'analytical', name:'Dr. Huda · Pulmonologist', persona:'Pulmonologist',
+    cues:['Asks for the spirometry endpoints and the trial population.','Reads the inclusion criteria before commenting.','Won\'t commit until she has reviewed the evidence.'] },
+  { id:133, style:'expressive', name:'Dr. Kareem · Plastic Surgeon', persona:'Plastic Surgeon',
+    cues:['Wants showcase results he can present at a congress.','Excited to be first with a novel technique.','Talks fast and jumps between ideas.'] },
+  { id:134, style:'amiable', name:'Dr. Rana · OB-GYN', persona:'OB-GYN',
+    cues:['Worried about safety in pregnancy.','Wants to start with a few patients she knows well.','Values a rep she can trust over time.'] },
+  { id:135, style:'driver', name:'Dr. Majed · Gastroenterologist', persona:'Gastroenterologist',
+    cues:['"I have a full endoscopy list — give me the headline."','Impatient with mechanism detail.','Frames everything around patient throughput.'] },
+  { id:136, style:'analytical', name:'Dr. Sana · Neurologist', persona:'Neurologist',
+    cues:['Asks for the relapse-rate data and the comparator arm.','Questions the study\'s methodology.','Methodical — wants time to evaluate.'] },
+  { id:137, style:'expressive', name:'Dr. Adel · Sports Medicine', persona:'Sports Medicine',
+    cues:['Loves an innovative, talked-about approach.','Wants co-marketing and clinic visibility.','Energetic and full of big ideas.'] },
+  { id:138, style:'amiable', name:'Dr. Lama · Palliative Care', persona:'Palliative Care',
+    cues:['Focused on patient comfort above all.','Wants reassurance on tolerability.','Gentle and relationship-first.'] },
+  { id:139, style:'driver', name:'Basel · Distributor Buyer', persona:'Distributor Buyer',
+    cues:['"Best price and supply terms — decide today."','Tracks his volume targets as you talk.','Wants two options and a fast call.'] },
+  { id:140, style:'analytical', name:'Dr. Faisal · Ophthalmologist', persona:'Ophthalmologist',
+    cues:['Asks for the exact intraocular-pressure reduction figures.','Reviews the prescribing information line by line.','Cautious — avoids quick conclusions.'] },
+  { id:141, style:'expressive', name:'Dr. Dina · Endocrinologist (KOL)', persona:'Endocrinologist · KOL',
+    cues:['Wants to champion a new patient-care program.','Excited to be recognized as a thought leader.','Talks fast about big-picture ideas.'] },
+  { id:142, style:'amiable', name:'Dr. Ola · Family GP', persona:'Family GP',
+    cues:['Asks how loyal patients will handle a change.','Prefers to ease in slowly.','Warm and relationship-first.'] },
+  { id:143, style:'analytical', name:'Dr. Hisham · Urologist', persona:'Urologist',
+    cues:['Wants head-to-head comparative data.','Re-reads the methodology before committing.','Will not be rushed into a decision.'] },
+  { id:144, style:'expressive', name:'Walid · Pharmacy Chain Marketer', persona:'Chain Marketer',
+    cues:['Wants an eye-catching launch campaign.','Loves being the first chain with a new product.','Talks fast about visibility and promotions.'] },
+  { id:145, style:'amiable', name:'Hala · Community Pharmacist', persona:'Community Pharmacist',
+    cues:['Cares about her regular customers\' wellbeing.','Wants reassurance before recommending a switch.','Avoids pushy, one-off deals.'] },
 ]
 
-// ───────────────────────── LEVEL 2 · Crisis Mode (pool of 10) ─────────────────────────
+// ───────────────────────── LEVEL 2 · Crisis Mode (pool of 27) ─────────────────────────
 export const L2: L2Item[] = [
   { id:201, style:'analytical', name:'Dr. Salim · Cardiologist', crisis:'"A competitor rep just showed me data saying your drug is no better. Convince me or leave."',
     q:'Dr. Salim (Analytical) is challenging you. Choose your path.',
@@ -206,9 +236,72 @@ export const L2: L2Item[] = [
       { t:'Reassure her that sales are strong, so it\'s fine.',            r:'escalate', why:'Numbers don\'t address an Amiable\'s care concern.' },
       { t:'Tell her the packaging meets all regulations — not her problem.', r:'escalate', why:'Dismissing her feeling breaks Amiable trust.' },
     ]},
+  { id:219, style:'driver', name:'Dr. Majed · Gastroenterologist', crisis:'"I have a full endoscopy list. You get 30 seconds — why should I switch?"',
+    q:'Dr. Majed (Driver) is rushed. Choose your path.',
+    opts:[
+      { t:'One-line outcome benefit, two protocol options, his call.',     r:'win', why:'Winning Strategy. Brevity, options and control feed the Driver drive.' },
+      { t:'Open the full clinical background to make your case.',          r:'escalate', why:'Long detail with no decision point frustrates a rushed Driver.' },
+      { t:'Ask how his packed list is treating him this week.',           r:'escalate', why:'A Driver reads small talk as wasted time.' },
+    ]},
+  { id:220, style:'analytical', name:'Dr. Sana · Neurologist', crisis:'"Your relapse-rate claim has no comparator arm. I can\'t act on that."',
+    q:'Dr. Sana (Analytical) wants proof. Choose your path.',
+    opts:[
+      { t:'Walk through the head-to-head data and the comparator arm precisely.', r:'win', why:'Winning Strategy. Rigorous evidence satisfies the Analytical drive for certainty.' },
+      { t:'Argue the result speaks for itself without the comparison.',     r:'escalate', why:'An unsupported claim ignores her need for accuracy.' },
+      { t:'Point out that leading centers already use it.',                r:'escalate', why:'Social proof isn\'t evidence for an Analytical.' },
+    ]},
+  { id:221, style:'amiable', name:'Dr. Rana · OB-GYN', crisis:'"I\'m anxious about using anything new in my pregnant patients."',
+    q:'Dr. Rana (Amiable) is worried. Choose your path.',
+    opts:[
+      { t:'Acknowledge it; share the safety data and propose a careful, monitored start with your support.', r:'win', why:'Winning Strategy. A safe, supported path satisfies the Amiable drive for security.' },
+      { t:'Push her to adopt now to keep pace with peers.',                r:'escalate', why:'Pressure attacks the Amiable need for security; stress rises.' },
+      { t:'Tell her the efficacy data settles any worry.',                r:'escalate', why:'Data alone doesn\'t reassure an anxious Amiable.' },
+    ]},
+  { id:222, style:'expressive', name:'Dr. Adel · Sports Medicine', crisis:'"My clinic posted my new protocol and it barely got noticed. I feel ignored."',
+    q:'Dr. Adel (Expressive) feels deflated. Choose your path.',
+    opts:[
+      { t:'Recognize his innovation and co-build a visible case-series showcase together.', r:'win', why:'Winning Strategy. Recognition plus a fresh idea restore the Expressive drive.' },
+      { t:'Send him an analytics breakdown of why engagement was low.',    r:'escalate', why:'Cold analysis deflates an Expressive who wants to be seen.' },
+      { t:'Tell him online attention doesn\'t matter — focus on the work.', r:'escalate', why:'Dismissing his standing escalates an Expressive.' },
+    ]},
+  { id:223, style:'driver', name:'Basel · Distributor Buyer', crisis:'"Your last shipment was short and late. Give me one reason to keep ordering."',
+    q:'Basel (Driver) is unimpressed. Choose your path.',
+    opts:[
+      { t:'Offer two supply-guarantee options with the cost impact, his call.', r:'win', why:'Winning Strategy. Action, options and control feed the Driver drive.' },
+      { t:'Apologize at length for the supply problem.',                   r:'escalate', why:'Dwelling on the past reads as no progress to a Driver.' },
+      { t:'Lean on your long-standing partnership.',                       r:'escalate', why:'A Driver wants the fix, not sentiment.' },
+    ]},
+  { id:224, style:'analytical', name:'Dr. Faisal · Ophthalmologist', crisis:'"Your IOP-reduction figures aren\'t broken down by baseline pressure. I can\'t prescribe blind."',
+    q:'Dr. Faisal (Analytical) needs detail. Choose your path.',
+    opts:[
+      { t:'Show the IOP data stratified by baseline, subgroup by subgroup.', r:'win', why:'Winning Strategy. Precise, segmented data resolves the Analytical objection.' },
+      { t:'Reassure him the average reduction is "more than enough."',     r:'escalate', why:'Vague averages ignore his drive for accuracy.' },
+      { t:'Say most ophthalmologists don\'t need that breakdown.',         r:'escalate', why:'Dismissing his question raises an Analytical\'s stress.' },
+    ]},
+  { id:225, style:'amiable', name:'Dr. Lama · Palliative Care', crisis:'"Adding another drug for my fragile patients really worries me."',
+    q:'Dr. Lama (Amiable) is anxious. Choose your path.',
+    opts:[
+      { t:'Acknowledge it; offer a gentle low-dose start with monitoring and your support.', r:'win', why:'Winning Strategy. A safe, supported path satisfies the Amiable drive for security.' },
+      { t:'Push her to hit the adoption target this cycle.',              r:'escalate', why:'Pressure attacks the Amiable need for security.' },
+      { t:'Tell her the tolerability data means there\'s nothing to fear.', r:'escalate', why:'Data alone doesn\'t calm an anxious Amiable.' },
+    ]},
+  { id:226, style:'expressive', name:'Dr. Dina · Endocrinologist (KOL)', crisis:'"Another company offered to make me the face of their program. Why stay with you?"',
+    q:'Dr. Dina (Expressive) is courting offers. Choose your path.',
+    opts:[
+      { t:'Recognize her influence and offer a visible platform — a symposium and program lead role.', r:'win', why:'Winning Strategy. Recognition and a stage feed the Expressive drive.' },
+      { t:'Counter with detailed, cold contract terms.',                  r:'escalate', why:'Spreadsheet-first deflates an Expressive who wants to be seen.' },
+      { t:'Downplay the rival and ask her to stay out of loyalty.',       r:'escalate', why:'Denying her standing escalates an Expressive.' },
+    ]},
+  { id:227, style:'driver', name:'Tariq · Pharmacy Owner', crisis:'"The generic is half your price. Give me a number, not a story."',
+    q:'Tariq (Driver) wants it fast. Choose your path.',
+    opts:[
+      { t:'Lead with margin and turnover, give two pack options, his call.', r:'win', why:'Winning Strategy. Numbers, options and a fast decision feed the Driver drive.' },
+      { t:'Deliver a lecture on why the brand is clinically superior.',    r:'escalate', why:'A time-pressed Driver reads this as wasted time.' },
+      { t:'Ask how he feels about stocking premium quality.',             r:'escalate', why:'A Driver wants the number, not a feelings question.' },
+    ]},
 ]
 
-// ───────────────────────── LEVEL 3 · Drive Decoder (pool of 10) ─────────────────────────
+// ───────────────────────── LEVEL 3 · Drive Decoder (pool of 27) ─────────────────────────
 export const L3: L3Item[] = [
   { id:301, multi:false, style:'driver', name:'Dr. Khalid · Surgeon', persona:'Driver — drive: Control & Achievement',
     situation:'Dr. Khalid is calm but has 5 minutes before his next case.',
@@ -354,9 +447,81 @@ export const L3: L3Item[] = [
       { t:'"Let\'s lock the price today and sort the paperwork later."', correct:false, why:'Wins Lina but ignores Mariam\'s need for certainty.' },
       { t:'"We\'ll wait until every document is triple-checked before talking terms."', correct:false, why:'Satisfies Mariam but starves Lina\'s need for a fast deal.' },
     ]},
+  { id:319, multi:false, style:'driver', name:'Dr. Majed · Gastroenterologist', persona:'Driver — drive: Control & Achievement',
+    situation:'Dr. Majed is sizing you up between endoscopy cases.',
+    q:'Which opening best feeds his core drive?',
+    opts:[
+      { t:'"Two protocols that move your list faster, with the throughput data — your call."', correct:true, why:'Control + measurable achievement. The Driver drive.' },
+      { t:'"Let me first take you through the full mechanism of action."', correct:false, why:'Process detail drains a results-focused Driver.' },
+      { t:'"How has the family been? Let\'s catch up."',                correct:false, why:'Relationship warmth is the Amiable drive.' },
+    ]},
+  { id:320, multi:false, style:'analytical', name:'Dr. Sana · Neurologist', persona:'Analytical — drive: Certainty & Accuracy',
+    situation:'Dr. Sana is weighing your therapy against the comparator.',
+    q:'Which response best feeds her core drive?',
+    opts:[
+      { t:'"Here\'s the head-to-head trial: primary endpoint, relapse rate, and the comparator arm."', correct:true, why:'Rigorous evidence. The Analytical drive.' },
+      { t:'"It\'s the fastest-growing option in its class."',          correct:false, why:'Popularity isn\'t proof.' },
+      { t:'"Most neurologists have already switched."',                correct:false, why:'Anecdote doesn\'t satisfy an Analytical.' },
+    ]},
+  { id:321, multi:false, style:'expressive', name:'Dr. Adel · Sports Medicine', persona:'Expressive — drive: Recognition & Ideas',
+    situation:'Dr. Adel wants to be first with a talked-about approach.',
+    q:'Which response best feeds his core drive?',
+    opts:[
+      { t:'"Let\'s put you on the panel to present your early results and put your name on it."', correct:true, why:'Recognition + a stage for his ideas. The Expressive drive.' },
+      { t:'"First, please complete this detailed audit form."',        correct:false, why:'Paperwork-first deflates an Expressive.' },
+      { t:'"Best to wait until everyone else adopts it."',             correct:false, why:'Caution kills the Expressive\'s drive to be first.' },
+    ]},
+  { id:322, multi:false, style:'amiable', name:'Dr. Rana · OB-GYN', persona:'Amiable — drive: Security & Harmony',
+    situation:'Dr. Rana is cautious about using it in pregnancy.',
+    q:'Which response best feeds her core drive?',
+    opts:[
+      { t:'"Here\'s the safety data; start with a few patients you know and I\'ll be reachable anytime."', correct:true, why:'Safety + a supported, gradual path. The Amiable drive.' },
+      { t:'"You\'re behind your peers — start prescribing widely now."', correct:false, why:'Pressure threatens the Amiable need for security.' },
+      { t:'"The efficacy numbers are excellent, that\'s all you need."', correct:false, why:'Efficacy alone doesn\'t calm a safety-first Amiable.' },
+    ]},
+  { id:323, multi:false, style:'analytical', name:'Dr. Faisal · Ophthalmologist', persona:'Analytical — drive: Certainty & Accuracy',
+    situation:'Dr. Faisal is evaluating the pressure-lowering evidence.',
+    q:'Which response best feeds his core drive?',
+    opts:[
+      { t:'"Here\'s the IOP reduction stratified by baseline pressure, with confidence intervals."', correct:true, why:'Precise, segmented evidence. The Analytical drive.' },
+      { t:'"Trust me, the effect is strong across the board."',        correct:false, why:'Trust-me undermines an Analytical\'s need for rigor.' },
+      { t:'"It\'s the most prescribed drop in the region."',           correct:false, why:'Usage isn\'t clinical proof.' },
+    ]},
+  { id:324, multi:false, style:'expressive', name:'Dr. Dina · Endocrinologist (KOL)', persona:'Expressive — drive: Recognition & Ideas',
+    situation:'Dr. Dina wants to champion a new patient-care program.',
+    q:'Which response best feeds her core drive?',
+    opts:[
+      { t:'"Lead the program as its public face and co-design the rollout with us."', correct:true, why:'Recognition + room for her ideas. The Expressive drive.' },
+      { t:'"Send me the supporting data tables first."',               correct:false, why:'That satisfies an Analytical, not an Expressive who wants to be seen.' },
+      { t:'"Let\'s slow down and de-risk it before anything."',        correct:false, why:'Caution speaks to the Amiable drive and deflates the Expressive.' },
+    ]},
+  { id:325, multi:false, style:'amiable', name:'Dr. Lama · Palliative Care', persona:'Amiable — drive: Security & Harmony',
+    situation:'Dr. Lama likes you but worries about her fragile patients.',
+    q:'Which response best feeds her core drive?',
+    opts:[
+      { t:'"We\'ll start low and slow, I\'ll support you personally, and we can pause anytime."', correct:true, why:'Security + harmony with a safety net. The Amiable drive.' },
+      { t:'"Decide today — the program enrollment closes tonight."',   correct:false, why:'Urgency threatens an Amiable\'s need for security.' },
+      { t:'"The tolerability numbers are airtight, that should settle it."', correct:false, why:'Data reassures an Analytical, not an Amiable.' },
+    ]},
+  { id:326, multi:true, name:'Clinic decision: Dr. Majed + Dr. Lama', persona:'Multi-stakeholder — competing drives',
+    situation:'Driver gastroenterologist Dr. Majed wants throughput; Amiable palliative physician Dr. Lama wants patient comfort. Both share the ward.',
+    q:'Which single move best balances BOTH drives at once?',
+    opts:[
+      { t:'"A faster protocol to move your list — with a gentle low-dose path and monitoring so fragile patients stay comfortable."', correct:true, why:'Throughput for Majed (Driver) + safe comfort for Lama (Amiable). Both drives met.' },
+      { t:'"Let\'s optimize purely for speed and volume today."',      correct:false, why:'Wins Majed but ignores Lama\'s comfort-and-security drive.' },
+      { t:'"Let\'s center everything on patient comfort and go slow."', correct:false, why:'Warms Lama but starves Majed\'s need for throughput.' },
+    ]},
+  { id:327, multi:true, name:'Launch meeting: Dr. Dina + Dr. Sana', persona:'Multi-stakeholder — competing drives',
+    situation:'Expressive KOL Dr. Dina wants to champion the idea; Analytical neurologist Dr. Sana wants the comparator evidence. Both must be on board.',
+    q:'Which single move best balances BOTH drives at once?',
+    opts:[
+      { t:'"Dr. Dina fronts the program — and here\'s the head-to-head evidence pack that backs it for the team."', correct:true, why:'Recognition for Dina (Expressive) + evidence for Sana (Analytical). Both drives met.' },
+      { t:'"Let\'s launch the exciting program now and gather data later."', correct:false, why:'Pleases Dina but ignores Sana\'s drive for certainty.' },
+      { t:'"We\'ll only move once every figure is triple-checked."',   correct:false, why:'Satisfies Sana but starves Dina\'s need for recognition.' },
+    ]},
 ]
 
-// ───────────────────────── LEVEL 4 · The Formulary Committee (pool of 8) ─────────────────────────
+// ───────────────────────── LEVEL 4 · The Formulary Committee (pool of 21) ─────────────────────────
 // You present your drug to a hospital Pharmacy & Therapeutics committee:
 // Analytical pharmacist, Driver department head, Amiable nurse manager, Expressive KOL.
 // Meters: Adoption (quota) · Trust (morale) · Risk.
@@ -444,6 +609,48 @@ export const L4: L4Item[] = [
       { t:'Offer on-site in-service training and ready-made materials.',             quota:+8,  morale:+12, risk:-6,  why:'Removing the training burden wins the Amiable and lifts Trust.' },
       { t:'Tell her the protocol is simple enough to self-teach.',                   quota:+2,  morale:-8,  risk:+6,  why:'Dismissing the burden alienates the nurse manager.' },
       { t:'Say training isn\'t your responsibility.',                                quota:-2,  morale:-10, risk:+8,  why:'Refusing support collapses Trust.' },
+    ]},
+  { id:415, q:'A patient-advocacy member asks how the drug affects quality of life, not just endpoints. You:',
+    opts:[
+      { t:'Present patient-reported outcome data alongside the clinical endpoints.',  quota:+8,  morale:+8,  risk:-8,  why:'Answering the human question directly builds Trust and lowers Risk.' },
+      { t:'Insist the hard endpoints are what really count.',                        quota:+2,  morale:-6,  risk:+6,  why:'Dismissing the question cools the room and raises Risk.' },
+      { t:'Promise to look into quality-of-life data later.',                        quota:+4,  morale:0,   risk:+4,  why:'Deferral leaves the concern open — mild Risk.' },
+    ]},
+  { id:416, q:'The pharmacy committee pushes mandatory generic substitution. You:',
+    opts:[
+      { t:'Show the sub-population where your brand changes outcomes, and accept generics elsewhere.', quota:+10, morale:+6,  risk:-8,  why:'A targeted, reasonable position protects adoption where it matters and lowers Risk.' },
+      { t:'Argue the brand should be protected across the board.',                   quota:-4,  morale:-4,  risk:+8,  why:'Over-reach reads as self-serving — Trust drops, Risk climbs.' },
+      { t:'Concede fully and hope volume holds.',                                    quota:-8,  morale:+2,  risk:-2,  why:'Surrendering the case sacrifices adoption momentum.' },
+    ]},
+  { id:417, q:'The Driver department head wants a decision today; the Analytical pharmacist wants another month. You:',
+    opts:[
+      { t:'Propose a monitored 90-day pilot that starts now with a data review built in.', quota:+12, morale:+8,  risk:-6,  why:'Action for the Driver + a review gate for the Analytical. Both are served and Risk drops.' },
+      { t:'Side with the department head and push for a full vote now.',             quota:+6,  morale:-6,  risk:+10, why:'Wins speed but the Analytical feels steam-rolled — Risk spikes.' },
+      { t:'Side with the pharmacist and delay a month.',                            quota:-8,  morale:+2,  risk:-2,  why:'A Driver reads delay as failure — adoption momentum is lost.' },
+    ]},
+  { id:418, q:'The chair asks who will monitor safety after adoption. You:',
+    opts:[
+      { t:'Lay out a clear pharmacovigilance plan with defined roles and reporting.', quota:+8,  morale:+8,  risk:-12, why:'A concrete monitoring plan cuts Risk hardest and reassures the cautious members.' },
+      { t:'Say the regulator already handles post-market safety.',                   quota:+2,  morale:-4,  risk:+8,  why:'Offloading the responsibility leaves the committee uneasy — Risk rises.' },
+      { t:'Suggest the hospital sort out monitoring itself.',                        quota:-2,  morale:-6,  risk:+10, why:'Pushing the burden onto them erodes Trust.' },
+    ]},
+  { id:419, q:'A rival rep slashed their price to the committee minutes before your slot. You:',
+    opts:[
+      { t:'Hold your price and reframe on total cost-of-care evidence.',            quota:+10, morale:+6,  risk:-8,  why:'Value over a panic discount keeps credibility and lowers Risk.' },
+      { t:'Match the rival\'s cut on the spot.',                                     quota:+6,  morale:0,   risk:+8,  why:'A reactive discount signals your price was never real — Risk climbs.' },
+      { t:'Attack the rival\'s lowball as unsustainable.',                          quota:+2,  morale:-6,  risk:+8,  why:'Mud-slinging reads as insecure — Trust drops.' },
+    ]},
+  { id:420, q:'A member worries the reporting paperwork will overload the staff. You:',
+    opts:[
+      { t:'Offer a streamlined reporting template and on-site support to run it.',   quota:+8,  morale:+12, risk:-6,  why:'Removing the admin burden wins the Amiable members and lifts Trust.' },
+      { t:'Tell them the paperwork is minimal and they\'ll manage.',                quota:+2,  morale:-8,  risk:+6,  why:'Dismissing the burden alienates the staff-facing members.' },
+      { t:'Say reporting logistics aren\'t your concern.',                          quota:-2,  morale:-10, risk:+8,  why:'Refusing support collapses Trust.' },
+    ]},
+  { id:421, q:'The committee leans yes but wants a staged hospital-wide rollout. You:',
+    opts:[
+      { t:'Agree to a phased rollout with adoption milestones and a review at each stage.', quota:+12, morale:+8,  risk:-6,  why:'Decisive yet measured — secures adoption while keeping Risk low.' },
+      { t:'Push for immediate full rollout to lock the win.',                       quota:+8,  morale:-6,  risk:+10, why:'Over-reach unsettles the cautious members — Risk climbs.' },
+      { t:'Ask to revisit the rollout plan next quarter.',                          quota:-10, morale:+4,  risk:-4,  why:'Avoids friction but surrenders the adoption momentum you earned.' },
     ]},
 ]
 

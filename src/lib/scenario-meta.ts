@@ -22,4 +22,13 @@ export const L2_OBJECTION: Record<number, ObjectionCategory> = {
   216: 'evidence',   // missing impurity profile
   217: 'competitor', // symposium slot lost
   218: 'safety',     // packaging confused a patient
+  219: 'time',       // 30 seconds, full endoscopy list
+  220: 'evidence',   // no comparator arm
+  221: 'safety',     // new drug in pregnancy
+  222: 'trust',      // protocol ignored, feels unseen
+  223: 'logistics',  // shipment short and late
+  224: 'evidence',   // IOP data not stratified
+  225: 'safety',     // extra drug in fragile patients
+  226: 'competitor', // offered to be face of rival program
+  227: 'price',      // generic is half the price
 }

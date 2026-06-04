@@ -8,10 +8,12 @@ import LevelThree from './LevelThree'
 import LevelFour from './LevelFour'
 import LevelResult from './LevelResult'
 import DailyChallenge from './DailyChallenge'
+import HowItWorks from './HowItWorks'
 import type { BadgeName } from '@/types/game'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 
-type Screen = 'home' | 'level' | 'result' | 'daily'
+type Screen = 'home' | 'level' | 'result' | 'daily' | 'how'
+const INTRO_KEY = 'styleshift_intro_done'
 
 interface LevelState {
   level: number
@@ -33,6 +35,16 @@ export default function GameShell() {
     } catch { /* offline — daily panel just won't show */ }
   }, [])
   useEffect(() => { loadDaily() }, [loadDaily])
+
+  // Show the intro once for first-time reps; reopenable from the home screen.
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !localStorage.getItem(INTRO_KEY)) setScreen('how')
+  }, [])
+
+  function finishIntro() {
+    try { localStorage.setItem(INTRO_KEY, '1') } catch { /* ignore */ }
+    setScreen('home')
+  }
 
   async function handleDailyComplete(correct: boolean, reactionMs: number) {
     if (daily) await recordDaily(daily.pick.level, daily.pick.scenarioId, correct, reactionMs)
@@ -95,6 +107,10 @@ export default function GameShell() {
     setScreen('home')
   }
 
+  if (screen === 'how') {
+    return <HowItWorks onDone={finishIntro} />
+  }
+
   if (screen === 'daily' && daily) {
     return <DailyChallenge level={daily.pick.level} scenarioId={daily.pick.scenarioId} onComplete={handleDailyComplete} />
   }
@@ -131,6 +147,7 @@ export default function GameShell() {
       role={profile?.role ?? 'rep'}
       daily={daily}
       onStartDaily={() => setScreen('daily')}
+      onShowHow={() => setScreen('how')}
       onStartLevel={startLevel}
     />
   )

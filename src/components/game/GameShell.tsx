@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useProfile } from '@/hooks/useProfile'
+import { useT } from '@/lib/i18n'
+import { DAILY_TOTAL } from '@/lib/daily'
 import GameHome from './GameHome'
 import LevelOne from './LevelOne'
 import LevelTwo from './LevelTwo'
@@ -27,6 +29,7 @@ interface LevelState {
 
 export default function GameShell() {
   const { profile, badges, completedLevels, loading, addXp, earnBadge, saveSession, recordDaily, updateAvatar } = useProfile()
+  const t = useT()
   const [screen, setScreen] = useState<Screen>('home')
   const [daily, setDaily] = useState<DailyLeaderboard | null>(null)
   const [standings, setStandings] = useState<Standings | null>(null)
@@ -55,10 +58,29 @@ export default function GameShell() {
     setScreen('home')
   }
 
+  // Today's remaining daily questions, captured when the rep opens the set, plus
+  // the position within them — so a partly-done day resumes at the next unanswered.
+  const [dailyQueue, setDailyQueue] = useState<{ level: number; scenarioId: number }[]>([])
+  const [dailyPos, setDailyPos] = useState(0)
+
+  function startDaily() {
+    if (!daily) return
+    const remaining = daily.picks.filter(p => !daily.todayLevelsDone.includes(p.level))
+    if (remaining.length === 0) return // whole set already done today
+    setDailyQueue(remaining)
+    setDailyPos(0)
+    setScreen('daily')
+  }
+
   async function handleDailyComplete(correct: boolean, reactionMs: number) {
-    if (daily) await recordDaily(daily.pick.level, daily.pick.scenarioId, correct, reactionMs)
-    await loadDaily()
-    setScreen('home')
+    const pick = dailyQueue[dailyPos]
+    if (pick) await recordDaily(pick.level, pick.scenarioId, correct, reactionMs)
+    if (dailyPos + 1 < dailyQueue.length) {
+      setDailyPos(dailyPos + 1) // next question in the set
+    } else {
+      await loadDaily() // set finished — refresh streak/progress and go home
+      setScreen('home')
+    }
   }
   const [activeLevel, setActiveLevel] = useState(1)
   const [levelState, setLevelState] = useState<LevelState | null>(null)
@@ -125,8 +147,19 @@ export default function GameShell() {
     return <VisitPrep onExit={() => setScreen('home')} />
   }
 
-  if (screen === 'daily' && daily) {
-    return <DailyChallenge level={daily.pick.level} scenarioId={daily.pick.scenarioId} onComplete={handleDailyComplete} />
+  if (screen === 'daily' && dailyQueue[dailyPos]) {
+    const pick = dailyQueue[dailyPos]
+    const total = daily?.picks.length ?? DAILY_TOTAL
+    const num = total - dailyQueue.length + dailyPos + 1 // 1-based across the full set
+    return (
+      <DailyChallenge
+        key={pick.level}
+        level={pick.level}
+        scenarioId={pick.scenarioId}
+        title={t('daily.progress', { n: num, total })}
+        onComplete={handleDailyComplete}
+      />
+    )
   }
 
   if (screen === 'result' && levelState) {
@@ -164,7 +197,7 @@ export default function GameShell() {
       avatarUrl={profile?.avatar_url ?? null}
       displayName={profile?.display_name ?? null}
       onUploadAvatar={updateAvatar}
-      onStartDaily={() => setScreen('daily')}
+      onStartDaily={startDaily}
       onShowHow={() => setScreen('how')}
       onShowPrep={() => setScreen('prep')}
       onStartLevel={startLevel}

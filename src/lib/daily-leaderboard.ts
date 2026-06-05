@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase-admin'
-import { computeStreak, dailyPick, todayKey } from '@/lib/daily'
+import { computeStreak, dailyPicks, isDayComplete, todayKey } from '@/lib/daily'
 
 export interface DailyStanding {
   id: string
@@ -11,8 +11,10 @@ export interface DailyStanding {
 }
 
 export interface DailyLeaderboard {
-  pick: { level: number; scenarioId: number }
+  picks: { level: number; scenarioId: number }[]
   today: string
+  /** Levels the caller has already finished today — for resume + progress. */
+  todayLevelsDone: number[]
   self: DailyStanding | null
   standings: DailyStanding[]
 }
@@ -52,27 +54,38 @@ export async function getDailyLeaderboard(userId: string): Promise<DailyLeaderbo
 
   const { data: rows } = await admin
     .from('daily_challenges')
-    .select('rep_id, challenge_date')
+    .select('rep_id, challenge_date, level')
     .in('rep_id', repIds)
     .gte('challenge_date', sinceKey)
 
-  const byRep = new Map<string, Set<string>>()
+  // rep → date → set of levels answered that day
+  const byRep = new Map<string, Map<string, Set<number>>>()
   for (const r of rows ?? []) {
-    const set = byRep.get(r.rep_id) ?? new Set<string>()
-    set.add(r.challenge_date as string)
-    byRep.set(r.rep_id, set)
+    const days = byRep.get(r.rep_id) ?? new Map<string, Set<number>>()
+    const levels = days.get(r.challenge_date as string) ?? new Set<number>()
+    levels.add(r.level as number)
+    days.set(r.challenge_date as string, levels)
+    byRep.set(r.rep_id, days)
+  }
+
+  // A day only counts toward streak/total once all three levels are done.
+  const completedDays = (id: string): Set<string> => {
+    const out = new Set<string>()
+    const days = byRep.get(id)
+    if (days) for (const [date, levels] of days) if (isDayComplete(levels)) out.add(date)
+    return out
   }
 
   const today = todayKey()
   const standings: DailyStanding[] = repIds
     .map(id => {
-      const dates = byRep.get(id) ?? new Set<string>()
+      const done = completedDays(id)
       return {
         id,
         name: names.get(id) ?? 'Rep',
-        streak: computeStreak(dates),
-        total: dates.size,
-        doneToday: dates.has(today),
+        streak: computeStreak(done),
+        total: done.size,
+        doneToday: done.has(today),
         isSelf: id === userId,
       }
     })
@@ -81,5 +94,6 @@ export async function getDailyLeaderboard(userId: string): Promise<DailyLeaderbo
     .sort((a, b) => b.streak - a.streak || b.total - a.total)
 
   const self = standings.find(s => s.isSelf) ?? null
-  return { pick: dailyPick(), today, self, standings }
+  const todayLevelsDone = [...(byRep.get(userId)?.get(today) ?? new Set<number>())]
+  return { picks: dailyPicks(), today, todayLevelsDone, self, standings }
 }

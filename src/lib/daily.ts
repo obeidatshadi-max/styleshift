@@ -1,9 +1,10 @@
 import { L1, L2, L3 } from '@/lib/game-data'
 
-// Daily Challenge: one scenario per day, identical for everyone (deterministic
-// from the UTC calendar day), rotating across levels 1→2→3. Selection is by
-// scenario id so it is language-independent — the rep sees it in their language.
-// Level 4 (the multi-step committee) is excluded; the daily is a quick single read.
+// Daily Challenge: three scenarios per day — one from each of levels 1, 2 and 3,
+// identical for everyone (deterministic from the UTC calendar day). Selection is
+// by scenario id so it is language-independent — the rep sees it in their
+// language. Level 4 (the multi-step committee) is excluded; the daily stays a
+// quick set of three single reads. A day only "counts" once all three are done.
 
 const DAILY_LEVELS = [1, 2, 3] as const
 
@@ -19,12 +20,20 @@ export function todayKey(date = new Date()): string {
 
 export interface DailyPick { level: number; scenarioId: number }
 
-/** The scenario everyone gets today (deterministic). */
-export function dailyPick(dayNum = utcDayNumber()): DailyPick {
-  const level = DAILY_LEVELS[dayNum % DAILY_LEVELS.length]
-  const pool = level === 1 ? L1 : level === 2 ? L2 : L3
-  const item = pool[dayNum % pool.length]
-  return { level, scenarioId: item.id }
+/** The three scenarios everyone gets today — one per level (deterministic). */
+export function dailyPicks(dayNum = utcDayNumber()): DailyPick[] {
+  return DAILY_LEVELS.map(level => {
+    const pool = level === 1 ? L1 : level === 2 ? L2 : L3
+    return { level, scenarioId: pool[dayNum % pool.length].id }
+  })
+}
+
+/** The total number of questions in a daily set. */
+export const DAILY_TOTAL = DAILY_LEVELS.length
+
+/** True once a rep has answered every level in today's daily set. */
+export function isDayComplete(levelsDone: Set<number>): boolean {
+  return DAILY_LEVELS.every(l => levelsDone.has(l))
 }
 
 /**

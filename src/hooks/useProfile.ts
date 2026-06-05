@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import type { Profile, BadgeName } from '@/types/game'
 import { XP_VALUES } from '@/lib/game-data'
-import { todayKey } from '@/lib/daily'
+import { todayKey, DAILY_TOTAL } from '@/lib/daily'
 
 export function useProfile() {
   const supabase = createClient()
@@ -99,18 +99,27 @@ export function useProfile() {
     setCompletedLevels(prev => [...new Set([...prev, level])])
   }, [profile, supabase])
 
-  // Records today's Daily Challenge result (one per UTC day; the unique
-  // constraint makes a second attempt a no-op). Awards XP only on first play.
+  // Records one of today's Daily Challenge questions (one row per UTC day per
+  // level; the unique constraint makes re-answering a level a no-op). Awards the
+  // correct-answer XP per question, plus the daily-streak bonus once — on the
+  // answer that completes today's full set of DAILY_TOTAL questions.
   const recordDaily = useCallback(async (
     level: number, scenarioId: number, correct: boolean, reactionMs?: number
   ): Promise<boolean> => {
     if (!profile) return false
+    const today = todayKey()
     const { error } = await supabase.from('daily_challenges').insert({
-      rep_id: profile.id, challenge_date: todayKey(), level, scenario_id: scenarioId,
+      rep_id: profile.id, challenge_date: today, level, scenario_id: scenarioId,
       correct, reaction_ms: reactionMs ?? null,
     })
-    if (error) return false // already played today (unique violation) or write failed
-    const reward = (correct ? XP_VALUES.correct : 0) + XP_VALUES.dailyStreak
+    if (error) return false // already answered this level today (unique) or write failed
+    let reward = correct ? XP_VALUES.correct : 0
+    const { count } = await supabase
+      .from('daily_challenges')
+      .select('id', { count: 'exact', head: true })
+      .eq('rep_id', profile.id)
+      .eq('challenge_date', today)
+    if (count === DAILY_TOTAL) reward += XP_VALUES.dailyStreak // set just completed
     await addXp(reward)
     return true
   }, [profile, supabase, addXp])

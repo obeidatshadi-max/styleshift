@@ -85,13 +85,18 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
               <div style={{ fontFamily:'var(--mono)', fontSize:13, letterSpacing:'.05em', color:(daily.self?.streak ?? 0) > 0 ? 'var(--amber)' : 'var(--ink-dim)' }}>
                 {(daily.self?.streak ?? 0) > 0 ? t('daily.streakActive', { n: daily.self!.streak }) : t('daily.streakNone')}
               </div>
-              {daily.self?.doneToday ? (
+              {daily.todayLevelsDone.length >= daily.picks.length ? (
                 <div style={{ fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.05em', color:'var(--green)' }}>{t('daily.doneToday')}</div>
               ) : (
-                <button onClick={onStartDaily}
-                  style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--amber)', color:'#1a1402', background:'var(--amber)', borderRadius:10, padding:'11px 16px', boxShadow:'0 0 18px rgba(255,206,77,.45)', touchAction:'manipulation' }}>
-                  {t('daily.play')}
-                </button>
+                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  <span style={{ fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.05em', color:'var(--ink-dim)' }}>
+                    {t('daily.todayProgress', { done: daily.todayLevelsDone.length, total: daily.picks.length })}
+                  </span>
+                  <button onClick={onStartDaily}
+                    style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--amber)', color:'#1a1402', background:'var(--amber)', borderRadius:10, padding:'11px 16px', boxShadow:'0 0 18px rgba(255,206,77,.45)', touchAction:'manipulation' }}>
+                    {daily.todayLevelsDone.length > 0 ? t('daily.continue') : t('daily.play')}
+                  </button>
+                </div>
               )}
             </div>
             <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.2em', textTransform:'uppercase', color:'var(--ink-dim)', marginBottom:8 }}>{t('daily.leaderboard')}</div>

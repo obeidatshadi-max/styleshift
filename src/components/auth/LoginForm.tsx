@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useT } from '@/lib/i18n'
@@ -16,12 +16,21 @@ export default function LoginForm() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
+  // Bounced back from /auth/confirm with an expired/invalid activation link.
+  useEffect(() => {
+    if (searchParams.get('confirm_error')) setError(t('login.confirmError'))
+  }, [searchParams, t])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     setLoading(true)
     if (mode === 'signup') {
-      const { error } = await supabase.auth.signUp({ email, password })
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/auth/confirm?next=/play` },
+      })
       if (error) { setError(error.message); setLoading(false); return }
       setError(t('login.checkEmail'))
       setLoading(false)

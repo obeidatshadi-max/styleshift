@@ -83,6 +83,7 @@ const EN: Dict = {
   'login.toSignup': "Don't have an account? Sign up",
   'login.toLogin': 'Already have an account? Sign in',
   'login.checkEmail': 'Check your email to confirm your account, then sign in.',
+  'login.confirmError': 'That activation link has expired or was already used. Please sign in, or sign up again to get a fresh link.',
   // badges
   'badge.First Scan': 'First Scan',
   'badge.Crisis Tamer': 'Crisis Tamer',
@@ -277,6 +278,7 @@ const AR: Dict = {
   'login.toSignup': 'ليس لديك حساب؟ سجّل الآن',
   'login.toLogin': 'لديك حساب؟ سجّل الدخول',
   'login.checkEmail': 'تحقق من بريدك لتأكيد حسابك، ثم سجّل الدخول.',
+  'login.confirmError': 'انتهت صلاحية رابط التفعيل أو تم استخدامه من قبل. الرجاء تسجيل الدخول، أو إنشاء حساب مرة أخرى للحصول على رابط جديد.',
   'badge.First Scan': 'أول قراءة',
   'badge.Crisis Tamer': 'مُهدِّئ الأزمات',
   'badge.Drive Whisperer': 'همس الدوافع',

@@ -24,8 +24,11 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const path = request.nextUrl.pathname
 
-  // Unauthenticated → /login
-  if (!user && !path.startsWith('/login')) {
+  // Unauthenticated → /login.
+  // Let /auth/* through unauthenticated: the email-confirmation route handler
+  // (/auth/confirm) must run to create the session — bouncing it to /login here
+  // would discard the activation token before it's ever exchanged.
+  if (!user && !path.startsWith('/login') && !path.startsWith('/auth')) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

@@ -55,8 +55,8 @@ for (const it of idsInBlock(L3, ...BLOCKS.L3 as [number, number])) {
 const pairs = [['L1', L1, L1_AR], ['L2', L2, L2_AR], ['L3', L3, L3_AR], ['L4', L4, L4_AR]] as const
 for (const [lvl, en, ar] of pairs) {
   const [lo, hi] = BLOCKS[lvl as keyof typeof BLOCKS]
-  const arIds = new Set(idsInBlock(ar, lo, hi).map(x => x.id))
-  for (const it of idsInBlock(en, lo, hi)) {
+  const arIds = new Set(idsInBlock(ar as readonly { id: number }[], lo, hi).map(x => x.id))
+  for (const it of idsInBlock(en as readonly { id: number }[], lo, hi)) {
     if (!arIds.has(it.id)) errors.push(`${lvl} ${it.id}: missing Arabic mirror`)
   }
 }

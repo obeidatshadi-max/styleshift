@@ -791,6 +791,55 @@ export const L4: L4Item[] = [
       { t:'Push for immediate full rollout to lock the win.',                       quota:+8,  morale:-6,  risk:+10, why:'Over-reach unsettles the cautious members — Risk climbs.' },
       { t:'Ask to revisit the rollout plan next quarter.',                          quota:-10, morale:+4,  risk:-4,  why:'Avoids friction but surrenders the adoption momentum you earned.' },
     ]},
+  // ── Iraq pack ── (hospital P&T committee, Baghdad context)
+  { id:1401, q:'Opening move before the Medical City P&T committee:',
+    opts:[
+      { t:'Lead with a bold "first in Iraq" innovation story, lightly backed by headline data.', quota:+8,  morale:+10, risk:+12, why:'Energizes the KOL, but thin data spikes Risk for the Analytical pharmacist.' },
+      { t:'Present a measured case: evidence pack, cost in dinars, and a phased rollout.',        quota:+10, morale:+6,  risk:-8,  why:'Balanced. Meets cost and evidence needs while keeping Risk low.' },
+      { t:'Spend the slot only building rapport.',                                                quota:-4,  morale:+12, risk:-2,  why:'Warmth without progress leaves the department head unconvinced on adoption.' },
+    ]},
+  { id:1402, q:'A committee member recalls your two-month stockout last year. You:',
+    opts:[
+      { t:'Acknowledge it, show your new supply guarantee and local stock plan, backed by figures.', quota:+10, morale:+8,  risk:-8,  why:'Owning the lapse with a concrete fix rebuilds Trust and lowers Risk.' },
+      { t:'Insist it was the distributor\'s fault, not yours.',                                       quota:+2,  morale:-6,  risk:+8,  why:'Blame-shifting keeps the distrust alive — Risk rises.' },
+      { t:'Avoid the topic and move straight to efficacy.',                                           quota:0,   morale:-4,  risk:+8,  why:'The unaddressed grievance festers.' },
+    ]},
+  { id:1403, q:'The Analytical pharmacist flags summer cold-chain storage. You:',
+    opts:[
+      { t:'Present stability data for high temperatures and your cold-chain support plan.', quota:+8,  morale:+6,  risk:-12, why:'Evidence plus a support plan cuts Risk hardest.' },
+      { t:'Say storage "shouldn\'t be a problem" in Baghdad.',                              quota:+2,  morale:-4,  risk:+12, why:'Hand-waving a real logistics risk spikes it.' },
+      { t:'Tell them to handle storage themselves.',                                        quota:-2,  morale:-6,  risk:+10, why:'Offloading the problem erodes Trust.' },
+    ]},
+  { id:1404, q:'The committee pushes mandatory generic substitution to save budget. You:',
+    opts:[
+      { t:'Show the sub-population where your brand changes outcomes; accept generics elsewhere.', quota:+10, morale:+6,  risk:-8,  why:'A targeted, reasonable position protects adoption where it matters and lowers Risk.' },
+      { t:'Argue the brand should be protected across the board.',                                  quota:-4,  morale:-4,  risk:+8,  why:'Over-reach reads as self-serving.' },
+      { t:'Concede fully and hope volume holds.',                                                   quota:-8,  morale:+2,  risk:-2,  why:'Surrendering the case sacrifices adoption momentum.' },
+    ]},
+  { id:1405, q:'The Driver department head demands the cost decision now, in dinars. You:',
+    opts:[
+      { t:'Offer two cost-effective options with a clear recommendation.', quota:+14, morale:+6,  risk:-4,  why:'Decisive + evidenced. Lands the Driver without spooking the others.' },
+      { t:'Ask for another month to align everyone.',                      quota:-8,  morale:+4,  risk:-2,  why:'A Driver reads delay as failure — momentum is lost.' },
+      { t:'Close hard on price alone, skipping the rationale.',            quota:+6,  morale:-6,  risk:+10, why:'May win the moment but leaves the others uneasy.' },
+    ]},
+  { id:1406, q:'The budget is cut 15% mid-meeting. You:',
+    opts:[
+      { t:'Offer a phased, tiered adoption that preserves value within the new budget.', quota:+10, morale:+6,  risk:-6,  why:'Flexibility keeps adoption alive without sacrificing value.' },
+      { t:'Hold firm on full price and volume.',                                         quota:-6,  morale:-4,  risk:+8,  why:'Rigidity loses adoption and raises Risk.' },
+      { t:'Slash your price to whatever fits.',                                          quota:+6,  morale:+2,  risk:+8,  why:'A panic discount signals the price was never real.' },
+    ]},
+  { id:1407, q:'The Expressive KOL wants to champion the drug at the Iraqi congress. You:',
+    opts:[
+      { t:'Give him a visible role and co-author the rollout protocol.', quota:+12, morale:+8,  risk:-2,  why:'Recognition turns him into your advocate, lifting Adoption and Trust.' },
+      { t:'Tell him to keep it low-key for now.',                        quota:-2,  morale:-8,  risk:+2,  why:'Denying the stage deflates the Expressive.' },
+      { t:'Ignore him and stay focused on the numbers.',                quota:+4,  morale:-4,  risk:+4,  why:'Missing his recognition need costs you a champion.' },
+    ]},
+  { id:1408, q:'The final vote. Your closing move:',
+    opts:[
+      { t:'Summarize evidence, dinar cost and safety, and ask for adoption with a monitored pilot.', quota:+14, morale:+8,  risk:-6,  why:'Decisive, evidenced and low-risk — the apex close.' },
+      { t:'Push for full immediate adoption across the hospital.',                                   quota:+8,  morale:-6,  risk:+10, why:'Over-reach unsettles the cautious members.' },
+      { t:'Withdraw and ask to revisit next quarter.',                                               quota:-10, morale:+4,  risk:-4,  why:'Avoids friction but surrenders all momentum.' },
+    ]},
 ]
 
 export const RANKS: Rank[] = [

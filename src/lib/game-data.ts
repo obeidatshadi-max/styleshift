@@ -106,6 +106,23 @@ export const L1: L1Item[] = [
     cues:['Wants an eye-catching launch campaign.','Loves being the first chain with a new product.','Talks fast about visibility and promotions.'] },
   { id:145, style:'amiable', name:'Hala · Community Pharmacist', persona:'Community Pharmacist',
     cues:['Cares about her regular customers\' wellbeing.','Wants reassurance before recommending a switch.','Avoids pushy, one-off deals.'] },
+  // ── Iraq pack ──
+  { id:1101, style:'driver', name:'Dr. Haider · Cardiologist', persona:'Cardiologist · Medical City',
+    cues:['"Bottom line — does it cut readmissions? Yes or no, my clinic is full."','Glances twice at the packed waiting hall.','Wants two options and decides on the spot.'] },
+  { id:1102, style:'analytical', name:'Dr. Zainab · Endocrinologist', persona:'Endocrinologist · Basra',
+    cues:['Asks for the exact HbA1c figures and the trial population.','Re-reads the leaflet before commenting.','Won\'t commit until she has reviewed the data.'] },
+  { id:1103, style:'expressive', name:'Dr. Mustafa · Dermatologist', persona:'Dermatologist · Mansour',
+    cues:['Excited to be the first in Baghdad with a novel option.','Talks about presenting his cases at the Iraqi dermatology conference.','Wants the brand to make his clinic look cutting-edge.'] },
+  { id:1104, style:'amiable', name:'Dr. Noor · Family GP', persona:'Family GP · Karrada',
+    cues:['Asks how her loyal patients will handle a switch.','Wants to start slowly with a few patients.','Values a rep she can trust over the long term.'] },
+  { id:1105, style:'amiable', name:'Abu Ahmed · Community Pharmacist', persona:'Community Pharmacist',
+    cues:['Asks how it helps his regular neighborhood customers.','Wants reassurance on counseling patients about side effects.','Prefers a steady relationship over a one-off deal.'] },
+  { id:1106, style:'analytical', name:'Hassan · Hospital Pharmacist', persona:'Hospital Pharmacist · Medical City',
+    cues:['Asks for stability and storage data given the summer heat.','Checks each Kimadia formulary criterion.','Wants the full dossier before listing anything.'] },
+  { id:1107, style:'driver', name:'Hajji Salam · Pharmacy Owner', persona:'Pharmacy Owner',
+    cues:['"What\'s my margin and how fast does it move?"','Counts shelf turnover as you talk.','Decides immediately if the numbers work.'] },
+  { id:1108, style:'expressive', name:'Dr. Sajjad · Orthopedic Surgeon (KOL)', persona:'Orthopedic Surgeon · KOL',
+    cues:['Riffs on a bold new surgical technique.','Wants to be recognized as a thought leader at conferences.','Asks about speaking slots and advisory roles.'] },
 ]
 
 // ───────────────────────── LEVEL 2 · Crisis Mode (pool of 27) ─────────────────────────

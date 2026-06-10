@@ -316,6 +316,63 @@ export const L2: L2Item[] = [
       { t:'Deliver a lecture on why the brand is clinically superior.',    r:'escalate', why:'A time-pressed Driver reads this as wasted time.' },
       { t:'Ask how he feels about stocking premium quality.',             r:'escalate', why:'A Driver wants the number, not a feelings question.' },
     ]},
+  // ── Iraq pack ──
+  { id:1201, style:'driver', name:'Dr. Haider · Cardiologist', crisis:'"Your product vanished from the warehouse for two months and I lost patients to the competitor. Why trust your supply?"',
+    q:'Dr. Haider (Driver) is angry. Choose your path.',
+    opts:[
+      { t:'Acknowledge it briefly, then give a concrete supply guarantee and two options, his call.', r:'win', why:'Winning Strategy. Action, options and control feed the Driver drive for Control & Achievement.' },
+      { t:'Apologize at length for the supply gap.', r:'escalate', why:'Dwelling on the past reads as no progress to a Driver.' },
+      { t:'Lean on your long relationship and ask him to be patient.', r:'escalate', why:'A Driver reads patience as no progress on the problem.' },
+    ]},
+  { id:1202, style:'analytical', name:'Dr. Zainab · Endocrinologist', crisis:'"A competitor rep was here yesterday with data saying yours is no better. Convince me or don\'t waste my time."',
+    q:'Dr. Zainab (Analytical) is challenging you. Choose your path.',
+    opts:[
+      { t:'Walk through the head-to-head endpoints and number-needed-to-treat, calmly.', r:'win', why:'Winning Strategy. Evidence and a logical breakdown satisfy the Analytical drive for Certainty & Accuracy.' },
+      { t:'Insist your drug is simply better and ask her to trust your experience.', r:'escalate', why:'Dismissing data raises an Analytical\'s stress and erodes trust.' },
+      { t:'Appeal emotionally to your long relationship.', r:'escalate', why:'Emotion over evidence ignores what an Analytical needs.' },
+    ]},
+  { id:1203, style:'amiable', name:'Abu Ahmed · Community Pharmacist', crisis:'"A customer came back complaining of side effects — I\'m nervous to recommend it again."',
+    q:'Abu Ahmed (Amiable) is worried. Choose your path.',
+    opts:[
+      { t:'Acknowledge the concern, share the safety profile and a patient-counseling card, and offer support.', r:'win', why:'Winning Strategy. Reassurance and a safety net satisfy the Amiable drive for Security & Harmony.' },
+      { t:'Push him to keep ordering — one complaint is nothing.', r:'escalate', why:'Pressure attacks the Amiable need for security; stress spikes.' },
+      { t:'Tell him the data says it\'s fine and move on.', r:'escalate', why:'Data alone doesn\'t reassure an Amiable.' },
+    ]},
+  { id:1204, style:'expressive', name:'Dr. Mustafa · Dermatologist', crisis:'"The conference committee gave my session to someone else. I feel ignored."',
+    q:'Dr. Mustafa (Expressive) is deflated. Choose your path.',
+    opts:[
+      { t:'Recognize his standing, then co-build the next case series or symposium together.', r:'win', why:'Winning Strategy. Recognition plus fresh ideas restore the Expressive drive for Recognition & Ideas.' },
+      { t:'Send him a chart explaining why the approach underperformed.', r:'escalate', why:'Cold analysis deflates an Expressive.' },
+      { t:'Tell him to toughen up and not take it personally.', r:'escalate', why:'Denying recognition escalates an Expressive fast.' },
+    ]},
+  { id:1205, style:'driver', name:'Hajji Salam · Pharmacy Owner', crisis:'"The imported generic is half your price. Give me a reason in ten seconds, not a story."',
+    q:'Hajji Salam (Driver) wants it fast. Choose your path.',
+    opts:[
+      { t:'Lead with margin and turnover, give two pack options, his call.', r:'win', why:'Winning Strategy. Numbers, options and a fast decision feed the Driver drive.' },
+      { t:'Deliver a lecture on why the brand is clinically superior.', r:'escalate', why:'A time-pressed Driver reads this as wasted time.' },
+      { t:'Ask how he feels about stocking premium quality.', r:'escalate', why:'A Driver wants the number, not a feelings question.' },
+    ]},
+  { id:1206, style:'analytical', name:'Hassan · Hospital Pharmacist', crisis:'"Your stability data doesn\'t cover our summer storage — Baghdad hits 50°C. I can\'t list it."',
+    q:'Hassan (Analytical) has blocked the listing. Choose your path.',
+    opts:[
+      { t:'Go through the stability dossier and your storage range point by point.', r:'win', why:'Winning Strategy. Precision on the exact data resolves the Analytical objection.' },
+      { t:'Reassure him vaguely that it will be fine.', r:'escalate', why:'Vague comfort ignores his drive for certainty.' },
+      { t:'Point out that other hospitals listed it, so he should too.', r:'escalate', why:'Social proof doesn\'t answer an Analytical\'s data question.' },
+    ]},
+  { id:1207, style:'amiable', name:'Dr. Noor · Family GP', crisis:'"You\'re pushing me to switch all my patients at once — I\'m not comfortable."',
+    q:'Dr. Noor (Amiable) feels pressured. Choose your path.',
+    opts:[
+      { t:'Reassure her; propose switching only new patients first, with your support.', r:'win', why:'Winning Strategy. A low-risk phased path satisfies the Amiable drive for security.' },
+      { t:'Push for a full switch now to hit the cycle target.', r:'escalate', why:'Pressure attacks the Amiable need for security; stress rises.' },
+      { t:'Tell her the data proves it\'s safe, so she should just do it.', r:'escalate', why:'Data alone doesn\'t reassure an Amiable under pressure.' },
+    ]},
+  { id:1208, style:'expressive', name:'Dr. Sajjad · Orthopedic Surgeon (KOL)', crisis:'"Another company offered me a bigger speaking role. Why should I stay with you?"',
+    q:'Dr. Sajjad (Expressive) is courting offers. Choose your path.',
+    opts:[
+      { t:'Recognize his influence and offer a visible platform for his ideas — a symposium and advisory role.', r:'win', why:'Winning Strategy. Recognition and a stage feed the Expressive drive.' },
+      { t:'Counter with cold, detailed contract terms.', r:'escalate', why:'Spreadsheet-first deflates an Expressive who wants to be seen.' },
+      { t:'Downplay the competitor and ask him to stay out of loyalty.', r:'escalate', why:'Denying his standing escalates an Expressive.' },
+    ]},
 ]
 
 // ───────────────────────── LEVEL 3 · Drive Decoder (pool of 27) ─────────────────────────

@@ -106,6 +106,16 @@ const EN: Dict = {
   'daily.resultCorrect': 'Correct read 🎯',
   'daily.resultWrong': 'Missed it',
   'daily.streakNow': '🔥 {n}-day streak!',
+  'daily.streakRisk': "🔥 {n}-day streak at risk — finish today's set to keep it!",
+  // coach assignment
+  'assign.title': 'Coach Assignment',
+  'assign.targetCategory': '{category} — objection drills',
+  'assign.targetLevel': 'Level {level} · {title}',
+  'assign.due': 'Due {date}',
+  'assign.overdue': 'Overdue — was due {date}',
+  'assign.done': 'Completed ✓ Nice work.',
+  'assign.start': 'Start',
+  'assign.progressTitle': 'Coach Drill · {n}/{total}',
   // team ranking (rep-facing)
   'rank.title': 'Team Ranking',
   'rank.subtitle': 'How your team stacks up by total XP.',
@@ -302,6 +312,16 @@ const AR: Dict = {
   'daily.resultCorrect': 'قراءة صحيحة 🎯',
   'daily.resultWrong': 'لم تُصب',
   'daily.streakNow': '🔥 سلسلة {n} يوم!',
+  'daily.streakRisk': '🔥 سلسلة {n} يوم في خطر — أكمل مجموعة اليوم للحفاظ عليها!',
+  // coach assignment
+  'assign.title': 'مهمة المدرب',
+  'assign.targetCategory': '{category} — تمارين اعتراضات',
+  'assign.targetLevel': 'المستوى {level} · {title}',
+  'assign.due': 'الموعد النهائي {date}',
+  'assign.overdue': 'متأخرة — كان الموعد {date}',
+  'assign.done': 'اكتملت ✓ أحسنت.',
+  'assign.start': 'ابدأ',
+  'assign.progressTitle': 'تمرين المدرب · {n}/{total}',
   // team ranking (rep-facing)
   'rank.title': 'ترتيب الفريق',
   'rank.subtitle': 'كيف يتفوّق فريقك بحسب مجموع نقاط الخبرة.',

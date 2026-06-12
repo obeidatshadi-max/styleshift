@@ -1,7 +1,7 @@
 'use client'
 import RankBar from './RankBar'
 import KpiPanel from './KpiPanel'
-import type { BadgeName } from '@/types/game'
+import type { BadgeName, RepAssignment } from '@/types/game'
 import { createClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import { useGameData, useT, useBadgeLabel } from '@/lib/i18n'
@@ -25,6 +25,8 @@ interface Props {
   role: string
   daily: DailyLeaderboard | null
   standings: Standings | null
+  assignment: RepAssignment | null
+  onStartAssignment: () => void
   avatarUrl: string | null
   displayName: string | null
   onUploadAvatar: (file: File) => Promise<string | null>
@@ -34,7 +36,7 @@ interface Props {
   onStartLevel: (n: number) => void
 }
 
-export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onStartLevel }: Props) {
+export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onStartLevel }: Props) {
   const unlocked = [1, ...earnedLevels.map(n => n + 1)].filter(n => n <= 4)
   const router = useRouter()
   const t = useT()
@@ -78,6 +80,37 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
       <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
 
+        {assignment && (() => {
+          const a = assignment.assignment
+          const target = a.target_type === 'category'
+            ? t('assign.targetCategory', { category: t(`obj.${a.target_key}`) })
+            : t('assign.targetLevel', { level: a.target_key, title: LEVELS[Number(a.target_key) - 1]?.title ?? '' })
+          const overdue = !assignment.completed && a.due_date < new Date().toISOString().slice(0, 10)
+          return (
+            <section style={{ border:`1px solid ${assignment.completed ? 'var(--green)' : overdue ? 'var(--red)' : 'var(--amber)'}`, borderRadius:16, padding:16, background: assignment.completed ? 'rgba(62,224,143,.06)' : 'rgba(255,206,77,.06)', boxShadow:'0 12px 40px rgba(0,0,0,.45)' }}>
+              <div style={{ fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.3em', textTransform:'uppercase', color: assignment.completed ? 'var(--green)' : 'var(--amber)', marginBottom:10 }}>
+                📋 {t('assign.title')}
+              </div>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+                <div>
+                  <div style={{ fontSize:15, fontWeight:700 }}>{target}</div>
+                  <div style={{ fontFamily:'var(--mono)', fontSize:11, marginTop:3, color: assignment.completed ? 'var(--green)' : overdue ? 'var(--red)' : 'var(--ink-dim)' }}>
+                    {assignment.completed
+                      ? t('assign.done')
+                      : overdue ? t('assign.overdue', { date: a.due_date }) : t('assign.due', { date: a.due_date })}
+                  </div>
+                </div>
+                {!assignment.completed && (
+                  <button onClick={onStartAssignment}
+                    style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--amber)', color:'#1a1402', background:'var(--amber)', borderRadius:10, padding:'11px 16px', boxShadow:'0 0 18px rgba(255,206,77,.45)', touchAction:'manipulation' }}>
+                    {t('assign.start')}
+                  </button>
+                )}
+              </div>
+            </section>
+          )
+        })()}
+
         {daily && panel(t('daily.title'),
           <>
             <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5, marginBottom:12 }}>{t('daily.subtitle')}</div>
@@ -99,6 +132,11 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
                 </div>
               )}
             </div>
+            {(daily.self?.streak ?? 0) >= 2 && daily.todayLevelsDone.length < daily.picks.length && (
+              <div style={{ border:'1px solid var(--red)', borderRadius:10, padding:'9px 12px', marginBottom:12, background:'rgba(255,93,108,.08)', color:'#ffd2d6', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.04em' }}>
+                {t('daily.streakRisk', { n: daily.self!.streak })}
+              </div>
+            )}
             <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.2em', textTransform:'uppercase', color:'var(--ink-dim)', marginBottom:8 }}>{t('daily.leaderboard')}</div>
             {daily.standings.length === 0 ? (
               <div style={{ color:'var(--ink-dim)', fontSize:12 }}>{t('daily.empty')}</div>

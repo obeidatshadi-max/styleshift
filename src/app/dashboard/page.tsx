@@ -1,9 +1,13 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { getTeamStatsForUser } from '@/lib/team-stats'
+import { getAssignmentForManager } from '@/lib/assignments'
+import { getTeamPulse } from '@/lib/team-pulse'
 import Leaderboard from '@/components/dashboard/Leaderboard'
 import SkillHeatmap from '@/components/dashboard/SkillHeatmap'
 import ActivityBar from '@/components/dashboard/ActivityBar'
+import AssignPanel from '@/components/dashboard/AssignPanel'
+import TeamPulsePanel from '@/components/dashboard/TeamPulse'
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -25,6 +29,9 @@ export default async function DashboardPage() {
   const stats = await getTeamStatsForUser(user.id)
   // Not a manager (or no company yet) → send them to create a team
   if (!stats) redirect('/onboarding')
+
+  const assignment = await getAssignmentForManager(user.id)
+  const pulse = await getTeamPulse(user.id, stats, assignment)
 
   const flagCount = stats?.reps.filter(r => r.flag).length ?? 0
   const avgAccuracy = stats?.reps.length
@@ -70,6 +77,10 @@ export default async function DashboardPage() {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <Panel title="Team Pulse"><TeamPulsePanel pulse={pulse} siteUrl={siteUrl} /></Panel>
+        <Panel title="Coach Assignment">
+          <AssignPanel current={assignment} reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} />
+        </Panel>
         <Panel title="Team Leaderboard"><Leaderboard reps={stats?.reps ?? []} /></Panel>
         <Panel title="Skill Gap Heatmap"><SkillHeatmap levelAccuracy={stats?.levelAccuracy ?? []} /></Panel>
         <Panel title="Activity This Week"><ActivityBar activity={stats?.activity ?? []} /></Panel>

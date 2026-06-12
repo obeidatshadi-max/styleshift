@@ -1,8 +1,11 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useProfile } from '@/hooks/useProfile'
-import { useT } from '@/lib/i18n'
+import { useGameData, useT } from '@/lib/i18n'
 import { DAILY_TOTAL } from '@/lib/daily'
+import { L2_OBJECTION } from '@/lib/scenario-meta'
+import { shuffle } from '@/lib/scenario-engine'
+import { XP_VALUES } from '@/lib/game-data'
 import GameHome from './GameHome'
 import LevelOne from './LevelOne'
 import LevelTwo from './LevelTwo'
@@ -12,11 +15,11 @@ import LevelResult from './LevelResult'
 import DailyChallenge from './DailyChallenge'
 import HowItWorks from './HowItWorks'
 import VisitPrep from './VisitPrep'
-import type { BadgeName } from '@/types/game'
+import type { BadgeName, RepAssignment } from '@/types/game'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
 
-type Screen = 'home' | 'level' | 'result' | 'daily' | 'how' | 'prep'
+type Screen = 'home' | 'level' | 'result' | 'daily' | 'how' | 'prep' | 'assignment'
 const INTRO_KEY = 'styleshift_intro_done'
 
 interface LevelState {
@@ -30,9 +33,11 @@ interface LevelState {
 export default function GameShell() {
   const { profile, badges, completedLevels, loading, addXp, earnBadge, saveSession, recordDaily, updateAvatar } = useProfile()
   const t = useT()
+  const { L2 } = useGameData()
   const [screen, setScreen] = useState<Screen>('home')
   const [daily, setDaily] = useState<DailyLeaderboard | null>(null)
   const [standings, setStandings] = useState<Standings | null>(null)
+  const [assignment, setAssignment] = useState<RepAssignment | null>(null)
 
   const loadDaily = useCallback(async () => {
     try {
@@ -46,7 +51,13 @@ export default function GameShell() {
       if (res.ok) setStandings(await res.json())
     } catch { /* offline — ranking panel just won't show */ }
   }, [])
-  useEffect(() => { loadDaily(); loadStandings() }, [loadDaily, loadStandings])
+  const loadAssignment = useCallback(async () => {
+    try {
+      const res = await fetch('/api/assignments')
+      if (res.ok) setAssignment(await res.json())
+    } catch { /* offline — assignment banner just won't show */ }
+  }, [])
+  useEffect(() => { loadDaily(); loadStandings(); loadAssignment() }, [loadDaily, loadStandings, loadAssignment])
 
   // Show the intro once for first-time reps; reopenable from the home screen.
   useEffect(() => {
@@ -79,6 +90,43 @@ export default function GameShell() {
       setDailyPos(dailyPos + 1) // next question in the set
     } else {
       await loadDaily() // set finished — refresh streak/progress and go home
+      setScreen('home')
+    }
+  }
+
+  // Coach assignment: a category assignment plays a short set of matching
+  // Crisis Mode drills; a level assignment routes to the normal level and is
+  // marked done when that level is completed.
+  const ASSIGNMENT_SET = 3
+  const [assignQueue, setAssignQueue] = useState<number[]>([])
+  const [assignPos, setAssignPos] = useState(0)
+
+  async function markAssignmentDone() {
+    try { await fetch('/api/assignments', { method: 'PATCH' }) } catch { /* retried next load */ }
+    await addXp(XP_VALUES.levelComplete)
+    await loadAssignment()
+  }
+
+  function startAssignment() {
+    if (!assignment || assignment.completed) return
+    const { target_type, target_key } = assignment.assignment
+    if (target_type === 'level') {
+      startLevel(Number(target_key))
+      return
+    }
+    const matching = L2.filter(s => L2_OBJECTION[s.id] === target_key)
+    const ids = shuffle(matching).slice(0, ASSIGNMENT_SET).map(s => s.id)
+    if (ids.length === 0) return // category has no scenarios — nothing to play
+    setAssignQueue(ids)
+    setAssignPos(0)
+    setScreen('assignment')
+  }
+
+  async function handleAssignmentDrillComplete() {
+    if (assignPos + 1 < assignQueue.length) {
+      setAssignPos(assignPos + 1)
+    } else {
+      await markAssignmentDone()
       setScreen('home')
     }
   }
@@ -129,6 +177,13 @@ export default function GameShell() {
     const newXp = (profile?.xp ?? 0) + xpEarned
     if (newXp >= 2000) await earnBadge('Style Master')
 
+    // A level run satisfies a matching level-type coach assignment.
+    if (assignment && !assignment.completed &&
+        assignment.assignment.target_type === 'level' &&
+        Number(assignment.assignment.target_key) === activeLevel) {
+      await markAssignmentDone()
+    }
+
     setLevelState({ level: activeLevel, results, xpEarned, avgMs, meters })
     setScreen('result')
   }
@@ -145,6 +200,18 @@ export default function GameShell() {
 
   if (screen === 'prep') {
     return <VisitPrep onExit={() => setScreen('home')} />
+  }
+
+  if (screen === 'assignment' && assignQueue[assignPos]) {
+    return (
+      <DailyChallenge
+        key={assignQueue[assignPos]}
+        level={2}
+        scenarioId={assignQueue[assignPos]}
+        title={t('assign.progressTitle', { n: assignPos + 1, total: assignQueue.length })}
+        onComplete={handleAssignmentDrillComplete}
+      />
+    )
   }
 
   if (screen === 'daily' && dailyQueue[dailyPos]) {
@@ -194,6 +261,8 @@ export default function GameShell() {
       role={profile?.role ?? 'rep'}
       daily={daily}
       standings={standings}
+      assignment={assignment}
+      onStartAssignment={startAssignment}
       avatarUrl={profile?.avatar_url ?? null}
       displayName={profile?.display_name ?? null}
       onUploadAvatar={updateAvatar}

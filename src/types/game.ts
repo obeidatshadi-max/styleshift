@@ -83,6 +83,32 @@ export interface Doctor {
 // Fields a rep can set when creating/editing a doctor profile.
 export type DoctorInput = Omit<Doctor, 'id' | 'rep_id' | 'created_at' | 'updated_at'>
 
+// A coaching assignment: the manager targets one objection category or one
+// level; each targeted rep completes one qualifying run before the due date.
+export interface Assignment {
+  id: string
+  company_id: string
+  target_type: 'category' | 'level'
+  target_key: string
+  rep_ids: string[] | null
+  due_date: string
+  active: boolean
+  created_at: string
+}
+
+// The rep-facing view returned by GET /api/assignments.
+export interface RepAssignment {
+  assignment: Assignment
+  completed: boolean
+}
+
+// One row of the manager-facing completion table.
+export interface AssignmentRepStatus {
+  rep_id: string
+  name: string | null
+  completed_at: string | null
+}
+
 // An AI-generated, doctor-specific objection drill (Visit Prep Layer 2).
 export interface GeneratedScenario {
   name: string

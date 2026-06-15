@@ -28,7 +28,8 @@ export async function middleware(request: NextRequest) {
   // Let /auth/* through unauthenticated: the email-confirmation route handler
   // (/auth/confirm) must run to create the session — bouncing it to /login here
   // would discard the activation token before it's ever exchanged.
-  if (!user && !path.startsWith('/login') && !path.startsWith('/auth')) {
+  const publicPaths = ['/login', '/auth', '/invite', '/api/rep-join', '/api/rep-login']
+  if (!user && !publicPaths.some(p => path.startsWith(p))) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

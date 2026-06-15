@@ -225,6 +225,24 @@ const EN: Dict = {
   'prep.aiBack': '← Back',
   'prep.aiSoon': 'Premium · Coming soon',
   'prep.aiTeaser': "This premium feature generates a brand-new role-play in {name}'s own voice — using the phrases and objection you saved — so you can rehearse the exact call before you walk in.",
+  // rep mobile login
+  'login.repTab': 'Rep · Mobile',
+  'login.managerTab': 'Manager · Email',
+  'login.mobileLabel': 'Mobile number',
+  'login.mobileSignIn': 'Sign In',
+  'login.mobileHint': 'First time? Use the invite link from your manager.',
+  'login.mobileLoginFailed': 'Sign-in failed. Try the invite link again.',
+  // join via invite link
+  'join.eyebrow': 'Team Invite',
+  'join.subtitle': 'Join your team',
+  'join.yourName': 'Your name',
+  'join.mobilePlaceholder': 'Mobile number (e.g. 07901234567)',
+  'join.submit': 'Join Team →',
+  'join.loading': 'Joining…',
+  'join.hint': 'Your mobile number is your login — no email or password needed.',
+  'join.welcome': 'Welcome to {name}!',
+  'join.redirecting': 'Taking you to the game…',
+  'join.otpError': 'Sign-in failed. Please try again.',
   // toggle (label shows the language you switch TO)
   'toggle.switchTo': 'عربي',
 }
@@ -429,6 +447,24 @@ const AR: Dict = {
   'prep.aiBack': '← رجوع',
   'prep.aiSoon': 'مميّز · قريباً',
   'prep.aiTeaser': 'تولّد هذه الميزة المميّزة تمثيلاً جديداً بصوت {name} — باستخدام العبارات والاعتراض الذي حفظته — لتتدرّب على الزيارة الحقيقية قبل دخولها.',
+  // rep mobile login
+  'login.repTab': 'مندوب · جوال',
+  'login.managerTab': 'مدير · بريد',
+  'login.mobileLabel': 'رقم الجوال',
+  'login.mobileSignIn': 'دخول',
+  'login.mobileHint': 'أول مرة؟ استخدم رابط الدعوة من مديرك.',
+  'login.mobileLoginFailed': 'فشل الدخول. جرّب رابط الدعوة مرة أخرى.',
+  // join via invite link
+  'join.eyebrow': 'دعوة للفريق',
+  'join.subtitle': 'انضم إلى فريقك',
+  'join.yourName': 'اسمك',
+  'join.mobilePlaceholder': 'رقم الجوال (مثال: 07901234567)',
+  'join.submit': 'انضم للفريق ←',
+  'join.loading': 'جارٍ الانضمام…',
+  'join.hint': 'رقم جوالك هو بيانات دخولك — لا بريد إلكتروني أو كلمة مرور.',
+  'join.welcome': 'أهلاً في {name}!',
+  'join.redirecting': 'ننتقل إلى اللعبة…',
+  'join.otpError': 'فشل تسجيل الدخول. الرجاء المحاولة مرة أخرى.',
   'toggle.switchTo': 'EN',
 }
 

@@ -60,14 +60,20 @@ export default function LoginForm() {
     setError(null)
     setLoading(true)
     if (mode === 'signup') {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: `${window.location.origin}/auth/confirm?next=/play` },
+      // Create the account server-side (already-confirmed, no email sent), then
+      // sign straight in. Avoids Supabase's built-in email rate limit entirely.
+      const res = await fetch('/api/manager-signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error); setLoading(false); return }
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) { setError(error.message); setLoading(false); return }
-      setError(t('login.checkEmail'))
-      setLoading(false)
+      const redirect = searchParams.get('redirect') || '/play'
+      router.push(redirect)
+      router.refresh()
       return
     }
     const { error } = await supabase.auth.signInWithPassword({ email, password })

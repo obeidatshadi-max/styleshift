@@ -9,12 +9,14 @@ interface Props {
   rankTitle: string
   companyName: string
   period: string // e.g. "June 2026"
+  onShare?: () => void
+  shareLabel?: string
 }
 
 // A polished, shareable "top performer" card. Rendered to a fixed-size node so it
 // exports cleanly as a PNG (for WhatsApp/email/print). Falls back to a gold
 // monogram when the rep hasn't uploaded a photo.
-export default function RecognitionCard({ name, avatarUrl, xp, rankTitle, companyName, period }: Props) {
+export default function RecognitionCard({ name, avatarUrl, xp, rankTitle, companyName, period, onShare, shareLabel }: Props) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [busy, setBusy] = useState(false)
   const initial = (name?.trim()?.[0] || '★').toUpperCase()
@@ -79,10 +81,18 @@ export default function RecognitionCard({ name, avatarUrl, xp, rankTitle, compan
         </div>
       </div>
 
-      <button onClick={download} disabled={busy} className="no-print"
-        style={{ cursor: busy ? 'default' : 'pointer', background: gold, color: '#1a1402', border: 'none', borderRadius: 10, padding: '12px 22px', fontSize: 14, fontWeight: 700, letterSpacing: '.04em', opacity: busy ? 0.6 : 1 }}>
-        {busy ? 'Preparing…' : '⬇ Download card (PNG)'}
-      </button>
+      <div className="no-print" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <button onClick={download} disabled={busy}
+          style={{ cursor: busy ? 'default' : 'pointer', background: gold, color: '#1a1402', border: 'none', borderRadius: 10, padding: '12px 22px', fontSize: 14, fontWeight: 700, letterSpacing: '.04em', opacity: busy ? 0.6 : 1 }}>
+          {busy ? 'Preparing…' : '⬇ Download card (PNG)'}
+        </button>
+        {onShare && (
+          <button onClick={onShare}
+            style={{ cursor: 'pointer', background: 'transparent', color: gold, border: `1px solid ${gold}`, borderRadius: 10, padding: '12px 22px', fontSize: 14, fontWeight: 700, letterSpacing: '.04em' }}>
+            {shareLabel ?? 'Share to WhatsApp'}
+          </button>
+        )}
+      </div>
     </div>
   )
 }

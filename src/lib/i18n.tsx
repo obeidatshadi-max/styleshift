@@ -107,6 +107,12 @@ const EN: Dict = {
   'daily.resultWrong': 'Missed it',
   'daily.streakNow': '🔥 {n}-day streak!',
   'daily.streakRisk': "🔥 {n}-day streak at risk — finish today's set to keep it!",
+  // champion spotlight
+  'champion.weekly': 'Champion of the Week',
+  'champion.today': "Today's leader: {name}",
+  'champion.empty': 'No champion yet — be the first this week',
+  'champion.share': 'Share to WhatsApp',
+  'champion.thisWeek': 'This Week',
   // coach assignment
   'assign.title': 'Coach Assignment',
   'assign.targetCategory': '{category} — objection drills',
@@ -331,6 +337,12 @@ const AR: Dict = {
   'daily.resultWrong': 'لم تُصب',
   'daily.streakNow': '🔥 سلسلة {n} يوم!',
   'daily.streakRisk': '🔥 سلسلة {n} يوم في خطر — أكمل مجموعة اليوم للحفاظ عليها!',
+  // champion spotlight
+  'champion.weekly': 'بطل الأسبوع',
+  'champion.today': 'متصدّر اليوم: {name}',
+  'champion.empty': 'لا يوجد بطل بعد — كن أول أبطال هذا الأسبوع',
+  'champion.share': 'شارك عبر واتساب',
+  'champion.thisWeek': 'هذا الأسبوع',
   // coach assignment
   'assign.title': 'مهمة المدرب',
   'assign.targetCategory': '{category} — تمارين اعتراضات',

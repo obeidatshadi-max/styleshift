@@ -96,6 +96,11 @@ export function useProfile() {
       rep_id: profile.id, level, accuracy, xp_earned: xpEarned,
       avg_reaction_ms: avgReactionMs ?? null,
     })
+    if (xpEarned > 0) {
+      await supabase.from('xp_events').insert({
+        rep_id: profile.id, amount: xpEarned, source: 'session',
+      })
+    }
     setCompletedLevels(prev => [...new Set([...prev, level])])
   }, [profile, supabase])
 
@@ -113,14 +118,26 @@ export function useProfile() {
       correct, reaction_ms: reactionMs ?? null,
     })
     if (error) return false // already answered this level today (unique) or write failed
-    let reward = correct ? XP_VALUES.correct : 0
+    const base = correct ? XP_VALUES.correct : 0
     const { count } = await supabase
       .from('daily_challenges')
       .select('id', { count: 'exact', head: true })
       .eq('rep_id', profile.id)
       .eq('challenge_date', today)
-    if (count === DAILY_TOTAL) reward += XP_VALUES.dailyStreak // set just completed
-    await addXp(reward)
+    const bonus = count === DAILY_TOTAL ? XP_VALUES.dailyStreak : 0 // set just completed
+
+    // Ledger rows are split by source so period (daily/weekly) XP is attributable.
+    if (base > 0) {
+      await supabase.from('xp_events').insert({
+        rep_id: profile.id, amount: base, source: 'daily',
+      })
+    }
+    if (bonus > 0) {
+      await supabase.from('xp_events').insert({
+        rep_id: profile.id, amount: bonus, source: 'daily_streak',
+      })
+    }
+    await addXp(base + bonus)
     return true
   }, [profile, supabase, addXp])
 

@@ -8,6 +8,8 @@ import SkillHeatmap from '@/components/dashboard/SkillHeatmap'
 import ActivityBar from '@/components/dashboard/ActivityBar'
 import AssignPanel from '@/components/dashboard/AssignPanel'
 import TeamPulsePanel from '@/components/dashboard/TeamPulse'
+import LeagueBoardPanel from '@/components/dashboard/LeagueBoardPanel'
+import { getLeagueBoard } from '@/lib/leagues'
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -32,6 +34,7 @@ export default async function DashboardPage() {
 
   const assignment = await getAssignmentForManager(user.id)
   const pulse = await getTeamPulse(user.id, stats, assignment)
+  const leagueBoard = await getLeagueBoard(user.id)
 
   const flagCount = stats?.reps.filter(r => r.flag).length ?? 0
   const avgAccuracy = stats?.reps.length
@@ -78,6 +81,7 @@ export default async function DashboardPage() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <Panel title="Team Pulse"><TeamPulsePanel pulse={pulse} siteUrl={siteUrl} /></Panel>
+        {leagueBoard && <Panel title="Team League"><LeagueBoardPanel board={leagueBoard} /></Panel>}
         <Panel title="Coach Assignment">
           <AssignPanel current={assignment} reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} />
         </Panel>

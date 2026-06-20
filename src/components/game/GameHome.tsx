@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { useGameData, useT, useBadgeLabel } from '@/lib/i18n'
 import LangToggle from '@/components/LangToggle'
 import AvatarUploader from './AvatarUploader'
+import ChampionBanner from './ChampionBanner'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
 
@@ -79,6 +80,11 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
       </header>
 
       <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+
+        <ChampionBanner
+          companyName={t('eyebrow')}
+          period={new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
+        />
 
         {assignment && (() => {
           const a = assignment.assignment

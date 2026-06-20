@@ -42,7 +42,7 @@ export default function RecognitionCard({ name, avatarUrl, xp, rankTitle, compan
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
-      <div ref={cardRef} style={{
+      <div ref={cardRef} id="recognition-card" style={{
         width: 460, boxSizing: 'border-box', padding: '40px 36px 30px',
         background: 'radial-gradient(120% 80% at 50% 0%, #122046 0%, #0a1430 55%, #060c1f 100%)',
         border: `1px solid ${gold}55`, borderRadius: 20, textAlign: 'center',

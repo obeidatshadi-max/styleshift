@@ -113,6 +113,12 @@ const EN: Dict = {
   'champion.empty': 'No champion yet — be the first this week',
   'champion.share': 'Share to WhatsApp',
   'champion.thisWeek': 'This Week',
+  // cross-team league
+  'league.title': 'Team League',
+  'league.yourRank': 'your team #{n} of {total}',
+  'league.avgPerRep': 'Avg XP / rep',
+  'league.team': 'Team',
+  'league.rank': 'Rank',
   // coach assignment
   'assign.title': 'Coach Assignment',
   'assign.targetCategory': '{category} — objection drills',
@@ -343,6 +349,12 @@ const AR: Dict = {
   'champion.empty': 'لا يوجد بطل بعد — كن أول أبطال هذا الأسبوع',
   'champion.share': 'شارك عبر واتساب',
   'champion.thisWeek': 'هذا الأسبوع',
+  // cross-team league
+  'league.title': 'دوري الفرق',
+  'league.yourRank': 'فريقك #{n} من {total}',
+  'league.avgPerRep': 'متوسط النقاط / مندوب',
+  'league.team': 'الفريق',
+  'league.rank': 'الترتيب',
   // coach assignment
   'assign.title': 'مهمة المدرب',
   'assign.targetCategory': '{category} — تمارين اعتراضات',

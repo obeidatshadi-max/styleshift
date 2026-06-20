@@ -8,6 +8,7 @@ import { useGameData, useT, useBadgeLabel } from '@/lib/i18n'
 import LangToggle from '@/components/LangToggle'
 import AvatarUploader from './AvatarUploader'
 import ChampionBanner from './ChampionBanner'
+import LeagueStrip from './LeagueStrip'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
 
@@ -85,6 +86,8 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
           companyName={t('eyebrow')}
           period={new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
         />
+
+        <LeagueStrip />
 
         {assignment && (() => {
           const a = assignment.assignment

@@ -20,14 +20,14 @@ export async function POST(request: Request) {
 
   if (companyError || !company) return NextResponse.json({ error: 'Invalid invite code' }, { status: 404 })
 
-  // Enforce Free plan rep limit (max 3)
+  // Enforce Free plan rep limit (max 10)
   if (company.plan === 'free') {
     const { count } = await admin
       .from('profiles')
       .select('id', { count: 'exact', head: true })
       .eq('company_id', company.id)
       .eq('role', 'rep')
-    if ((count ?? 0) >= 3) return NextResponse.json({ error: 'Team is full. Ask your manager to upgrade.' }, { status: 403 })
+    if ((count ?? 0) >= 10) return NextResponse.json({ error: 'Team is full. Ask your manager to upgrade.' }, { status: 403 })
   }
 
   const { error: updateError } = await admin

@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       .select('id', { count: 'exact', head: true })
       .eq('company_id', company.id)
       .eq('role', 'rep')
-    if ((count ?? 0) >= 3)
+    if ((count ?? 0) >= 10)
       return NextResponse.json({ error: 'Team is full. Ask your manager to upgrade.' }, { status: 403 })
   }
 

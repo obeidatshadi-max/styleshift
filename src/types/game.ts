@@ -1,3 +1,5 @@
+import type { SpsKey, SpsResult } from '@/lib/sps-core'
+
 export type StyleKey = 'driver' | 'expressive' | 'amiable' | 'analytical'
 
 export interface StyleDef {
@@ -46,6 +48,8 @@ export interface Profile {
   company_id: string | null
   role: string
   avatar_url: string | null
+  sps_top_key: SpsKey | null
+  sps_profile: SpsResult | null
 }
 
 export interface GameSession {

@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import type { Profile, BadgeName } from '@/types/game'
+import type { SpsResult } from '@/lib/sps-core'
 import { XP_VALUES } from '@/lib/game-data'
 import { todayKey, DAILY_TOTAL } from '@/lib/daily'
 
@@ -82,6 +83,18 @@ export function useProfile() {
     return url
   }, [profile, supabase])
 
+  // Writes the completed SPS assessment onto the rep's profile row. Called
+  // once, the first time GameShell detects sps_top_key is missing.
+  const saveSpsAssessment = useCallback(async (result: SpsResult) => {
+    if (!profile) return
+    const { error } = await supabase
+      .from('profiles')
+      .update({ sps_top_key: result.topKey, sps_profile: result })
+      .eq('id', profile.id)
+    if (error) return
+    setProfile(prev => prev ? { ...prev, sps_top_key: result.topKey, sps_profile: result } : prev)
+  }, [profile, supabase])
+
   const earnBadge = useCallback(async (name: BadgeName) => {
     if (!profile || badges.includes(name)) return
     await supabase.from('badges').insert({ rep_id: profile.id, badge_name: name })
@@ -141,5 +154,5 @@ export function useProfile() {
     return true
   }, [profile, supabase, addXp])
 
-  return { profile, badges, completedLevels, loading, addXp, earnBadge, saveSession, recordDaily, updateAvatar, reload: load }
+  return { profile, badges, completedLevels, loading, addXp, earnBadge, saveSession, recordDaily, updateAvatar, saveSpsAssessment, reload: load }
 }

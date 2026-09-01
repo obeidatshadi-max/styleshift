@@ -15,11 +15,12 @@ import LevelResult from './LevelResult'
 import DailyChallenge from './DailyChallenge'
 import HowItWorks from './HowItWorks'
 import VisitPrep from './VisitPrep'
+import SpsAssessment from './SpsAssessment'
 import type { BadgeName, RepAssignment } from '@/types/game'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
 
-type Screen = 'home' | 'level' | 'result' | 'daily' | 'how' | 'prep' | 'assignment'
+type Screen = 'home' | 'level' | 'result' | 'daily' | 'how' | 'prep' | 'assignment' | 'sps'
 const INTRO_KEY = 'styleshift_intro_done'
 
 interface LevelState {
@@ -31,7 +32,7 @@ interface LevelState {
 }
 
 export default function GameShell() {
-  const { profile, badges, completedLevels, loading, addXp, earnBadge, saveSession, recordDaily, updateAvatar } = useProfile()
+  const { profile, badges, completedLevels, loading, addXp, earnBadge, saveSession, recordDaily, updateAvatar, saveSpsAssessment } = useProfile()
   const t = useT()
   const { L2 } = useGameData()
   const [screen, setScreen] = useState<Screen>('home')
@@ -59,10 +60,14 @@ export default function GameShell() {
   }, [])
   useEffect(() => { loadDaily(); loadStandings(); loadAssignment() }, [loadDaily, loadStandings, loadAssignment])
 
-  // Show the intro once for first-time reps; reopenable from the home screen.
+  // First-run gating, in order: complete the SPS assessment (DB-persisted,
+  // so it survives across devices), then show the one-time intro carousel
+  // (localStorage, reopenable from the home screen).
   useEffect(() => {
+    if (loading) return
+    if (profile && !profile.sps_top_key) { setScreen('sps'); return }
     if (typeof window !== 'undefined' && !localStorage.getItem(INTRO_KEY)) setScreen('how')
-  }, [])
+  }, [loading, profile])
 
   function finishIntro() {
     try { localStorage.setItem(INTRO_KEY, '1') } catch { /* ignore */ }
@@ -192,6 +197,18 @@ export default function GameShell() {
     setConfidence(conf)
     loadStandings() // XP changed this session — refresh the team ranking
     setScreen('home')
+  }
+
+  if (screen === 'sps') {
+    return (
+      <SpsAssessment
+        onComplete={async (result) => {
+          await saveSpsAssessment(result)
+          if (typeof window !== 'undefined' && !localStorage.getItem(INTRO_KEY)) setScreen('how')
+          else setScreen('home')
+        }}
+      />
+    )
   }
 
   if (screen === 'how') {

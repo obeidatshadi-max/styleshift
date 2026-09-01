@@ -170,7 +170,7 @@ export function useRoleplayRecorder(doctorId: string | null) {
 
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      await supabase.from('roleplay_sessions').insert({
+      const { error: insertError } = await supabase.from('roleplay_sessions').insert({
         rep_id: user.id,
         doctor_id: doctorId,
         duration_sec: Math.round(built.durationSec),
@@ -181,9 +181,16 @@ export function useRoleplayRecorder(doctorId: string | null) {
         rep_confidence: built.repRead?.confidence ?? null,
         rep_metrics: built.repRead ?? null,
       })
-      const { data: profile } = await supabase.from('profiles').select('xp').eq('id', user.id).single()
-      if (profile) {
-        await supabase.from('profiles').update({ xp: profile.xp + XP_VALUES.roleplayComplete }).eq('id', user.id)
+      if (insertError) {
+        console.error('roleplay_sessions insert failed:', insertError.message)
+      } else {
+        const { data: profile, error: profileError } = await supabase.from('profiles').select('xp').eq('id', user.id).single()
+        if (profileError) {
+          console.error('profile xp read failed:', profileError.message)
+        } else if (profile) {
+          const { error: xpError } = await supabase.from('profiles').update({ xp: profile.xp + XP_VALUES.roleplayComplete }).eq('id', user.id)
+          if (xpError) console.error('profile xp update failed:', xpError.message)
+        }
       }
     }
 

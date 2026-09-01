@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase-admin'
+import type { SpsKey } from '@/lib/sps-core'
 
 export interface RepStat {
   id: string
@@ -9,6 +10,7 @@ export interface RepStat {
   avg_accuracy: number
   flag: boolean
   avatar_url: string | null
+  sps_top_key: SpsKey | null
 }
 
 export interface TeamStats {
@@ -51,7 +53,7 @@ export async function getTeamStatsForUser(userId: string): Promise<TeamStats | n
 
   const { data: reps } = await admin
     .from('profiles')
-    .select('id, display_name, xp, last_visit, avatar_url')
+    .select('id, display_name, xp, last_visit, avatar_url, sps_top_key')
     .eq('company_id', companyId)
     .eq('role', 'rep')
     .order('xp', { ascending: false })
@@ -92,6 +94,7 @@ export async function getTeamStatsForUser(userId: string): Promise<TeamStats | n
       avg_accuracy: avg,
       flag: avg > 0 && avg < 70,
       avatar_url: rep.avatar_url ?? null,
+      sps_top_key: (rep.sps_top_key as SpsKey | null) ?? null,
     }
   })
 

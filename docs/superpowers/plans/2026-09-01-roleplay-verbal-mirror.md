@@ -56,7 +56,7 @@ describe('processAcousticData + classifySocialStyle (ported acoustic engine)', (
     })
     expect(metrics).not.toBeNull()
     expect(metrics!.pitchLabel).toBe('deep')
-    expect(metrics!.paceLabel).toBe('rapid')
+    expect(metrics!.paceLabel).toBe('fast')
     const read = classifySocialStyle(metrics!, 0)
     expect(read.style).toBe('driver')
     expect(read.assertiveness).toBeGreaterThan(50)
@@ -128,7 +128,7 @@ describe('turn-taking analysis', () => {
     expect(result.talkRatio.repRatio).toBeGreaterThan(0.5)
     expect(result.rapidTurnSwitches).toBe(3)
     expect(result.questionRatio).toBe(0)
-    expect(result.durationSec).toBeCloseTo(15, 0)
+    expect(result.durationSec).toBeCloseTo(14, 0)
   })
 })
 ```

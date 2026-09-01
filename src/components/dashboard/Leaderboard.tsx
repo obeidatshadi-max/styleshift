@@ -59,6 +59,9 @@ export default function Leaderboard({ reps }: Props) {
               {rep.sps_top_key
                 ? <span style={{ fontSize: 10.5, fontFamily: 'var(--mono)', fontWeight: 700, color: SPS_PROFILES_EN[rep.sps_top_key].color }}>
                     {SPS_PROFILES_EN[rep.sps_top_key].name.replace('The ', '')}
+                    {rep.sps_compliance_level === 'elevated' && (
+                      <span title="Elevated compliance risk (SPS)" style={{ color: 'var(--red)', marginInlineStart: 4 }}>⚠</span>
+                    )}
                   </span>
                 : <span style={{ color: 'var(--ink-dim)', fontSize: 11 }}>—</span>}
             </div>

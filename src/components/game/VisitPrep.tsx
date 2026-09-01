@@ -9,6 +9,7 @@ import { shuffle } from '@/lib/scenario-engine'
 import type { Doctor, DoctorInput, StyleKey, GeneratedScenario } from '@/types/game'
 import DailyChallenge from './DailyChallenge'
 import GeneratedDrill from './GeneratedDrill'
+import RoleplayRecorder from './RoleplayRecorder'
 
 interface Props { onExit: () => void }
 
@@ -21,6 +22,7 @@ type View =
   | { mode: 'detail'; doctor: Doctor }
   | { mode: 'warmup'; doctor: Doctor }
   | { mode: 'ai'; doctor: Doctor }
+  | { mode: 'roleplay'; doctor: Doctor }
 
 const inputStyle: React.CSSProperties = {
   background:'rgba(0,0,0,.3)', border:'1px solid var(--line)', borderRadius:10,
@@ -64,6 +66,11 @@ export default function VisitPrep({ onExit }: Props) {
   // ───────────────────────── AI BESPOKE DRILL ─────────────────────────
   if (view.mode === 'ai') {
     return <AiDrill doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
+  }
+
+  // ───────────────────────── ROLEPLAY VERBAL MIRROR ─────────────────────────
+  if (view.mode === 'roleplay') {
+    return <RoleplayRecorder doctorId={view.doctor.id} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
   }
 
   // ───────────────────────── DETAIL / PREP ─────────────────────────
@@ -116,6 +123,10 @@ export default function VisitPrep({ onExit }: Props) {
             <button onClick={() => setView({ mode: 'ai', doctor: d })}
               style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               {t('prep.aiDrill')} · {t('prep.aiPremium')}
+            </button>
+            <button onClick={() => setView({ mode: 'roleplay', doctor: d })}
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--green)', color:'var(--green)', background:'rgba(62,224,143,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              🎙 {t('roleplay.entryButton')}
             </button>
           </div>
         )}

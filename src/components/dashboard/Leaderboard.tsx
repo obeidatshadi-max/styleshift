@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import type { RepStat } from '@/app/api/team-stats/route'
 import { getRank } from '@/lib/game-logic'
+import { SPS_PROFILES_EN } from '@/lib/sps-data'
 
 interface Props { reps: RepStat[] }
 
@@ -30,11 +31,12 @@ export default function Leaderboard({ reps }: Props) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 80px 80px 100px', gap: 8, padding: '8px 12px', fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--ink-dim)', borderBottom: '1px solid var(--line)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 80px 80px 90px 100px', gap: 8, padding: '8px 12px', fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--ink-dim)', borderBottom: '1px solid var(--line)' }}>
         <span>Rep</span>
         <span style={{ textAlign: 'center' }}>Rank</span>
         <span style={{ textAlign: 'center' }}>Accuracy</span>
         <span style={{ textAlign: 'center' }}>Sessions</span>
+        <span style={{ textAlign: 'center' }}>Style</span>
         <span style={{ textAlign: 'center' }}>Status</span>
       </div>
       {reps.map((rep, i) => {
@@ -43,7 +45,7 @@ export default function Leaderboard({ reps }: Props) {
         const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
         const active = rep.last_visit === today || rep.last_visit === yesterday
         return (
-          <div key={rep.id} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 80px 80px 100px', gap: 8, padding: '12px', borderBottom: '1px solid var(--line)', background: i % 2 === 0 ? 'rgba(0,0,0,.1)' : 'transparent', alignItems: 'center' }}>
+          <div key={rep.id} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 80px 80px 90px 100px', gap: 8, padding: '12px', borderBottom: '1px solid var(--line)', background: i % 2 === 0 ? 'rgba(0,0,0,.1)' : 'transparent', alignItems: 'center' }}>
             <div>
               <div style={{ fontSize: 14, fontWeight: 600 }}>{rep.display_name || rep.id.slice(0, 8)}</div>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-dim)' }}>{rep.xp} XP</div>
@@ -53,6 +55,13 @@ export default function Leaderboard({ reps }: Props) {
               {rep.avg_accuracy > 0 ? `${rep.avg_accuracy}%` : '—'}
             </div>
             <div style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--ink-dim)' }}>{rep.total_sessions}</div>
+            <div style={{ textAlign: 'center' }}>
+              {rep.sps_top_key
+                ? <span style={{ fontSize: 10.5, fontFamily: 'var(--mono)', fontWeight: 700, color: SPS_PROFILES_EN[rep.sps_top_key].color }}>
+                    {SPS_PROFILES_EN[rep.sps_top_key].name.replace('The ', '')}
+                  </span>
+                : <span style={{ color: 'var(--ink-dim)', fontSize: 11 }}>—</span>}
+            </div>
             <div style={{ textAlign: 'center' }}>
               {rep.flag ? <AssignButton repName={rep.display_name || rep.id.slice(0, 8)} /> : active ? '🔥' : '—'}
             </div>

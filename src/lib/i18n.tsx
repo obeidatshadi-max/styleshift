@@ -2,6 +2,8 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { STYLES, STYLE_ORDER, L1, L2, L3, L4, LEVELS, RANKS } from '@/lib/game-data'
 import { STYLES_AR, L1_AR, L2_AR, L3_AR, L4_AR, LEVELS_AR, RANKS_AR } from '@/lib/game-data-ar'
+import { SPS_QUESTIONS_EN, SPS_PROFILES_EN } from '@/lib/sps-data'
+import { SPS_QUESTIONS_AR, SPS_PROFILES_AR } from '@/lib/sps-data-ar'
 import type { BadgeName } from '@/types/game'
 
 export type Lang = 'en' | 'ar'
@@ -255,6 +257,29 @@ const EN: Dict = {
   'join.welcome': 'Welcome to {name}!',
   'join.redirecting': 'Taking you to the game…',
   'join.otpError': 'Sign-in failed. Please try again.',
+  // sps onboarding
+  'sps.eyebrow': 'Sales Person Style',
+  'sps.title': 'Discover Your Selling Style',
+  'sps.intro': "A quick 16-question read on how you sell. It becomes your StyleShift player profile and shows up on your manager's dashboard. Takes about 4 minutes.",
+  'sps.start': 'Begin →',
+  'sps.progress': 'Question {n} of {total}',
+  'sps.resultEyebrow': 'SPS Assessment Complete',
+  'sps.resultTitle': 'Your Sales Profile',
+  'sps.scoresTitle': 'Score Breakdown',
+  'sps.strengths': 'Key Strengths',
+  'sps.growthLabel': 'Growth Focus:',
+  'sps.tipLabel': 'Field Action Tip:',
+  'sps.oppEyebrow': 'Growth Edge',
+  'sps.oppTitle': 'Your Opposing Force',
+  'sps.oppIntro': 'You scored <b>{score}/{total}</b> on {name} traits — the direct opposite of your dominant style. This is not a weakness to fix; it\'s the pattern you rely on least.',
+  'sps.oppBorrow': "Borrow this — don't become it:",
+  'sps.balancedNote': 'Your scores are spread across styles — a Balanced Profile, meaning you can adapt your approach across different situations.',
+  'sps.complianceTitle': 'Compliance & Ethics Signal',
+  'sps.complianceIntro': 'On the 2 compliance scenarios, your responses scored <b>{level} risk</b> ({score}/{max}). Scored separately from your SPS style.',
+  'sps.complianceLevel.low': 'Low',
+  'sps.complianceLevel.moderate': 'Moderate',
+  'sps.complianceLevel.elevated': 'Elevated',
+  'sps.continue': 'Continue to StyleShift →',
   // toggle (label shows the language you switch TO)
   'toggle.switchTo': 'عربي',
 }
@@ -489,6 +514,29 @@ const AR: Dict = {
   'join.welcome': 'أهلاً في {name}!',
   'join.redirecting': 'ننتقل إلى اللعبة…',
   'join.otpError': 'فشل تسجيل الدخول. الرجاء المحاولة مرة أخرى.',
+  // sps onboarding
+  'sps.eyebrow': 'أسلوب مندوب المبيعات',
+  'sps.title': 'اكتشف أسلوبك في البيع',
+  'sps.intro': 'تقييم سريع من ١٦ سؤالاً حول أسلوبك في البيع. يصبح ملفك الشخصي في StyleShift ويظهر في لوحة مديرك. يستغرق حوالي ٤ دقائق.',
+  'sps.start': 'ابدأ ←',
+  'sps.progress': 'السؤال {n} من {total}',
+  'sps.resultEyebrow': 'اكتمل تقييم SPS',
+  'sps.resultTitle': 'أسلوبك في المبيعات',
+  'sps.scoresTitle': 'تفصيل الدرجات',
+  'sps.strengths': 'أهم نقاط القوة',
+  'sps.growthLabel': 'محور التطوير:',
+  'sps.tipLabel': 'نصيحة ميدانية:',
+  'sps.oppEyebrow': 'حافة النمو',
+  'sps.oppTitle': 'قوّتك المقابلة',
+  'sps.oppIntro': 'حصلت على <b>{score}/{total}</b> في صفات {name} — الأسلوب المعاكس تماماً لأسلوبك الغالب. هذه ليست نقطة ضعف، بل النمط الذي تستخدمه أقل.',
+  'sps.oppBorrow': 'استعرها، ولا تصبح إياها:',
+  'sps.balancedNote': 'درجاتك موزّعة على أكثر من أسلوب — لديك أسلوب متوازن، ما يعني أنك تستطيع تكييف أسلوبك حسب الموقف.',
+  'sps.complianceTitle': 'الامتثال والأخلاقيات',
+  'sps.complianceIntro': 'في سؤالي الامتثال، جاءت إجاباتك بمستوى <b>مخاطرة {level}</b> ({score}/{max}). يُحتسب هذا منفصلاً عن أسلوبك في SPS.',
+  'sps.complianceLevel.low': 'منخفض',
+  'sps.complianceLevel.moderate': 'متوسط',
+  'sps.complianceLevel.elevated': 'مرتفع',
+  'sps.continue': 'المتابعة إلى StyleShift ←',
   'toggle.switchTo': 'EN',
 }
 
@@ -567,4 +615,13 @@ export function useGameData() {
     return { STYLES: STYLES_AR, STYLE_ORDER, L1: L1_AR, L2: L2_AR, L3: L3_AR, L4: L4_AR, LEVELS: LEVELS_AR, RANKS: RANKS_AR }
   }
   return { STYLES, STYLE_ORDER, L1, L2, L3, L4, LEVELS, RANKS }
+}
+
+/** Returns the SPS assessment content set for the current language. */
+export function useSpsData() {
+  const { lang } = useLang()
+  if (lang === 'ar') {
+    return { SPS_QUESTIONS_TEXT: SPS_QUESTIONS_AR, SPS_PROFILES_TEXT: SPS_PROFILES_AR }
+  }
+  return { SPS_QUESTIONS_TEXT: SPS_QUESTIONS_EN, SPS_PROFILES_TEXT: SPS_PROFILES_EN }
 }

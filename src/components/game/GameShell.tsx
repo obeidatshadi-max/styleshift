@@ -252,6 +252,7 @@ export default function GameShell() {
         level={levelState.level}
         results={levelState.results}
         meters={levelState.meters}
+        spsKey={profile?.sps_top_key}
         onHome={handleHome}
       />
     )

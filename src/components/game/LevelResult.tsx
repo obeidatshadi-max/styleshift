@@ -1,22 +1,26 @@
 'use client'
 import { useState } from 'react'
 import { Meter } from './helpers'
-import { useT } from '@/lib/i18n'
+import { useT, useSpsData } from '@/lib/i18n'
+import type { SpsKey } from '@/lib/sps-core'
 
 interface Props {
   level: number
   results: boolean[]
   meters?: { quota: number; morale: number; risk: number }
+  spsKey?: SpsKey | null
   onHome: (confidence: number) => void
 }
 
-export default function LevelResult({ level, results, meters, onHome }: Props) {
+export default function LevelResult({ level, results, meters, spsKey, onHome }: Props) {
   const t = useT()
+  const { SPS_PROFILES_TEXT } = useSpsData()
   const total = results.length
   const got = results.filter(Boolean).length
   const acc = Math.round(got / total * 100)
   const [conf, setConf] = useState(acc)
   const apexClear = meters ? meters.quota >= 60 && meters.morale >= 50 && meters.risk <= 50 : false
+  const spsTip = spsKey ? SPS_PROFILES_TEXT[spsKey] : null
 
   return (
     <div style={{ position:'relative', zIndex:1, maxWidth:1040, margin:'0 auto', padding:14 }}>
@@ -35,6 +39,12 @@ export default function LevelResult({ level, results, meters, onHome }: Props) {
               {t('result.target')}
             </div>
           </>
+        )}
+        {spsTip && (
+          <div style={{ marginBottom:14, borderRadius:12, padding:'13px 14px', fontSize:13, lineHeight:1.5, border:`1px solid ${spsTip.color}` }}>
+            <b style={{ display:'block', fontFamily:'var(--mono)', letterSpacing:'.1em', textTransform:'uppercase', fontSize:11, marginBottom:5, color: spsTip.color }}>{spsTip.name} &middot; {t('sps.tipLabel')}</b>
+            {spsTip.tip}
+          </div>
         )}
         <div style={{ fontFamily:'var(--mono)', fontSize:13, color:'var(--ink-dim)', letterSpacing:'.04em', marginBottom:10 }}>{t('result.confidence')}</div>
         <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>

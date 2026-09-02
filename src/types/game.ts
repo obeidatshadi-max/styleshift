@@ -87,6 +87,23 @@ export interface Doctor {
 // Fields a rep can set when creating/editing a doctor profile.
 export type DoctorInput = Omit<Doctor, 'id' | 'rep_id' | 'created_at' | 'updated_at'>
 
+// A timestamped entry on a doctor's Digital Twin: a real visit or an
+// auto-logged practice session, so prep sharpens with each visit.
+export interface DoctorVisit {
+  id: string
+  doctor_id: string
+  rep_id: string
+  source: 'manual' | 'warmup' | 'ai_drill'
+  objection_raised: string | null
+  promise_made: string | null
+  what_worked: string | null
+  note: string | null
+  created_at: string
+}
+
+export type DoctorVisitInput = Pick<DoctorVisit, 'source'> &
+  Partial<Pick<DoctorVisit, 'objection_raised' | 'promise_made' | 'what_worked' | 'note'>>
+
 // A coaching assignment: the manager targets one objection category or one
 // level; each targeted rep completes one qualifying run before the due date.
 export interface Assignment {

@@ -1,14 +1,16 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useT, useLang, useGameData } from '@/lib/i18n'
 import { useDoctors } from '@/hooks/useDoctors'
+import { useDoctorVisits } from '@/hooks/useDoctorVisits'
 import { deriveStyle, OBJECTION_CATEGORIES } from '@/lib/social-style'
 import type { Assertiveness, Responsiveness } from '@/lib/social-style'
 import { L2_OBJECTION } from '@/lib/scenario-meta'
 import { shuffle } from '@/lib/scenario-engine'
-import type { Doctor, DoctorInput, StyleKey, GeneratedScenario } from '@/types/game'
+import type { Doctor, DoctorInput, DoctorVisit, StyleKey, GeneratedScenario } from '@/types/game'
 import DailyChallenge from './DailyChallenge'
 import GeneratedDrill from './GeneratedDrill'
+import VoiceRecorder from './VoiceRecorder'
 
 interface Props { onExit: () => void }
 
@@ -21,6 +23,7 @@ type View =
   | { mode: 'detail'; doctor: Doctor }
   | { mode: 'warmup'; doctor: Doctor }
   | { mode: 'ai'; doctor: Doctor }
+  | { mode: 'logVisit'; doctor: Doctor }
 
 const inputStyle: React.CSSProperties = {
   background:'rgba(0,0,0,.3)', border:'1px solid var(--line)', borderRadius:10,
@@ -64,6 +67,11 @@ export default function VisitPrep({ onExit }: Props) {
   // ───────────────────────── AI BESPOKE DRILL ─────────────────────────
   if (view.mode === 'ai') {
     return <AiDrill doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
+  }
+
+  // ───────────────────────── LOG A VISIT ─────────────────────────
+  if (view.mode === 'logVisit') {
+    return <LogVisitForm doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} onCancel={() => setView({ mode: 'detail', doctor: view.doctor })} />
   }
 
   // ───────────────────────── DETAIL / PREP ─────────────────────────
@@ -121,6 +129,11 @@ export default function VisitPrep({ onExit }: Props) {
         )}
         {!style && panel(t('prep.cheatTitle'),
           <button onClick={() => setView({ mode: 'form', doctor: d })} style={primaryBtn}>{t('prep.styleHelp')}</button>
+        )}
+
+        {panel(t('visit.historyTitle'),
+          <DoctorHistory doctorId={d.id} />,
+          <button onClick={() => setView({ mode: 'logVisit', doctor: d })} style={{ ...ghostBtn, fontSize:11, padding:'6px 12px' }}>{t('visit.logVisit')}</button>
         )}
       </>
     )
@@ -302,6 +315,8 @@ function WarmUp({ doctor, L1, L2, L3, onDone }: {
   onDone: () => void
 }) {
   const t = useT()
+  const { addVisit } = useDoctorVisits(doctor.id)
+  const logged = useRef(false)
   const style = doctor.style
   // Build a 3-drill rehearsal for this doctor's style: read -> objection -> drive.
   const [drills] = useState(() => {
@@ -318,6 +333,13 @@ function WarmUp({ doctor, L1, L2, L3, onDone }: {
     return out
   })
   const [idx, setIdx] = useState(0)
+
+  useEffect(() => {
+    if (drills.length > 0 && idx >= drills.length && !logged.current) {
+      logged.current = true
+      void addVisit({ source: 'warmup', note: t('visit.warmupNote', { style: style ?? '', n: drills.length }) })
+    }
+  }, [idx, drills.length, style, addVisit, t])
 
   if (drills.length === 0 || idx >= drills.length) {
     return (
@@ -348,6 +370,7 @@ function WarmUp({ doctor, L1, L2, L3, onDone }: {
 function AiDrill({ doctor, onDone }: { doctor: Doctor; onDone: () => void }) {
   const t = useT()
   const { lang } = useLang()
+  const { addVisit } = useDoctorVisits(doctor.id)
   const [state, setState] = useState<'loading' | 'ready' | 'error' | 'notconfigured'>('loading')
   const [scenario, setScenario] = useState<GeneratedScenario | null>(null)
 
@@ -371,7 +394,16 @@ function AiDrill({ doctor, onDone }: { doctor: Doctor; onDone: () => void }) {
     return () => { active = false }
   }, [doctor.id, lang])
 
-  if (state === 'ready' && scenario) return <GeneratedDrill scenario={scenario} onDone={onDone} />
+  if (state === 'ready' && scenario) {
+    return <GeneratedDrill scenario={scenario} onDone={(won) => {
+      void addVisit({
+        source: 'ai_drill',
+        objection_raised: scenario.crisis,
+        note: t('visit.aiDrillNote', { crisis: scenario.crisis, outcome: won ? t('visit.aiDrillWin') : t('visit.aiDrillEscalate') }),
+      })
+      onDone()
+    }} />
+  }
 
   return (
     <div style={{ position:'relative', zIndex:1, maxWidth:560, margin:'0 auto', padding:14 }}>
@@ -393,6 +425,90 @@ function AiDrill({ doctor, onDone }: { doctor: Doctor; onDone: () => void }) {
           )}
           {state !== 'loading' && <button onClick={onDone} style={ghostBtn}>{t('prep.aiBack')}</button>}
         </>
+      )}
+    </div>
+  )
+}
+
+// ───────────────────────── Doctor history (Digital Twin) ─────────────────────────
+const SOURCE_LABEL_KEY: Record<DoctorVisit['source'], string> = {
+  manual: 'visit.sourceManual', warmup: 'visit.sourceWarmup', ai_drill: 'visit.sourceAiDrill',
+}
+
+const historyRow: React.CSSProperties = { fontSize:13, lineHeight:1.5, marginBottom:3 }
+const historyLabel: React.CSSProperties = { color:'var(--ink-dim)', fontWeight:600 }
+
+function DoctorHistory({ doctorId }: { doctorId: string }) {
+  const t = useT()
+  const { lang } = useLang()
+  const { visits, loading } = useDoctorVisits(doctorId)
+
+  if (loading) return <div style={{ color:'var(--ink-dim)', fontSize:13 }}>…</div>
+  if (visits.length === 0) return <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.5 }}>{t('visit.empty')}</div>
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+      {visits.map(v => (
+        <div key={v.id} style={{ border:'1px solid var(--line)', borderRadius:10, padding:'10px 12px', background:'rgba(0,0,0,.18)' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+            <span style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.1em', textTransform:'uppercase', color:'var(--cyan)' }}>{t(SOURCE_LABEL_KEY[v.source])}</span>
+            <span style={{ fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-dim)' }}>{new Date(v.created_at).toLocaleDateString(lang === 'ar' ? 'ar' : 'en')}</span>
+          </div>
+          {v.objection_raised && <div style={historyRow}><span style={historyLabel}>{t('visit.objectionRaised')}:</span> {v.objection_raised}</div>}
+          {v.promise_made && <div style={historyRow}><span style={historyLabel}>{t('visit.promiseMade')}:</span> {v.promise_made}</div>}
+          {v.what_worked && <div style={historyRow}><span style={historyLabel}>{t('visit.whatWorked')}:</span> {v.what_worked}</div>}
+          {v.note && <div style={{ ...historyRow, color:'var(--ink-dim)', marginBottom:0 }}>{v.note}</div>}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ───────────────────────── Log a visit ─────────────────────────
+function LogVisitForm({ doctor, onDone, onCancel }: { doctor: Doctor; onDone: () => void; onCancel: () => void }) {
+  const t = useT()
+  const { addVisit } = useDoctorVisits(doctor.id)
+  const [objection, setObjection] = useState('')
+  const [promise, setPromise] = useState('')
+  const [worked, setWorked] = useState('')
+  const [note, setNote] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  async function submit() {
+    setSaving(true)
+    await addVisit({
+      source: 'manual',
+      objection_raised: objection.trim() || null,
+      promise_made: promise.trim() || null,
+      what_worked: worked.trim() || null,
+      note: note.trim() || null,
+    })
+    onDone()
+  }
+
+  const field = (label: string, value: string, setValue: React.Dispatch<React.SetStateAction<string>>) => (
+    <div>
+      <span style={labelStyle}>{label}</span>
+      <div style={{ display:'flex', gap:8, alignItems:'flex-start' }}>
+        <textarea value={value} onChange={e => setValue(e.target.value)} rows={2} style={{ ...inputStyle, resize:'vertical' as const, flex:1 }} />
+        <VoiceRecorder onTranscript={text => setValue(prev => prev ? `${prev} ${text}` : text)} />
+      </div>
+    </div>
+  )
+
+  return (
+    <div style={{ position:'relative', zIndex:1, maxWidth:560, margin:'0 auto', padding:14 }}>
+      {panel(t('visit.logVisit'),
+        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+          {field(t('visit.objectionRaised'), objection, setObjection)}
+          {field(t('visit.promiseMade'), promise, setPromise)}
+          {field(t('visit.whatWorked'), worked, setWorked)}
+          {field(t('visit.generalNote'), note, setNote)}
+          <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+            <button onClick={submit} disabled={saving} style={{ ...primaryBtn, flex:1, opacity: saving ? .6 : 1 }}>{t('visit.save')}</button>
+            <button onClick={onCancel} style={ghostBtn}>{t('visit.cancel')}</button>
+          </div>
+        </div>
       )}
     </div>
   )

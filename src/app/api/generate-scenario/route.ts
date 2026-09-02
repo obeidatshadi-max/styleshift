@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
-import type { Doctor, GeneratedScenario, StyleKey } from '@/types/game'
+import type { Doctor, DoctorVisit, GeneratedScenario, StyleKey } from '@/types/game'
 
 const DRIVE: Record<StyleKey, string> = {
   driver: 'Control & Achievement',
@@ -18,7 +18,24 @@ Hard rules — follow exactly:
 - The scenario and every rationale must teach COMMUNICATION STYLE, not medical claims.
 - Output ONLY a single valid JSON object. No markdown fences, no commentary.`
 
-function buildUserPrompt(d: Doctor, style: StyleKey, lang: 'en' | 'ar'): string {
+// Turns the doctor's visit history into "the rep already knows this" context so
+// visit #6's drill is sharper than visit #1's — it echoes real objections/promises
+// instead of generic style theory.
+function buildHistoryContext(visits: DoctorVisit[]): string {
+  if (!visits.length) return ''
+  const lines = visits.slice(0, 5).map(v => {
+    const parts: string[] = []
+    if (v.objection_raised) parts.push(`objection: "${v.objection_raised}"`)
+    if (v.promise_made) parts.push(`rep promised: "${v.promise_made}"`)
+    if (v.what_worked) parts.push(`worked well: "${v.what_worked}"`)
+    if (!parts.length && v.note) parts.push(v.note)
+    return parts.length ? `- ${parts.join('; ')}` : null
+  }).filter(Boolean)
+  if (!lines.length) return ''
+  return `Past visit history with this doctor (most recent first) — use this to make the objection feel like a continuation, not a first meeting:\n${lines.join('\n')}`
+}
+
+function buildUserPrompt(d: Doctor, style: StyleKey, lang: 'en' | 'ar', history: string): string {
   const langName = lang === 'ar' ? 'Arabic' : 'English'
   const phrases = d.key_phrases?.trim() ? `They often say things like: "${d.key_phrases.trim()}".` : ''
   const objections = d.objections?.length ? `Objection theme(s) they are likely to raise: ${d.objections.join(', ')}.` : ''
@@ -27,6 +44,7 @@ function buildUserPrompt(d: Doctor, style: StyleKey, lang: 'en' | 'ar'): string 
 Customer: ${d.name}${specialty}. Social style: ${style} (core drive: ${DRIVE[style]}).
 ${phrases}
 ${objections}
+${history}
 
 Return JSON exactly in this shape:
 {
@@ -89,6 +107,15 @@ export async function POST(req: Request) {
 
   const lang = body.lang === 'ar' ? 'ar' : 'en'
 
+  // RLS ensures the rep can only read their own doctor's visit history.
+  const { data: visits } = await supabase
+    .from('doctor_visits')
+    .select('*')
+    .eq('doctor_id', body.doctorId)
+    .order('created_at', { ascending: false })
+    .limit(5)
+  const history = buildHistoryContext((visits as DoctorVisit[]) ?? [])
+
   let res: Response
   try {
     res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -102,7 +129,7 @@ export async function POST(req: Request) {
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 900,
         system: SYSTEM,
-        messages: [{ role: 'user', content: buildUserPrompt(doctor as Doctor, style, lang) }],
+        messages: [{ role: 'user', content: buildUserPrompt(doctor as Doctor, style, lang, history) }],
       }),
     })
   } catch {

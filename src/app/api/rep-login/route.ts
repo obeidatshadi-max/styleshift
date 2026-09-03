@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { checkRateLimit, clientIp } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
+  if (!(await checkRateLimit('rep-login', clientIp(request), 15, 600)))
+    return NextResponse.json({ error: 'Too many attempts. Try again in a few minutes.' }, { status: 429 })
+
   const { mobile } = await request.json()
   if (!mobile?.trim())
     return NextResponse.json({ error: 'Mobile number required' }, { status: 400 })

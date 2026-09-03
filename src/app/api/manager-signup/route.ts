@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { checkRateLimit, clientIp } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
+  if (!(await checkRateLimit('manager-signup', clientIp(request), 5, 600)))
+    return NextResponse.json({ error: 'Too many attempts. Try again in a few minutes.' }, { status: 429 })
+
   const { email, password } = await request.json()
   if (!email?.trim() || !password)
     return NextResponse.json({ error: 'Email and password required' }, { status: 400 })

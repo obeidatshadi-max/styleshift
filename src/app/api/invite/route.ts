@@ -1,11 +1,16 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  // Authenticated already, but still brute-forceable across companies' invite codes.
+  if (!(await checkRateLimit('invite', user.id, 15, 600)))
+    return NextResponse.json({ error: 'Too many attempts. Try again in a few minutes.' }, { status: 429 })
 
   const { code } = await request.json()
   if (!code) return NextResponse.json({ error: 'Invite code required' }, { status: 400 })

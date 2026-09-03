@@ -9,6 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@netlify/blobs": "^11.0.3",
     "@opentelemetry/api": "^1.9.1",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.107.0",

@@ -1,5 +1,14 @@
 // src/lib/assemblyai-client.ts
+import { createClient } from '@/lib/supabase-browser'
+
 const PROXY_URL = '/.netlify/functions/assemblyai-proxy'
+
+async function authHeaders(): Promise<Record<string, string>> {
+  const supabase = createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Not signed in.')
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }
+}
 
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -22,7 +31,7 @@ interface TranscriptStatus {
 async function uploadAudio(blob: Blob): Promise<string> {
   const audio = await blobToBase64(blob)
   const res = await fetch(PROXY_URL, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: await authHeaders(),
     body: JSON.stringify({ action: 'upload', audio }),
   })
   const data = await res.json()
@@ -32,7 +41,7 @@ async function uploadAudio(blob: Blob): Promise<string> {
 
 async function submitDiarization(audioUrl: string): Promise<string> {
   const res = await fetch(PROXY_URL, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: await authHeaders(),
     body: JSON.stringify({ action: 'submit', audio_url: audioUrl }),
   })
   const data = await res.json()
@@ -42,7 +51,7 @@ async function submitDiarization(audioUrl: string): Promise<string> {
 
 async function pollTranscript(transcriptId: string): Promise<TranscriptStatus> {
   const res = await fetch(PROXY_URL, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: await authHeaders(),
     body: JSON.stringify({ action: 'poll', transcript_id: transcriptId }),
   })
   const data = await res.json()

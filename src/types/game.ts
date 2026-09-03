@@ -104,6 +104,33 @@ export interface DoctorVisit {
 export type DoctorVisitInput = Pick<DoctorVisit, 'source'> &
   Partial<Pick<DoctorVisit, 'objection_raised' | 'promise_made' | 'what_worked' | 'note'>>
 
+// A named practice colleague — deliberately minimal (see `colleagues`
+// migration comment): a practice partner's identity, not a prep target.
+export interface Colleague {
+  id: string
+  rep_id: string
+  name: string
+  created_at: string
+}
+
+export type ColleagueInput = Pick<Colleague, 'name'>
+
+// A row from a colleague's (or doctor's) roleplay session history —
+// scores only, matching the privacy shape of `roleplay_sessions` itself:
+// never the transcript, never the audio.
+export interface RoleplaySessionSummary {
+  id: string
+  created_at: string
+  duration_sec: number
+  talk_ratio: number
+  question_ratio: number
+  open_question_ratio: number | null
+  paraphrase_score: number | null
+  active_listening_score: number | null
+  rep_style: StyleKey | null
+  rep_confidence: number | null
+}
+
 // A coaching assignment: the manager targets one objection category or one
 // level; each targeted rep completes one qualifying run before the due date.
 export interface Assignment {

@@ -3,11 +3,11 @@ import { useState } from 'react'
 import { useT } from '@/lib/i18n'
 import { useRoleplayRecorder } from '@/hooks/useRoleplayRecorder'
 
-interface Props { doctorId: string | null; onDone: () => void }
+interface Props { doctorId: string | null; colleagueId: string | null; onDone: () => void }
 
-export default function RoleplayRecorder({ doctorId, onDone }: Props) {
+export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Props) {
   const t = useT()
-  const { phase, error, elapsedSec, speakerPreviews, result, start, stop, pickSpeaker, reset } = useRoleplayRecorder(doctorId)
+  const { phase, error, elapsedSec, speakerPreviews, result, start, stop, pickSpeaker, reset } = useRoleplayRecorder(doctorId, colleagueId)
   const [consentChecked, setConsentChecked] = useState(false)
   const [consented, setConsented] = useState(false)
 

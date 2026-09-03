@@ -37,7 +37,7 @@ function autoCorrelate(bufIn: Float32Array, sampleRate: number): number {
   return sampleRate / T0
 }
 
-export function useRoleplayRecorder(doctorId: string | null) {
+export function useRoleplayRecorder(doctorId: string | null, colleagueId: string | null) {
   const supabase = createClient()
   const [phase, setPhase] = useState<RecorderPhase>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -173,6 +173,7 @@ export function useRoleplayRecorder(doctorId: string | null) {
       const { error: insertError } = await supabase.from('roleplay_sessions').insert({
         rep_id: user.id,
         doctor_id: doctorId,
+        colleague_id: colleagueId,
         duration_sec: Math.round(built.durationSec),
         talk_ratio: built.talkRatio.repRatio,
         rapid_turn_switches: built.rapidTurnSwitches,
@@ -198,7 +199,7 @@ export function useRoleplayRecorder(doctorId: string | null) {
     }
 
     setPhase('done')
-  }, [doctorId, supabase])
+  }, [doctorId, colleagueId, supabase])
 
   const reset = useCallback(() => {
     cleanupCapture()

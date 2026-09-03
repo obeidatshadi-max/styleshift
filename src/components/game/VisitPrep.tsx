@@ -78,7 +78,7 @@ export default function VisitPrep({ onExit }: Props) {
 
   // ───────────────────────── ROLEPLAY VERBAL MIRROR ─────────────────────────
   if (view.mode === 'roleplay') {
-    return <RoleplayRecorder doctorId={view.doctor.id} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
+    return <RoleplayRecorder doctorId={view.doctor.id} colleagueId={null} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
   }
 
   // ───────────────────────── DETAIL / PREP ─────────────────────────

@@ -251,6 +251,35 @@ export function computeParaphraseScore(turns: Turn[], repSpeaker: string): numbe
   return pairs > 0 ? scored / pairs : 0
 }
 
+export interface ActiveListeningResult { score: number; label: 'developing' | 'solid' | 'excellent' }
+
+/**
+ * Composite 0-100 score from three signals, each already computed elsewhere:
+ * - talk balance: 50% talk time is neutral; scores fall off both above it
+ *   (dominating the conversation = not listening) and below ~15% (too
+ *   passive to be actively engaging).
+ * - cutoff rate: fewer rapid turn-switches per minute (see
+ *   computeRapidTurnSwitches) is better.
+ * - paraphrase evidence: the strongest direct signal, weighted highest.
+ */
+export function computeActiveListeningScore(
+  talkRatio: TalkRatio, rapidTurnSwitches: number, paraphraseScore: number
+): ActiveListeningResult {
+  const talkN = talkRatio.repRatio <= 0.5
+    ? band(talkRatio.repRatio, 0.15, 0.5)
+    : 100 - band(talkRatio.repRatio, 0.5, 0.85)
+
+  const durationMin = talkRatio.totalMs / 60000
+  const switchesPerMin = durationMin > 0 ? rapidTurnSwitches / durationMin : 0
+  const cutoffN = 100 - band(switchesPerMin, 0, 10)
+
+  const paraphraseN = clamp01(paraphraseScore * 100)
+
+  const score = Math.round(clamp01(talkN * 0.35 + cutoffN * 0.25 + paraphraseN * 0.4))
+  const label: ActiveListeningResult['label'] = score >= 75 ? 'excellent' : score >= 45 ? 'solid' : 'developing'
+  return { score, label }
+}
+
 export function repTranscript(turns: Turn[], repSpeaker: string): string {
   return turns.filter(t => t.speaker === repSpeaker).map(t => t.text).join(' ')
 }
@@ -271,6 +300,9 @@ export interface RoleplayResult {
   talkRatio: TalkRatio
   rapidTurnSwitches: number
   questionRatio: number
+  openQuestionRatio: number
+  paraphraseScore: number
+  activeListening: ActiveListeningResult
   repRead: SocialStyleRead | null
   durationSec: number
 }
@@ -284,11 +316,14 @@ export function buildRoleplayResult(
   const talkRatio = computeTalkRatio(turns, repSpeaker)
   const rapidTurnSwitches = computeRapidTurnSwitches(turns)
   const questionRatio = computeQuestionRatio(turns, repSpeaker)
+  const openQuestionRatio = classifyQuestions(turns, repSpeaker).openRatio
+  const paraphraseScore = computeParaphraseScore(turns, repSpeaker)
+  const activeListening = computeActiveListeningScore(talkRatio, rapidTurnSwitches, paraphraseScore)
   const transcript = repTranscript(turns, repSpeaker)
   const { pitchSamples: repPitch, silencePeriods: repSilence } = scopeAcousticToSpeaker(pitchSamples, silencePeriods, turns, repSpeaker)
   const repDurationSec = talkRatio.repMs / 1000
   const metrics = processAcousticData({ pitchSamples: repPitch, silencePeriods: repSilence, transcript, durationSec: repDurationSec })
   const delivery = analyzeDelivery({ transcript })
   const repRead = metrics ? classifySocialStyle(metrics, delivery.warmth) : null
-  return { talkRatio, rapidTurnSwitches, questionRatio, repRead, durationSec: talkRatio.totalMs / 1000 }
+  return { talkRatio, rapidTurnSwitches, questionRatio, openQuestionRatio, paraphraseScore, activeListening, repRead, durationSec: talkRatio.totalMs / 1000 }
 }

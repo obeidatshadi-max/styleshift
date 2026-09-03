@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   processAcousticData, classifySocialStyle, buildTurns, computeTalkRatio,
-  computeRapidTurnSwitches, computeQuestionRatio, classifyQuestions, computeParaphraseScore, repTranscript,
+  computeRapidTurnSwitches, computeQuestionRatio, classifyQuestions, computeParaphraseScore,
+  computeActiveListeningScore, repTranscript,
   scopeAcousticToSpeaker, buildRoleplayResult,
   type Utterance, type PitchSample, type SilencePeriod,
 } from './roleplay-core'
@@ -89,6 +90,10 @@ describe('turn-taking analysis', () => {
     expect(result.rapidTurnSwitches).toBe(3)
     expect(result.questionRatio).toBe(0)
     expect(result.durationSec).toBeCloseTo(14, 0)
+    expect(result.openQuestionRatio).toBe(0) // rep (A) asked no questions in this fixture
+    expect(result.paraphraseScore).toBeGreaterThanOrEqual(0)
+    expect(result.paraphraseScore).toBeLessThanOrEqual(1)
+    expect(['developing', 'solid', 'excellent']).toContain(result.activeListening.label)
   })
 
   it('splits rep questions into open vs. closed', () => {
@@ -136,5 +141,21 @@ describe('paraphrase score', () => {
   it('returns 0 when no rep turn follows a partner turn', () => {
     const turns = buildTurns([{ speaker: 'A', text: 'hello there', start: 0, end: 500 }])
     expect(computeParaphraseScore(turns, 'A')).toBe(0)
+  })
+})
+
+describe('active listening score', () => {
+  it('scores a balanced, non-interrupting, paraphrasing rep as excellent', () => {
+    const talkRatio = { repMs: 4000, partnerMs: 6000, totalMs: 10000, repRatio: 0.4 }
+    const result = computeActiveListeningScore(talkRatio, 0, 0.8)
+    expect(result.score).toBe(82)
+    expect(result.label).toBe('excellent')
+  })
+
+  it('scores a dominating, interrupting, non-paraphrasing rep as developing', () => {
+    const talkRatio = { repMs: 270000, partnerMs: 30000, totalMs: 300000, repRatio: 0.9 }
+    const result = computeActiveListeningScore(talkRatio, 20, 0)
+    expect(result.score).toBe(15)
+    expect(result.label).toBe('developing')
   })
 })

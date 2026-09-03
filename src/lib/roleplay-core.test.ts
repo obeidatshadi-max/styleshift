@@ -103,4 +103,17 @@ describe('turn-taking analysis', () => {
     expect(b.closed).toBe(1)
     expect(b.openRatio).toBeCloseTo(0.5, 5)
   })
+
+  it('detects Arabic open-question markers correctly', () => {
+    const arabicUtterances: Utterance[] = [
+      { speaker: 'rep', text: 'ماذا تحتاج من هذا الدواء؟', start: 0, end: 2000 },   // "What do you need from this medicine?" - open
+      { speaker: 'rep', text: 'هل هذا يناسبك؟', start: 2100, end: 4000 },           // "Does this suit you?" - closed
+    ]
+    const turns = buildTurns(arabicUtterances)
+    const result = classifyQuestions(turns, 'rep')
+    expect(result.total).toBe(2)
+    expect(result.open).toBe(1)    // ماذا question is open
+    expect(result.closed).toBe(1)  // هل question is closed (no open marker)
+    expect(result.openRatio).toBeCloseTo(0.5, 5)
+  })
 })

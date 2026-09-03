@@ -191,7 +191,7 @@ export function computeQuestionRatio(turns: Turn[], repSpeaker: string): number 
 // opens the sentence exactly ("Sure, what have you got?"), so anchoring to
 // the start would miss it.
 const OPEN_MARKERS_EN = /\b(what|how|why|when|where|which|tell me|walk me through|describe|explain)\b/i
-const OPEN_MARKERS_AR = /\b(ماذا|كيف|متى|لماذا|أين|من|كم)\b/
+const OPEN_MARKERS_AR = /(?<![\p{L}\p{N}])(ماذا|كيف|متى|لماذا|أين|من|كم)(?![\p{L}\p{N}])/u
 
 export interface QuestionBreakdown { total: number; open: number; closed: number; openRatio: number }
 

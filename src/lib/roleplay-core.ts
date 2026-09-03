@@ -187,6 +187,102 @@ export function computeQuestionRatio(turns: Turn[], repSpeaker: string): number 
   return questions / repTurns.length
 }
 
+// "Contains" rather than "starts with" — a wh-word or yes/no marker rarely
+// opens the sentence exactly ("Sure, what have you got?"), so anchoring to
+// the start would miss it.
+const OPEN_MARKERS_EN = /\b(what|how|why|when|where|which|tell me|walk me through|describe|explain)\b/i
+const OPEN_MARKERS_AR = /^(?:ماذا|كيف|متى|لماذا|أين|من|كم)(?![\p{L}\p{N}])/u
+
+export interface QuestionBreakdown { total: number; open: number; closed: number; openRatio: number }
+
+/**
+ * Splits a speaker's questions into open-ended (wh-word / "tell me" / "walk
+ * me through" style — invites the other person to elaborate) vs. closed
+ * (yes/no-shaped, or a question with no open marker). A question with no
+ * detected open marker defaults to closed rather than "undetermined" — most
+ * unmarked questions ("This works for you?") are yes/no-shaped in practice.
+ */
+export function classifyQuestions(turns: Turn[], repSpeaker: string): QuestionBreakdown {
+  const repTurns = turns.filter(t => t.speaker === repSpeaker)
+  const isQuestion = (text: string) => {
+    const trimmed = text.trim()
+    return trimmed.endsWith('?') || trimmed.endsWith('؟') || QUESTION_STARTERS_AR.test(trimmed)
+  }
+  const questions = repTurns.map(t => t.text).filter(isQuestion)
+  const open = questions.filter(q => {
+    const trimmed = q.trim()
+    return OPEN_MARKERS_EN.test(trimmed) || OPEN_MARKERS_AR.test(trimmed)
+  }).length
+  const total = questions.length
+  return { total, open, closed: total - open, openRatio: total > 0 ? open / total : 0 }
+}
+
+const STOPWORDS = new Set([
+  'the', 'a', 'an', 'is', 'are', 'was', 'were', 'i', 'you', 'he', 'she', 'it', 'we', 'they',
+  'to', 'of', 'in', 'on', 'for', 'and', 'or', 'but', 'not', 'this', 'that', 'with', 'as', 'at',
+  'be', 'do', 'does', 'did', 'have', 'has',
+  'من', 'في', 'على', 'إلى', 'هذا', 'هذه', 'ذلك', 'التي', 'الذي', 'و', 'أو', 'لا', 'نعم', 'كان', 'كانت',
+])
+
+/** Lowercased, punctuation-stripped content words (length > 2, stopwords removed). */
+function contentWords(text: string): Set<string> {
+  const words = (text || '').toLowerCase().replace(/[.,!?؟،;:"'()]/g, '').split(/\s+/).filter(Boolean)
+  return new Set(words.filter(w => w.length > 2 && !STOPWORDS.has(w)))
+}
+
+/**
+ * For each rep turn that immediately follows a partner turn, scores what
+ * fraction of the partner's content words the rep's reply echoes back — a
+ * proxy for paraphrasing/rephrasing what was just said. Reads partner-turn
+ * TEXT transiently (same in-memory Utterance[] the pipeline already
+ * discards after scoring) — only the resulting number is ever persisted.
+ * Returns the average across all measured rep-follows-partner pairs, or 0
+ * if there are none.
+ */
+export function computeParaphraseScore(turns: Turn[], repSpeaker: string): number {
+  let scored = 0, pairs = 0
+  for (let i = 1; i < turns.length; i++) {
+    if (turns[i].speaker !== repSpeaker || turns[i - 1].speaker === repSpeaker) continue
+    const partnerWords = contentWords(turns[i - 1].text)
+    if (partnerWords.size === 0) continue
+    const repWords = contentWords(turns[i].text)
+    let hits = 0
+    for (const w of partnerWords) if (repWords.has(w)) hits++
+    scored += hits / partnerWords.size
+    pairs++
+  }
+  return pairs > 0 ? scored / pairs : 0
+}
+
+export interface ActiveListeningResult { score: number; label: 'developing' | 'solid' | 'excellent' }
+
+/**
+ * Composite 0-100 score from three signals, each already computed elsewhere:
+ * - talk balance: 50% talk time is neutral; scores fall off both above it
+ *   (dominating the conversation = not listening) and below ~15% (too
+ *   passive to be actively engaging).
+ * - cutoff rate: fewer rapid turn-switches per minute (see
+ *   computeRapidTurnSwitches) is better.
+ * - paraphrase evidence: the strongest direct signal, weighted highest.
+ */
+export function computeActiveListeningScore(
+  talkRatio: TalkRatio, rapidTurnSwitches: number, paraphraseScore: number
+): ActiveListeningResult {
+  const talkN = talkRatio.repRatio <= 0.5
+    ? band(talkRatio.repRatio, 0.15, 0.5)
+    : 100 - band(talkRatio.repRatio, 0.5, 0.85)
+
+  const durationMin = talkRatio.totalMs / 60000
+  const switchesPerMin = durationMin > 0 ? rapidTurnSwitches / durationMin : 0
+  const cutoffN = 100 - band(switchesPerMin, 0, 10)
+
+  const paraphraseN = clamp01(paraphraseScore * 100)
+
+  const score = Math.round(clamp01(talkN * 0.35 + cutoffN * 0.25 + paraphraseN * 0.4))
+  const label: ActiveListeningResult['label'] = score >= 75 ? 'excellent' : score >= 45 ? 'solid' : 'developing'
+  return { score, label }
+}
+
 export function repTranscript(turns: Turn[], repSpeaker: string): string {
   return turns.filter(t => t.speaker === repSpeaker).map(t => t.text).join(' ')
 }
@@ -207,6 +303,9 @@ export interface RoleplayResult {
   talkRatio: TalkRatio
   rapidTurnSwitches: number
   questionRatio: number
+  openQuestionRatio: number
+  paraphraseScore: number
+  activeListening: ActiveListeningResult
   repRead: SocialStyleRead | null
   durationSec: number
 }
@@ -220,11 +319,14 @@ export function buildRoleplayResult(
   const talkRatio = computeTalkRatio(turns, repSpeaker)
   const rapidTurnSwitches = computeRapidTurnSwitches(turns)
   const questionRatio = computeQuestionRatio(turns, repSpeaker)
+  const openQuestionRatio = classifyQuestions(turns, repSpeaker).openRatio
+  const paraphraseScore = computeParaphraseScore(turns, repSpeaker)
+  const activeListening = computeActiveListeningScore(talkRatio, rapidTurnSwitches, paraphraseScore)
   const transcript = repTranscript(turns, repSpeaker)
   const { pitchSamples: repPitch, silencePeriods: repSilence } = scopeAcousticToSpeaker(pitchSamples, silencePeriods, turns, repSpeaker)
   const repDurationSec = talkRatio.repMs / 1000
   const metrics = processAcousticData({ pitchSamples: repPitch, silencePeriods: repSilence, transcript, durationSec: repDurationSec })
   const delivery = analyzeDelivery({ transcript })
   const repRead = metrics ? classifySocialStyle(metrics, delivery.warmth) : null
-  return { talkRatio, rapidTurnSwitches, questionRatio, repRead, durationSec: talkRatio.totalMs / 1000 }
+  return { talkRatio, rapidTurnSwitches, questionRatio, openQuestionRatio, paraphraseScore, activeListening, repRead, durationSec: talkRatio.totalMs / 1000 }
 }

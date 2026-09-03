@@ -191,7 +191,7 @@ export function computeQuestionRatio(turns: Turn[], repSpeaker: string): number 
 // opens the sentence exactly ("Sure, what have you got?"), so anchoring to
 // the start would miss it.
 const OPEN_MARKERS_EN = /\b(what|how|why|when|where|which|tell me|walk me through|describe|explain)\b/i
-const OPEN_MARKERS_AR = /(?<![\p{L}\p{N}])(ماذا|كيف|متى|لماذا|أين|من|كم)(?![\p{L}\p{N}])/u
+const OPEN_MARKERS_AR = /^(?:ماذا|كيف|متى|لماذا|أين|من|كم)(?![\p{L}\p{N}])/u
 
 export interface QuestionBreakdown { total: number; open: number; closed: number; openRatio: number }
 
@@ -209,7 +209,10 @@ export function classifyQuestions(turns: Turn[], repSpeaker: string): QuestionBr
     return trimmed.endsWith('?') || trimmed.endsWith('؟') || QUESTION_STARTERS_AR.test(trimmed)
   }
   const questions = repTurns.map(t => t.text).filter(isQuestion)
-  const open = questions.filter(q => OPEN_MARKERS_EN.test(q) || OPEN_MARKERS_AR.test(q)).length
+  const open = questions.filter(q => {
+    const trimmed = q.trim()
+    return OPEN_MARKERS_EN.test(trimmed) || OPEN_MARKERS_AR.test(trimmed)
+  }).length
   const total = questions.length
   return { total, open, closed: total - open, openRatio: total > 0 ? open / total : 0 }
 }

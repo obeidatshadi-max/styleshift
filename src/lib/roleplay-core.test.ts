@@ -121,6 +121,18 @@ describe('turn-taking analysis', () => {
     expect(result.closed).toBe(1)  // هل question is closed (no open marker)
     expect(result.openRatio).toBeCloseTo(0.5, 5)
   })
+
+  it('does not misclassify a closed Arabic question containing "من" as a preposition, but still detects it as the interrogative "who"', () => {
+    const utterances: Utterance[] = [
+      { speaker: 'A', text: 'هل يمكنني الحصول على عينة من هذا الدواء؟', start: 0, end: 3000 },
+      { speaker: 'A', text: 'من سيقرر هذا؟', start: 3100, end: 5000 },
+    ]
+    const turns = buildTurns(utterances)
+    const result = classifyQuestions(turns, 'A')
+    expect(result.total).toBe(2)
+    expect(result.open).toBe(1)
+    expect(result.closed).toBe(1)
+  })
 })
 
 describe('paraphrase score', () => {

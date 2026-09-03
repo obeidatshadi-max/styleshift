@@ -118,6 +118,8 @@ export default function RoleplayRecorder({ doctorId, onDone }: Props) {
   const r = result!
   const talkPct = Math.round(r.talkRatio.repRatio * 100)
   const questionPct = Math.round(r.questionRatio * 100)
+  const openQuestionPct = Math.round(r.openQuestionRatio * 100)
+  const paraphrasePct = Math.round(r.paraphraseScore * 100)
 
   return (
     <div style={wrap}>
@@ -140,6 +142,35 @@ export default function RoleplayRecorder({ doctorId, onDone }: Props) {
           </div>
           <div style={{ height: 6, borderRadius: 3, background: 'var(--line)', overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${questionPct}%`, background: 'var(--green)' }} />
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 4 }}>
+            <span>{t('roleplay.openQuestionRatio')}</span><span style={{ fontFamily: 'var(--mono)' }}>{openQuestionPct}%</span>
+          </div>
+          <div style={{ height: 6, borderRadius: 3, background: 'var(--line)', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${openQuestionPct}%`, background: 'var(--purple)' }} />
+          </div>
+          <p style={{ fontSize: 11.5, color: 'var(--ink-dim)', lineHeight: 1.5, marginTop: 5 }}>{t('roleplay.openQuestionHint')}</p>
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 4 }}>
+            <span>{t('roleplay.paraphraseScore')}</span><span style={{ fontFamily: 'var(--mono)' }}>{paraphrasePct}%</span>
+          </div>
+          <div style={{ height: 6, borderRadius: 3, background: 'var(--line)', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${paraphrasePct}%`, background: 'var(--amber)' }} />
+          </div>
+          <p style={{ fontSize: 11.5, color: 'var(--ink-dim)', lineHeight: 1.5, marginTop: 5 }}>{t('roleplay.paraphraseHint')}</p>
+        </div>
+
+        <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5 }}>
+            <span>{t('roleplay.activeListeningTitle')}</span>
+            <span style={{ fontFamily: 'var(--mono)', fontWeight: 700 }}>
+              {r.activeListening.score} · {t(`roleplay.activeListening.${r.activeListening.label}`)}
+            </span>
           </div>
         </div>
 

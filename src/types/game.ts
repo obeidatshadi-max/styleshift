@@ -37,7 +37,7 @@ export interface Rank { name: string; minXp: number }
 
 export interface XpValues {
   correct: number; fastBonus: number; levelComplete: number
-  perfectLevel: number; dailyStreak: number
+  perfectLevel: number; dailyStreak: number; roleplayComplete: number
 }
 
 export interface Profile {

@@ -851,11 +851,12 @@ export const RANKS: Rank[] = [
 ]
 
 export const XP_VALUES: XpValues = {
-  correct:       20,
-  fastBonus:     10,
-  levelComplete: 50,
-  perfectLevel:  100,
-  dailyStreak:   30,
+  correct:         20,
+  fastBonus:       10,
+  levelComplete:   50,
+  perfectLevel:    100,
+  dailyStreak:     30,
+  roleplayComplete: 40,
 }
 
 export const LEVELS = [

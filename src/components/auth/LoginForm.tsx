@@ -134,6 +134,7 @@ export default function LoginForm() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
           {([
+            { label: t('login.hookSpsLabel'), body: t('sps.intro') },
             { label: t('nav.tabTrain'), body: t('login.hookTrain') },
             { label: t('nav.tabRehearse'), body: t('login.hookRehearse') },
             { label: t('nav.tabPerform'), body: t('login.hookPerform') },

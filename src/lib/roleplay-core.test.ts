@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   processAcousticData, classifySocialStyle, buildTurns, computeTalkRatio,
-  computeRapidTurnSwitches, computeQuestionRatio, repTranscript,
+  computeRapidTurnSwitches, computeQuestionRatio, classifyQuestions, repTranscript,
   scopeAcousticToSpeaker, buildRoleplayResult,
   type Utterance, type PitchSample, type SilencePeriod,
 } from './roleplay-core'
@@ -89,5 +89,18 @@ describe('turn-taking analysis', () => {
     expect(result.rapidTurnSwitches).toBe(3)
     expect(result.questionRatio).toBe(0)
     expect(result.durationSec).toBeCloseTo(14, 0)
+  })
+
+  it('splits rep questions into open vs. closed', () => {
+    const turns = buildTurns(utterances)
+    // rep (A) turns: none are questions
+    expect(classifyQuestions(turns, 'A')).toEqual({ total: 0, open: 0, closed: 0, openRatio: 0 })
+    // partner (B): "Sure, what have you got?" -> contains "what" -> open
+    //              "Does it interact with anticoagulants?" -> contains "does", no open marker -> closed
+    const b = classifyQuestions(turns, 'B')
+    expect(b.total).toBe(2)
+    expect(b.open).toBe(1)
+    expect(b.closed).toBe(1)
+    expect(b.openRatio).toBeCloseTo(0.5, 5)
   })
 })

@@ -44,3 +44,6 @@ next-env.d.ts
 
 # Local Netlify folder
 .netlify
+
+# Superpowers worktrees (scratch, per-plan isolated workspaces)
+.claude/worktrees/

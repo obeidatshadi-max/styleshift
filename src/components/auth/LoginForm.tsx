@@ -2,14 +2,17 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useT } from '@/lib/i18n'
+import { useT, useGameData } from '@/lib/i18n'
 import LangToggle from '@/components/LangToggle'
+
+const STYLE_COLOR: Record<string, string> = { driver:'var(--purple)', expressive:'var(--green)', amiable:'var(--pink)', analytical:'var(--cyan)' }
 
 export default function LoginForm() {
   const supabase = createClient()
   const router = useRouter()
   const searchParams = useSearchParams()
   const t = useT()
+  const { STYLES, STYLE_ORDER } = useGameData()
 
   const [tab, setTab] = useState<'rep' | 'manager'>('rep')
   const [email, setEmail] = useState('')
@@ -22,6 +25,22 @@ export default function LoginForm() {
   useEffect(() => {
     if (searchParams.get('confirm_error')) setError(t('login.confirmError'))
   }, [searchParams, t])
+
+  // Supabase delivers an expired/invalid magic-link as a URL hash fragment
+  // (#error=access_denied&error_code=otp_expired&...), not a query param —
+  // read it once on mount and surface the same friendly message.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.location.hash) return
+    const hashParams = new URLSearchParams(window.location.hash.slice(1))
+    if (hashParams.get('error')) {
+      setError(t('login.confirmError'))
+      // Plain History API, not router.replace — this component sits inside
+      // a Suspense boundary (useSearchParams requires it), and a router
+      // navigation re-suspends it, remounting LoginForm and wiping the
+      // error state we just set above.
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+  }, [t])
 
   async function handleRepLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -106,6 +125,36 @@ export default function LoginForm() {
           STYLE<span style={{ color: 'var(--cyan)' }}>SHIFT</span>
         </h1>
         <p style={{ color: 'var(--ink-dim)', fontSize: 13, marginTop: 8, letterSpacing: '.18em', textTransform: 'uppercase' }}>{t('tagline')}</p>
+      </div>
+
+      {/* Hook: what the journey looks like, before you sign in */}
+      <div style={{ background: 'linear-gradient(180deg,var(--panel),#0a1430)', border: '1px solid var(--line)', borderRadius: 16, padding: 20, marginBottom: 20, boxShadow: '0 12px 40px rgba(0,0,0,.45)' }}>
+        <h2 style={{ fontSize: 18, fontWeight: 800, letterSpacing: '.01em', marginBottom: 8, lineHeight: 1.25 }}>{t('login.hookHeadline')}</h2>
+        <p style={{ color: 'var(--ink-dim)', fontSize: 13, lineHeight: 1.55, marginBottom: 16 }}>{t('login.hookBody')}</p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+          {([
+            { label: t('nav.tabTrain'), body: t('login.hookTrain') },
+            { label: t('nav.tabRehearse'), body: t('login.hookRehearse') },
+            { label: t('nav.tabPerform'), body: t('login.hookPerform') },
+          ]).map(step => (
+            <div key={step.label} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <span style={{ flexShrink: 0, fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--cyan)', border: '1px solid var(--cyan)', borderRadius: 20, padding: '4px 10px', marginTop: 1 }}>{step.label}</span>
+              <span style={{ fontSize: 12.5, color: 'var(--ink-dim)', lineHeight: 1.5 }}>{step.body}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {STYLE_ORDER.map(k => {
+            const s = STYLES[k]; const c = STYLE_COLOR[k]
+            return (
+              <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.05em', border: `1px solid ${c}`, color: c, borderRadius: 20, padding: '5px 10px', background: 'rgba(0,0,0,.2)' }}>
+                {s.icon} {s.name}
+              </span>
+            )
+          })}
+        </div>
       </div>
 
       {/* Tab switcher */}

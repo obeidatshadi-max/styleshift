@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useProfile } from '@/hooks/useProfile'
 import { useGameData, useT } from '@/lib/i18n'
 import { DAILY_TOTAL } from '@/lib/daily'
@@ -60,14 +60,25 @@ export default function GameShell() {
   }, [])
   useEffect(() => { loadDaily(); loadStandings(); loadAssignment() }, [loadDaily, loadStandings, loadAssignment])
 
-  // First-run gating, in order: complete the SPS assessment (DB-persisted,
-  // so it survives across devices), then show the one-time intro carousel
-  // (localStorage, reopenable from the home screen).
+  // First-run routing, decided once per session-load (guarded by the ref
+  // below, not by [loading, profile] alone) — playing Level 1 changes
+  // `profile` via addXp/saveSession, and a reactive effect would re-fire
+  // mid-playthrough and yank a brand-new rep back out of their first level.
+  //
+  // Order for a brand-new rep: Level 1 (a real, XP-earning taste of the
+  // game) -> its result screen -> the SPS assessment (DB-persisted, so it
+  // survives across devices) -> the one-time intro carousel (localStorage,
+  // reopenable from the home screen). A rep who already finished Level 1
+  // but closed the app before finishing SPS resumes straight into SPS,
+  // without being forced to replay Level 1.
+  const initialRouteRef = useRef(false)
   useEffect(() => {
-    if (loading) return
+    if (loading || initialRouteRef.current) return
+    initialRouteRef.current = true
+    if (profile && !profile.sps_top_key && !completedLevels.includes(1)) { startLevel(1); return }
     if (profile && !profile.sps_top_key) { setScreen('sps'); return }
     if (typeof window !== 'undefined' && !localStorage.getItem(INTRO_KEY)) setScreen('how')
-  }, [loading, profile])
+  }, [loading, profile, completedLevels])
 
   function finishIntro() {
     try { localStorage.setItem(INTRO_KEY, '1') } catch { /* ignore */ }
@@ -196,6 +207,9 @@ export default function GameShell() {
   function handleHome(conf: number) {
     setConfidence(conf)
     loadStandings() // XP changed this session — refresh the team ranking
+    // Brand-new rep coming off their first (pre-SPS) Level 1 result: send
+    // them into the assessment next, instead of the dashboard.
+    if (profile && !profile.sps_top_key) { setScreen('sps'); return }
     setScreen('home')
   }
 

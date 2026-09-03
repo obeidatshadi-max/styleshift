@@ -169,7 +169,7 @@ export default function RoleplayRecorder({ doctorId, onDone }: Props) {
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5 }}>
             <span>{t('roleplay.activeListeningTitle')}</span>
             <span style={{ fontFamily: 'var(--mono)', fontWeight: 700 }}>
-              {r.activeListening.score} · {t(`roleplay.activeListening.${r.activeListening.label}`)}
+              {r.activeListening.score} Â· {t(`roleplay.activeListening.${r.activeListening.label}`)}
             </span>
           </div>
         </div>

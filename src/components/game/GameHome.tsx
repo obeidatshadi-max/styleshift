@@ -36,10 +36,11 @@ interface Props {
   onStartDaily: () => void
   onShowHow: () => void
   onShowPrep: () => void
+  onShowPerform: () => void
   onStartLevel: (n: number) => void
 }
 
-export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onStartLevel }: Props) {
+export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onShowPerform, onStartLevel }: Props) {
   const unlocked = [1, ...earnedLevels.map(n => n + 1)].filter(n => n <= 4)
   const [tab, setTab] = useState<'train' | 'rehearse' | 'perform'>('train')
   const router = useRouter()
@@ -278,7 +279,13 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
         </>}
 
         {tab === 'perform' && panel(t('perform.title'),
-          <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.6 }}>{t('perform.comingSoon')}</div>
+          <>
+            <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5, marginBottom:14 }}>{t('perform.subtitle')}</div>
+            <button onClick={onShowPerform}
+              style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'rgba(56,214,255,.06)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              🤝 {t('perform.reopen')}
+            </button>
+          </>
         )}
 
       </div>

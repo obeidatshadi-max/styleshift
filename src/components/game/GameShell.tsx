@@ -15,12 +15,13 @@ import LevelResult from './LevelResult'
 import DailyChallenge from './DailyChallenge'
 import HowItWorks from './HowItWorks'
 import VisitPrep from './VisitPrep'
+import Colleagues from './Colleagues'
 import SpsAssessment from './SpsAssessment'
 import type { BadgeName, RepAssignment } from '@/types/game'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
 
-type Screen = 'home' | 'level' | 'result' | 'daily' | 'how' | 'prep' | 'assignment' | 'sps'
+type Screen = 'home' | 'level' | 'result' | 'daily' | 'how' | 'prep' | 'perform' | 'assignment' | 'sps'
 const INTRO_KEY = 'styleshift_intro_done'
 
 interface LevelState {
@@ -233,6 +234,10 @@ export default function GameShell() {
     return <VisitPrep onExit={() => setScreen('home')} />
   }
 
+  if (screen === 'perform') {
+    return <Colleagues onExit={() => setScreen('home')} />
+  }
+
   if (screen === 'assignment' && assignQueue[assignPos]) {
     return (
       <DailyChallenge
@@ -301,6 +306,7 @@ export default function GameShell() {
       onStartDaily={startDaily}
       onShowHow={() => setScreen('how')}
       onShowPrep={() => setScreen('prep')}
+      onShowPerform={() => setScreen('perform')}
       onStartLevel={startLevel}
     />
   )

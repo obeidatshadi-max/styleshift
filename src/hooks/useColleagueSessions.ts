@@ -13,10 +13,13 @@ export function useColleagueSessions(colleagueId: string) {
 
   const load = useCallback(async () => {
     setLoading(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setLoading(false); return }
     const { data } = await supabase
       .from('roleplay_sessions')
       .select(SESSION_COLUMNS)
       .eq('colleague_id', colleagueId)
+      .eq('rep_id', user.id)
       .order('created_at', { ascending: false })
     setSessions((data as RoleplaySessionSummary[]) ?? [])
     setLoading(false)

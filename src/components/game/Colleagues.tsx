@@ -38,6 +38,7 @@ export default function Colleagues({ onExit }: Props) {
   const t = useT()
   const { colleagues, loading, saveColleague, removeColleague } = useColleagues()
   const [view, setView] = useState<View>({ mode: 'list' })
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const wrap = (children: React.ReactNode) => (
     <div style={{ position:'relative', zIndex:1, maxWidth:560, margin:'0 auto', padding:14, display:'flex', flexDirection:'column', gap:14 }}>{children}</div>
@@ -62,17 +63,28 @@ export default function Colleagues({ onExit }: Props) {
     const c = view.colleague
     return wrap(
       <>
-        <button onClick={() => setView({ mode: 'list' })} style={{ ...ghostBtn, alignSelf:'flex-start', border:'none', padding:'4px 0', color:'var(--ink-dim)' }}>{t('perform.backToList')}</button>
+        <button onClick={() => { setConfirmingDelete(false); setView({ mode: 'list' }) }} style={{ ...ghostBtn, alignSelf:'flex-start', border:'none', padding:'4px 0', color:'var(--ink-dim)' }}>{t('perform.backToList')}</button>
         {panel(c.name,
           <>
-            <button onClick={() => setView({ mode: 'roleplay', colleague: c })}
+            <button onClick={() => { setConfirmingDelete(false); setView({ mode: 'roleplay', colleague: c }) }}
               style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--green)', color:'var(--green)', background:'rgba(62,224,143,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               🎙 {t('roleplay.entryButton')}
             </button>
-            <button onClick={async () => { await removeColleague(c.id); setView({ mode: 'list' }) }}
-              style={{ ...ghostBtn, border:'1px solid var(--red)', color:'var(--red)', marginTop:10, width:'100%' }}>
-              {t('prep.delete')}
-            </button>
+            {confirmingDelete ? (
+              <div style={{ display:'flex', alignItems:'center', gap:10, marginTop:10, width:'100%' }}>
+                <span style={{ flex:1, fontSize:12.5, color:'var(--red)' }}>{t('prep.delete')}?</span>
+                <button onClick={() => setConfirmingDelete(false)} style={ghostBtn}>{t('prep.cancel')}</button>
+                <button onClick={async () => { await removeColleague(c.id); setConfirmingDelete(false); setView({ mode: 'list' }) }}
+                  style={{ ...ghostBtn, border:'1px solid var(--red)', color:'var(--red)' }}>
+                  {t('prep.delete')}
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmingDelete(true)}
+                style={{ ...ghostBtn, border:'1px solid var(--red)', color:'var(--red)', marginTop:10, width:'100%' }}>
+                {t('prep.delete')}
+              </button>
+            )}
           </>
         )}
         {panel(t('perform.historyTitle'), <ColleagueHistory colleagueId={c.id} />)}
@@ -97,7 +109,7 @@ export default function Colleagues({ onExit }: Props) {
         : colleagues.length === 0 ? <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.5 }}>{t('perform.empty')}</div>
         : <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
             {colleagues.map(c => (
-              <button key={c.id} onClick={() => setView({ mode: 'detail', colleague: c })}
+              <button key={c.id} onClick={() => { setConfirmingDelete(false); setView({ mode: 'detail', colleague: c }) }}
                 style={{ display:'flex', alignItems:'center', gap:12, textAlign:'start', cursor:'pointer', border:'1px solid var(--line)', borderRadius:12, padding:'11px 13px', background:'rgba(0,0,0,.18)', color:'var(--ink)' }}>
                 <span style={{ flex:1, fontSize:14.5 }}>{c.name}</span>
                 <span style={{ color:'var(--ink-dim)' }}>›</span>

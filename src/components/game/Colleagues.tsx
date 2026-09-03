@@ -63,7 +63,10 @@ export default function Colleagues({ onExit }: Props) {
     const c = view.colleague
     return wrap(
       <>
-        <button onClick={() => { setConfirmingDelete(false); setView({ mode: 'list' }) }} style={{ ...ghostBtn, alignSelf:'flex-start', border:'none', padding:'4px 0', color:'var(--ink-dim)' }}>{t('perform.backToList')}</button>
+        <div style={{ display:'flex', justifyContent:'space-between' }}>
+          <button onClick={() => { setConfirmingDelete(false); setView({ mode: 'list' }) }} style={{ ...ghostBtn, alignSelf:'flex-start', border:'none', padding:'4px 0', color:'var(--ink-dim)' }}>{t('perform.backToList')}</button>
+          <button onClick={onExit} style={{ ...ghostBtn, border:'none', color:'var(--ink-dim)', padding:'4px 0' }}>{t('home')}</button>
+        </div>
         {panel(c.name,
           <>
             <button onClick={() => { setConfirmingDelete(false); setView({ mode: 'roleplay', colleague: c }) }}

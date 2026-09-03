@@ -9,11 +9,12 @@ interface Props {
   scenarioId: number
   onComplete: (correct: boolean, reactionMs: number) => void
   title?: string
+  onExit?: () => void
 }
 
 const COLOR: Record<string, string> = { driver:'var(--purple)', expressive:'var(--green)', amiable:'var(--pink)', analytical:'var(--cyan)' }
 
-export default function DailyChallenge({ level, scenarioId, onComplete, title }: Props) {
+export default function DailyChallenge({ level, scenarioId, onComplete, title, onExit }: Props) {
   const t = useT()
   const { STYLES, STYLE_ORDER, L1, L2, L3 } = useGameData()
   const startedAt = useRef(Date.now())
@@ -30,9 +31,16 @@ export default function DailyChallenge({ level, scenarioId, onComplete, title }:
   const panel = (children: React.ReactNode) => (
     <div style={{ position:'relative', zIndex:1, maxWidth:1040, margin:'0 auto', padding:14 }}>
       <div style={{ background:'linear-gradient(180deg,var(--panel),#0a1430)', border:'1px solid var(--line)', borderRadius:16, padding:16, boxShadow:'0 12px 40px rgba(0,0,0,.45)' }}>
-        <div style={{ fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.3em', textTransform:'uppercase', color:'var(--amber)', display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
-          <span style={{ width:9, height:9, borderRadius:'50%', background:'var(--amber)', boxShadow:'0 0 14px var(--amber)', display:'inline-block' }} />
-          {title ?? t('daily.title')}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginBottom:14 }}>
+          <div style={{ fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.3em', textTransform:'uppercase', color:'var(--amber)', display:'flex', alignItems:'center', gap:8 }}>
+            <span style={{ width:9, height:9, borderRadius:'50%', background:'var(--amber)', boxShadow:'0 0 14px var(--amber)', display:'inline-block' }} />
+            {title ?? t('daily.title')}
+          </div>
+          {onExit && (
+            <button onClick={onExit} style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.12em', textTransform:'uppercase', color:'var(--ink-dim)' }}>
+              {t('home')}
+            </button>
+          )}
         </div>
         {children}
       </div>

@@ -89,7 +89,10 @@ export default function VisitPrep({ onExit }: Props) {
     const c = style ? COLOR[style] : 'var(--ink-dim)'
     return wrap(
       <>
-        <button onClick={() => setView({ mode: 'list' })} style={{ ...ghostBtn, alignSelf:'flex-start', border:'none', padding:'4px 0', color:'var(--ink-dim)' }}>{t('prep.backToList')}</button>
+        <div style={{ display:'flex', justifyContent:'space-between' }}>
+          <button onClick={() => setView({ mode: 'list' })} style={{ ...ghostBtn, alignSelf:'flex-start', border:'none', padding:'4px 0', color:'var(--ink-dim)' }}>{t('prep.backToList')}</button>
+          <button onClick={onExit} style={{ ...ghostBtn, border:'none', color:'var(--ink-dim)', padding:'4px 0' }}>{t('home')}</button>
+        </div>
         {panel(t('prep.prepFor', { name: d.name }),
           <>
             <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>

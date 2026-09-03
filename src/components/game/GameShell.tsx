@@ -66,23 +66,30 @@ export default function GameShell() {
   // `profile` via addXp/saveSession, and a reactive effect would re-fire
   // mid-playthrough and yank a brand-new rep back out of their first level.
   //
-  // Order for a brand-new rep: Level 1 (a real, XP-earning taste of the
-  // game) -> its result screen -> the SPS assessment (DB-persisted, so it
-  // survives across devices) -> the one-time intro carousel (localStorage,
-  // reopenable from the home screen). A rep who already finished Level 1
-  // but closed the app before finishing SPS resumes straight into SPS,
-  // without being forced to replay Level 1.
+  // Order for a brand-new rep: the one-time intro carousel (localStorage,
+  // reopenable from the home screen) -> Level 1 (a real, XP-earning taste
+  // of the game, now with context for what it's building toward) -> its
+  // result screen -> the SPS assessment (DB-persisted, so it survives
+  // across devices). A rep who already finished Level 1 but closed the app
+  // before finishing SPS resumes straight into SPS, without being forced
+  // to replay Level 1 or re-see an intro they've already seen.
   const initialRouteRef = useRef(false)
   useEffect(() => {
     if (loading || initialRouteRef.current) return
     initialRouteRef.current = true
-    if (profile && !profile.sps_top_key && !completedLevels.includes(1)) { startLevel(1); return }
+    const seenIntro = typeof window !== 'undefined' && !!localStorage.getItem(INTRO_KEY)
+    if (profile && !profile.sps_top_key && !completedLevels.includes(1)) {
+      if (!seenIntro) { setScreen('how'); return }
+      startLevel(1); return
+    }
     if (profile && !profile.sps_top_key) { setScreen('sps'); return }
-    if (typeof window !== 'undefined' && !localStorage.getItem(INTRO_KEY)) setScreen('how')
+    if (!seenIntro) setScreen('how')
   }, [loading, profile, completedLevels])
 
   function finishIntro() {
     try { localStorage.setItem(INTRO_KEY, '1') } catch { /* ignore */ }
+    if (profile && !profile.sps_top_key && !completedLevels.includes(1)) { startLevel(1); return }
+    if (profile && !profile.sps_top_key) { setScreen('sps'); return }
     setScreen('home')
   }
 
@@ -246,6 +253,7 @@ export default function GameShell() {
         scenarioId={assignQueue[assignPos]}
         title={t('assign.progressTitle', { n: assignPos + 1, total: assignQueue.length })}
         onComplete={handleAssignmentDrillComplete}
+        onExit={() => setScreen('home')}
       />
     )
   }
@@ -261,6 +269,7 @@ export default function GameShell() {
         scenarioId={pick.scenarioId}
         title={t('daily.progress', { n: num, total })}
         onComplete={handleDailyComplete}
+        onExit={() => setScreen('home')}
       />
     )
   }

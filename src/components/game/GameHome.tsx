@@ -1,4 +1,5 @@
 'use client'
+import { useState } from 'react'
 import RankBar from './RankBar'
 import KpiPanel from './KpiPanel'
 import type { BadgeName, RepAssignment } from '@/types/game'
@@ -40,6 +41,7 @@ interface Props {
 
 export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onStartLevel }: Props) {
   const unlocked = [1, ...earnedLevels.map(n => n + 1)].filter(n => n <= 4)
+  const [tab, setTab] = useState<'train' | 'rehearse' | 'perform'>('train')
   const router = useRouter()
   const t = useT()
   const badgeLabel = useBadgeLabel()
@@ -120,6 +122,44 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
           )
         })()}
 
+        {standings && standings.standings.length > 0 && panel(t('rank.title'),
+          <>
+            <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5, marginBottom:12 }}>
+              {standings.selfRank
+                ? t('rank.yourPosition', { n: standings.selfRank, total: standings.teamSize })
+                : t('rank.subtitle')}
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              {standings.standings.map((s, i) => {
+                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null
+                return (
+                  <div key={s.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:10, border:'1px solid var(--line)', background: s.isSelf ? 'rgba(56,214,255,.07)' : 'rgba(0,0,0,.18)' }}>
+                    <span style={{ fontFamily:'var(--mono)', fontSize:13, width:24, textAlign:'center' }}>{medal ?? <span style={{ color:'var(--ink-dim)' }}>{i + 1}</span>}</span>
+                    <span style={{ flex:1, minWidth:0 }}>
+                      <span style={{ display:'block', fontSize:13, color: s.isSelf ? 'var(--cyan)' : 'var(--ink)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {s.isSelf ? t('rank.you') : (s.name || '—')}
+                      </span>
+                      <span style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.06em', color:'var(--ink-dim)', textTransform:'uppercase' }}>{rankTitle(s.xp)}</span>
+                    </span>
+                    <span style={{ fontFamily:'var(--mono)', fontSize:13, color: s.isSelf ? 'var(--cyan)' : 'var(--ink-dim)' }}>{s.xp.toLocaleString()} XP</span>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+
+        <div style={{ display:'flex', gap:8, borderBottom:'1px solid var(--line)', marginBottom:2 }}>
+          {(['train', 'rehearse', 'perform'] as const).map(k => (
+            <button key={k} onClick={() => setTab(k)}
+              style={{ flex:1, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.18em', textTransform:'uppercase', padding:'12px 8px', background:'none', border:'none', borderBottom: tab === k ? '2px solid var(--cyan)' : '2px solid transparent', color: tab === k ? 'var(--cyan)' : 'var(--ink-dim)' }}>
+              {t(`nav.tab${k[0].toUpperCase()}${k.slice(1)}`)}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'train' && <>
+
         {daily && panel(t('daily.title'),
           <>
             <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5, marginBottom:12 }}>{t('daily.subtitle')}</div>
@@ -161,43 +201,6 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
                 ))}
               </div>
             )}
-          </>
-        )}
-
-        {standings && standings.standings.length > 0 && panel(t('rank.title'),
-          <>
-            <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5, marginBottom:12 }}>
-              {standings.selfRank
-                ? t('rank.yourPosition', { n: standings.selfRank, total: standings.teamSize })
-                : t('rank.subtitle')}
-            </div>
-            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-              {standings.standings.map((s, i) => {
-                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null
-                return (
-                  <div key={s.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:10, border:'1px solid var(--line)', background: s.isSelf ? 'rgba(56,214,255,.07)' : 'rgba(0,0,0,.18)' }}>
-                    <span style={{ fontFamily:'var(--mono)', fontSize:13, width:24, textAlign:'center' }}>{medal ?? <span style={{ color:'var(--ink-dim)' }}>{i + 1}</span>}</span>
-                    <span style={{ flex:1, minWidth:0 }}>
-                      <span style={{ display:'block', fontSize:13, color: s.isSelf ? 'var(--cyan)' : 'var(--ink)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                        {s.isSelf ? t('rank.you') : (s.name || '—')}
-                      </span>
-                      <span style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.06em', color:'var(--ink-dim)', textTransform:'uppercase' }}>{rankTitle(s.xp)}</span>
-                    </span>
-                    <span style={{ fontFamily:'var(--mono)', fontSize:13, color: s.isSelf ? 'var(--cyan)' : 'var(--ink-dim)' }}>{s.xp.toLocaleString()} XP</span>
-                  </div>
-                )
-              })}
-            </div>
-          </>
-        )}
-
-        {panel(t('prep.title'),
-          <>
-            <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5, marginBottom:14 }}>{t('prep.subtitle')}</div>
-            <button onClick={onShowPrep}
-              style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'rgba(56,214,255,.06)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
-              🩺 {t('prep.reopen')}
-            </button>
           </>
         )}
 
@@ -256,6 +259,26 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
             </div>
             <AvatarUploader avatarUrl={avatarUrl} name={displayName} onUpload={onUploadAvatar} />
           </>
+        )}
+
+        </>}
+
+        {tab === 'rehearse' && <>
+
+        {panel(t('prep.title'),
+          <>
+            <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5, marginBottom:14 }}>{t('prep.subtitle')}</div>
+            <button onClick={onShowPrep}
+              style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'rgba(56,214,255,.06)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              🩺 {t('prep.reopen')}
+            </button>
+          </>
+        )}
+
+        </>}
+
+        {tab === 'perform' && panel(t('perform.title'),
+          <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.6 }}>{t('perform.comingSoon')}</div>
         )}
 
       </div>

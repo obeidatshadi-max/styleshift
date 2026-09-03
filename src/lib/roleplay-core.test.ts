@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   processAcousticData, classifySocialStyle, buildTurns, computeTalkRatio,
-  computeRapidTurnSwitches, computeQuestionRatio, classifyQuestions, repTranscript,
+  computeRapidTurnSwitches, computeQuestionRatio, classifyQuestions, computeParaphraseScore, repTranscript,
   scopeAcousticToSpeaker, buildRoleplayResult,
   type Utterance, type PitchSample, type SilencePeriod,
 } from './roleplay-core'
@@ -115,5 +115,26 @@ describe('turn-taking analysis', () => {
     expect(result.open).toBe(1)    // ماذا question is open
     expect(result.closed).toBe(1)  // هل question is closed (no open marker)
     expect(result.openRatio).toBeCloseTo(0.5, 5)
+  })
+})
+
+describe('paraphrase score', () => {
+  it('scores how much of the partner\'s content words the rep echoes back in the next turn', () => {
+    const utterances: Utterance[] = [
+      { speaker: 'B', text: 'The main worry is dosing frequency and patient compliance.', start: 0, end: 3000 },
+      { speaker: 'A', text: 'So dosing frequency and compliance are your main worry, got it.', start: 3100, end: 6000 },
+      { speaker: 'B', text: 'Also cost is a factor for our patients.', start: 6100, end: 8000 },
+      { speaker: 'A', text: 'Understood, thanks for sharing that.', start: 8100, end: 10000 },
+    ]
+    const turns = buildTurns(utterances)
+    // pair 1: rep echoes 5 of partner's 6 content words -> 5/6
+    // pair 2: rep echoes 0 of partner's 5 content words -> 0/5
+    // average: (5/6 + 0) / 2
+    expect(computeParaphraseScore(turns, 'A')).toBeCloseTo((5 / 6 + 0) / 2, 3)
+  })
+
+  it('returns 0 when no rep turn follows a partner turn', () => {
+    const turns = buildTurns([{ speaker: 'A', text: 'hello there', start: 0, end: 500 }])
+    expect(computeParaphraseScore(turns, 'A')).toBe(0)
   })
 })

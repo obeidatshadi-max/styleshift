@@ -214,6 +214,43 @@ export function classifyQuestions(turns: Turn[], repSpeaker: string): QuestionBr
   return { total, open, closed: total - open, openRatio: total > 0 ? open / total : 0 }
 }
 
+const STOPWORDS = new Set([
+  'the', 'a', 'an', 'is', 'are', 'was', 'were', 'i', 'you', 'he', 'she', 'it', 'we', 'they',
+  'to', 'of', 'in', 'on', 'for', 'and', 'or', 'but', 'not', 'this', 'that', 'with', 'as', 'at',
+  'be', 'do', 'does', 'did', 'have', 'has',
+  'من', 'في', 'على', 'إلى', 'هذا', 'هذه', 'ذلك', 'التي', 'الذي', 'و', 'أو', 'لا', 'نعم', 'كان', 'كانت',
+])
+
+/** Lowercased, punctuation-stripped content words (length > 2, stopwords removed). */
+function contentWords(text: string): Set<string> {
+  const words = (text || '').toLowerCase().replace(/[.,!?؟،;:"'()]/g, '').split(/\s+/).filter(Boolean)
+  return new Set(words.filter(w => w.length > 2 && !STOPWORDS.has(w)))
+}
+
+/**
+ * For each rep turn that immediately follows a partner turn, scores what
+ * fraction of the partner's content words the rep's reply echoes back — a
+ * proxy for paraphrasing/rephrasing what was just said. Reads partner-turn
+ * TEXT transiently (same in-memory Utterance[] the pipeline already
+ * discards after scoring) — only the resulting number is ever persisted.
+ * Returns the average across all measured rep-follows-partner pairs, or 0
+ * if there are none.
+ */
+export function computeParaphraseScore(turns: Turn[], repSpeaker: string): number {
+  let scored = 0, pairs = 0
+  for (let i = 1; i < turns.length; i++) {
+    if (turns[i].speaker !== repSpeaker || turns[i - 1].speaker === repSpeaker) continue
+    const partnerWords = contentWords(turns[i - 1].text)
+    if (partnerWords.size === 0) continue
+    const repWords = contentWords(turns[i].text)
+    let hits = 0
+    for (const w of partnerWords) if (repWords.has(w)) hits++
+    scored += hits / partnerWords.size
+    pairs++
+  }
+  return pairs > 0 ? scored / pairs : 0
+}
+
 export function repTranscript(turns: Turn[], repSpeaker: string): string {
   return turns.filter(t => t.speaker === repSpeaker).map(t => t.text).join(' ')
 }

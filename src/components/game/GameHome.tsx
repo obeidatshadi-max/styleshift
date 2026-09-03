@@ -302,7 +302,7 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
       <footer style={{ textAlign:'center', color:'var(--ink-dim)', fontSize:12, letterSpacing:'.05em', padding:'18px 8px 6px', lineHeight:1.6 }}>
         {t('footer.tagline')}<br />
-        {t('footer.by')} <a href="https://psychologytobusiness.com" style={{ color:'var(--cyan)', textDecoration:'none' }}>psychologytobusiness.com</a>
+        {t('footer.by')} <a href="mailto:obeidatshadi@gmail.com" style={{ color:'var(--cyan)', textDecoration:'none' }}>obeidatshadi@gmail.com</a>
       </footer>
     </div>
   )

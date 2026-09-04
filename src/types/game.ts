@@ -38,6 +38,7 @@ export interface Rank { name: string; minXp: number }
 export interface XpValues {
   correct: number; fastBonus: number; levelComplete: number
   perfectLevel: number; dailyStreak: number; roleplayComplete: number
+  voicePartnerWin: number
 }
 
 export interface Profile {
@@ -93,7 +94,7 @@ export interface DoctorVisit {
   id: string
   doctor_id: string
   rep_id: string
-  source: 'manual' | 'warmup' | 'ai_drill'
+  source: 'manual' | 'warmup' | 'ai_drill' | 'voice_partner'
   objection_raised: string | null
   promise_made: string | null
   what_worked: string | null

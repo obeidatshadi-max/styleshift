@@ -446,7 +446,7 @@ function AiDrill({ doctor, onDone }: { doctor: Doctor; onDone: () => void }) {
 
 // ───────────────────────── Doctor history (Digital Twin) ─────────────────────────
 const SOURCE_LABEL_KEY: Record<DoctorVisit['source'], string> = {
-  manual: 'visit.sourceManual', warmup: 'visit.sourceWarmup', ai_drill: 'visit.sourceAiDrill',
+  manual: 'visit.sourceManual', warmup: 'visit.sourceWarmup', ai_drill: 'visit.sourceAiDrill', voice_partner: 'visit.sourceVoicePartner',
 }
 
 const historyRow: React.CSSProperties = { fontSize:13, lineHeight:1.5, marginBottom:3 }

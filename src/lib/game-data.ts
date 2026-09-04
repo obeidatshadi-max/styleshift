@@ -857,6 +857,7 @@ export const XP_VALUES: XpValues = {
   perfectLevel:    100,
   dailyStreak:     30,
   roleplayComplete: 40,
+  voicePartnerWin:  40,
 }
 
 export const LEVELS = [

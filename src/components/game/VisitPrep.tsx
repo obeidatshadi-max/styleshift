@@ -12,6 +12,7 @@ import DailyChallenge from './DailyChallenge'
 import GeneratedDrill from './GeneratedDrill'
 import VoiceRecorder from './VoiceRecorder'
 import RoleplayRecorder from './RoleplayRecorder'
+import VoicePartner from './VoicePartner'
 
 interface Props { onExit: () => void }
 
@@ -26,6 +27,7 @@ type View =
   | { mode: 'ai'; doctor: Doctor }
   | { mode: 'logVisit'; doctor: Doctor }
   | { mode: 'roleplay'; doctor: Doctor }
+  | { mode: 'voice'; doctor: Doctor }
 
 const inputStyle: React.CSSProperties = {
   background:'rgba(0,0,0,.3)', border:'1px solid var(--line)', borderRadius:10,
@@ -79,6 +81,11 @@ export default function VisitPrep({ onExit }: Props) {
   // ───────────────────────── ROLEPLAY VERBAL MIRROR ─────────────────────────
   if (view.mode === 'roleplay') {
     return <RoleplayRecorder doctorId={view.doctor.id} colleagueId={null} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
+  }
+
+  // ───────────────────────── AI VOICE PARTNER ─────────────────────────
+  if (view.mode === 'voice') {
+    return <VoicePartnerScreen doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
   }
 
   // ───────────────────────── DETAIL / PREP ─────────────────────────
@@ -138,6 +145,10 @@ export default function VisitPrep({ onExit }: Props) {
             <button onClick={() => setView({ mode: 'roleplay', doctor: d })}
               style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--green)', color:'var(--green)', background:'rgba(62,224,143,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               🎙 {t('roleplay.entryButton')}
+            </button>
+            <button onClick={() => setView({ mode: 'voice', doctor: d })}
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              {t('voice.entryButton')} · {t('voice.premium')}
             </button>
           </div>
         )}
@@ -441,6 +452,28 @@ function AiDrill({ doctor, onDone }: { doctor: Doctor; onDone: () => void }) {
         </>
       )}
     </div>
+  )
+}
+
+// ───────────────────────── AI voice partner wrapper (owns doctor_visits logging) ─────────────────────────
+function VoicePartnerScreen({ doctor, onDone }: { doctor: Doctor; onDone: () => void }) {
+  const t = useT()
+  const { addVisit } = useDoctorVisits(doctor.id)
+
+  return (
+    <VoicePartner
+      doctor={doctor}
+      onDone={(won, meta) => {
+        if (meta.turns > 0) {
+          void addVisit({
+            source: 'voice_partner',
+            objection_raised: meta.openingCrisis || null,
+            note: t('visit.voicePartnerNote', { turns: meta.turns, outcome: won ? t('visit.aiDrillWin') : t('visit.aiDrillEscalate') }),
+          })
+        }
+        onDone()
+      }}
+    />
   )
 }
 

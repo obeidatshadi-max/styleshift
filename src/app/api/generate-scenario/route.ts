@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import { DRIVE, buildHistoryContext } from '@/lib/doctor-context'
 import type { Doctor, DoctorVisit, GeneratedScenario, StyleKey } from '@/types/game'
-
-const DRIVE: Record<StyleKey, string> = {
-  driver: 'Control & Achievement',
-  expressive: 'Recognition & Ideas',
-  amiable: 'Security & Harmony',
-  analytical: 'Certainty & Accuracy',
-}
 
 // Hard guardrail: the model coaches COMMUNICATION STYLE only — never clinical claims.
 const SYSTEM = `You write short role-play OBJECTION scenarios that train pharmaceutical sales reps to adapt to a customer's SOCIAL STYLE (Driver, Expressive, Amiable, Analytical).
@@ -17,23 +11,6 @@ Hard rules — follow exactly:
 - Refer to the product only as "your product"; refer to evidence generically ("the trial data", "the evidence pack", "the safety profile").
 - The scenario and every rationale must teach COMMUNICATION STYLE, not medical claims.
 - Output ONLY a single valid JSON object. No markdown fences, no commentary.`
-
-// Turns the doctor's visit history into "the rep already knows this" context so
-// visit #6's drill is sharper than visit #1's — it echoes real objections/promises
-// instead of generic style theory.
-function buildHistoryContext(visits: DoctorVisit[]): string {
-  if (!visits.length) return ''
-  const lines = visits.slice(0, 5).map(v => {
-    const parts: string[] = []
-    if (v.objection_raised) parts.push(`objection: "${v.objection_raised}"`)
-    if (v.promise_made) parts.push(`rep promised: "${v.promise_made}"`)
-    if (v.what_worked) parts.push(`worked well: "${v.what_worked}"`)
-    if (!parts.length && v.note) parts.push(v.note)
-    return parts.length ? `- ${parts.join('; ')}` : null
-  }).filter(Boolean)
-  if (!lines.length) return ''
-  return `Past visit history with this doctor (most recent first) — use this to make the objection feel like a continuation, not a first meeting:\n${lines.join('\n')}`
-}
 
 function buildUserPrompt(d: Doctor, style: StyleKey, lang: 'en' | 'ar', history: string): string {
   const langName = lang === 'ar' ? 'Arabic' : 'English'

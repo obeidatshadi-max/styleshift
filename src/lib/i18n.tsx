@@ -295,6 +295,11 @@ const EN: Dict = {
   'voice.won': 'Objection resolved',
   'voice.escalated': 'The doctor moved on',
   'voice.back': '← Back',
+  'voice.consentTitle': 'Before You Speak',
+  'voice.consentBody': 'This records your voice to practice out loud against an AI-simulated doctor. Your audio is sent to OpenAI to transcribe your words and generate the spoken reply, and to Anthropic to judge your response — it is processed and discarded, never stored. This is for training practice only, never a real doctor visit, and the AI doctor is simulated, not medical advice.',
+  'voice.consentCheckbox': 'I understand my voice is processed by third-party AI services and not saved.',
+  'voice.consentAgree': 'I Understand — Start Practicing',
+  'voice.consentCancel': 'Not Now',
   // rep mobile login
   'login.repTab': 'Rep · Mobile',
   'login.managerTab': 'Manager · Email',
@@ -643,6 +648,11 @@ const AR: Dict = {
   'voice.won': 'تم تجاوز الاعتراض',
   'voice.escalated': 'انتقل الطبيب إلى موضوع آخر',
   'voice.back': '← رجوع',
+  'voice.consentTitle': 'قبل أن تتحدث',
+  'voice.consentBody': 'هذا التمرين يسجّل صوتك للتدرّب بصوت مسموع أمام طبيب محاكى بالذكاء الاصطناعي. يُرسل صوتك إلى OpenAI لتفريغ كلامك وتوليد الرد المنطوق، وإلى Anthropic لتقييم ردّك — تتم معالجته والتخلص منه فوراً، ولا يُحفظ أبداً. هذا للتدريب فقط وليس لزيارة طبيب حقيقية، والطبيب بالذكاء الاصطناعي محاكاة وليس استشارة طبية.',
+  'voice.consentCheckbox': 'أفهم أن صوتي تتم معالجته عبر خدمات ذكاء اصطناعي خارجية ولا يُحفظ.',
+  'voice.consentAgree': 'فهمت — ابدأ التدرّب',
+  'voice.consentCancel': 'ليس الآن',
   // rep mobile login
   'login.repTab': 'مندوب · جوال',
   'login.managerTab': 'مدير · بريد',

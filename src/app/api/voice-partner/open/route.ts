@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { buildHistoryContext } from '@/lib/doctor-context'
 import { SYSTEM, buildOpeningPrompt, parseOpeningResponse } from '@/lib/voice-partner-core'
+import { checkRateLimit } from '@/lib/rate-limit'
 import type { Doctor, DoctorVisit } from '@/types/game'
 
 export async function POST(req: Request) {
@@ -13,6 +14,12 @@ export async function POST(req: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+  // Shared bucket across open/turn/speak: each is an upstream AI call, so the
+  // 20/hour ceiling bounds total Anthropic+OpenAI cost exposure per rep, not
+  // just this one route.
+  if (!(await checkRateLimit('voice-partner', user.id, 20, 3600)))
+    return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
 
   const body = await req.json().catch(() => ({})) as { doctorId?: string; lang?: 'en' | 'ar' }
   if (!body.doctorId) return NextResponse.json({ error: 'bad_request' }, { status: 400 })

@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 // One fixed voice for both languages — the language is steered through the
 // per-request `instructions` field rather than by swapping voice names.
 const VOICE = 'onyx'
+// Matches turn/route.ts's MAX_TURN_CHARS — a doctor line never legitimately
+// runs this long, so anything longer is misuse, not a real conversation.
+const MAX_TEXT_CHARS = 2000
 
 export async function POST(req: Request) {
   const apiKey = process.env.OPENAI_API_KEY
@@ -15,8 +19,12 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
+  // Shared bucket with open/turn (see open/route.ts).
+  if (!(await checkRateLimit('voice-partner', user.id, 20, 3600)))
+    return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
+
   const body = await req.json().catch(() => ({})) as { text?: string; lang?: 'en' | 'ar' }
-  if (!body.text || typeof body.text !== 'string' || !body.text.trim()) {
+  if (!body.text || typeof body.text !== 'string' || !body.text.trim() || body.text.length > MAX_TEXT_CHARS) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   }
   const lang = body.lang === 'ar' ? 'ar' : 'en'

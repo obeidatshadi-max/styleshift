@@ -1,13 +1,38 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { buildHistoryContext } from '@/lib/doctor-context'
-import { SYSTEM, buildJudgePrompt, parseJudgeResponse, resolveTurn, type VoicePartnerTurn } from '@/lib/voice-partner-core'
+import { SYSTEM, TURN_CAP, buildJudgePrompt, parseJudgeResponse, resolveTurn, type VoicePartnerTurn } from '@/lib/voice-partner-core'
 import type { Doctor, DoctorVisit } from '@/types/game'
 
-async function transcribe(audio: Blob, apiKey: string): Promise<string | null> {
+// A full conversation is at most TURN_CAP rep lines plus TURN_CAP doctor lines.
+const MAX_HISTORY_ENTRIES = 2 * TURN_CAP
+const MAX_TURN_CHARS = 2000
+
+/** Validates the client-supplied conversation history. Returns null (→ 400) for
+ * anything that isn't a bounded array of well-formed {role, text} turns. */
+function parseHistory(raw: FormDataEntryValue | null): VoicePartnerTurn[] | null {
+  if (typeof raw !== 'string') return null
+  let parsed: unknown
+  try { parsed = JSON.parse(raw) } catch { return null }
+  if (!Array.isArray(parsed) || parsed.length > MAX_HISTORY_ENTRIES) return null
+  const turns: VoicePartnerTurn[] = []
+  for (const entry of parsed) {
+    if (!entry || typeof entry !== 'object') return null
+    const { role, text } = entry as Record<string, unknown>
+    if (role !== 'doctor' && role !== 'rep') return null
+    if (typeof text !== 'string' || !text.trim() || text.length > MAX_TURN_CHARS) return null
+    turns.push({ role, text })
+  }
+  return turns
+}
+
+async function transcribe(audio: Blob, apiKey: string, lang: 'en' | 'ar'): Promise<string | null> {
   const form = new FormData()
   form.append('file', audio, 'turn.webm')
   form.append('model', 'whisper-1')
+  // Pinning the language stops Whisper guessing (and mis-transcribing short
+  // Arabic replies as another language) when the session is already known.
+  form.append('language', lang === 'ar' ? 'ar' : 'en')
   let res: Response
   try {
     res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
@@ -42,10 +67,13 @@ export async function POST(req: Request) {
   if (typeof doctorId !== 'string' || !doctorId) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   if (!(audio instanceof Blob)) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
 
-  let history: VoicePartnerTurn[] = []
-  if (typeof historyRaw === 'string') {
-    try { history = JSON.parse(historyRaw) } catch { history = [] }
-  }
+  // The client resends the whole conversation each turn, so `history` is
+  // untrusted input that gets interpolated verbatim into the guardrailed judge
+  // prompt as Doctor:/Rep: lines. Fail loudly on anything malformed rather than
+  // silently falling back to [] — a well-behaved client never sends bad shapes,
+  // and an empty fallback would mask the bug while resetting the turn count.
+  const history = parseHistory(historyRaw)
+  if (!history) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
 
   // RLS ensures the rep can only read their own doctor.
   const { data: doctor } = await supabase.from('doctors').select('*').eq('id', doctorId).single()
@@ -58,11 +86,11 @@ export async function POST(req: Request) {
     .order('created_at', { ascending: false }).limit(5)
   const historyContext = buildHistoryContext((visits as DoctorVisit[]) ?? [])
 
-  const repText = await transcribe(audio, openaiKey)
+  const repText = await transcribe(audio, openaiKey, lang)
   if (!repText) return NextResponse.json({ error: 'upstream' }, { status: 502 })
 
   const turnCount = history.filter(h => h.role === 'rep').length + 1
-  const prompt = buildJudgePrompt((doctor as Doctor).name, style, lang, historyContext, history, repText, turnCount)
+  const prompt = buildJudgePrompt(doctor as Doctor, style, lang, historyContext, history, repText, turnCount)
 
   let res: Response
   try {

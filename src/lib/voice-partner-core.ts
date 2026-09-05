@@ -1,4 +1,4 @@
-import type { StyleKey } from '@/types/game'
+import type { Doctor, StyleKey } from '@/types/game'
 import { DRIVE } from '@/lib/doctor-context'
 
 export const TURN_CAP = 5
@@ -23,8 +23,20 @@ function langName(lang: 'en' | 'ar'): string {
   return lang === 'ar' ? 'Arabic' : 'English'
 }
 
-export function buildOpeningPrompt(name: string, style: StyleKey, lang: 'en' | 'ar', historyContext: string): string {
-  return `You are ${name}, a ${style} customer (core drive: ${DRIVE[style]}). Write ALL text in ${langName(lang)}.
+/** The persona lines shared by the opening and judge prompts — same
+ * key_phrases/objections/specialty inputs generate-scenario already assembles,
+ * so the voice partner sounds like the rep's own Digital Twin doctor. */
+function personaLines(d: Doctor, style: StyleKey, lang: 'en' | 'ar'): string {
+  const specialty = d.specialty ? `, ${d.specialty}` : ''
+  const phrases = d.key_phrases?.trim() ? `They often say things like: "${d.key_phrases.trim()}".` : ''
+  const objections = d.objections?.length ? `Objection theme(s) they are likely to raise: ${d.objections.join(', ')}.` : ''
+  return `You are ${d.name}${specialty}, a ${style} customer (core drive: ${DRIVE[style]}). Write ALL text in ${langName(lang)}.
+${phrases}
+${objections}`
+}
+
+export function buildOpeningPrompt(doctor: Doctor, style: StyleKey, lang: 'en' | 'ar', historyContext: string): string {
+  return `${personaLines(doctor, style, lang)}
 ${historyContext}
 
 Open the conversation with a short objection about "your product" — the opening resistance the rep needs to work through, in your own voice, 1-2 sentences.
@@ -45,11 +57,11 @@ export function parseOpeningResponse(text: string): string | null {
 }
 
 export function buildJudgePrompt(
-  name: string, style: StyleKey, lang: 'en' | 'ar', historyContext: string,
+  doctor: Doctor, style: StyleKey, lang: 'en' | 'ar', historyContext: string,
   turns: VoicePartnerTurn[], repReply: string, turnCount: number,
 ): string {
   const transcript = turns.map(t => `${t.role === 'doctor' ? 'Doctor' : 'Rep'}: ${t.text}`).join('\n')
-  return `You are ${name}, a ${style} customer (core drive: ${DRIVE[style]}). Write ALL text in ${langName(lang)}.
+  return `${personaLines(doctor, style, lang)}
 ${historyContext}
 
 Conversation so far:

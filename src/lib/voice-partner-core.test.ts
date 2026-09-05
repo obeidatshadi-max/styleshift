@@ -4,6 +4,19 @@ import {
   buildJudgePrompt, parseJudgeResponse, resolveTurn,
   type VoicePartnerTurn,
 } from './voice-partner-core'
+import type { Doctor } from '@/types/game'
+
+/** A minimal Digital Twin doctor; `over` supplies the persona fields under test. */
+function doctorFixture(over: Partial<Doctor> = {}): Doctor {
+  return {
+    id: 'd1', rep_id: 'r1', name: 'Dr. Amina',
+    specialty: null, workplace: null, style: 'analytical',
+    assertiveness: null, responsiveness: null,
+    key_phrases: null, objections: [], objection_notes: null, notes: null,
+    created_at: '', updated_at: '',
+    ...over,
+  }
+}
 
 describe('resolveTurn', () => {
   it('resolves "won" whenever the model verdict is win, regardless of turn count', () => {
@@ -28,15 +41,32 @@ describe('resolveTurn', () => {
 
 describe('buildOpeningPrompt', () => {
   it('includes the doctor name, style drive, and language', () => {
-    const prompt = buildOpeningPrompt('Dr. Amina', 'analytical', 'en', '')
+    const prompt = buildOpeningPrompt(doctorFixture(), 'analytical', 'en', '')
     expect(prompt).toContain('Dr. Amina')
     expect(prompt).toContain('Certainty & Accuracy')
     expect(prompt).toContain('English')
   })
 
   it('includes visit history context when provided', () => {
-    const prompt = buildOpeningPrompt('Dr. Amina', 'driver', 'en', 'Past visit history with this doctor: objection about price')
+    const prompt = buildOpeningPrompt(doctorFixture(), 'driver', 'en', 'Past visit history with this doctor: objection about price')
     expect(prompt).toContain('objection about price')
+  })
+
+  it('includes the specialty, key phrases, and objections when the doctor has them', () => {
+    const prompt = buildOpeningPrompt(doctorFixture({
+      specialty: 'Cardiology',
+      key_phrases: 'Show me the data first',
+      objections: ['price', 'formulary access'],
+    }), 'analytical', 'en', '')
+    expect(prompt).toContain('Cardiology')
+    expect(prompt).toContain('Show me the data first')
+    expect(prompt).toContain('price, formulary access')
+  })
+
+  it('omits the persona lines entirely when key phrases and objections are empty', () => {
+    const prompt = buildOpeningPrompt(doctorFixture(), 'analytical', 'en', '')
+    expect(prompt).not.toContain('They often say things like')
+    expect(prompt).not.toContain('Objection theme(s)')
   })
 })
 
@@ -63,15 +93,27 @@ describe('buildJudgePrompt', () => {
   const turns: VoicePartnerTurn[] = [{ role: 'doctor', text: 'Your product costs too much.' }]
 
   it('includes the transcript so far, the new rep reply, and the turn count/cap', () => {
-    const prompt = buildJudgePrompt('Dr. Amina', 'driver', 'en', '', turns, 'It pays for itself within a month.', 1)
+    const prompt = buildJudgePrompt(doctorFixture(), 'driver', 'en', '', turns, 'It pays for itself within a month.', 1)
     expect(prompt).toContain('Doctor: Your product costs too much.')
     expect(prompt).toContain('It pays for itself within a month.')
     expect(prompt).toContain(`rep reply #1 of a maximum ${TURN_CAP}`)
   })
 
   it('marks the opening turn explicitly when there is no prior transcript', () => {
-    const prompt = buildJudgePrompt('Dr. Amina', 'driver', 'en', '', [], 'first reply', 1)
+    const prompt = buildJudgePrompt(doctorFixture(), 'driver', 'en', '', [], 'first reply', 1)
     expect(prompt).toContain('the rep has not spoken yet')
+  })
+
+  it('includes the specialty, key phrases, and objections when the doctor has them', () => {
+    const prompt = buildJudgePrompt(doctorFixture({
+      specialty: 'Oncology',
+      key_phrases: 'Get to the point',
+      objections: ['switching cost'],
+    }), 'driver', 'ar', '', turns, 'reply', 1)
+    expect(prompt).toContain('Oncology')
+    expect(prompt).toContain('Get to the point')
+    expect(prompt).toContain('switching cost')
+    expect(prompt).toContain('Arabic')
   })
 })
 

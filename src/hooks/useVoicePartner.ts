@@ -7,9 +7,9 @@ import type { VoicePartnerTurn, TurnOutcome } from '@/lib/voice-partner-core'
 export type VoicePartnerPhase =
   | 'idle' | 'opening' | 'recording' | 'sending' | 'playing' | 'notconfigured' | 'error'
 
-async function speak(text: string): Promise<string | null> {
+async function speak(text: string, lang: 'en' | 'ar'): Promise<string | null> {
   const res = await fetch('/api/voice-partner/speak', {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }),
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text, lang }),
   })
   if (!res.ok) return null
   const data = await res.json().catch(() => null) as { audio?: string } | null
@@ -54,7 +54,7 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
       setOpeningText(data.doctorText)
       setTranscript([{ role: 'doctor', text: data.doctorText }])
 
-      const audio = await speak(data.doctorText)
+      const audio = await speak(data.doctorText, lang)
       setPhase('playing')
       if (audio) await playBase64Audio(audio)
       setPhase('idle')
@@ -119,9 +119,11 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
       ]
       setTranscript(nextTranscript)
       setTurnCount(data.turnCount ?? turnCount + 1)
-      setOutcome(data.outcome)
+      // `outcome` means "the session has resolved" everywhere it's read — a
+      // non-terminal 'continue' must leave it null so the mic stays available.
+      if (data.outcome !== 'continue') setOutcome(data.outcome)
 
-      const audio = await speak(data.doctorText)
+      const audio = await speak(data.doctorText, lang)
       setPhase('playing')
       if (audio) await playBase64Audio(audio)
 

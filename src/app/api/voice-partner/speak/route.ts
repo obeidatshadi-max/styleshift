@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 
+// One fixed voice for both languages — the language is steered through the
+// per-request `instructions` field rather than by swapping voice names.
 const VOICE = 'onyx'
 
 export async function POST(req: Request) {
@@ -13,17 +15,21 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  const body = await req.json().catch(() => ({})) as { text?: string }
+  const body = await req.json().catch(() => ({})) as { text?: string; lang?: 'en' | 'ar' }
   if (!body.text || typeof body.text !== 'string' || !body.text.trim()) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   }
+  const lang = body.lang === 'ar' ? 'ar' : 'en'
+  const instructions = lang === 'ar'
+    ? 'Speak in clear, natural Modern Standard Arabic.'
+    : 'Speak in clear, natural English.'
 
   let res: Response
   try {
     res = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ model: 'gpt-4o-mini-tts', voice: VOICE, input: body.text }),
+      body: JSON.stringify({ model: 'gpt-4o-mini-tts', voice: VOICE, input: body.text, instructions }),
     })
   } catch {
     return NextResponse.json({ error: 'upstream' }, { status: 502 })

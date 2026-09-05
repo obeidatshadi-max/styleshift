@@ -38,7 +38,7 @@ export async function POST(req: Request) {
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 300,
         system: SYSTEM,
-        messages: [{ role: 'user', content: buildOpeningPrompt((doctor as Doctor).name, style, lang, historyContext) }],
+        messages: [{ role: 'user', content: buildOpeningPrompt(doctor as Doctor, style, lang, historyContext) }],
       }),
     })
   } catch {

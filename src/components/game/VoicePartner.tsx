@@ -19,7 +19,7 @@ export default function VoicePartner({ doctor, onDone }: Props) {
   const t = useT()
   const { lang } = useLang()
   const { STYLES } = useGameData()
-  const { phase, transcript, turnCount, outcome, openingText, startVoicePartner, startRecording, stopRecording, reset } = useVoicePartner(doctor.id, lang)
+  const { phase, transcript, turnCount, outcome, openingText, startVoicePartner, startRecording, stopRecording } = useVoicePartner(doctor.id, lang)
 
   useEffect(() => { void startVoicePartner() }, [startVoicePartner])
 
@@ -71,20 +71,34 @@ export default function VoicePartner({ doctor, onDone }: Props) {
         </div>
 
         {!outcome && (
-          <button
-            onClick={phase === 'recording' ? stopRecording : startRecording}
-            disabled={phase === 'opening' || phase === 'sending' || phase === 'playing'}
-            style={{
-              width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 13, letterSpacing: '.1em', textTransform: 'uppercase',
-              border: `1px solid ${phase === 'recording' ? 'var(--red)' : 'var(--cyan)'}`,
-              color: phase === 'recording' ? 'var(--red)' : '#04121c',
-              background: phase === 'recording' ? 'rgba(255,80,80,.08)' : 'var(--cyan)',
-              borderRadius: 10, padding: '14px 18px', touchAction: 'manipulation',
-              opacity: (phase === 'opening' || phase === 'sending' || phase === 'playing') ? 0.6 : 1,
-            }}
-          >
-            🎙️ {label}
-          </button>
+          <>
+            {/* Stays enabled in the 'error' phase on purpose: an upstream failure
+                is retried by simply speaking again — the client-held transcript
+                and turn count are untouched, per the spec's error contract. */}
+            <button
+              onClick={phase === 'recording' ? stopRecording : startRecording}
+              disabled={phase === 'opening' || phase === 'sending' || phase === 'playing'}
+              style={{
+                width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 13, letterSpacing: '.1em', textTransform: 'uppercase',
+                border: `1px solid ${phase === 'recording' ? 'var(--red)' : 'var(--cyan)'}`,
+                color: phase === 'recording' ? 'var(--red)' : '#04121c',
+                background: phase === 'recording' ? 'rgba(255,80,80,.08)' : 'var(--cyan)',
+                borderRadius: 10, padding: '14px 18px', touchAction: 'manipulation',
+                opacity: (phase === 'opening' || phase === 'sending' || phase === 'playing') ? 0.6 : 1,
+              }}
+            >
+              🎙️ {label}
+            </button>
+            {/* Always-available exit from an unresolved session. Reports
+                turns: 0 so the wrapper's `meta.turns > 0` guard skips logging
+                a phantom visit. */}
+            <button
+              onClick={() => onDone(false, { turns: 0, openingCrisis: '' })}
+              style={{ ...ghostBtn, marginTop: 10 }}
+            >
+              {t('voice.back')}
+            </button>
+          </>
         )}
 
         {outcome && outcome !== 'continue' && (
@@ -99,10 +113,6 @@ export default function VoicePartner({ doctor, onDone }: Props) {
               </button>
             </div>
           </>
-        )}
-
-        {phase === 'error' && (
-          <button onClick={reset} style={{ ...ghostBtn, marginTop: 10 }}>{t('voice.back')}</button>
         )}
       </div>
     </div>

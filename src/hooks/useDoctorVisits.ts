@@ -25,11 +25,12 @@ export function useDoctorVisits(doctorId: string) {
   const addVisit = useCallback(async (input: DoctorVisitInput): Promise<DoctorVisit | null> => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('doctor_visits')
       .insert({ ...input, doctor_id: doctorId, rep_id: user.id })
       .select()
       .single()
+    if (error) console.error('doctor_visits insert failed:', error.message)
     if (data) setVisits(prev => [data as DoctorVisit, ...prev])
     return (data as DoctorVisit) ?? null
   }, [supabase, doctorId])

@@ -19,7 +19,7 @@ export default function VoicePartner({ doctor, onDone }: Props) {
   const t = useT()
   const { lang } = useLang()
   const { STYLES } = useGameData()
-  const { phase, transcript, turnCount, outcome, openingText, startVoicePartner, startRecording, stopRecording } = useVoicePartner(doctor.id, lang)
+  const { phase, transcript, turnCount, outcome, openingText, startVoicePartner, startRecording, stopRecording, reset } = useVoicePartner(doctor.id, lang)
 
   useEffect(() => { void startVoicePartner() }, [startVoicePartner])
 
@@ -89,11 +89,13 @@ export default function VoicePartner({ doctor, onDone }: Props) {
             >
               🎙️ {label}
             </button>
-            {/* Always-available exit from an unresolved session. Reports
-                turns: 0 so the wrapper's `meta.turns > 0` guard skips logging
-                a phantom visit. */}
+            {/* Always-available exit from an unresolved session. `reset()`
+                releases any live mic stream/recorder first — tapping this
+                mid-recording must not strand the microphone. Reports turns: 0
+                so the wrapper's `meta.turns > 0` guard skips logging a
+                phantom visit. */}
             <button
-              onClick={() => onDone(false, { turns: 0, openingCrisis: '' })}
+              onClick={() => { reset(); onDone(false, { turns: 0, openingCrisis: '' }) }}
               style={{ ...ghostBtn, marginTop: 10 }}
             >
               {t('voice.back')}

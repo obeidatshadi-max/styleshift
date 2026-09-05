@@ -135,6 +135,15 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
   }, [doctorId, lang, transcript, turnCount, awardXpOnWin])
 
   const reset = useCallback(() => {
+    // Stop the recorder before its source tracks — some browsers only fire
+    // onstop reliably when told directly, rather than inferring it from the
+    // stream going away, which left a leaving-mid-recording tap with a live
+    // mic (indicator stays lit until the tab reloads).
+    if (mediaRecRef.current && mediaRecRef.current.state !== 'inactive') {
+      try { mediaRecRef.current.stop() } catch { /* already stopping */ }
+    }
+    mediaRecRef.current = null
+    chunksRef.current = []
     streamRef.current?.getTracks().forEach(t => t.stop())
     streamRef.current = null
     setPhase('idle')

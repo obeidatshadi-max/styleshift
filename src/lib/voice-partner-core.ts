@@ -19,6 +19,38 @@ Hard rules — follow exactly:
 - Judge the rep's most recent reply on its own merits: adjust resistance based on argument quality — don't concede to a weak reply, don't stonewall a strong one.
 - Output ONLY a single valid JSON object. No markdown fences, no commentary.`
 
+export type ObjectionType = 'wrong_info' | 'doubt' | 'true_objection' | 'indifference'
+export const OBJECTION_TYPES: readonly ObjectionType[] = ['wrong_info', 'doubt', 'true_objection', 'indifference']
+
+export function pickObjectionType(): ObjectionType {
+  return OBJECTION_TYPES[Math.floor(Math.random() * OBJECTION_TYPES.length)]
+}
+
+export function isObjectionType(value: unknown): value is ObjectionType {
+  return typeof value === 'string' && (OBJECTION_TYPES as readonly string[]).includes(value)
+}
+
+export type ClearStep = 'clarify' | 'listen' | 'empathy' | 'answer' | 'recheck'
+export const CLEAR_STEPS: readonly ClearStep[] = ['clarify', 'listen', 'empathy', 'answer', 'recheck']
+
+export function isClearStep(value: unknown): value is ClearStep {
+  return typeof value === 'string' && (CLEAR_STEPS as readonly string[]).includes(value)
+}
+
+/** What each objection type should feel like from the doctor's side, and how
+ * the rep is meant to handle it — injected into both the opening and judge
+ * prompts so the AI stays in character for the type across the whole session. */
+const OBJECTION_INSTRUCTIONS: Record<ObjectionType, string> = {
+  wrong_info: 'Your resistance is rooted in a mistaken belief you hold about "your product" — keep it a vague misconception (e.g. about how or for whom it is used), never a specific fabricated fact. The rep is meant to correct your misunderstanding diplomatically, pointing you to generic evidence ("the trial data", "the evidence pack") rather than inventing data of their own — reward that kind of correction.',
+  doubt: 'Your resistance is skepticism about whether "your product" really works or is safe — you are not convinced, but you have not made up your mind against it either. The rep is meant to answer your doubt with third-party evidence (referred to generically, e.g. "the evidence pack" or "the trial data") — reward that more than a bare reassurance with no reference to evidence.',
+  true_objection: 'Your resistance is a real, legitimate concern (for example, a side-effect or practical concern already reflected in your persona) — this is not a misunderstanding. The rep is meant to normalize and generalize it, acknowledging it is a known and manageable concern rather than dismissing or minimizing it — reward that, and stay resistant to a reply that brushes past your concern.',
+  indifference: 'Show low engagement rather than a sharp objection — mild dismissiveness, a "not interested right now," or a shrug. You are hiding a real underlying concern that you will not volunteer. Only warm up if the rep asks genuine open-ended questions that draw out what is actually on your mind — a generic pitch or a closed yes/no question should not move you.',
+}
+
+function objectionInstruction(type: ObjectionType): string {
+  return OBJECTION_INSTRUCTIONS[type]
+}
+
 function langName(lang: 'en' | 'ar'): string {
   return lang === 'ar' ? 'Arabic' : 'English'
 }
@@ -35,9 +67,13 @@ ${phrases}
 ${objections}`
 }
 
-export function buildOpeningPrompt(doctor: Doctor, style: StyleKey, lang: 'en' | 'ar', historyContext: string): string {
+export function buildOpeningPrompt(
+  doctor: Doctor, style: StyleKey, lang: 'en' | 'ar', historyContext: string, objectionType: ObjectionType,
+): string {
   return `${personaLines(doctor, style, lang)}
 ${historyContext}
+
+${objectionInstruction(objectionType)}
 
 Open the conversation with a short objection about "your product" — the opening resistance the rep needs to work through, in your own voice, 1-2 sentences.
 
@@ -58,11 +94,13 @@ export function parseOpeningResponse(text: string): string | null {
 
 export function buildJudgePrompt(
   doctor: Doctor, style: StyleKey, lang: 'en' | 'ar', historyContext: string,
-  turns: VoicePartnerTurn[], repReply: string, turnCount: number,
+  turns: VoicePartnerTurn[], repReply: string, turnCount: number, objectionType: ObjectionType,
 ): string {
   const transcript = turns.map(t => `${t.role === 'doctor' ? 'Doctor' : 'Rep'}: ${t.text}`).join('\n')
   return `${personaLines(doctor, style, lang)}
 ${historyContext}
+
+${objectionInstruction(objectionType)}
 
 Conversation so far:
 ${transcript || '(this is the opening line — the rep has not spoken yet)'}
@@ -70,17 +108,26 @@ Rep: ${repReply}
 
 This is rep reply #${turnCount} of a maximum ${TURN_CAP}. Judge this reply and respond as the doctor.
 
+Also identify which of the CLEAR objection-handling steps the rep's reply demonstrated, if any:
+- "clarify": asked an open-ended question to understand your concern better
+- "listen": paraphrased or reflected back what you said
+- "empathy": acknowledged how you feel or think about this
+- "answer": gave a substantive response addressing the objection (in the way appropriate to its type)
+- "recheck": asked whether their answer resolved your concern or if anything remains
+
 Return JSON exactly in this shape:
 {
   "verdict": "win" | "escalate" | "continue",
-  "doctorReply": "your in-character spoken reply, 1-3 sentences"
+  "doctorReply": "your in-character spoken reply, 1-3 sentences",
+  "clearSteps": ["clarify", "listen", "empathy", "answer", "recheck"]
 }
 "win" = the rep's reply resolves your objection convincingly, end the conversation satisfied.
 "escalate" = the rep's reply is weak or off-target and you're done listening, end the conversation unsatisfied.
-"continue" = the reply is reasonable but you still have more resistance to raise — keep pushing.`
+"continue" = the reply is reasonable but you still have more resistance to raise — keep pushing.
+"clearSteps" = the subset of the five steps above this specific reply demonstrated — empty array if none.`
 }
 
-export function parseJudgeResponse(text: string): { verdict: VoicePartnerVerdict; doctorReply: string } | null {
+export function parseJudgeResponse(text: string): { verdict: VoicePartnerVerdict; doctorReply: string; clearSteps: ClearStep[] } | null {
   const start = text.indexOf('{')
   const end = text.lastIndexOf('}')
   if (start === -1 || end === -1) return null
@@ -89,7 +136,8 @@ export function parseJudgeResponse(text: string): { verdict: VoicePartnerVerdict
   const o = obj as Record<string, unknown>
   if (!o || typeof o.doctorReply !== 'string' || !o.doctorReply.trim()) return null
   if (o.verdict !== 'win' && o.verdict !== 'escalate' && o.verdict !== 'continue') return null
-  return { verdict: o.verdict, doctorReply: o.doctorReply }
+  const clearSteps: ClearStep[] = Array.isArray(o.clearSteps) ? o.clearSteps.filter(isClearStep) : []
+  return { verdict: o.verdict, doctorReply: o.doctorReply, clearSteps }
 }
 
 /** Pure turn-cap enforcement: the model's own verdict wins/escalates the

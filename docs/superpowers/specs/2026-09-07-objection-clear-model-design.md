@@ -24,6 +24,11 @@ no AI judge today, only post-hoc talk-ratio/paraphrase analytics
 Out of scope: surfacing this data on the manager dashboard. The DB
 table + RLS are built to support it, but wiring it into
 `app/dashboard` and the SPS recommendation logic is a follow-up spec.
+Whoever writes that follow-up spec should note: `session-result` rows are
+client-asserted practice self-reports with no server-side session state to
+validate against (each voice-partner session has no server-side record until
+the final POST) — a manager-facing view must present them as self-reports,
+not audited results.
 
 ## Decisions (from brainstorming)
 
@@ -128,10 +133,12 @@ No update/delete policies — sessions are write-once, matching
   `Set<ClearStep>` (updated from each `turn` response); on terminal outcome,
   fires `session-result` (best-effort — a failed save doesn't block the rep
   from seeing their summary).
-- New `VoicePartnerSummary.tsx` — renders on `outcome !== 'continue'`:
-  objection type faced (translated label), a 5-row CLEAR checklist
-  (✓ hit / — missed), and the verdict. Replaces/extends whatever
-  `VoicePartner.tsx` currently shows at session end.
+- No new `VoicePartnerSummary.tsx` component was added. Instead, on
+  `outcome !== 'continue'`, `VoicePartner.tsx` builds an HTML string —
+  objection type faced (translated label) plus a 5-row CLEAR checklist
+  (✓ hit / — missed) — and passes it as the `body` prop to the existing
+  `Feedback` component (already used elsewhere in `VoicePartner.tsx` for the
+  win/escalate message), avoiding a duplicate verdict panel.
 - `i18n.tsx` — new EN+AR keys: 4 objection-type labels, 5 CLEAR-step labels
   (+ one-line description each), summary screen headings.
 

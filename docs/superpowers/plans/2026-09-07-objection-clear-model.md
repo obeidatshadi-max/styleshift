@@ -673,7 +673,7 @@ Add this new `useCallback` right after `awardXpOnWin`:
 
 - [ ] **Step 5: Wire it into `stopRecording`**
 
-At the top of `stopRecording`, right after `const rec = mediaRecRef.current; if (!rec) return`, add a guard (the objection type is always set by the time a turn can be sent, but this keeps the function honest about its precondition):
+Do NOT add the objection-type guard at the top of `stopRecording` — that runs before the mic stream is stopped (`streamRef.current?.getTracks().forEach(t => t.stop())`), and an early return there would strand a live mic, the exact bug fixed in commit `d275655`. Instead add the guard immediately before the existing `try {` block (i.e. right after `streamRef.current = null`, once the recorder and mic are already torn down) — the objection type is always set by the time a turn can be sent, but this keeps the function honest about its precondition without reintroducing a mic leak on that path:
 
 ```ts
     if (!objectionType) { setPhase('error'); return }

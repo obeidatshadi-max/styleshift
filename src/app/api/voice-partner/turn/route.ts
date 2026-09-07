@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { buildHistoryContext } from '@/lib/doctor-context'
-import { SYSTEM, TURN_CAP, buildJudgePrompt, parseJudgeResponse, resolveTurn, type VoicePartnerTurn } from '@/lib/voice-partner-core'
+import { SYSTEM, TURN_CAP, buildJudgePrompt, parseJudgeResponse, resolveTurn, isObjectionType, type VoicePartnerTurn } from '@/lib/voice-partner-core'
 import { checkRateLimit } from '@/lib/rate-limit'
 import type { Doctor, DoctorVisit } from '@/types/game'
 
@@ -72,6 +72,11 @@ export async function POST(req: Request) {
   if (typeof doctorId !== 'string' || !doctorId) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   if (!(audio instanceof Blob)) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
 
+  const objectionTypeRaw = form.get('objectionType')
+  if (typeof objectionTypeRaw !== 'string' || !isObjectionType(objectionTypeRaw)) {
+    return NextResponse.json({ error: 'bad_request' }, { status: 400 })
+  }
+
   // The client resends the whole conversation each turn, so `history` is
   // untrusted input that gets interpolated verbatim into the guardrailed judge
   // prompt as Doctor:/Rep: lines. Fail loudly on anything malformed rather than
@@ -95,7 +100,7 @@ export async function POST(req: Request) {
   if (!repText) return NextResponse.json({ error: 'upstream' }, { status: 502 })
 
   const turnCount = history.filter(h => h.role === 'rep').length + 1
-  const prompt = buildJudgePrompt(doctor as Doctor, style, lang, historyContext, history, repText, turnCount)
+  const prompt = buildJudgePrompt(doctor as Doctor, style, lang, historyContext, history, repText, turnCount, objectionTypeRaw)
 
   let res: Response
   try {
@@ -120,5 +125,5 @@ export async function POST(req: Request) {
 
   const outcome = resolveTurn(turnCount, judged.verdict)
 
-  return NextResponse.json({ repText, doctorText: judged.doctorReply, outcome, turnCount })
+  return NextResponse.json({ repText, doctorText: judged.doctorReply, outcome, turnCount, clearSteps: judged.clearSteps })
 }

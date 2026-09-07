@@ -2,7 +2,8 @@
 import { useCallback, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { XP_VALUES } from '@/lib/game-data'
-import type { VoicePartnerTurn, TurnOutcome } from '@/lib/voice-partner-core'
+import type { VoicePartnerTurn, TurnOutcome, ObjectionType, ClearStep } from '@/lib/voice-partner-core'
+import { isObjectionType, isClearStep } from '@/lib/voice-partner-core'
 
 export type VoicePartnerPhase =
   | 'idle' | 'opening' | 'recording' | 'sending' | 'playing' | 'notconfigured' | 'error'
@@ -32,6 +33,8 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
   const [turnCount, setTurnCount] = useState(0)
   const [outcome, setOutcome] = useState<TurnOutcome | null>(null)
   const [openingText, setOpeningText] = useState('')
+  const [objectionType, setObjectionType] = useState<ObjectionType | null>(null)
+  const [clearStepsHit, setClearStepsHit] = useState<ClearStep[]>([])
 
   const streamRef = useRef<MediaStream | null>(null)
   const mediaRecRef = useRef<MediaRecorder | null>(null)
@@ -42,6 +45,8 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
     setTranscript([])
     setTurnCount(0)
     setOutcome(null)
+    setObjectionType(null)
+    setClearStepsHit([])
     try {
       const res = await fetch('/api/voice-partner/open', {
         method: 'POST', headers: { 'content-type': 'application/json' },
@@ -49,9 +54,10 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
       })
       if (res.status === 503) { setPhase('notconfigured'); return }
       if (!res.ok) { setPhase('error'); return }
-      const data = await res.json().catch(() => null) as { doctorText?: string } | null
-      if (!data?.doctorText) { setPhase('error'); return }
+      const data = await res.json().catch(() => null) as { doctorText?: string; objectionType?: string } | null
+      if (!data?.doctorText || !isObjectionType(data.objectionType)) { setPhase('error'); return }
       setOpeningText(data.doctorText)
+      setObjectionType(data.objectionType)
       setTranscript([{ role: 'doctor', text: data.doctorText }])
 
       const audio = await speak(data.doctorText, lang)
@@ -87,6 +93,19 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
     if (xpError) console.error('voice partner xp update failed:', xpError.message)
   }, [supabase])
 
+  const saveSessionResult = useCallback(async (
+    finalOutcome: 'won' | 'escalated', finalTurnCount: number, finalClearSteps: ClearStep[], type: ObjectionType,
+  ) => {
+    try {
+      await fetch('/api/voice-partner/session-result', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ doctorId, objectionType: type, outcome: finalOutcome, clearSteps: finalClearSteps, turnCount: finalTurnCount }),
+      })
+    } catch {
+      // Best-effort — the rep still sees their end-of-session summary either way.
+    }
+  }, [doctorId])
+
   const stopRecording = useCallback(async () => {
     const rec = mediaRecRef.current
     if (!rec) return
@@ -99,18 +118,21 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
     streamRef.current?.getTracks().forEach(t => t.stop())
     streamRef.current = null
 
+    if (!objectionType) { setPhase('error'); return }
+
     try {
       const form = new FormData()
       form.append('doctorId', doctorId)
       form.append('lang', lang)
       form.append('history', JSON.stringify(transcript))
       form.append('audio', blob, 'turn.webm')
+      form.append('objectionType', objectionType)
 
       const res = await fetch('/api/voice-partner/turn', { method: 'POST', body: form })
       if (res.status === 503) { setPhase('notconfigured'); return }
       if (!res.ok) { setPhase('error'); return }
       const data = await res.json().catch(() => null) as {
-        repText?: string; doctorText?: string; outcome?: TurnOutcome; turnCount?: number
+        repText?: string; doctorText?: string; outcome?: TurnOutcome; turnCount?: number; clearSteps?: unknown
       } | null
       if (!data?.repText || !data.doctorText || !data.outcome) { setPhase('error'); return }
 
@@ -118,10 +140,19 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
         ...transcript, { role: 'rep', text: data.repText }, { role: 'doctor', text: data.doctorText },
       ]
       setTranscript(nextTranscript)
-      setTurnCount(data.turnCount ?? turnCount + 1)
+      const nextTurnCount = data.turnCount ?? turnCount + 1
+      setTurnCount(nextTurnCount)
+
+      const newSteps = Array.isArray(data.clearSteps) ? data.clearSteps.filter(isClearStep) : []
+      const mergedSteps = Array.from(new Set([...clearStepsHit, ...newSteps]))
+      setClearStepsHit(mergedSteps)
+
       // `outcome` means "the session has resolved" everywhere it's read — a
       // non-terminal 'continue' must leave it null so the mic stays available.
-      if (data.outcome !== 'continue') setOutcome(data.outcome)
+      if (data.outcome !== 'continue') {
+        setOutcome(data.outcome)
+        void saveSessionResult(data.outcome, nextTurnCount, mergedSteps, objectionType)
+      }
 
       const audio = await speak(data.doctorText, lang)
       setPhase('playing')
@@ -132,7 +163,7 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
     } catch {
       setPhase('error')
     }
-  }, [doctorId, lang, transcript, turnCount, awardXpOnWin])
+  }, [doctorId, lang, transcript, turnCount, awardXpOnWin, objectionType, clearStepsHit, saveSessionResult])
 
   const reset = useCallback(() => {
     // Stop the recorder before its source tracks — some browsers only fire
@@ -151,7 +182,12 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
     setTurnCount(0)
     setOutcome(null)
     setOpeningText('')
+    setObjectionType(null)
+    setClearStepsHit([])
   }, [])
 
-  return { phase, transcript, turnCount, outcome, openingText, startVoicePartner, startRecording, stopRecording, reset }
+  return {
+    phase, transcript, turnCount, outcome, openingText, objectionType, clearStepsHit,
+    startVoicePartner, startRecording, stopRecording, reset,
+  }
 }

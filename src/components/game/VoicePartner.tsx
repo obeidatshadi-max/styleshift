@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useT, useLang, useGameData } from '@/lib/i18n'
 import type { Doctor } from '@/types/game'
 import { useVoicePartner } from '@/hooks/useVoicePartner'
-import { TURN_CAP } from '@/lib/voice-partner-core'
+import { TURN_CAP, CLEAR_STEPS } from '@/lib/voice-partner-core'
 import { Feedback } from './helpers'
 
 interface Props {
@@ -20,7 +20,7 @@ export default function VoicePartner({ doctor, onDone }: Props) {
   const t = useT()
   const { lang } = useLang()
   const { STYLES } = useGameData()
-  const { phase, transcript, turnCount, outcome, openingText, startVoicePartner, startRecording, stopRecording, reset } = useVoicePartner(doctor.id, lang)
+  const { phase, transcript, turnCount, outcome, openingText, objectionType, clearStepsHit, startVoicePartner, startRecording, stopRecording, reset } = useVoicePartner(doctor.id, lang)
   const [consentChecked, setConsentChecked] = useState(false)
   const [consented, setConsented] = useState(false)
 
@@ -73,6 +73,13 @@ export default function VoicePartner({ doctor, onDone }: Props) {
     phase === 'playing' ? t('voice.speaking') :
     phase === 'error' ? t('voice.error') :
     t('voice.tapToSpeak')
+
+  const clearSummaryHtml = objectionType
+    ? `<div>${t('voice.objectionFaced', { type: t(`voice.objType.${objectionType}`) })}</div>` +
+      `<ul style="margin:8px 0 0;padding-left:18px;list-style:none">` +
+      CLEAR_STEPS.map(step => `<li>${clearStepsHit.includes(step) ? '✓' : '—'} ${t(`voice.clear.${step}`)}</li>`).join('') +
+      `</ul>`
+    : ''
 
   return (
     <div style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14 }}>
@@ -133,7 +140,7 @@ export default function VoicePartner({ doctor, onDone }: Props) {
 
         {outcome && outcome !== 'continue' && (
           <>
-            <Feedback ok={outcome === 'won'} title={outcome === 'won' ? t('voice.won') : t('voice.escalated')} body="" />
+            <Feedback ok={outcome === 'won'} title={outcome === 'won' ? t('voice.won') : t('voice.escalated')} body={clearSummaryHtml} />
             <div style={{ marginTop: 14 }}>
               <button
                 onClick={() => onDone(outcome === 'won', { turns: turnCount, openingCrisis: openingText })}

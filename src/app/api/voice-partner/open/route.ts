@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { buildHistoryContext } from '@/lib/doctor-context'
-import { SYSTEM, buildOpeningPrompt, parseOpeningResponse } from '@/lib/voice-partner-core'
+import { SYSTEM, buildOpeningPrompt, parseOpeningResponse, pickObjectionType } from '@/lib/voice-partner-core'
 import { checkRateLimit } from '@/lib/rate-limit'
 import type { Doctor, DoctorVisit } from '@/types/game'
 
@@ -36,6 +36,8 @@ export async function POST(req: Request) {
     .order('created_at', { ascending: false }).limit(5)
   const historyContext = buildHistoryContext((visits as DoctorVisit[]) ?? [])
 
+  const objectionType = pickObjectionType()
+
   let res: Response
   try {
     res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -45,7 +47,7 @@ export async function POST(req: Request) {
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 300,
         system: SYSTEM,
-        messages: [{ role: 'user', content: buildOpeningPrompt(doctor as Doctor, style, lang, historyContext) }],
+        messages: [{ role: 'user', content: buildOpeningPrompt(doctor as Doctor, style, lang, historyContext, objectionType) }],
       }),
     })
   } catch {
@@ -57,5 +59,5 @@ export async function POST(req: Request) {
   const doctorText = parseOpeningResponse(data?.content?.[0]?.text ?? '')
   if (!doctorText) return NextResponse.json({ error: 'invalid' }, { status: 422 })
 
-  return NextResponse.json({ doctorText })
+  return NextResponse.json({ doctorText, objectionType })
 }

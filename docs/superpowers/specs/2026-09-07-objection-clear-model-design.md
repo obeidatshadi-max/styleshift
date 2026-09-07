@@ -46,9 +46,9 @@ not audited results.
 ### `ObjectionType` (new, `voice-partner-core.ts`)
 
 ```ts
-export type ObjectionType = 'wrong_info' | 'doubt' | 'true_objection' | 'indifference'
+export type ObjectionType = 'wrong_info' | 'doubt' | 'true_objection' | 'indifference' | 'false_objection'
 export const OBJECTION_TYPES: readonly ObjectionType[] =
-  ['wrong_info', 'doubt', 'true_objection', 'indifference']
+  ['wrong_info', 'doubt', 'true_objection', 'indifference', 'false_objection']
 export function pickObjectionType(): ObjectionType // uniform random
 ```
 
@@ -67,6 +67,13 @@ raise and sustain that flavor of resistance:
   it, not dismiss it.
 - `indifference` — low engagement, no strong objection voiced; rep must
   ask open questions to surface the real concern.
+- `false_objection` — state a reason that isn't the real one (a reflexive
+  excuse, thinly held) — distinct from `indifference` (no stated reason at
+  all vs. a stated-but-untrue one); rep must stay patient, not argue the
+  stated reason, and question to surface what's actually behind it. Named
+  after the 5-type taxonomy from the source training material (`edits.docx`
+  point 6 lists 4; the underlying workshop notes, `notesnotes.docx`, list a
+  5th: "false" objection).
 
 ### `ClearStep` (new, `voice-partner-core.ts`)
 

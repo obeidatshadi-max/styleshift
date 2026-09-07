@@ -11,7 +11,7 @@ create table public.voice_partner_sessions (
   doctor_id uuid references public.doctors(id) on delete set null,
   style text check (style = any (array['driver','expressive','amiable','analytical'])),
   objection_type text not null check (objection_type = any (
-    array['wrong_info','doubt','true_objection','indifference']
+    array['wrong_info','doubt','true_objection','indifference','false_objection']
   )),
   outcome text not null check (outcome = any (array['won','escalated'])),
   clear_steps_hit text[] not null default '{}',

@@ -24,6 +24,7 @@ const OBJECTION_KEYWORD: Record<ObjectionType, string> = {
   doubt: 'skepticism about whether',
   true_objection: 'real, legitimate concern',
   indifference: 'low engagement',
+  false_objection: 'not a real reason',
 }
 
 describe('resolveTurn', () => {
@@ -48,7 +49,7 @@ describe('resolveTurn', () => {
 })
 
 describe('pickObjectionType', () => {
-  it('always returns one of the four valid objection types', () => {
+  it('always returns one of the five valid objection types', () => {
     for (let i = 0; i < 50; i++) {
       expect(OBJECTION_TYPES).toContain(pickObjectionType())
     }
@@ -159,6 +160,11 @@ describe('buildJudgePrompt', () => {
     expect(prompt).toContain('clearSteps')
     expect(prompt).toContain('"clarify"')
     expect(prompt).toContain('"recheck"')
+  })
+
+  it('describes the "listen" step as covering paraphrase, reflection, or repeating back key words', () => {
+    const prompt = buildJudgePrompt(doctorFixture(), 'driver', 'en', '', turns, 'reply', 1, 'doubt')
+    expect(prompt).toContain('repeated the last few words')
   })
 })
 

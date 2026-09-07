@@ -1,20 +1,22 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { isObjectionType, CLEAR_STEPS, type ClearStep } from '@/lib/voice-partner-core'
+import { isObjectionType, isClearStep, type ClearStep } from '@/lib/voice-partner-core'
 import type { Doctor } from '@/types/game'
 
+// Stricter than voice-partner-core's AI-judge-output parsing: this route
+// rejects the whole request if ANY element is invalid, rather than silently
+// filtering out the bad ones.
 function parseClearSteps(raw: unknown): ClearStep[] | null {
   if (!Array.isArray(raw)) return null
-  const steps: ClearStep[] = []
-  for (const s of raw) {
-    if (typeof s !== 'string' || !(CLEAR_STEPS as readonly string[]).includes(s)) return null
-    steps.push(s as ClearStep)
-  }
-  return steps
+  return raw.every(isClearStep) ? (raw as ClearStep[]) : null
 }
 
 export async function POST(req: Request) {
+  if (process.env.AI_VOICE_PARTNER_ENABLED !== 'true') {
+    return NextResponse.json({ error: 'not_configured' }, { status: 503 })
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })

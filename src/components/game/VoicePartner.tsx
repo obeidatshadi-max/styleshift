@@ -76,7 +76,7 @@ export default function VoicePartner({ doctor, onDone }: Props) {
 
   const clearSummaryHtml = objectionType
     ? `<div>${t('voice.objectionFaced', { type: t(`voice.objType.${objectionType}`) })}</div>` +
-      `<ul style="margin:8px 0 0;padding-left:18px;list-style:none">` +
+      `<ul style="margin:8px 0 0;padding-inline-start:18px;list-style:none">` +
       CLEAR_STEPS.map(step => `<li>${clearStepsHit.includes(step) ? '✓' : '—'} ${t(`voice.clear.${step}`)}</li>`).join('') +
       `</ul>`
     : ''

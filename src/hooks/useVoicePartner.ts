@@ -97,12 +97,16 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
     finalOutcome: 'won' | 'escalated', finalTurnCount: number, finalClearSteps: ClearStep[], type: ObjectionType,
   ) => {
     try {
-      await fetch('/api/voice-partner/session-result', {
+      const res = await fetch('/api/voice-partner/session-result', {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ doctorId, objectionType: type, outcome: finalOutcome, clearSteps: finalClearSteps, turnCount: finalTurnCount }),
       })
-    } catch {
-      // Best-effort — the rep still sees their end-of-session summary either way.
+      // Best-effort — the rep still sees their end-of-session summary either
+      // way. Warn (not error) so a systematically-failing save is still
+      // discoverable without looking like an app-breaking error in prod logs.
+      if (!res.ok) console.warn('voice partner session-result save failed:', res.status)
+    } catch (err) {
+      console.warn('voice partner session-result save failed:', err)
     }
   }, [doctorId])
 

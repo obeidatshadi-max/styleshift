@@ -2,6 +2,9 @@
 -- roleplay session (won or escalated — sessions that never resolve are never
 -- persisted). Turns themselves stay stateless/unpersisted; only the final
 -- objection type faced, CLEAR steps demonstrated, and verdict are stored.
+-- Rows here are self-reported by the client (no server-side session state to
+-- validate against) — a future manager-facing view must treat them as
+-- practice self-reports, not audited results.
 create table public.voice_partner_sessions (
   id uuid primary key default gen_random_uuid(),
   rep_id uuid not null references public.profiles(id) on delete cascade,

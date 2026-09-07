@@ -61,7 +61,7 @@ export function buildListeningJudgePrompt(
 ${historyContext}
 
 Earlier in this conversation:
-Rep asked: "${questionText}"
+Rep asked: "${questionText}" (a ${questionType} question)
 You answered: "${doctorAnswer}"
 
 The rep has now replied to your answer:

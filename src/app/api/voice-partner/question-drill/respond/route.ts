@@ -6,6 +6,10 @@ import { buildListeningJudgePrompt, parseListeningJudgeResponse, isQuestionType 
 import { checkRateLimit } from '@/lib/rate-limit'
 import type { Doctor, DoctorVisit } from '@/types/game'
 
+// Resent conversation state is untrusted; a well-behaved client never sends
+// something this large. Matches turn/route.ts's MAX_TURN_CHARS.
+const MAX_TURN_CHARS = 2000
+
 export async function POST(req: Request) {
   const anthropicKey = process.env.ANTHROPIC_API_KEY
   const openaiKey = process.env.OPENAI_API_KEY
@@ -32,8 +36,8 @@ export async function POST(req: Request) {
   const questionTypeRaw = form.get('questionType')
   if (typeof doctorId !== 'string' || !doctorId) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   if (!(audio instanceof Blob)) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
-  if (typeof questionText !== 'string' || !questionText.trim()) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
-  if (typeof doctorAnswer !== 'string' || !doctorAnswer.trim()) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
+  if (typeof questionText !== 'string' || !questionText.trim() || questionText.length > MAX_TURN_CHARS) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
+  if (typeof doctorAnswer !== 'string' || !doctorAnswer.trim() || doctorAnswer.length > MAX_TURN_CHARS) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   if (typeof questionTypeRaw !== 'string' || !isQuestionType(questionTypeRaw)) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
 
   // RLS ensures the rep can only read their own doctor.

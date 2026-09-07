@@ -122,6 +122,15 @@ describe('buildListeningJudgePrompt', () => {
     expect(prompt).toContain('So adherence is the main challenge you see?')
   })
 
+  it('interpolates the questionType into the earlier-exchange context', () => {
+    const prompt = buildListeningJudgePrompt(
+      doctorFixture(), 'driver', 'en', '',
+      'What challenges do your patients face?', 'Adherence is a big one.', 'effective_challenges',
+      'So adherence is the main challenge you see?',
+    )
+    expect(prompt).toContain('effective_challenges')
+  })
+
   it('describes all three listening cues including the last-few-words technique', () => {
     const prompt = buildListeningJudgePrompt(doctorFixture(), 'driver', 'en', '', 'q', 'a', 'other', 'reply')
     expect(prompt).toContain('"restated"')

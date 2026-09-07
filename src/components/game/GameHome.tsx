@@ -37,10 +37,11 @@ interface Props {
   onShowHow: () => void
   onShowPrep: () => void
   onShowPerform: () => void
+  onShowFieldCards: () => void
   onStartLevel: (n: number) => void
 }
 
-export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onShowPerform, onStartLevel }: Props) {
+export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onShowPerform, onShowFieldCards, onStartLevel }: Props) {
   const unlocked = [1, ...earnedLevels.map(n => n + 1)].filter(n => n <= 4)
   const [tab, setTab] = useState<'train' | 'rehearse' | 'perform'>('train')
   const router = useRouter()
@@ -297,6 +298,7 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
           <a href="/onboarding" style={navLinkStyle}>{t('nav.createTeam')}</a>
         )}
         <button onClick={onShowHow} style={navLinkStyle}>{t('how.reopen')}</button>
+        <button onClick={onShowFieldCards} style={navLinkStyle}>{t('nav.fieldCards')}</button>
         <button onClick={signOut} style={navLinkStyle}>{t('nav.signOut')}</button>
       </div>
 

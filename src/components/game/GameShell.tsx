@@ -17,11 +17,12 @@ import HowItWorks from './HowItWorks'
 import VisitPrep from './VisitPrep'
 import Colleagues from './Colleagues'
 import SpsAssessment from './SpsAssessment'
+import FieldCards from './FieldCards'
 import type { BadgeName, RepAssignment } from '@/types/game'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
 
-type Screen = 'home' | 'level' | 'result' | 'daily' | 'how' | 'prep' | 'perform' | 'assignment' | 'sps'
+type Screen = 'home' | 'level' | 'result' | 'daily' | 'how' | 'prep' | 'perform' | 'assignment' | 'sps' | 'fieldcards'
 const INTRO_KEY = 'styleshift_intro_done'
 
 interface LevelState {
@@ -241,6 +242,10 @@ export default function GameShell() {
     return <VisitPrep onExit={() => setScreen('home')} />
   }
 
+  if (screen === 'fieldcards') {
+    return <FieldCards onExit={() => setScreen('home')} />
+  }
+
   if (screen === 'perform') {
     return <Colleagues onExit={() => setScreen('home')} />
   }
@@ -316,6 +321,7 @@ export default function GameShell() {
       onShowHow={() => setScreen('how')}
       onShowPrep={() => setScreen('prep')}
       onShowPerform={() => setScreen('perform')}
+      onShowFieldCards={() => setScreen('fieldcards')}
       onStartLevel={startLevel}
     />
   )

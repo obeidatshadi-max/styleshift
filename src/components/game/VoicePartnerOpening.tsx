@@ -4,15 +4,11 @@ import { useT, useLang, useGameData } from '@/lib/i18n'
 import type { Doctor } from '@/types/game'
 import { useVoicePartnerOpening } from '@/hooks/useVoicePartnerOpening'
 import { OPENING_CRITERIA, type OpeningCriterion } from '@/lib/voice-partner-opening'
-import { Feedback } from './helpers'
+import { Feedback, escapeHtml } from './helpers'
 
 interface Props {
   doctor: Doctor
   onDone: (meta: { completed: boolean; criteriaHit: OpeningCriterion[] }) => void
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
 const COLOR: Record<string, string> = { driver: 'var(--purple)', expressive: 'var(--green)', amiable: 'var(--pink)', analytical: 'var(--cyan)' }

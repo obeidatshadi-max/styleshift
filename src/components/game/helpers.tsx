@@ -32,6 +32,10 @@ export function OptBtn({ text, state, disabled, onClick }: { text: string; state
   )
 }
 
+export function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
 export function Feedback({ ok, title, body }: { ok: boolean; title: string; body: string }) {
   return (
     <div style={{ marginTop:14, borderRadius:12, padding:'13px 14px', fontSize:13.5, lineHeight:1.5, border:`1px solid ${ok?'var(--green)':'var(--red)'}`, background:ok?'rgba(62,224,143,.1)':'rgba(255,93,108,.1)' }}>

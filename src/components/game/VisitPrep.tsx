@@ -13,6 +13,8 @@ import GeneratedDrill from './GeneratedDrill'
 import VoiceRecorder from './VoiceRecorder'
 import RoleplayRecorder from './RoleplayRecorder'
 import VoicePartner from './VoicePartner'
+import VoicePartnerOpening from './VoicePartnerOpening'
+import { OPENING_CRITERIA } from '@/lib/voice-partner-opening'
 
 interface Props { onExit: () => void }
 
@@ -28,6 +30,7 @@ type View =
   | { mode: 'logVisit'; doctor: Doctor }
   | { mode: 'roleplay'; doctor: Doctor }
   | { mode: 'voice'; doctor: Doctor }
+  | { mode: 'voiceOpening'; doctor: Doctor }
 
 const inputStyle: React.CSSProperties = {
   background:'rgba(0,0,0,.3)', border:'1px solid var(--line)', borderRadius:10,
@@ -86,6 +89,11 @@ export default function VisitPrep({ onExit }: Props) {
   // ───────────────────────── AI VOICE PARTNER ─────────────────────────
   if (view.mode === 'voice') {
     return <VoicePartnerScreen doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
+  }
+
+  // ───────────────────────── AI VOICE PARTNER: OPENING STATEMENT ─────────────────────────
+  if (view.mode === 'voiceOpening') {
+    return <VoicePartnerOpeningScreen doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
   }
 
   // ───────────────────────── DETAIL / PREP ─────────────────────────
@@ -149,6 +157,10 @@ export default function VisitPrep({ onExit }: Props) {
             <button onClick={() => setView({ mode: 'voice', doctor: d })}
               style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               {t('voice.entryButton')} · {t('voice.premium')}
+            </button>
+            <button onClick={() => setView({ mode: 'voiceOpening', doctor: d })}
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              {t('voiceOpening.entryButton')} · {t('voice.premium')}
             </button>
           </div>
         )}
@@ -477,9 +489,30 @@ function VoicePartnerScreen({ doctor, onDone }: { doctor: Doctor; onDone: () => 
   )
 }
 
+// ───────────────────────── AI voice partner opening-statement wrapper (owns doctor_visits logging) ─────────────────────────
+function VoicePartnerOpeningScreen({ doctor, onDone }: { doctor: Doctor; onDone: () => void }) {
+  const t = useT()
+  const { addVisit } = useDoctorVisits(doctor.id)
+
+  return (
+    <VoicePartnerOpening
+      doctor={doctor}
+      onDone={(meta) => {
+        if (meta.completed) {
+          void addVisit({
+            source: 'voice_partner_opening',
+            note: t('visit.voicePartnerOpeningNote', { hit: meta.criteriaHit.length, total: OPENING_CRITERIA.length }),
+          })
+        }
+        onDone()
+      }}
+    />
+  )
+}
+
 // ───────────────────────── Doctor history (Digital Twin) ─────────────────────────
 const SOURCE_LABEL_KEY: Record<DoctorVisit['source'], string> = {
-  manual: 'visit.sourceManual', warmup: 'visit.sourceWarmup', ai_drill: 'visit.sourceAiDrill', voice_partner: 'visit.sourceVoicePartner',
+  manual: 'visit.sourceManual', warmup: 'visit.sourceWarmup', ai_drill: 'visit.sourceAiDrill', voice_partner: 'visit.sourceVoicePartner', voice_partner_opening: 'visit.sourceVoicePartnerOpening',
 }
 
 const historyRow: React.CSSProperties = { fontSize:13, lineHeight:1.5, marginBottom:3 }

@@ -94,7 +94,7 @@ export interface DoctorVisit {
   id: string
   doctor_id: string
   rep_id: string
-  source: 'manual' | 'warmup' | 'ai_drill' | 'voice_partner' | 'voice_partner_opening'
+  source: 'manual' | 'warmup' | 'ai_drill' | 'voice_partner' | 'voice_partner_opening' | 'voice_partner_question'
   objection_raised: string | null
   promise_made: string | null
   what_worked: string | null

@@ -4,7 +4,7 @@ import type { OpeningCriterion } from '@/lib/voice-partner-opening'
 import { isOpeningCriterion } from '@/lib/voice-partner-opening'
 
 export type VoicePartnerOpeningPhase =
-  | 'idle' | 'recording' | 'sending' | 'playing' | 'notconfigured' | 'error'
+  | 'idle' | 'recording' | 'sending' | 'playing' | 'notconfigured' | 'error' | 'ratelimited'
 
 export type VoicePartnerOpeningResult = { doctorText: string; criteriaHit: OpeningCriterion[] }
 
@@ -84,6 +84,7 @@ export function useVoicePartnerOpening(doctorId: string, lang: 'en' | 'ar') {
 
       const res = await fetch('/api/voice-partner/opening-statement', { method: 'POST', body: form })
       if (res.status === 503) { setPhase('notconfigured'); return }
+      if (res.status === 429) { setPhase('ratelimited'); return }
       if (!res.ok) { setPhase('error'); return }
       const data = await res.json().catch(() => null) as { doctorText?: string; criteriaHit?: unknown } | null
       if (!data?.doctorText) { setPhase('error'); return }

@@ -344,6 +344,7 @@ const EN: Dict = {
   'voiceOpening.criterion.relevant': "Relevant to this doctor's patients",
   'voiceOpening.criterion.solution_linked': 'Connected the problem to your solution',
   'voiceOpening.criterion.concise': 'Concise — a focused statement, not a pitch',
+  'voiceOpening.rateLimited': "You've hit the practice limit for this hour — try again later.",
   'visit.sourceVoicePartnerOpening': 'AI voice partner · opening statement',
   'visit.voicePartnerOpeningNote': 'AI voice partner · opening statement · {hit}/{total} criteria met',
   // rep mobile login
@@ -742,6 +743,7 @@ const AR: Dict = {
   'voiceOpening.criterion.relevant': 'ذات صلة بمرضى هذا الطبيب',
   'voiceOpening.criterion.solution_linked': 'ربطت المشكلة بحل منتجك',
   'voiceOpening.criterion.concise': 'موجزة — جملة مركّزة وليست عرضاً تسويقياً',
+  'voiceOpening.rateLimited': 'لقد وصلت إلى حد التدريب لهذه الساعة — حاول مرة أخرى لاحقاً.',
   'visit.sourceVoicePartnerOpening': 'شريك صوتي بالذكاء · جملة الافتتاح',
   'visit.voicePartnerOpeningNote': 'شريك صوتي بالذكاء · جملة الافتتاح · {hit}/{total} معايير محققة',
   // rep mobile login

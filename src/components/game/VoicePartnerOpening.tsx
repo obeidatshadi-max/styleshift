@@ -72,6 +72,7 @@ export default function VoicePartnerOpening({ doctor, onDone }: Props) {
     phase === 'recording' ? t('voice.listening') :
     phase === 'sending' ? t('voice.thinking') :
     phase === 'playing' ? t('voice.speaking') :
+    phase === 'ratelimited' ? t('voiceOpening.rateLimited') :
     phase === 'error' ? t('voice.error') :
     t('voice.tapToSpeak')
 
@@ -126,7 +127,7 @@ export default function VoicePartnerOpening({ doctor, onDone }: Props) {
 
         {result && (
           <>
-            <Feedback ok={true} title={t('voiceOpening.done')} body={checklistHtml} />
+            <Feedback ok={result.criteriaHit.length >= 3} title={t('voiceOpening.done')} body={checklistHtml} />
             <div style={{ marginTop: 14 }}>
               <button
                 onClick={() => onDone({ completed: true, criteriaHit: result.criteriaHit })}

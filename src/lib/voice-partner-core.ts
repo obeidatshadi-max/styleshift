@@ -52,14 +52,14 @@ function objectionInstruction(type: ObjectionType): string {
   return OBJECTION_INSTRUCTIONS[type]
 }
 
-function langName(lang: 'en' | 'ar'): string {
+export function langName(lang: 'en' | 'ar'): string {
   return lang === 'ar' ? 'Arabic' : 'English'
 }
 
 /** The persona lines shared by the opening and judge prompts — same
  * key_phrases/objections/specialty inputs generate-scenario already assembles,
  * so the voice partner sounds like the rep's own Digital Twin doctor. */
-function personaLines(d: Doctor, style: StyleKey, lang: 'en' | 'ar'): string {
+export function personaLines(d: Doctor, style: StyleKey, lang: 'en' | 'ar'): string {
   const specialty = d.specialty ? `, ${d.specialty}` : ''
   const phrases = d.key_phrases?.trim() ? `They often say things like: "${d.key_phrases.trim()}".` : ''
   const objections = d.objections?.length ? `Objection theme(s) they are likely to raise: ${d.objections.join(', ')}.` : ''
@@ -148,4 +148,24 @@ export function resolveTurn(turnCount: number, verdict: VoicePartnerVerdict): Tu
   if (verdict === 'win') return 'won'
   if (verdict === 'escalate') return 'escalated'
   return turnCount >= TURN_CAP ? 'escalated' : 'continue'
+}
+
+export async function transcribeAudio(audio: Blob, apiKey: string, lang: 'en' | 'ar'): Promise<string | null> {
+  const form = new FormData()
+  form.append('file', audio, 'turn.webm')
+  form.append('model', 'whisper-1')
+  // Pinning the language stops Whisper guessing (and mis-transcribing short
+  // Arabic replies as another language) when the session is already known.
+  form.append('language', lang === 'ar' ? 'ar' : 'en')
+  let res: Response
+  try {
+    res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${apiKey}` },
+      body: form,
+    })
+  } catch { return null }
+  if (!res.ok) return null
+  const data = await res.json().catch(() => null) as { text?: string } | null
+  return data?.text?.trim() || null
 }

@@ -396,12 +396,15 @@ const EN: Dict = {
   'visit.sourceVoicePartnerClosing': 'AI voice partner · closing',
   'visit.voicePartnerClosingNote': 'AI voice partner · closing · {hit}/{total} criteria met',
   // rep mobile login
-  'login.repTab': 'Rep · Mobile',
+  'login.repTab': 'Rep',
   'login.managerTab': 'Manager · Email',
   'login.mobileLabel': 'Mobile number',
   'login.mobileSignIn': 'Sign In',
   'login.mobileHint': 'First time? Use the invite link from your manager.',
   'login.mobileLoginFailed': 'Sign-in failed. Try the invite link again.',
+  'login.repModeMobile': 'From my manager',
+  'login.repModeIndividual': 'Individual',
+  'login.repIndividualHint': 'No manager? Create your own account and train solo.',
   // join via invite link
   'join.eyebrow': 'Team Invite',
   'join.subtitle': 'Join your team',
@@ -843,12 +846,15 @@ const AR: Dict = {
   'visit.sourceVoicePartnerClosing': 'شريك صوتي بالذكاء · الختام',
   'visit.voicePartnerClosingNote': 'شريك صوتي بالذكاء · الختام · {hit}/{total} معايير محققة',
   // rep mobile login
-  'login.repTab': 'مندوب · جوال',
+  'login.repTab': 'مندوب',
   'login.managerTab': 'مدير · بريد',
   'login.mobileLabel': 'رقم الجوال',
   'login.mobileSignIn': 'دخول',
   'login.mobileHint': 'أول مرة؟ استخدم رابط الدعوة من مديرك.',
   'login.mobileLoginFailed': 'فشل الدخول. جرّب رابط الدعوة مرة أخرى.',
+  'login.repModeMobile': 'من مديري',
+  'login.repModeIndividual': 'فردي',
+  'login.repIndividualHint': 'بدون مدير؟ أنشئ حسابك الخاص وتدرّب بمفردك.',
   // join via invite link
   'join.eyebrow': 'دعوة للفريق',
   'join.subtitle': 'انضم إلى فريقك',

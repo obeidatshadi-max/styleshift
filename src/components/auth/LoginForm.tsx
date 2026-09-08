@@ -15,6 +15,7 @@ export default function LoginForm() {
   const { STYLES, STYLE_ORDER } = useGameData()
 
   const [tab, setTab] = useState<'rep' | 'manager'>('rep')
+  const [repMode, setRepMode] = useState<'mobile' | 'individual'>('mobile')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [mode, setMode] = useState<'login' | 'signup'>('login')
@@ -69,6 +70,36 @@ export default function LoginForm() {
       return
     }
 
+    const redirect = searchParams.get('redirect') || '/play'
+    router.push(redirect)
+    router.refresh()
+  }
+
+  async function handleRepIndividualAuth(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+    if (mode === 'signup') {
+      // Same server-side pattern as manager signup: creates an already-confirmed
+      // account (no email sent), then signs straight in. Unlike /api/rep-join,
+      // there's no invite code — this is a solo account with no company_id,
+      // not attached to any manager's team.
+      const res = await fetch('/api/rep-signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error); setLoading(false); return }
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) { setError(error.message); setLoading(false); return }
+      const redirect = searchParams.get('redirect') || '/play'
+      router.push(redirect)
+      router.refresh()
+      return
+    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) { setError(error.message); setLoading(false); return }
     const redirect = searchParams.get('redirect') || '/play'
     router.push(redirect)
     router.refresh()
@@ -180,28 +211,66 @@ export default function LoginForm() {
 
       <div style={{ background: 'linear-gradient(180deg,var(--panel),#0a1430)', border: '1px solid var(--line)', borderRadius: 16, padding: 24, boxShadow: '0 12px 40px rgba(0,0,0,.45)' }}>
         {tab === 'rep' ? (
-          <form onSubmit={handleRepLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--ink-dim)' }}>
-              {t('login.mobileLabel')}
+          <>
+            <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+              {(['mobile', 'individual'] as const).map(m => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => { setRepMode(m); setError(null) }}
+                  style={{
+                    background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
+                    fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase',
+                    color: repMode === m ? 'var(--cyan)' : 'var(--ink-dim)',
+                    borderBottom: repMode === m ? '2px solid var(--cyan)' : '2px solid transparent',
+                    paddingBottom: 4,
+                  }}
+                >
+                  {m === 'mobile' ? t('login.repModeMobile') : t('login.repModeIndividual')}
+                </button>
+              ))}
             </div>
-            <input
-              type="tel"
-              value={mobile}
-              onChange={e => setMobile(e.target.value)}
-              placeholder={t('join.mobilePlaceholder')}
-              required
-              style={inputStyle}
-            />
-            {error && (
-              <p style={{ color: 'var(--red)', fontSize: 13, fontFamily: 'var(--mono)' }}>{error}</p>
+            {repMode === 'mobile' ? (
+              <form onSubmit={handleRepLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--ink-dim)' }}>
+                  {t('login.mobileLabel')}
+                </div>
+                <input
+                  type="tel"
+                  value={mobile}
+                  onChange={e => setMobile(e.target.value)}
+                  placeholder={t('join.mobilePlaceholder')}
+                  required
+                  style={inputStyle}
+                />
+                {error && (
+                  <p style={{ color: 'var(--red)', fontSize: 13, fontFamily: 'var(--mono)' }}>{error}</p>
+                )}
+                <button type="submit" disabled={loading} style={btnPrimary}>
+                  {loading ? '…' : t('login.mobileSignIn')}
+                </button>
+                <p style={{ color: 'var(--ink-dim)', fontSize: 12, lineHeight: 1.5, margin: 0 }}>
+                  {t('login.mobileHint')}
+                </p>
+              </form>
+            ) : (
+              <form onSubmit={handleRepIndividualAuth} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('login.email')} required style={inputStyle} />
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('login.password')} required style={inputStyle} />
+                {error && <p style={{ color: 'var(--red)', fontSize: 13, fontFamily: 'var(--mono)' }}>{error}</p>}
+                <button type="submit" disabled={loading} style={btnPrimary}>
+                  {loading ? '...' : mode === 'login' ? t('login.signIn') : t('login.createAccount')}
+                </button>
+                <button type="button" onClick={() => setMode(m => m === 'login' ? 'signup' : 'login')}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--ink-dim)', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--sans)' }}>
+                  {mode === 'login' ? t('login.toSignup') : t('login.toLogin')}
+                </button>
+                <p style={{ color: 'var(--ink-dim)', fontSize: 12, lineHeight: 1.5, margin: 0 }}>
+                  {t('login.repIndividualHint')}
+                </p>
+              </form>
             )}
-            <button type="submit" disabled={loading} style={btnPrimary}>
-              {loading ? '…' : t('login.mobileSignIn')}
-            </button>
-            <p style={{ color: 'var(--ink-dim)', fontSize: 12, lineHeight: 1.5, margin: 0 }}>
-              {t('login.mobileHint')}
-            </p>
-          </form>
+          </>
         ) : (
           <form onSubmit={handleManagerLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('login.email')} required style={inputStyle} />

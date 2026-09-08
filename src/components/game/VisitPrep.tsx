@@ -7,7 +7,7 @@ import { deriveStyle, OBJECTION_CATEGORIES } from '@/lib/social-style'
 import type { Assertiveness, Responsiveness } from '@/lib/social-style'
 import { L2_OBJECTION } from '@/lib/scenario-meta'
 import { shuffle } from '@/lib/scenario-engine'
-import type { Doctor, DoctorInput, DoctorVisit, StyleKey, GeneratedScenario } from '@/types/game'
+import type { Doctor, DoctorInput, DoctorVisit, StyleKey, Specialty, GeneratedScenario } from '@/types/game'
 import DailyChallenge from './DailyChallenge'
 import GeneratedDrill from './GeneratedDrill'
 import VoiceRecorder from './VoiceRecorder'
@@ -26,6 +26,10 @@ interface Props { onExit: () => void }
 
 const COLOR: Record<string, string> = { driver:'var(--purple)', expressive:'var(--green)', amiable:'var(--pink)', analytical:'var(--cyan)' }
 const STYLE_KEYS: StyleKey[] = ['driver', 'expressive', 'amiable', 'analytical']
+const SPECIALTY_KEYS: Specialty[] = [
+  'cardiology', 'endocrinology', 'oncology', 'pediatrics',
+  'general_practice', 'dermatology', 'respiratory', 'psychiatry_neurology',
+]
 
 type View =
   | { mode: 'list' }
@@ -67,7 +71,7 @@ const ghostBtn: React.CSSProperties = { cursor:'pointer', fontFamily:'var(--mono
 
 export default function VisitPrep({ onExit }: Props) {
   const t = useT()
-  const { STYLES, L1, L2, L3 } = useGameData()
+  const { STYLES, SPECIALTIES, L1, L2, L3 } = useGameData()
   const { doctors, loading, saveDoctor, removeDoctor } = useDoctors()
   const [view, setView] = useState<View>({ mode: 'list' })
 
@@ -138,7 +142,7 @@ export default function VisitPrep({ onExit }: Props) {
               {s && <div style={{ width:46, height:46, borderRadius:'50%', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, border:`2px solid ${c}`, color:c, boxShadow:`0 0 14px ${c}` }}>{s.icon}</div>}
               <div>
                 <div style={{ fontSize:16, fontWeight:700 }}>{d.name}</div>
-                <div style={{ fontSize:12.5, color:'var(--ink-dim)' }}>{[d.specialty, d.workplace].filter(Boolean).join(' · ')}</div>
+                <div style={{ fontSize:12.5, color:'var(--ink-dim)' }}>{[d.specialty ? (SPECIALTIES[d.specialty as Specialty]?.name ?? d.specialty) : null, d.workplace].filter(Boolean).join(' · ')}</div>
                 {s && <div style={{ fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.05em', color:c, marginTop:2 }}>{s.name} · {s.drive}</div>}
               </div>
             </div>
@@ -217,6 +221,7 @@ export default function VisitPrep({ onExit }: Props) {
     return <DoctorForm
       doctor={view.doctor}
       styles={STYLES}
+      specialties={SPECIALTIES}
       onCancel={() => setView(view.doctor ? { mode: 'detail', doctor: view.doctor } : { mode: 'list' })}
       onSave={async (input, id) => {
         const saved = await saveDoctor(input, id)
@@ -252,7 +257,7 @@ export default function VisitPrep({ onExit }: Props) {
                   <span style={{ width:38, height:38, flexShrink:0, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:17, border:`1px solid ${c}`, color:c }}>{s ? s.icon : '?'}</span>
                   <span style={{ flex:1, minWidth:0 }}>
                     <b style={{ fontSize:14.5, display:'block' }}>{d.name}</b>
-                    <span style={{ fontSize:12, color:'var(--ink-dim)' }}>{[s?.name, d.specialty].filter(Boolean).join(' · ') || '—'}</span>
+                    <span style={{ fontSize:12, color:'var(--ink-dim)' }}>{[s?.name, d.specialty ? (SPECIALTIES[d.specialty as Specialty]?.name ?? d.specialty) : null].filter(Boolean).join(' · ') || '—'}</span>
                   </span>
                   <span style={{ color:'var(--ink-dim)' }}>›</span>
                 </button>
@@ -265,9 +270,10 @@ export default function VisitPrep({ onExit }: Props) {
 }
 
 // ───────────────────────── Doctor form ─────────────────────────
-function DoctorForm({ doctor, styles, onSave, onCancel, onDelete }: {
+function DoctorForm({ doctor, styles, specialties, onSave, onCancel, onDelete }: {
   doctor?: Doctor
   styles: Record<StyleKey, { name: string; icon: string }>
+  specialties: Record<Specialty, { name: string; icon: string }>
   onSave: (input: DoctorInput, id?: string) => void
   onCancel: () => void
   onDelete?: () => void
@@ -308,8 +314,13 @@ function DoctorForm({ doctor, styles, onSave, onCancel, onDelete }: {
       {panel(doctor ? t('prep.edit') : t('prep.addDoctor'),
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
           <div><span style={labelStyle}>{t('prep.name')}</span><input value={name} onChange={e => setName(e.target.value)} style={inputStyle} /></div>
-          <div style={{ display:'flex', gap:10 }}>
-            <div style={{ flex:1 }}><span style={labelStyle}>{t('prep.specialty')}</span><input value={specialty} onChange={e => setSpecialty(e.target.value)} style={inputStyle} /></div>
+          <div>
+            <span style={labelStyle}>{t('prep.specialty')}</span>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+              {SPECIALTY_KEYS.map(k => (
+                <button key={k} onClick={() => setSpecialty(k)} style={chip(specialty === k)}>{specialties[k].icon} {specialties[k].name}</button>
+              ))}
+            </div>
           </div>
           <div><span style={labelStyle}>{t('prep.workplace')}</span><input value={workplace} onChange={e => setWorkplace(e.target.value)} style={inputStyle} /></div>
 

@@ -34,6 +34,7 @@ const SPECIALTY_KEYS: Specialty[] = [
 type View =
   | { mode: 'list' }
   | { mode: 'form'; doctor?: Doctor }
+  | { mode: 'quickPractice' }
   | { mode: 'detail'; doctor: Doctor }
   | { mode: 'warmup'; doctor: Doctor }
   | { mode: 'ai'; doctor: Doctor }
@@ -232,6 +233,21 @@ export default function VisitPrep({ onExit }: Props) {
     />
   }
 
+  // ───────────────────────── QUICK PRACTICE ─────────────────────────
+  if (view.mode === 'quickPractice') {
+    return <QuickPractice
+      specialties={SPECIALTIES}
+      styles={STYLES}
+      existingNames={doctors.map(d => d.name)}
+      onCancel={() => setView({ mode: 'list' })}
+      onStart={async (input) => {
+        const saved = await saveDoctor(input)
+        if (saved) setView({ mode: 'detail', doctor: saved })
+        else setView({ mode: 'list' })
+      }}
+    />
+  }
+
   // ───────────────────────── LIST ─────────────────────────
   return wrap(
     <>
@@ -242,6 +258,7 @@ export default function VisitPrep({ onExit }: Props) {
         <>
           <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5, marginBottom:14 }}>{t('prep.subtitle')}</div>
           <button onClick={() => setView({ mode: 'form' })} style={{ ...primaryBtn, width:'100%' }}>{t('prep.addDoctor')}</button>
+          <button onClick={() => setView({ mode: 'quickPractice' })} style={{ ...ghostBtn, width:'100%', marginTop:8 }}>{t('prep.quickPractice')}</button>
         </>,
       )}
       {panel(t('prep.myDoctors'),
@@ -385,6 +402,68 @@ function DoctorForm({ doctor, styles, specialties, onSave, onCancel, onDelete }:
           </div>
           {onDelete && <button onClick={onDelete} style={{ ...ghostBtn, border:'1px solid var(--red)', color:'var(--red)' }}>{t('prep.delete')}</button>}
         </div>
+      )}
+    </div>
+  )
+}
+
+// ───────────────────────── Quick Practice launcher ─────────────────────────
+function QuickPractice({ specialties, styles, existingNames, onStart, onCancel }: {
+  specialties: Record<Specialty, { name: string; icon: string }>
+  styles: Record<StyleKey, { name: string; icon: string }>
+  existingNames: string[]
+  onStart: (input: DoctorInput) => void
+  onCancel: () => void
+}) {
+  const t = useT()
+  const [specialty, setSpecialty] = useState<Specialty | null>(null)
+  const [style, setStyle] = useState<StyleKey | null>(null)
+
+  const chip = (active: boolean): React.CSSProperties => ({
+    cursor:'pointer', fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.05em', borderRadius:20, padding:'8px 12px',
+    border:`1px solid ${active ? 'var(--cyan)' : 'var(--line)'}`, color: active ? 'var(--cyan)' : 'var(--ink-dim)',
+    background: active ? 'rgba(56,214,255,.1)' : 'transparent', touchAction:'manipulation',
+  })
+
+  function start() {
+    if (!specialty || !style) return
+    const base = `${specialties[specialty].name} Practice`
+    let name = base
+    let n = 2
+    while (existingNames.includes(name)) { name = `${base} ${n}`; n++ }
+    onStart({
+      name, specialty, workplace: null, style,
+      assertiveness: null, responsiveness: null,
+      key_phrases: null, objections: [], objection_notes: null, notes: null,
+    })
+  }
+
+  return (
+    <div style={{ position:'relative', zIndex:1, maxWidth:560, margin:'0 auto', padding:14 }}>
+      {panel(t('prep.quickPracticeTitle'),
+        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+          <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5 }}>{t('prep.quickPracticeSubtitle')}</div>
+          <div>
+            <span style={labelStyle}>{t('prep.specialty')}</span>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+              {SPECIALTY_KEYS.map(k => (
+                <button key={k} onClick={() => setSpecialty(k)} style={chip(specialty === k)}>{specialties[k].icon} {specialties[k].name}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <span style={labelStyle}>{t('prep.style')}</span>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+              {STYLE_KEYS.map(k => (
+                <button key={k} onClick={() => setStyle(k)} style={chip(style === k)}>{styles[k].icon} {styles[k].name}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+            <button onClick={start} disabled={!specialty || !style} style={{ ...primaryBtn, flex:1, opacity: (specialty && style) ? 1 : .5 }}>{t('prep.quickPracticeStart')}</button>
+            <button onClick={onCancel} style={ghostBtn}>{t('prep.cancel')}</button>
+          </div>
+        </div>,
       )}
     </div>
   )

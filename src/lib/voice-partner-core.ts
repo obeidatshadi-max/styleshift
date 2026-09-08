@@ -1,5 +1,6 @@
-import type { Doctor, StyleKey } from '@/types/game'
+import type { Doctor, StyleKey, Specialty } from '@/types/game'
 import { DRIVE } from '@/lib/doctor-context'
+import { SPECIALTIES } from '@/lib/game-data'
 
 export const TURN_CAP = 5
 
@@ -52,6 +53,25 @@ function objectionInstruction(type: ObjectionType): string {
   return OBJECTION_INSTRUCTIONS[type]
 }
 
+/** Domain of plausible concern categories per specialty — steers WHICH
+ * generic categories the model reaches for, never specific facts; the
+ * SYSTEM guardrail's ban on invented clinical data/statistics still
+ * applies in full. */
+export const SPECIALTY_CONTEXT: Record<Specialty, string> = {
+  cardiology: 'Concerns in this domain typically center on cardiovascular risk profile, drug-drug interactions with other cardiac medications, and long-term safety — draw on these domains generically, never invented statistics.',
+  endocrinology: 'Concerns in this domain typically center on adherence over chronic long-term use, monitoring burden, and interactions with comorbid conditions.',
+  oncology: 'Concerns in this domain typically center on efficacy versus quality-of-life trade-offs, treatment burden, and how this fits alongside other therapies.',
+  pediatrics: 'Concerns in this domain typically center on dosing across different ages/weights, compliance and palatability for children, and burden on caregivers.',
+  general_practice: 'You are a generalist gatekeeper, not a narrow specialist — concerns are broad: does this fit a wide range of patients, referral thresholds, and time pressure in a busy practice.',
+  dermatology: 'Concerns in this domain typically center on visible side effects, treatment duration, and cosmetic tolerance.',
+  respiratory: 'Concerns in this domain typically center on inhaler/device technique, exacerbation history, and comorbid conditions.',
+  psychiatry_neurology: 'Concerns in this domain typically center on adherence and stigma, titration/onset concerns, and cognitive or sedative side effects.',
+}
+
+export function isSpecialty(value: unknown): value is Specialty {
+  return typeof value === 'string' && value in SPECIALTY_CONTEXT
+}
+
 export function langName(lang: 'en' | 'ar'): string {
   return lang === 'ar' ? 'Arabic' : 'English'
 }
@@ -60,10 +80,13 @@ export function langName(lang: 'en' | 'ar'): string {
  * key_phrases/objections/specialty inputs generate-scenario already assembles,
  * so the voice partner sounds like the rep's own Digital Twin doctor. */
 export function personaLines(d: Doctor, style: StyleKey, lang: 'en' | 'ar'): string {
-  const specialty = d.specialty ? `, ${d.specialty}` : ''
+  const specialtyLabel = d.specialty ? (isSpecialty(d.specialty) ? SPECIALTIES[d.specialty].name : d.specialty) : ''
+  const specialty = specialtyLabel ? `, ${specialtyLabel}` : ''
+  const domainFlavor = d.specialty && isSpecialty(d.specialty) ? SPECIALTY_CONTEXT[d.specialty] : ''
   const phrases = d.key_phrases?.trim() ? `They often say things like: "${d.key_phrases.trim()}".` : ''
   const objections = d.objections?.length ? `Objection theme(s) they are likely to raise: ${d.objections.join(', ')}.` : ''
   return `You are ${d.name}${specialty}, a ${style} customer (core drive: ${DRIVE[style]}). Write ALL text in ${langName(lang)}.
+${domainFlavor}
 ${phrases}
 ${objections}`
 }

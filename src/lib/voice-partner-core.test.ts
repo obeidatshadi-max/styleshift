@@ -3,6 +3,7 @@ import {
   TURN_CAP, buildOpeningPrompt, parseOpeningResponse,
   buildJudgePrompt, parseJudgeResponse, resolveTurn,
   pickObjectionType, isObjectionType, OBJECTION_TYPES,
+  isSpecialty, SPECIALTY_CONTEXT,
   type VoicePartnerTurn, type ObjectionType,
 } from './voice-partner-core'
 import type { Doctor } from '@/types/game'
@@ -65,6 +66,46 @@ describe('isObjectionType', () => {
     expect(isObjectionType('made_up')).toBe(false)
     expect(isObjectionType(123)).toBe(false)
     expect(isObjectionType(undefined)).toBe(false)
+  })
+})
+
+describe('isSpecialty', () => {
+  it('accepts each of the 8 curated specialty keys', () => {
+    for (const key of Object.keys(SPECIALTY_CONTEXT)) expect(isSpecialty(key)).toBe(true)
+  })
+
+  it('rejects legacy free-text values, other strings, and non-strings', () => {
+    expect(isSpecialty('Cardiology')).toBe(false) // display label, not the key
+    expect(isSpecialty('made_up')).toBe(false)
+    expect(isSpecialty(null)).toBe(false)
+    expect(isSpecialty(undefined)).toBe(false)
+    expect(isSpecialty(123)).toBe(false)
+  })
+})
+
+describe('personaLines via buildOpeningPrompt — specialty domain-flavor', () => {
+  it('includes the specialty display label and its domain-flavor text when specialty is a recognized key', () => {
+    const prompt = buildOpeningPrompt(doctorFixture({ specialty: 'cardiology' }), 'analytical', 'en', '', 'doubt')
+    expect(prompt).toContain('Cardiology')
+    expect(prompt).toContain('cardiovascular risk')
+  })
+
+  it('renders a different domain flavor for a different specialty', () => {
+    const prompt = buildOpeningPrompt(doctorFixture({ specialty: 'pediatrics' }), 'analytical', 'en', '', 'doubt')
+    expect(prompt).toContain('Pediatrics')
+    expect(prompt).toContain('dosing across different ages/weights')
+  })
+
+  it('falls back to the raw stored value with no domain-flavor line for an unrecognized legacy specialty', () => {
+    const prompt = buildOpeningPrompt(doctorFixture({ specialty: 'Cardiology' }), 'analytical', 'en', '', 'doubt')
+    expect(prompt).toContain('Cardiology')
+    expect(prompt).not.toContain('cardiovascular risk')
+  })
+
+  it('omits any domain-flavor line and does not error when specialty is null', () => {
+    const prompt = buildOpeningPrompt(doctorFixture({ specialty: null }), 'analytical', 'en', '', 'doubt')
+    expect(prompt).not.toContain('cardiovascular risk')
+    expect(prompt).not.toContain('dosing across different ages/weights')
   })
 })
 

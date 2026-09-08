@@ -412,12 +412,13 @@ function QuickPractice({ specialties, styles, existingNames, onStart, onCancel }
   specialties: Record<Specialty, { name: string; icon: string }>
   styles: Record<StyleKey, { name: string; icon: string }>
   existingNames: string[]
-  onStart: (input: DoctorInput) => void
+  onStart: (input: DoctorInput) => Promise<void>
   onCancel: () => void
 }) {
   const t = useT()
   const [specialty, setSpecialty] = useState<Specialty | null>(null)
   const [style, setStyle] = useState<StyleKey | null>(null)
+  const [busy, setBusy] = useState(false)
 
   const chip = (active: boolean): React.CSSProperties => ({
     cursor:'pointer', fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.05em', borderRadius:20, padding:'8px 12px',
@@ -425,13 +426,14 @@ function QuickPractice({ specialties, styles, existingNames, onStart, onCancel }
     background: active ? 'rgba(56,214,255,.1)' : 'transparent', touchAction:'manipulation',
   })
 
-  function start() {
-    if (!specialty || !style) return
-    const base = `${specialties[specialty].name} Practice`
+  async function start() {
+    if (!specialty || !style || busy) return
+    setBusy(true)
+    const base = `${specialties[specialty].name} ${t('prep.quickPracticeNameSuffix')}`
     let name = base
     let n = 2
     while (existingNames.includes(name)) { name = `${base} ${n}`; n++ }
-    onStart({
+    await onStart({
       name, specialty, workplace: null, style,
       assertiveness: null, responsiveness: null,
       key_phrases: null, objections: [], objection_notes: null, notes: null,
@@ -460,7 +462,7 @@ function QuickPractice({ specialties, styles, existingNames, onStart, onCancel }
             </div>
           </div>
           <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
-            <button onClick={start} disabled={!specialty || !style} style={{ ...primaryBtn, flex:1, opacity: (specialty && style) ? 1 : .5 }}>{t('prep.quickPracticeStart')}</button>
+            <button onClick={start} disabled={!specialty || !style || busy} style={{ ...primaryBtn, flex:1, opacity: (specialty && style && !busy) ? 1 : .5 }}>{t('prep.quickPracticeStart')}</button>
             <button onClick={onCancel} style={ghostBtn}>{t('prep.cancel')}</button>
           </div>
         </div>,

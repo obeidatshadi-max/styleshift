@@ -1,6 +1,6 @@
 import type { Doctor, StyleKey, Specialty } from '@/types/game'
 import { DRIVE } from '@/lib/doctor-context'
-import { SPECIALTIES } from '@/lib/game-data'
+import { SPECIALTIES, SPECIALTY_ORDER } from '@/lib/game-data'
 
 export const TURN_CAP = 5
 
@@ -69,7 +69,7 @@ export const SPECIALTY_CONTEXT: Record<Specialty, string> = {
 }
 
 export function isSpecialty(value: unknown): value is Specialty {
-  return typeof value === 'string' && value in SPECIALTY_CONTEXT
+  return typeof value === 'string' && (SPECIALTY_ORDER as readonly string[]).includes(value)
 }
 
 export function langName(lang: 'en' | 'ar'): string {

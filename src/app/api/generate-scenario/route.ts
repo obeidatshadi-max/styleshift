@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { DRIVE, buildHistoryContext } from '@/lib/doctor-context'
+import { isSpecialty } from '@/lib/voice-partner-core'
+import { SPECIALTIES } from '@/lib/game-data'
 import type { Doctor, DoctorVisit, GeneratedScenario, StyleKey } from '@/types/game'
 
 // Hard guardrail: the model coaches COMMUNICATION STYLE only — never clinical claims.
@@ -16,7 +18,8 @@ function buildUserPrompt(d: Doctor, style: StyleKey, lang: 'en' | 'ar', history:
   const langName = lang === 'ar' ? 'Arabic' : 'English'
   const phrases = d.key_phrases?.trim() ? `They often say things like: "${d.key_phrases.trim()}".` : ''
   const objections = d.objections?.length ? `Objection theme(s) they are likely to raise: ${d.objections.join(', ')}.` : ''
-  const specialty = d.specialty ? `, ${d.specialty}` : ''
+  const specialtyLabel = d.specialty ? (isSpecialty(d.specialty) ? SPECIALTIES[d.specialty].name : d.specialty) : ''
+  const specialty = specialtyLabel ? `, ${specialtyLabel}` : ''
   return `Write one objection scenario. Write ALL text fields in ${langName}.
 Customer: ${d.name}${specialty}. Social style: ${style} (core drive: ${DRIVE[style]}).
 ${phrases}

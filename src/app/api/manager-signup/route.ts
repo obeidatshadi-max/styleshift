@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   // auth.signUp flow this sends NO confirmation email, so it never touches
   // Supabase's tiny built-in email quota (the 2/hr cap that locked everyone out).
   // The client then signs in with the password — no SMTP anywhere in the path.
-  const { error } = await admin.auth.admin.createUser({
+  const { data: created, error } = await admin.auth.admin.createUser({
     email: email.trim(),
     password,
     email_confirm: true,
@@ -30,6 +30,15 @@ export async function POST(request: Request) {
       { error: already ? 'An account with this email already exists. Please sign in.' : error.message },
       { status: already ? 409 : 400 }
     )
+  }
+
+  // No DB trigger creates the profiles row — insert it explicitly so
+  // /api/onboarding's UPDATE (role → manager, company_id → new company)
+  // has a row to land on instead of silently matching zero rows.
+  const { error: profileError } = await admin.from('profiles').insert({ id: created.user.id })
+  if (profileError) {
+    await admin.auth.admin.deleteUser(created.user.id)
+    return NextResponse.json({ error: 'Failed to create profile. Please try again.' }, { status: 500 })
   }
 
   return NextResponse.json({ ok: true })

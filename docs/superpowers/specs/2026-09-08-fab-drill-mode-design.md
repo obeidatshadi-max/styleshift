@@ -160,9 +160,9 @@ take.
 - `src/types/game.ts`: extend `DoctorVisit['source']` with
   `'voice_partner_fab'`.
 - `i18n.tsx` — new EN+AR keys: entry button label, teaser text, 4
-  criterion labels + one-line description each (mirroring the
-  opening-criterion description keys), summary screen heading, source
-  label, visit-note template.
+  criterion labels (mirroring the opening-criterion label keys, which are
+  labels only — no separate description keys), summary screen heading,
+  source label, visit-note template.
 
 ## Error handling
 

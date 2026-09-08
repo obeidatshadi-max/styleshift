@@ -22,8 +22,8 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   // Shared bucket with the rest of voice partner — this route makes no
-  // upstream AI call, but one insert per attempt is a negligible addition
-  // to that budget and keeps all voice-partner traffic under one limiter.
+  // upstream AI call, but each completed drill costs 2 of the 20/hour budget
+  // (one for the statement judge call, one for this insert).
   if (!(await checkRateLimit('voice-partner', user.id, 20, 3600)))
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
 

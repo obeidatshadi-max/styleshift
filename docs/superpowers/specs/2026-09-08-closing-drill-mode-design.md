@@ -9,12 +9,12 @@ selling model's "Tailored Execution" stage, section E:
 > A. Give a summary to show the level of agreement.
 > B. Ask a question and keep silence — let the doctor reply.
 
-This is the last of the four backlog items from the same source (opening
+This is the fifth and final backlog item from the same source (opening
 statement — section A, built; forbidden/effective questions — section B,
 built; features & benefits — section C, built; objection handling —
-section D, already built earlier as the CLEAR model). With this mode, all
-four backlog items from the source notes are complete. This spec covers
-only the closing drill.
+section D, already built earlier as the CLEAR model; closing — section E,
+this spec). With this mode, all five backlog items from the source notes
+are complete.
 
 ## Scope
 

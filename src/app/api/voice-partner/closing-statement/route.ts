@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  // Shared bucket with the rest of voice partner (see fab-statement/route.ts).
+  // Shared bucket with the rest of voice partner (see opening-statement/route.ts).
   if (!(await checkRateLimit('voice-partner', user.id, 20, 3600)))
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
 

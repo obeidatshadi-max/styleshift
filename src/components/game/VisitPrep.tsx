@@ -17,6 +17,8 @@ import VoicePartnerOpening from './VoicePartnerOpening'
 import { OPENING_CRITERIA } from '@/lib/voice-partner-opening'
 import QuestionDrill from './QuestionDrill'
 import { LISTENING_CUES } from '@/lib/voice-partner-questioning'
+import VoicePartnerFab from './VoicePartnerFab'
+import { FAB_CRITERIA } from '@/lib/voice-partner-fab'
 
 interface Props { onExit: () => void }
 
@@ -34,6 +36,7 @@ type View =
   | { mode: 'voice'; doctor: Doctor }
   | { mode: 'voiceOpening'; doctor: Doctor }
   | { mode: 'questionDrill'; doctor: Doctor }
+  | { mode: 'voiceFab'; doctor: Doctor }
 
 const inputStyle: React.CSSProperties = {
   background:'rgba(0,0,0,.3)', border:'1px solid var(--line)', borderRadius:10,
@@ -102,6 +105,11 @@ export default function VisitPrep({ onExit }: Props) {
   // ───────────────────────── AI VOICE PARTNER: QUESTION DRILL ─────────────────────────
   if (view.mode === 'questionDrill') {
     return <QuestionDrillScreen doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
+  }
+
+  // ───────────────────────── AI VOICE PARTNER: FEATURES & BENEFITS ─────────────────────────
+  if (view.mode === 'voiceFab') {
+    return <VoicePartnerFabScreen doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
   }
 
   // ───────────────────────── DETAIL / PREP ─────────────────────────
@@ -173,6 +181,10 @@ export default function VisitPrep({ onExit }: Props) {
             <button onClick={() => setView({ mode: 'questionDrill', doctor: d })}
               style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               {t('voiceQuestion.entryButton')} · {t('voice.premium')}
+            </button>
+            <button onClick={() => setView({ mode: 'voiceFab', doctor: d })}
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              {t('voiceFab.entryButton')} · {t('voice.premium')}
             </button>
           </div>
         )}
@@ -547,9 +559,30 @@ function QuestionDrillScreen({ doctor, onDone }: { doctor: Doctor; onDone: () =>
   )
 }
 
+// ───────────────────────── AI voice partner FAB-drill wrapper (owns doctor_visits logging) ─────────────────────────
+function VoicePartnerFabScreen({ doctor, onDone }: { doctor: Doctor; onDone: () => void }) {
+  const t = useT()
+  const { addVisit } = useDoctorVisits(doctor.id)
+
+  return (
+    <VoicePartnerFab
+      doctor={doctor}
+      onDone={(meta) => {
+        if (meta.completed) {
+          void addVisit({
+            source: 'voice_partner_fab',
+            note: t('visit.voicePartnerFabNote', { hit: meta.criteriaHit.length, total: FAB_CRITERIA.length }),
+          })
+        }
+        onDone()
+      }}
+    />
+  )
+}
+
 // ───────────────────────── Doctor history (Digital Twin) ─────────────────────────
 const SOURCE_LABEL_KEY: Record<DoctorVisit['source'], string> = {
-  manual: 'visit.sourceManual', warmup: 'visit.sourceWarmup', ai_drill: 'visit.sourceAiDrill', voice_partner: 'visit.sourceVoicePartner', voice_partner_opening: 'visit.sourceVoicePartnerOpening', voice_partner_question: 'visit.sourceVoicePartnerQuestion',
+  manual: 'visit.sourceManual', warmup: 'visit.sourceWarmup', ai_drill: 'visit.sourceAiDrill', voice_partner: 'visit.sourceVoicePartner', voice_partner_opening: 'visit.sourceVoicePartnerOpening', voice_partner_question: 'visit.sourceVoicePartnerQuestion', voice_partner_fab: 'visit.sourceVoicePartnerFab',
 }
 
 const historyRow: React.CSSProperties = { fontSize:13, lineHeight:1.5, marginBottom:3 }

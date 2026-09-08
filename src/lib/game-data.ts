@@ -1,4 +1,4 @@
-import type { StyleDef, StyleKey, L1Item, L2Item, L3Item, L4Item, Rank, XpValues } from '@/types/game'
+import type { StyleDef, StyleKey, Specialty, SpecialtyDef, L1Item, L2Item, L3Item, L4Item, Rank, XpValues } from '@/types/game'
 
 // Pharma sales context: the player is a medical sales rep calling on doctors and
 // pharmacies. Scenarios are pools — the scenario engine draws a fresh random
@@ -13,6 +13,22 @@ export const STYLES: Record<StyleKey, StyleDef> = {
 }
 
 export const STYLE_ORDER: StyleKey[] = ['driver','expressive','amiable','analytical']
+
+export const SPECIALTIES: Record<Specialty, SpecialtyDef> = {
+  cardiology:           { name:'Cardiology',            icon:'♡' },
+  endocrinology:        { name:'Endocrinology',         icon:'⚖' },
+  oncology:             { name:'Oncology',               icon:'✚' },
+  pediatrics:           { name:'Pediatrics',             icon:'★' },
+  general_practice:     { name:'General Practice',       icon:'●' },
+  dermatology:          { name:'Dermatology',            icon:'◐' },
+  respiratory:          { name:'Respiratory',            icon:'≈' },
+  psychiatry_neurology: { name:'Psychiatry & Neurology', icon:'◈' },
+}
+
+export const SPECIALTY_ORDER: Specialty[] = [
+  'cardiology', 'endocrinology', 'oncology', 'pediatrics',
+  'general_practice', 'dermatology', 'respiratory', 'psychiatry_neurology',
+]
 
 // ───────────────────────── LEVEL 1 · Style Scan (pool of 45) ─────────────────────────
 export const L1: L1Item[] = [

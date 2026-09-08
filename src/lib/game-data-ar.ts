@@ -1,4 +1,4 @@
-import type { StyleDef, StyleKey, L1Item, L2Item, L3Item, L4Item, Rank } from '@/types/game'
+import type { StyleDef, StyleKey, Specialty, SpecialtyDef, L1Item, L2Item, L3Item, L4Item, Rank } from '@/types/game'
 
 // Arabic mirror of game-data.ts (pharma sales context). Same ids, same order,
 // same correctness flags and numeric meter values — only display text differs —
@@ -10,6 +10,17 @@ export const STYLES_AR: Record<StyleKey, StyleDef> = {
   expressive: { name:'التعبيري',  cls:'expressive', icon:'✦', drive:'التقدير والأفكار',  blurb:'متحمس ومبدع ويحب التعاون. يحب الأفكار الكبيرة ويريد أن يُرى مميزاً.' },
   amiable:    { name:'الودود',    cls:'amiable',    icon:'♥', drive:'الأمان والانسجام',  blurb:'دافئ وصبور، يهتم بالعلاقات. يتجنب المخاطرة ويبحث عن التوافق.' },
   analytical: { name:'التحليلي',  cls:'analytical', icon:'◆', drive:'اليقين والدقة',     blurb:'دقيق ومنطقي، يعتمد على البيانات. يريد الأدلة ويأخذ وقته في التقييم.' },
+}
+
+export const SPECIALTIES_AR: Record<Specialty, SpecialtyDef> = {
+  cardiology:           { name:'أمراض القلب',            icon:'♡' },
+  endocrinology:        { name:'الغدد الصماء',            icon:'⚖' },
+  oncology:             { name:'الأورام',                 icon:'✚' },
+  pediatrics:           { name:'طب الأطفال',              icon:'★' },
+  general_practice:     { name:'الطب العام',              icon:'●' },
+  dermatology:          { name:'الأمراض الجلدية',         icon:'◐' },
+  respiratory:          { name:'أمراض الجهاز التنفسي',    icon:'≈' },
+  psychiatry_neurology: { name:'الطب النفسي والأعصاب',    icon:'◈' },
 }
 
 // ───────────────────────── المستوى 1 · قراءة الأسلوب ─────────────────────────

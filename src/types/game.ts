@@ -10,6 +10,12 @@ export interface StyleDef {
   blurb: string
 }
 
+export type Specialty =
+  | 'cardiology' | 'endocrinology' | 'oncology' | 'pediatrics'
+  | 'general_practice' | 'dermatology' | 'respiratory' | 'psychiatry_neurology'
+
+export interface SpecialtyDef { name: string; icon: string }
+
 export interface L1Item {
   id: number
   style: StyleKey

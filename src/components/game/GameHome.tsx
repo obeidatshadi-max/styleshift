@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import { useGameData, useT, useBadgeLabel } from '@/lib/i18n'
 import LangToggle from '@/components/LangToggle'
 import AvatarUploader from './AvatarUploader'
+import PrivacyPanel from './PrivacyPanel'
 import ChampionBanner from './ChampionBanner'
 import LeagueStrip from './LeagueStrip'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
@@ -294,6 +295,8 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
             <AvatarUploader avatarUrl={avatarUrl} name={displayName} onUpload={onUploadAvatar} />
           </>
         )}
+
+        {panel(t('privacy.title'), <PrivacyPanel />)}
 
         </>}
 

@@ -4,6 +4,7 @@ import { buildHistoryContext } from '@/lib/doctor-context'
 import { SYSTEM, transcribeAudio } from '@/lib/voice-partner-core'
 import { buildFabJudgePrompt, parseFabJudgeResponse } from '@/lib/voice-partner-fab'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { validateAudioUpload } from '@/lib/audio-upload'
 import type { Doctor, DoctorVisit } from '@/types/game'
 
 export async function POST(req: Request) {
@@ -26,9 +27,10 @@ export async function POST(req: Request) {
 
   const doctorId = form.get('doctorId')
   const lang = form.get('lang') === 'ar' ? 'ar' : 'en'
-  const audio = form.get('audio')
+  const audioCheck = validateAudioUpload(form.get('audio'))
   if (typeof doctorId !== 'string' || !doctorId) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
-  if (!(audio instanceof Blob)) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
+  if (!audioCheck.ok) return NextResponse.json({ error: audioCheck.error }, { status: audioCheck.status })
+  const audio = audioCheck.blob
 
   // RLS ensures the rep can only read their own doctor.
   const { data: doctor } = await supabase.from('doctors').select('*').eq('id', doctorId).single()

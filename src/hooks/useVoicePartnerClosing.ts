@@ -17,7 +17,7 @@ export function useVoicePartnerClosing(doctorId: string, lang: 'en' | 'ar') {
   const [phase, setPhase] = useState<VoicePartnerClosingPhase>('idle')
   const [errorKind, setErrorKind] = useState<VoiceErrorKind | null>(null)
   const [result, setResult] = useState<VoicePartnerClosingResult | null>(null)
-  const recorder = useAudioRecorder('closing', lang)
+  const recorder = useAudioRecorder('closing', lang, () => setPhase('review'))
 
   const startRecording = useCallback(async () => {
     const ok = await recorder.start()

@@ -4,6 +4,7 @@ import { buildHistoryContext } from '@/lib/doctor-context'
 import { SYSTEM, transcribeAudio } from '@/lib/voice-partner-core'
 import { buildListeningJudgePrompt, parseListeningJudgeResponse, isQuestionType } from '@/lib/voice-partner-questioning'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { validateAudioUpload } from '@/lib/audio-upload'
 import type { Doctor, DoctorVisit } from '@/types/game'
 
 // Resent conversation state is untrusted; a well-behaved client never sends
@@ -30,12 +31,13 @@ export async function POST(req: Request) {
 
   const doctorId = form.get('doctorId')
   const lang = form.get('lang') === 'ar' ? 'ar' : 'en'
-  const audio = form.get('audio')
+  const audioCheck = validateAudioUpload(form.get('audio'))
   const questionText = form.get('questionText')
   const doctorAnswer = form.get('doctorAnswer')
   const questionTypeRaw = form.get('questionType')
   if (typeof doctorId !== 'string' || !doctorId) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
-  if (!(audio instanceof Blob)) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
+  if (!audioCheck.ok) return NextResponse.json({ error: audioCheck.error }, { status: audioCheck.status })
+  const audio = audioCheck.blob
   if (typeof questionText !== 'string' || !questionText.trim() || questionText.length > MAX_TURN_CHARS) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   if (typeof doctorAnswer !== 'string' || !doctorAnswer.trim() || doctorAnswer.length > MAX_TURN_CHARS) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   if (typeof questionTypeRaw !== 'string' || !isQuestionType(questionTypeRaw)) return NextResponse.json({ error: 'bad_request' }, { status: 400 })

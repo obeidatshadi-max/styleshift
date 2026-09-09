@@ -22,7 +22,7 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
   const [openingText, setOpeningText] = useState('')
   const [objectionType, setObjectionType] = useState<ObjectionType | null>(null)
   const [clearStepsHit, setClearStepsHit] = useState<ClearStep[]>([])
-  const recorder = useAudioRecorder('objection', lang)
+  const recorder = useAudioRecorder('objection', lang, () => setPhase('review'))
 
   const startVoicePartner = useCallback(async () => {
     setPhase('opening')

@@ -16,7 +16,7 @@ export function useVoicePartnerFab(doctorId: string, lang: 'en' | 'ar') {
   const [phase, setPhase] = useState<VoicePartnerFabPhase>('idle')
   const [errorKind, setErrorKind] = useState<VoiceErrorKind | null>(null)
   const [result, setResult] = useState<VoicePartnerFabResult | null>(null)
-  const recorder = useAudioRecorder('fab', lang)
+  const recorder = useAudioRecorder('fab', lang, () => setPhase('review'))
 
   const startRecording = useCallback(async () => {
     const ok = await recorder.start()

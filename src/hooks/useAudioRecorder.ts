@@ -2,6 +2,12 @@
 import { useCallback, useRef, useState } from 'react'
 import { logVoiceEvent, type VoiceMode } from '@/lib/voice-events'
 
+// Generous headroom over every mode's real target (opening/closing statements
+// aim for 30-50s; objection turns and question-drill answers are short
+// conversational replies) — bounds worst-case cost and upload size without
+// ever interrupting a legitimate take.
+const MAX_RECORDING_MS = 3 * 60 * 1000
+
 /**
  * The record → listen-back → confirm/re-record mechanics shared by every
  * AI-voice-partner mode (objection, opening, FAB, closing, question) — was
@@ -10,7 +16,7 @@ import { logVoiceEvent, type VoiceMode } from '@/lib/voice-events'
  * still owns its own larger phase state machine (recording/review are just
  * two of its phases) and decides what to do with a confirmed take.
  */
-export function useAudioRecorder(mode: VoiceMode, lang: 'en' | 'ar') {
+export function useAudioRecorder(mode: VoiceMode, lang: 'en' | 'ar', onAutoStop?: () => void) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
   const streamRef = useRef<MediaStream | null>(null)
@@ -19,11 +25,32 @@ export function useAudioRecorder(mode: VoiceMode, lang: 'en' | 'ar') {
   const recordingStartRef = useRef<number>(0)
   const durationRef = useRef<number>(0)
   const blobRef = useRef<Blob | null>(null)
+  const autoStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const clearPreview = useCallback(() => {
     setPreviewUrl(url => { if (url) URL.revokeObjectURL(url); return null })
     blobRef.current = null
   }, [])
+
+  const clearAutoStopTimer = useCallback(() => {
+    if (autoStopTimerRef.current) { clearTimeout(autoStopTimerRef.current); autoStopTimerRef.current = null }
+  }, [])
+
+  /** Stops capture, releases the mic, and readies a listen-back preview. */
+  const stop = useCallback(async () => {
+    clearAutoStopTimer()
+    const rec = mediaRecRef.current
+    if (!rec) return
+    const blob: Blob = await new Promise(resolve => {
+      rec.onstop = () => resolve(new Blob(chunksRef.current, { type: rec.mimeType || 'audio/webm' }))
+      rec.stop()
+    })
+    durationRef.current = Math.round((Date.now() - recordingStartRef.current) / 1000)
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current = null
+    blobRef.current = blob
+    setPreviewUrl(URL.createObjectURL(blob))
+  }, [clearAutoStopTimer])
 
   /** Requests the mic and starts capture. Returns false on permission denial. */
   const start = useCallback(async (): Promise<boolean> => {
@@ -36,28 +63,14 @@ export function useAudioRecorder(mode: VoiceMode, lang: 'en' | 'ar') {
       mediaRecRef.current = rec
       rec.start()
       recordingStartRef.current = Date.now()
+      autoStopTimerRef.current = setTimeout(() => { void stop().then(() => onAutoStop?.()) }, MAX_RECORDING_MS)
       logVoiceEvent(mode, lang, 'recording_start')
       return true
     } catch {
       logVoiceEvent(mode, lang, 'mic_denied')
       return false
     }
-  }, [mode, lang])
-
-  /** Stops capture, releases the mic, and readies a listen-back preview. */
-  const stop = useCallback(async () => {
-    const rec = mediaRecRef.current
-    if (!rec) return
-    const blob: Blob = await new Promise(resolve => {
-      rec.onstop = () => resolve(new Blob(chunksRef.current, { type: rec.mimeType || 'audio/webm' }))
-      rec.stop()
-    })
-    durationRef.current = Math.round((Date.now() - recordingStartRef.current) / 1000)
-    streamRef.current?.getTracks().forEach(t => t.stop())
-    streamRef.current = null
-    blobRef.current = blob
-    setPreviewUrl(URL.createObjectURL(blob))
-  }, [])
+  }, [mode, lang, stop, onAutoStop])
 
   /** Discards the current take (rep chose "re-record"). */
   const discard = useCallback(() => { clearPreview() }, [clearPreview])
@@ -73,6 +86,7 @@ export function useAudioRecorder(mode: VoiceMode, lang: 'en' | 'ar') {
 
   /** Force-stops any live recorder/stream and clears the preview — for reset(). */
   const abort = useCallback(() => {
+    clearAutoStopTimer()
     // Stop the recorder before its source tracks — some browsers only fire
     // onstop reliably when told directly, rather than inferring it from the
     // stream going away, which left a leaving-mid-recording tap with a live
@@ -85,7 +99,7 @@ export function useAudioRecorder(mode: VoiceMode, lang: 'en' | 'ar') {
     streamRef.current?.getTracks().forEach(t => t.stop())
     streamRef.current = null
     clearPreview()
-  }, [clearPreview])
+  }, [clearPreview, clearAutoStopTimer])
 
   return { previewUrl, start, stop, discard, take, abort }
 }

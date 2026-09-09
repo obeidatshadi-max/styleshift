@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import { buildHistoryContext } from '@/lib/doctor-context'
 import { SYSTEM, TURN_CAP, buildJudgePrompt, parseJudgeResponse, resolveTurn, isObjectionType, transcribeAudio, type VoicePartnerTurn } from '@/lib/voice-partner-core'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { validateAudioUpload } from '@/lib/audio-upload'
 import type { Doctor, DoctorVisit } from '@/types/game'
 
 // A full conversation is at most TURN_CAP rep lines plus TURN_CAP doctor lines.
@@ -48,9 +49,10 @@ export async function POST(req: Request) {
   const doctorId = form.get('doctorId')
   const lang = form.get('lang') === 'ar' ? 'ar' : 'en'
   const historyRaw = form.get('history')
-  const audio = form.get('audio')
+  const audioCheck = validateAudioUpload(form.get('audio'))
   if (typeof doctorId !== 'string' || !doctorId) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
-  if (!(audio instanceof Blob)) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
+  if (!audioCheck.ok) return NextResponse.json({ error: audioCheck.error }, { status: audioCheck.status })
+  const audio = audioCheck.blob
 
   const objectionTypeRaw = form.get('objectionType')
   if (typeof objectionTypeRaw !== 'string' || !isObjectionType(objectionTypeRaw)) {

@@ -18,7 +18,7 @@ export function useQuestionDrill(doctorId: string, lang: 'en' | 'ar') {
   const [errorKind, setErrorKind] = useState<VoiceErrorKind | null>(null)
   const [turn1, setTurn1] = useState<QuestionDrillTurn1 | null>(null)
   const [result, setResult] = useState<QuestionDrillResult | null>(null)
-  const recorder = useAudioRecorder('question', lang)
+  const recorder = useAudioRecorder('question', lang, () => setPhase('review'))
 
   const startRecording = useCallback(async () => {
     const ok = await recorder.start()

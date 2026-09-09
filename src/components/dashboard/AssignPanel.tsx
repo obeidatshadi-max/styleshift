@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { OBJECTION_CATEGORIES } from '@/lib/social-style'
 import type { ManagerAssignmentView } from '@/lib/assignments'
+import type { AssignmentRepStatus } from '@/types/game'
 
 // Dashboard-side labels (the dashboard is English; reps see localized names in-game).
 const CATEGORY_LABEL: Record<string, string> = {
@@ -24,6 +25,28 @@ export function describeTarget(targetType: string, targetKey: string): string {
 interface Props {
   current: ManagerAssignmentView | null
   reps: { id: string; name: string | null }[]
+}
+
+const REPLY_SOURCE_LABEL: Record<'doctor_session' | 'colleague_session', string> = {
+  doctor_session: 'AI doctor roleplay', colleague_session: 'Colleague roleplay',
+}
+
+function describeReply(reply: NonNullable<AssignmentRepStatus['reply']>) {
+  if (reply.kind === 'note') {
+    return (
+      <div style={{ fontSize: 12.5, color: 'var(--ink-dim)', lineHeight: 1.4, borderInlineStart: '2px solid var(--cyan)', paddingInlineStart: 8 }}>
+        &ldquo;{reply.note_text}&rdquo;
+      </div>
+    )
+  }
+  const s = reply.session
+  const source = REPLY_SOURCE_LABEL[reply.kind]
+  return (
+    <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.04em', color: 'var(--ink-dim)' }}>
+      Shared: {source}
+      {s && ` · talk ${Math.round(s.talk_ratio * 100)}% · questions ${Math.round(s.question_ratio * 100)}%${s.active_listening_score != null ? ` · listening ${s.active_listening_score}` : ''}`}
+    </div>
+  )
 }
 
 export default function AssignPanel({ current, reps }: Props) {
@@ -82,11 +105,14 @@ export default function AssignPanel({ current, reps }: Props) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {current.reps.map(r => (
-              <div key={r.rep_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '8px 10px', borderRadius: 10, border: '1px solid var(--line)', background: 'rgba(0,0,0,.18)' }}>
-                <span style={{ fontSize: 13 }}>{r.name ?? 'Rep'}</span>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: r.completed_at ? 'var(--green)' : 'var(--ink-dim)' }}>
-                  {r.completed_at ? '✓ done' : '— pending'}
-                </span>
+              <div key={r.rep_id} style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid var(--line)', background: 'rgba(0,0,0,.18)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <span style={{ fontSize: 13 }}>{r.name ?? 'Rep'}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: r.completed_at ? 'var(--green)' : 'var(--ink-dim)' }}>
+                    {r.completed_at ? '✓ done' : '— pending'}
+                  </span>
+                </div>
+                {r.reply && <div style={{ marginTop: 6 }}>{describeReply(r.reply)}</div>}
               </div>
             ))}
           </div>

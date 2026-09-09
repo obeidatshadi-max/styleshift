@@ -44,6 +44,7 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
   const [elapsedSec, setElapsedSec] = useState(0)
   const [speakerPreviews, setSpeakerPreviews] = useState<RawSpeakerPreview[]>([])
   const [result, setResult] = useState<RoleplayResult | null>(null)
+  const [sessionId, setSessionId] = useState<string | null>(null)
 
   const streamRef = useRef<MediaStream | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
@@ -170,7 +171,7 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
 
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      const { error: insertError } = await supabase.from('roleplay_sessions').insert({
+      const { data: inserted, error: insertError } = await supabase.from('roleplay_sessions').insert({
         rep_id: user.id,
         doctor_id: doctorId,
         colleague_id: colleagueId,
@@ -184,10 +185,11 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
         rep_style: built.repRead?.style ?? null,
         rep_confidence: built.repRead?.confidence ?? null,
         rep_metrics: built.repRead ?? null,
-      })
+      }).select('id').single()
       if (insertError) {
         console.error('roleplay_sessions insert failed:', insertError.message)
       } else {
+        setSessionId(inserted.id)
         const { data: profile, error: profileError } = await supabase.from('profiles').select('xp').eq('id', user.id).single()
         if (profileError) {
           console.error('profile xp read failed:', profileError.message)
@@ -206,10 +208,11 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     utterancesRef.current = []
     setSpeakerPreviews([])
     setResult(null)
+    setSessionId(null)
     setError(null)
     setElapsedSec(0)
     setPhase('idle')
   }, [cleanupCapture])
 
-  return { phase, error, elapsedSec, speakerPreviews, result, start, stop, pickSpeaker, reset }
+  return { phase, error, elapsedSec, speakerPreviews, result, sessionId, start, stop, pickSpeaker, reset }
 }

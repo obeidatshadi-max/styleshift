@@ -1,15 +1,41 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useT } from '@/lib/i18n'
 import { useRoleplayRecorder } from '@/hooks/useRoleplayRecorder'
+import type { RepAssignment } from '@/types/game'
 
 interface Props { doctorId: string | null; colleagueId: string | null; onDone: () => void }
 
 export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Props) {
   const t = useT()
-  const { phase, error, elapsedSec, speakerPreviews, result, start, stop, pickSpeaker, reset } = useRoleplayRecorder(doctorId, colleagueId)
+  const { phase, error, elapsedSec, speakerPreviews, result, sessionId, start, stop, pickSpeaker, reset } = useRoleplayRecorder(doctorId, colleagueId)
   const [consentChecked, setConsentChecked] = useState(false)
   const [consented, setConsented] = useState(false)
+
+  // The active assignment, fetched once — lets the results screen offer a
+  // "Share with manager" button without the doctor/colleague prep screens
+  // (which mount this component) needing to know about assignments at all.
+  const [assignment, setAssignment] = useState<RepAssignment | null>(null)
+  const [shareState, setShareState] = useState<'idle' | 'sharing' | 'shared' | 'error'>('idle')
+  useEffect(() => {
+    fetch('/api/assignments').then(res => res.ok ? res.json() : null).then(setAssignment).catch(() => {})
+  }, [])
+
+  async function shareWithManager() {
+    if (!sessionId) return
+    setShareState('sharing')
+    try {
+      const res = await fetch('/api/assignments/reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: doctorId ? 'doctor_session' : 'colleague_session', session_id: sessionId }),
+      })
+      if (!res.ok) { setShareState('error'); return }
+      setShareState('shared')
+    } catch {
+      setShareState('error')
+    }
+  }
 
   const card: React.CSSProperties = {
     width: '100%', maxWidth: 480,
@@ -188,6 +214,19 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
             ? <div style={{ fontSize: 14 }}>{r.repRead.style} · {r.repRead.confidence}%</div>
             : <p style={{ fontSize: 13, color: 'var(--ink-dim)', lineHeight: 1.5 }}>{t('roleplay.noStyleRead')}</p>}
         </div>
+
+        {assignment && !assignment.completed && (
+          shareState === 'shared' ? (
+            <div style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--green)', marginBottom: 10 }}>
+              ✓ {t('roleplay.shared')}
+            </div>
+          ) : (
+            <button style={{ ...btnGhost, marginTop: 0, marginBottom: 10, borderColor: 'var(--amber)', color: 'var(--amber)' }}
+              disabled={shareState === 'sharing'} onClick={shareWithManager}>
+              {shareState === 'sharing' ? '…' : shareState === 'error' ? t('roleplay.shareError') : t('roleplay.shareWithManager')}
+            </button>
+          )
+        )}
 
         <button style={btnPrimary} onClick={onDone}>{t('roleplay.done')}</button>
       </div>

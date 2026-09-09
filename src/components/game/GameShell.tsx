@@ -259,7 +259,9 @@ export default function GameShell() {
   }
 
   if (screen === 'prep') {
-    return withNav(<VisitPrep onExit={() => setScreen('home')} />)
+    // A doctor roleplay in there may have shared against the active
+    // assignment — refresh so the home banner reflects it.
+    return withNav(<VisitPrep onExit={() => { setScreen('home'); loadAssignment() }} />)
   }
 
   if (screen === 'fieldcards') {
@@ -267,7 +269,7 @@ export default function GameShell() {
   }
 
   if (screen === 'perform') {
-    return withNav(<Colleagues onExit={() => setScreen('home')} />)
+    return withNav(<Colleagues onExit={() => { setScreen('home'); loadAssignment() }} />)
   }
 
   if (screen === 'assignment' && assignQueue[assignPos]) {
@@ -334,6 +336,7 @@ export default function GameShell() {
       standings={standings}
       assignment={assignment}
       onStartAssignment={startAssignment}
+      onAssignmentShared={loadAssignment}
       avatarUrl={profile?.avatar_url ?? null}
       displayName={profile?.display_name ?? null}
       onUploadAvatar={updateAvatar}

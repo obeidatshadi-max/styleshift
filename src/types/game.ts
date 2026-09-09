@@ -158,11 +158,26 @@ export interface RepAssignment {
   completed: boolean
 }
 
+// A rep's opt-in share of proof-of-work against an assignment: one roleplay
+// session's scores, or a free-text note. Never automatic — the rep picks
+// what (if anything) the manager sees.
+export interface AssignmentReply {
+  id: string
+  assignment_id: string
+  rep_id: string
+  kind: 'doctor_session' | 'colleague_session' | 'note'
+  session_id: string | null
+  note_text: string | null
+  created_at: string
+}
+
 // One row of the manager-facing completion table.
 export interface AssignmentRepStatus {
   rep_id: string
   name: string | null
   completed_at: string | null
+  /** The rep's most recent shared reply, if any — never fetched unless shared. */
+  reply: (AssignmentReply & { session: RoleplaySessionSummary | null }) | null
 }
 
 // An AI-generated, doctor-specific objection drill (Visit Prep Layer 2).

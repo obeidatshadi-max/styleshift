@@ -1,4 +1,5 @@
 'use client'
+import { useState } from 'react'
 import RankBar from './RankBar'
 import GroupPanel from './GroupPanel'
 import type { Section } from './AppNav'
@@ -31,6 +32,7 @@ interface Props {
   standings: Standings | null
   assignment: RepAssignment | null
   onStartAssignment: () => void
+  onAssignmentShared: () => void
   avatarUrl: string | null
   displayName: string | null
   onUploadAvatar: (file: File) => Promise<string | null>
@@ -43,7 +45,28 @@ interface Props {
   tab: Section
 }
 
-export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onShowPerform, onShowFieldCards, onStartLevel, tab }: Props) {
+export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, onAssignmentShared, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onShowPerform, onShowFieldCards, onStartLevel, tab }: Props) {
+  const [note, setNote] = useState('')
+  const [noteState, setNoteState] = useState<'idle' | 'sending' | 'error'>('idle')
+
+  async function sendNote() {
+    if (!note.trim() || noteState === 'sending') return
+    setNoteState('sending')
+    try {
+      const res = await fetch('/api/assignments/reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'note', note_text: note.trim() }),
+      })
+      if (!res.ok) { setNoteState('error'); return }
+      setNote('')
+      setNoteState('idle')
+      onAssignmentShared()
+    } catch {
+      setNoteState('error')
+    }
+  }
+
   const unlocked = [1, ...earnedLevels.map(n => n + 1)].filter(n => n <= 4)
   const router = useRouter()
   const t = useT()
@@ -114,6 +137,21 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
                   </button>
                 )}
               </div>
+              {!assignment.completed && (
+                <div style={{ marginTop:12, paddingTop:12, borderTop:'1px solid var(--line)' }}>
+                  <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.15em', textTransform:'uppercase', color:'var(--ink-dim)', marginBottom:6 }}>{t('assign.noteLabel')}</div>
+                  <textarea value={note} onChange={e => setNote(e.target.value)} rows={2}
+                    placeholder={t('assign.notePlaceholder')} aria-label={t('assign.noteLabel')}
+                    style={{ width:'100%', background:'rgba(0,0,0,.25)', border:'1px solid var(--line)', borderRadius:10, padding:'9px 11px', color:'var(--ink)', fontFamily:'var(--sans)', fontSize:13, resize:'vertical', outline:'none' }} />
+                  <div style={{ display:'flex', alignItems:'center', gap:10, marginTop:8 }}>
+                    <button onClick={sendNote} disabled={!note.trim() || noteState === 'sending'}
+                      style={{ cursor: !note.trim() ? 'not-allowed' : 'pointer', fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'rgba(56,214,255,.06)', borderRadius:8, padding:'8px 14px', opacity: !note.trim() ? .5 : 1, touchAction:'manipulation' }}>
+                      {noteState === 'sending' ? '…' : t('assign.noteSend')}
+                    </button>
+                    {noteState === 'error' && <span style={{ color:'var(--red)', fontSize:12 }}>{t('assign.noteError')}</span>}
+                  </div>
+                </div>
+              )}
             </section>
           )
         })()}

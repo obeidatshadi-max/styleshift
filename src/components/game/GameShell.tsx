@@ -78,29 +78,28 @@ export default function GameShell() {
   // mid-playthrough and yank a brand-new rep back out of their first level.
   //
   // Order for a brand-new rep: the one-time intro carousel (localStorage,
-  // reopenable from the home screen) -> Level 1 (a real, XP-earning taste
-  // of the game, now with context for what it's building toward) -> its
-  // result screen -> the SPS assessment (DB-persisted, so it survives
-  // across devices). A rep who already finished Level 1 but closed the app
-  // before finishing SPS resumes straight into SPS, without being forced
-  // to replay Level 1 or re-see an intro they've already seen.
+  // reopenable from the home screen) -> the SPS self-assessment (DB-persisted,
+  // so it survives across devices) -> Level 1, now played with the rep's own
+  // style already known -> its result screen -> home. SPS goes first because
+  // it's the diagnostic the whole Driver/Expressive/Amiable/Analytical
+  // curriculum is built on — a facilitator running a classroom session needs
+  // every trainee's style before pairing them for Live Roleplay, not after.
+  // A rep who already finished SPS but closed the app before Level 1 resumes
+  // straight into Level 1, without re-seeing an intro they've already seen.
   const initialRouteRef = useRef(false)
   useEffect(() => {
     if (loading || initialRouteRef.current) return
     initialRouteRef.current = true
     const seenIntro = typeof window !== 'undefined' && !!localStorage.getItem(INTRO_KEY)
-    if (profile && !profile.sps_top_key && !completedLevels.includes(1)) {
-      if (!seenIntro) { setScreen('how'); return }
-      startLevel(1); return
-    }
+    if (!seenIntro) { setScreen('how'); return }
     if (profile && !profile.sps_top_key) { setScreen('sps'); return }
-    if (!seenIntro) setScreen('how')
+    if (profile && !completedLevels.includes(1)) { startLevel(1); return }
   }, [loading, profile, completedLevels])
 
   function finishIntro() {
     try { localStorage.setItem(INTRO_KEY, '1') } catch { /* ignore */ }
-    if (profile && !profile.sps_top_key && !completedLevels.includes(1)) { startLevel(1); return }
     if (profile && !profile.sps_top_key) { setScreen('sps'); return }
+    if (profile && !completedLevels.includes(1)) { startLevel(1); return }
     setScreen('home')
   }
 
@@ -236,8 +235,9 @@ export default function GameShell() {
   function handleHome(conf: number) {
     setConfidence(conf)
     loadStandings() // XP changed this session — refresh the team ranking
-    // Brand-new rep coming off their first (pre-SPS) Level 1 result: send
-    // them into the assessment next, instead of the dashboard.
+    // Only reachable for a rep who completed Level 1 under the old
+    // Level-1-then-SPS order and never got to the assessment — send them
+    // into it now instead of the dashboard. New reps hit SPS before Level 1.
     if (profile && !profile.sps_top_key) { setScreen('sps'); return }
     setScreen('home')
   }
@@ -247,8 +247,8 @@ export default function GameShell() {
       <SpsAssessment
         onComplete={async (result) => {
           await saveSpsAssessment(result)
-          if (typeof window !== 'undefined' && !localStorage.getItem(INTRO_KEY)) setScreen('how')
-          else setScreen('home')
+          if (profile && !completedLevels.includes(1)) { startLevel(1); return }
+          setScreen('home')
         }}
       />
     )

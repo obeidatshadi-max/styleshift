@@ -433,7 +433,7 @@ const EN: Dict = {
   'join.redirecting': 'Taking you to the game…',
   'join.otpError': 'Sign-in failed. Please try again.',
   // sps onboarding
-  'sps.eyebrow': 'Sales Person Style',
+  'sps.eyebrow': 'Level 0 · Sales Person Style',
   'sps.title': 'Discover Your Selling Style',
   'sps.intro': "A quick 16-question read on how you sell. It becomes your StyleShift player profile and shows up on your manager's dashboard. Takes about 4 minutes.",
   'sps.start': 'Begin →',
@@ -899,7 +899,7 @@ const AR: Dict = {
   'join.redirecting': 'ننتقل إلى اللعبة…',
   'join.otpError': 'فشل تسجيل الدخول. الرجاء المحاولة مرة أخرى.',
   // sps onboarding
-  'sps.eyebrow': 'أسلوب مندوب المبيعات',
+  'sps.eyebrow': 'المستوى 0 · أسلوب مندوب المبيعات',
   'sps.title': 'اكتشف أسلوبك في البيع',
   'sps.intro': 'تقييم سريع من ١٦ سؤالاً حول أسلوبك في البيع. يصبح ملفك الشخصي في StyleShift ويظهر في لوحة مديرك. يستغرق حوالي ٤ دقائق.',
   'sps.start': 'ابدأ ←',

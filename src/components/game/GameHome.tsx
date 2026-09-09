@@ -13,6 +13,7 @@ import AvatarUploader from './AvatarUploader'
 import PrivacyPanel from './PrivacyPanel'
 import ChampionBanner from './ChampionBanner'
 import LeagueStrip from './LeagueStrip'
+import NextActionCard from './NextActionCard'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
 
@@ -47,26 +48,7 @@ interface Props {
 }
 
 export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, onAssignmentShared, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onShowPerform, onShowFieldCards, onStartLevel, tab }: Props) {
-  const [note, setNote] = useState('')
-  const [noteState, setNoteState] = useState<'idle' | 'sending' | 'error'>('idle')
-
-  async function sendNote() {
-    if (!note.trim() || noteState === 'sending') return
-    setNoteState('sending')
-    try {
-      const res = await fetch('/api/assignments/reply', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind: 'note', note_text: note.trim() }),
-      })
-      if (!res.ok) { setNoteState('error'); return }
-      setNote('')
-      setNoteState('idle')
-      onAssignmentShared()
-    } catch {
-      setNoteState('error')
-    }
-  }
+  const [moreOpen, setMoreOpen] = useState(false)
 
   const unlocked = [1, ...earnedLevels.map(n => n + 1)].filter(n => n <= 4)
   const router = useRouter()
@@ -111,53 +93,21 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
       <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
 
-        {assignment && (() => {
-          const a = assignment.assignment
-          const target = a.target_type === 'category'
-            ? t('assign.targetCategory', { category: t(`obj.${a.target_key}`) })
-            : t('assign.targetLevel', { level: a.target_key, title: LEVELS[Number(a.target_key) - 1]?.title ?? '' })
-          const overdue = !assignment.completed && a.due_date < new Date().toISOString().slice(0, 10)
-          return (
-            <section style={{ border:`1px solid ${assignment.completed ? 'var(--green)' : overdue ? 'var(--red)' : 'var(--amber)'}`, borderRadius:16, padding:16, background: assignment.completed ? 'rgba(62,224,143,.06)' : 'rgba(255,206,77,.06)', boxShadow:'0 12px 40px rgba(0,0,0,.45)' }}>
-              <div style={{ fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.3em', textTransform:'uppercase', color: assignment.completed ? 'var(--green)' : 'var(--amber)', marginBottom:10 }}>
-                📋 {t('assign.title')}
-              </div>
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
-                <div>
-                  <div style={{ fontSize:15, fontWeight:700 }}>{target}</div>
-                  <div style={{ fontFamily:'var(--mono)', fontSize:11, marginTop:3, color: assignment.completed ? 'var(--green)' : overdue ? 'var(--red)' : 'var(--ink-dim)' }}>
-                    {assignment.completed
-                      ? t('assign.done')
-                      : overdue ? t('assign.overdue', { date: a.due_date }) : t('assign.due', { date: a.due_date })}
-                  </div>
-                </div>
-                {!assignment.completed && (
-                  <button onClick={onStartAssignment}
-                    style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--amber)', color:'#1a1402', background:'var(--amber)', borderRadius:10, padding:'11px 16px', boxShadow:'0 0 18px rgba(255,206,77,.45)', touchAction:'manipulation' }}>
-                    {t('assign.start')}
-                  </button>
-                )}
-              </div>
-              {!assignment.completed && (
-                <div style={{ marginTop:12, paddingTop:12, borderTop:'1px solid var(--line)' }}>
-                  <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.15em', textTransform:'uppercase', color:'var(--ink-dim)', marginBottom:6 }}>{t('assign.noteLabel')}</div>
-                  <textarea value={note} onChange={e => setNote(e.target.value)} rows={2}
-                    placeholder={t('assign.notePlaceholder')} aria-label={t('assign.noteLabel')}
-                    style={{ width:'100%', background:'rgba(0,0,0,.25)', border:'1px solid var(--line)', borderRadius:10, padding:'9px 11px', color:'var(--ink)', fontFamily:'var(--sans)', fontSize:13, resize:'vertical', outline:'none' }} />
-                  <div style={{ display:'flex', alignItems:'center', gap:10, marginTop:8 }}>
-                    <button onClick={sendNote} disabled={!note.trim() || noteState === 'sending'}
-                      style={{ cursor: !note.trim() ? 'not-allowed' : 'pointer', fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'rgba(56,214,255,.06)', borderRadius:8, padding:'8px 14px', opacity: !note.trim() ? .5 : 1, touchAction:'manipulation' }}>
-                      {noteState === 'sending' ? '…' : t('assign.noteSend')}
-                    </button>
-                    {noteState === 'error' && <span style={{ color:'var(--red)', fontSize:12 }}>{t('assign.noteError')}</span>}
-                  </div>
-                </div>
-              )}
-            </section>
-          )
-        })()}
-
         {tab === 'train' && <>
+
+        <NextActionCard
+          assignment={assignment} onStartAssignment={onStartAssignment} onAssignmentShared={onAssignmentShared}
+          daily={daily} onStartDaily={onStartDaily}
+          unlocked={unlocked} earnedLevels={earnedLevels} onStartLevel={onStartLevel}
+          onShowPrep={onShowPrep}
+        />
+
+        <button onClick={() => setMoreOpen(o => !o)}
+          style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', cursor:'pointer', fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.15em', textTransform:'uppercase', border:'1px solid var(--line)', color:'var(--ink-dim)', background:'transparent', borderRadius:10, padding:'10px 16px', touchAction:'manipulation' }}>
+          {moreOpen ? t('home.less') : t('home.more')} {moreOpen ? '▲' : '▼'}
+        </button>
+
+        {moreOpen && <>
 
         <ChampionBanner
           companyName={t('eyebrow')}
@@ -297,6 +247,8 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
         )}
 
         {panel(t('privacy.title'), <PrivacyPanel />)}
+
+        </>}
 
         </>}
 

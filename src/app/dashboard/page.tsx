@@ -6,12 +6,13 @@ import { getTeamPulse } from '@/lib/team-pulse'
 import Leaderboard from '@/components/dashboard/Leaderboard'
 import SkillHeatmap from '@/components/dashboard/SkillHeatmap'
 import ActivityBar from '@/components/dashboard/ActivityBar'
-import AssignPanel from '@/components/dashboard/AssignPanel'
 import TeamPulsePanel from '@/components/dashboard/TeamPulse'
 import LeagueBoardPanel from '@/components/dashboard/LeagueBoardPanel'
 import { getLeagueBoard } from '@/lib/leagues'
 import VoicePracticePanel from '@/components/dashboard/VoicePracticePanel'
 import { getVoiceStats } from '@/lib/voice-stats'
+import CoachingQueueAndAssign from '@/components/dashboard/CoachingQueueAndAssign'
+import { getCoachingQueue } from '@/lib/coaching-queue'
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -38,6 +39,7 @@ export default async function DashboardPage() {
   const pulse = await getTeamPulse(user.id, stats, assignment)
   const leagueBoard = await getLeagueBoard(user.id)
   const voiceStats = await getVoiceStats(stats.reps.map(r => r.id))
+  const coachingQueue = await getCoachingQueue(user.id)
 
   const flagCount = stats?.reps.filter(r => r.flag).length ?? 0
   const avgAccuracy = stats?.reps.length
@@ -85,9 +87,10 @@ export default async function DashboardPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <Panel title="Team Pulse"><TeamPulsePanel pulse={pulse} siteUrl={siteUrl} /></Panel>
         {leagueBoard && <Panel title="Team League"><LeagueBoardPanel board={leagueBoard} /></Panel>}
-        <Panel title="Coach Assignment">
-          <AssignPanel current={assignment} reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} />
-        </Panel>
+        <CoachingQueueAndAssign
+          queue={coachingQueue} current={assignment}
+          reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))}
+        />
         <Panel title="Team Leaderboard"><Leaderboard reps={stats?.reps ?? []} /></Panel>
         <Panel title="Skill Gap Heatmap"><SkillHeatmap levelAccuracy={stats?.levelAccuracy ?? []} /></Panel>
         <Panel title="Voice Practice">

@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { OBJECTION_CATEGORIES } from '@/lib/social-style'
 import type { ManagerAssignmentView } from '@/lib/assignments'
@@ -22,9 +22,15 @@ export function describeTarget(targetType: string, targetKey: string): string {
     : LEVEL_LABEL[targetKey] ?? `Level ${targetKey}`
 }
 
+export interface AssignPrefill { target_type: 'category' | 'level'; target_key: string; rep_id: string }
+
 interface Props {
   current: ManagerAssignmentView | null
   reps: { id: string; name: string | null }[]
+  /** Set by a parent (e.g. the coaching queue's "suggest" action) to open the
+      form pre-targeted — a new object reference each time re-applies it, even
+      re-suggesting the same rep. */
+  prefill?: AssignPrefill | null
 }
 
 const REPLY_SOURCE_LABEL: Record<'doctor_session' | 'colleague_session', string> = {
@@ -49,7 +55,7 @@ function describeReply(reply: NonNullable<AssignmentRepStatus['reply']>) {
   )
 }
 
-export default function AssignPanel({ current, reps }: Props) {
+export default function AssignPanel({ current, reps, prefill }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [targetType, setTargetType] = useState<'category' | 'level'>('category')
@@ -57,6 +63,14 @@ export default function AssignPanel({ current, reps }: Props) {
   const [selected, setSelected] = useState<string[]>(reps.map(r => r.id))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(false)
+
+  useEffect(() => {
+    if (!prefill) return
+    setOpen(true)
+    setTargetType(prefill.target_type)
+    setTargetKey(prefill.target_key)
+    setSelected([prefill.rep_id])
+  }, [prefill])
 
   const overdue = current ? current.assignment.due_date < new Date().toISOString().slice(0, 10) : false
   const doneCount = current?.reps.filter(r => r.completed_at).length ?? 0

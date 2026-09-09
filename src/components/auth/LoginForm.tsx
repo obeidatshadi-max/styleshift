@@ -255,8 +255,8 @@ export default function LoginForm() {
               </form>
             ) : (
               <form onSubmit={handleRepIndividualAuth} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('login.email')} required style={inputStyle} />
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('login.password')} required style={inputStyle} />
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('login.email')} aria-label={t('login.email')} required style={inputStyle} />
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('login.password')} aria-label={t('login.password')} required style={inputStyle} />
                 {error && <p style={{ color: 'var(--red)', fontSize: 13, fontFamily: 'var(--mono)' }}>{error}</p>}
                 <button type="submit" disabled={loading} style={btnPrimary}>
                   {loading ? '...' : mode === 'login' ? t('login.signIn') : t('login.createAccount')}
@@ -273,8 +273,8 @@ export default function LoginForm() {
           </>
         ) : (
           <form onSubmit={handleManagerLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('login.email')} required style={inputStyle} />
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('login.password')} required style={inputStyle} />
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('login.email')} aria-label={t('login.email')} required style={inputStyle} />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('login.password')} aria-label={t('login.password')} required style={inputStyle} />
             {error && <p style={{ color: error === t('login.checkEmail') ? 'var(--green)' : 'var(--red)', fontSize: 13, fontFamily: 'var(--mono)' }}>{error}</p>}
             <button type="submit" disabled={loading} style={btnPrimary}>
               {loading ? '...' : mode === 'login' ? t('login.signIn') : t('login.createAccount')}

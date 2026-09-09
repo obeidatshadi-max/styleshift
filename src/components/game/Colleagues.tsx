@@ -132,7 +132,7 @@ function ColleagueForm({ onSave, onCancel }: { onSave: (name: string) => void; o
     <div style={{ position:'relative', zIndex:1, maxWidth:560, margin:'0 auto', padding:14 }}>
       {panel(t('perform.addColleague'),
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-          <div><span style={labelStyle}>{t('prep.name')}</span><input value={name} onChange={e => setName(e.target.value)} style={inputStyle} /></div>
+          <div><span style={labelStyle}>{t('prep.name')}</span><input value={name} onChange={e => setName(e.target.value)} aria-label={t('prep.name')} style={inputStyle} /></div>
           <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
             <button onClick={() => name.trim() && onSave(name.trim())} disabled={!name.trim()} style={{ ...primaryBtn, flex:1, opacity: name.trim() ? 1 : .5 }}>{t('perform.save')}</button>
             <button onClick={onCancel} style={ghostBtn}>{t('prep.cancel')}</button>

@@ -48,7 +48,7 @@ export default function LevelResult({ level, results, meters, spsKey, onHome }: 
         )}
         <div style={{ fontFamily:'var(--mono)', fontSize:13, color:'var(--ink-dim)', letterSpacing:'.04em', marginBottom:10 }}>{t('result.confidence')}</div>
         <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
-          <input type="range" min={0} max={100} value={conf} onChange={e => setConf(+e.target.value)} style={{ flex:1, accentColor:'var(--cyan)' }} />
+          <input type="range" min={0} max={100} value={conf} onChange={e => setConf(+e.target.value)} aria-label={t('result.confidence')} style={{ flex:1, accentColor:'var(--cyan)' }} />
           <span style={{ fontFamily:'var(--mono)', fontSize:18, color:'var(--cyan)', width:48, textAlign:'end' as const }}>{conf}%</span>
         </div>
         <button onClick={() => onHome(conf)} style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.15em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'#04121c', background:'var(--cyan)', borderRadius:10, padding:'12px 18px', boxShadow:'var(--glow-cyan)', touchAction:'manipulation' }}>

@@ -64,8 +64,9 @@ export default function OnboardingPage() {
       <div style={{ background: 'linear-gradient(180deg,var(--panel),#0a1430)', border: '1px solid var(--line)', borderRadius: 16, padding: 24, boxShadow: '0 12px 40px rgba(0,0,0,.45)' }}>
         {!inviteLink ? (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <label style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--ink-dim)' }}>Company / Team Name</label>
+            <label htmlFor="company-name" style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--ink-dim)' }}>Company / Team Name</label>
             <input
+              id="company-name"
               value={name} onChange={e => setName(e.target.value)}
               placeholder="e.g. Wafi Group Iraq" required
               style={inputStyle}

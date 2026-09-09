@@ -39,9 +39,10 @@ export default function AppNav({ activeSection, onSelectSection, showBack, onBac
           </button>
         </div>
       )}
-      <div style={{ display: 'flex', gap: 6, borderBottom: '1px solid var(--line)' }}>
+      <div role="tablist" aria-label={t('nav.tabsLabel')} style={{ display: 'flex', gap: 6, borderBottom: '1px solid var(--line)' }}>
         {SECTIONS.map(s => (
-          <button key={s} onClick={() => onSelectSection(s)} style={tabStyle(activeSection === s)}>
+          <button key={s} role="tab" aria-selected={activeSection === s} tabIndex={activeSection === s ? 0 : -1}
+            onClick={() => onSelectSection(s)} style={tabStyle(activeSection === s)}>
             {t(`nav.tab${s[0].toUpperCase()}${s.slice(1)}`)}
           </button>
         ))}

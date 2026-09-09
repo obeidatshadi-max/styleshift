@@ -334,7 +334,7 @@ function DoctorForm({ doctor, styles, specialties, onSave, onCancel, onDelete }:
     <div style={{ position:'relative', zIndex:1, maxWidth:560, margin:'0 auto', padding:14 }}>
       {panel(doctor ? t('prep.edit') : t('prep.addDoctor'),
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-          <div><span style={labelStyle}>{t('prep.name')}</span><input value={name} onChange={e => setName(e.target.value)} style={inputStyle} /></div>
+          <div><span style={labelStyle}>{t('prep.name')}</span><input value={name} onChange={e => setName(e.target.value)} aria-label={t('prep.name')} style={inputStyle} /></div>
           <div>
             <span style={labelStyle}>{t('prep.specialty')}</span>
             <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
@@ -343,7 +343,7 @@ function DoctorForm({ doctor, styles, specialties, onSave, onCancel, onDelete }:
               ))}
             </div>
           </div>
-          <div><span style={labelStyle}>{t('prep.workplace')}</span><input value={workplace} onChange={e => setWorkplace(e.target.value)} style={inputStyle} /></div>
+          <div><span style={labelStyle}>{t('prep.workplace')}</span><input value={workplace} onChange={e => setWorkplace(e.target.value)} aria-label={t('prep.workplace')} style={inputStyle} /></div>
 
           {/* Style */}
           <div>
@@ -384,7 +384,7 @@ function DoctorForm({ doctor, styles, specialties, onSave, onCancel, onDelete }:
           </div>
 
           {/* Key phrases */}
-          <div><span style={labelStyle}>{t('prep.keyPhrases')}</span><input value={keyPhrases} onChange={e => setKeyPhrases(e.target.value)} placeholder={t('prep.keyPhrasesHint')} style={inputStyle} /></div>
+          <div><span style={labelStyle}>{t('prep.keyPhrases')}</span><input value={keyPhrases} onChange={e => setKeyPhrases(e.target.value)} placeholder={t('prep.keyPhrasesHint')} aria-label={t('prep.keyPhrases')} style={inputStyle} /></div>
 
           {/* Objections */}
           <div>
@@ -398,7 +398,7 @@ function DoctorForm({ doctor, styles, specialties, onSave, onCancel, onDelete }:
           </div>
 
           {/* Notes */}
-          <div><span style={labelStyle}>{t('prep.notes')}</span><textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} style={{ ...inputStyle, resize:'vertical' as const }} /></div>
+          <div><span style={labelStyle}>{t('prep.notes')}</span><textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} aria-label={t('prep.notes')} style={{ ...inputStyle, resize:'vertical' as const }} /></div>
 
           <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
             <button onClick={submit} disabled={!name.trim()} style={{ ...primaryBtn, flex:1, opacity: name.trim() ? 1 : .5 }}>{t('prep.save')}</button>
@@ -796,7 +796,7 @@ function LogVisitForm({ doctor, onDone, onCancel }: { doctor: Doctor; onDone: ()
     <div>
       <span style={labelStyle}>{label}</span>
       <div style={{ display:'flex', gap:8, alignItems:'flex-start' }}>
-        <textarea value={value} onChange={e => setValue(e.target.value)} rows={2} style={{ ...inputStyle, resize:'vertical' as const, flex:1 }} />
+        <textarea value={value} onChange={e => setValue(e.target.value)} rows={2} aria-label={label} style={{ ...inputStyle, resize:'vertical' as const, flex:1 }} />
         <VoiceRecorder onTranscript={text => setValue(prev => prev ? `${prev} ${text}` : text)} />
       </div>
     </div>

@@ -95,6 +95,7 @@ export default function InvitePage() {
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder={t('join.yourName')}
+              aria-label={t('join.yourName')}
               required
               style={inputStyle}
             />
@@ -103,6 +104,7 @@ export default function InvitePage() {
               value={mobile}
               onChange={e => setMobile(e.target.value)}
               placeholder={t('join.mobilePlaceholder')}
+              aria-label={t('join.mobilePlaceholder')}
               required
               style={inputStyle}
             />

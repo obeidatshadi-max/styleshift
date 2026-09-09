@@ -97,7 +97,10 @@ export default function SpsAssessment({ onComplete }: Props) {
         {eyebrow(t('sps.resultEyebrow'))}
         <div style={{ background: p.gradient, borderRadius: 14, padding: '18px 18px 16px', marginBottom: 16 }}>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', opacity: .85 }}>{t('sps.resultTitle')}</div>
-          <div style={{ fontSize: 22, fontWeight: 800, margin: '4px 0 2px' }}>{p.name}</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '4px 0 2px' }}>
+            <span style={{ fontSize: 22, fontWeight: 800 }}>{p.name}</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, letterSpacing: '.08em', opacity: .7 }}>SPS™</span>
+          </div>
           <div style={{ fontSize: 12.5, opacity: .85, marginBottom: 10 }}>{p.orient}</div>
           <p style={{ fontSize: 13.5, lineHeight: 1.5 }}>{p.desc}</p>
         </div>

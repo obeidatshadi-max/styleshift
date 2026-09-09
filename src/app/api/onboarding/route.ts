@@ -12,6 +12,26 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient()
 
+  // A manager who already has a team and revisits /onboarding (bookmark,
+  // back button, lost session) must not silently spawn a second company and
+  // get their profile repointed away from the real one — return their
+  // existing team instead of creating a duplicate.
+  const { data: existingProfile } = await admin
+    .from('profiles')
+    .select('company_id, role')
+    .eq('id', user.id)
+    .single()
+
+  if (existingProfile?.company_id && existingProfile.role === 'manager') {
+    const { data: existingCompany, error: existingError } = await admin
+      .from('companies')
+      .select()
+      .eq('id', existingProfile.company_id)
+      .single()
+    if (existingError) return NextResponse.json({ error: existingError.message }, { status: 500 })
+    return NextResponse.json({ company: existingCompany })
+  }
+
   const { data: company, error: companyError } = await admin
     .from('companies')
     .insert({ name: companyName.trim(), plan: 'free' })

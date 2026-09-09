@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { getTeamStatsForUser } from '@/lib/team-stats'
+import { getVoiceStats } from '@/lib/voice-stats'
 import PrintButton from '@/components/dashboard/PrintButton'
 
 // Light-themed, print-optimized snapshot of the team's performance, meant to be
@@ -13,6 +14,7 @@ export default async function ReportPage() {
 
   const stats = await getTeamStatsForUser(user.id)
   if (!stats) redirect('/onboarding')
+  const voiceStats = await getVoiceStats(stats.reps.map(r => r.id))
 
   const flagCount = stats.reps.filter(r => r.flag).length
   const avgAccuracy = stats.reps.length
@@ -55,7 +57,7 @@ export default async function ReportPage() {
         </header>
 
         {/* KPI strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 26 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 12, marginBottom: 26 }}>
           {[
             { label: 'Total Reps', val: String(stats.reps.length) },
             { label: 'Avg Accuracy', val: stats.reps.length ? `${avgAccuracy}%` : '—' },
@@ -78,12 +80,13 @@ export default async function ReportPage() {
               <th style={{ ...th, textAlign: 'right' }}>XP</th>
               <th style={{ ...th, textAlign: 'right' }}>Sessions</th>
               <th style={{ ...th, textAlign: 'right' }}>Avg Acc.</th>
+              <th style={{ ...th, textAlign: 'right' }}>Voice</th>
               <th style={{ ...th, textAlign: 'right' }}>Status</th>
             </tr>
           </thead>
           <tbody>
             {stats.reps.length === 0 ? (
-              <tr><td style={td} colSpan={6}>No reps have joined yet.</td></tr>
+              <tr><td style={td} colSpan={7}>No reps have joined yet.</td></tr>
             ) : stats.reps.map((r, i) => (
               <tr key={r.id}>
                 <td style={{ ...td, color: dim }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td>
@@ -91,6 +94,7 @@ export default async function ReportPage() {
                 <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{r.xp.toLocaleString()}</td>
                 <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{r.total_sessions}</td>
                 <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{r.total_sessions ? `${r.avg_accuracy}%` : '—'}</td>
+                <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{voiceStats.byRep.get(r.id)?.sessionsCompleted ?? 0}</td>
                 <td style={{ ...td, textAlign: 'right', color: r.flag ? '#c0392b' : '#1e8e5a', fontWeight: 600 }}>{r.flag ? 'Coaching' : r.total_sessions ? 'On track' : '—'}</td>
               </tr>
             ))}

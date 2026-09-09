@@ -10,6 +10,8 @@ import AssignPanel from '@/components/dashboard/AssignPanel'
 import TeamPulsePanel from '@/components/dashboard/TeamPulse'
 import LeagueBoardPanel from '@/components/dashboard/LeagueBoardPanel'
 import { getLeagueBoard } from '@/lib/leagues'
+import VoicePracticePanel from '@/components/dashboard/VoicePracticePanel'
+import { getVoiceStats } from '@/lib/voice-stats'
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -35,6 +37,7 @@ export default async function DashboardPage() {
   const assignment = await getAssignmentForManager(user.id)
   const pulse = await getTeamPulse(user.id, stats, assignment)
   const leagueBoard = await getLeagueBoard(user.id)
+  const voiceStats = await getVoiceStats(stats.reps.map(r => r.id))
 
   const flagCount = stats?.reps.filter(r => r.flag).length ?? 0
   const avgAccuracy = stats?.reps.length
@@ -66,7 +69,7 @@ export default async function DashboardPage() {
       </header>
 
       {/* KPI strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 12, marginBottom: 14 }}>
         {[
           { label: 'Total Reps', val: stats?.reps.length ?? 0, color: 'var(--cyan)' },
           { label: 'Avg Accuracy', val: stats?.reps.length ? `${avgAccuracy}%` : '—', color: 'var(--green)' },
@@ -87,6 +90,9 @@ export default async function DashboardPage() {
         </Panel>
         <Panel title="Team Leaderboard"><Leaderboard reps={stats?.reps ?? []} /></Panel>
         <Panel title="Skill Gap Heatmap"><SkillHeatmap levelAccuracy={stats?.levelAccuracy ?? []} /></Panel>
+        <Panel title="Voice Practice">
+          <VoicePracticePanel stats={voiceStats} reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} />
+        </Panel>
         <Panel title="Activity This Week"><ActivityBar activity={stats?.activity ?? []} /></Panel>
         {stats?.inviteCode && (
           <Panel title="Invite Link">

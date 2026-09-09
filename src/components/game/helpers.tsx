@@ -32,6 +32,32 @@ export function OptBtn({ text, state, disabled, onClick }: { text: string; state
   )
 }
 
+const voiceReviewPrimaryBtn: React.CSSProperties = { width:'100%', cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'#04121c', background:'var(--cyan)', borderRadius:10, padding:'12px 18px', boxShadow:'var(--glow-cyan)', touchAction:'manipulation' }
+const voiceReviewGhostBtn: React.CSSProperties = { cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent', borderRadius:10, padding:'12px 18px', touchAction:'manipulation' }
+
+/** The listen-back checkpoint shared by every AI-voice-partner mode: hear
+    the raw take, then confirm (upload) or re-record — nothing uploads until
+    the rep chooses "sounds good". */
+export function RecordReviewControls({ previewUrl, onConfirm, onRerecord }: { previewUrl: string; onConfirm: () => void; onRerecord: () => void }) {
+  const t = useT()
+  return (
+    <>
+      <div style={{ fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.1em', textTransform:'uppercase', color:'var(--ink-dim)', marginBottom:8 }}>{t('voice.reviewLabel')}</div>
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- live mic recording, no captions available */}
+      <audio controls src={previewUrl} style={{ width:'100%', marginBottom:12 }} />
+      <button onClick={onConfirm} style={voiceReviewPrimaryBtn}>{t('voice.sendRecording')}</button>
+      <button onClick={onRerecord} style={{ ...voiceReviewGhostBtn, width:'100%', marginTop:10 }}>{t('voice.rerecord')}</button>
+    </>
+  )
+}
+
+/** Announces AI-voice-partner phase changes (recording/thinking/speaking/
+    error) to screen readers — the visible label inside the mic button only
+    reaches a sighted user watching it; this mirrors it into a live region. */
+export function VoiceStatusAnnouncer({ text }: { text: string }) {
+  return <div aria-live="polite" aria-atomic="true" className="sr-only">{text}</div>
+}
+
 export function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }

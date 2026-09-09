@@ -4,7 +4,7 @@ import { useT, useLang, useGameData } from '@/lib/i18n'
 import type { Doctor } from '@/types/game'
 import { useVoicePartner } from '@/hooks/useVoicePartner'
 import { TURN_CAP, CLEAR_STEPS } from '@/lib/voice-partner-core'
-import { Feedback } from './helpers'
+import { Feedback, RecordReviewControls, VoiceStatusAnnouncer } from './helpers'
 
 interface Props {
   doctor: Doctor
@@ -20,7 +20,7 @@ export default function VoicePartner({ doctor, onDone }: Props) {
   const t = useT()
   const { lang } = useLang()
   const { STYLES } = useGameData()
-  const { phase, transcript, turnCount, outcome, openingText, objectionType, clearStepsHit, startVoicePartner, startRecording, stopRecording, reset } = useVoicePartner(doctor.id, lang)
+  const { phase, errorKind, transcript, turnCount, outcome, openingText, objectionType, clearStepsHit, previewUrl, startVoicePartner, startRecording, stopRecording, confirmRecording, rerecord, reset } = useVoicePartner(doctor.id, lang)
   const [consentChecked, setConsentChecked] = useState(false)
   const [consented, setConsented] = useState(false)
 
@@ -66,12 +66,20 @@ export default function VoicePartner({ doctor, onDone }: Props) {
     )
   }
 
+  const errorLabel =
+    errorKind === 'mic' ? t('voice.errorMic') :
+    errorKind === 'network' ? t('voice.errorNetwork') :
+    errorKind === 'api' ? t('voice.errorApi') :
+    errorKind === 'bad_response' ? t('voice.errorBadResponse') :
+    t('voice.error')
+
   const label =
     phase === 'opening' ? t('voice.connecting') :
     phase === 'recording' ? t('voice.listening') :
     phase === 'sending' ? t('voice.thinking') :
     phase === 'playing' ? t('voice.speaking') :
-    phase === 'error' ? t('voice.error') :
+    phase === 'ratelimited' ? t('voice.rateLimited') :
+    phase === 'error' ? errorLabel :
     t('voice.tapToSpeak')
 
   const clearSummaryHtml = objectionType
@@ -94,19 +102,27 @@ export default function VoicePartner({ doctor, onDone }: Props) {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14, maxHeight: 320, overflowY: 'auto' }}>
           {transcript.map((turn, i) => (
-            <div key={i} style={{
+            <div key={i} aria-label={`${turn.role === 'doctor' ? t('voice.speakerDoctor') : t('voice.speakerYou')}: ${turn.text}`} style={{
               alignSelf: turn.role === 'doctor' ? 'flex-start' : 'flex-end',
               maxWidth: '85%', borderRadius: 12, padding: '9px 12px', fontSize: 13.5, lineHeight: 1.5,
               background: turn.role === 'doctor' ? 'rgba(0,0,0,.25)' : 'rgba(62,224,143,.1)',
               border: `1px solid ${turn.role === 'doctor' ? 'var(--line)' : 'var(--green)'}`,
             }}>
+              <span aria-hidden="true" style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 2 }}>
+                {turn.role === 'doctor' ? t('voice.speakerDoctor') : t('voice.speakerYou')}
+              </span>
               {turn.text}
             </div>
           ))}
         </div>
 
-        {!outcome && (
+        {!outcome && phase === 'review' && previewUrl && (
+          <RecordReviewControls previewUrl={previewUrl} onConfirm={confirmRecording} onRerecord={rerecord} />
+        )}
+
+        {!outcome && phase !== 'review' && (
           <>
+            <VoiceStatusAnnouncer text={label} />
             {/* Stays enabled in the 'error' phase on purpose: an upstream failure
                 is retried by simply speaking again — the client-held transcript
                 and turn count are untouched, per the spec's error contract. */}

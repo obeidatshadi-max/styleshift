@@ -1,53 +1,29 @@
 'use client'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import type { OpeningCriterion } from '@/lib/voice-partner-opening'
 import { isOpeningCriterion } from '@/lib/voice-partner-opening'
+import { logVoiceEvent } from '@/lib/voice-events'
+import type { VoiceErrorKind } from '@/lib/voice-events'
+import { isConciseDuration } from '@/lib/voice-duration'
+import { speak, playBase64Audio } from '@/lib/voice-tts'
+import { useAudioRecorder } from './useAudioRecorder'
 
 export type VoicePartnerOpeningPhase =
-  | 'idle' | 'recording' | 'sending' | 'playing' | 'notconfigured' | 'error' | 'ratelimited'
+  | 'idle' | 'recording' | 'review' | 'sending' | 'playing' | 'notconfigured' | 'error' | 'ratelimited'
 
-export type VoicePartnerOpeningResult = { doctorText: string; criteriaHit: OpeningCriterion[] }
-
-async function speak(text: string, lang: 'en' | 'ar'): Promise<string | null> {
-  const res = await fetch('/api/voice-partner/speak', {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text, lang }),
-  })
-  if (!res.ok) return null
-  const data = await res.json().catch(() => null) as { audio?: string } | null
-  return data?.audio ?? null
-}
-
-function playBase64Audio(base64: string): Promise<void> {
-  return new Promise(resolve => {
-    const audio = new Audio(`data:audio/mp3;base64,${base64}`)
-    audio.onended = () => resolve()
-    audio.onerror = () => resolve()
-    void audio.play().catch(() => resolve())
-  })
-}
+export type VoicePartnerOpeningResult = { doctorText: string; criteriaHit: OpeningCriterion[]; durationSec: number }
 
 export function useVoicePartnerOpening(doctorId: string, lang: 'en' | 'ar') {
   const [phase, setPhase] = useState<VoicePartnerOpeningPhase>('idle')
+  const [errorKind, setErrorKind] = useState<VoiceErrorKind | null>(null)
   const [result, setResult] = useState<VoicePartnerOpeningResult | null>(null)
-
-  const streamRef = useRef<MediaStream | null>(null)
-  const mediaRecRef = useRef<MediaRecorder | null>(null)
-  const chunksRef = useRef<Blob[]>([])
+  const recorder = useAudioRecorder('opening', lang)
 
   const startRecording = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      streamRef.current = stream
-      chunksRef.current = []
-      const rec = new MediaRecorder(stream)
-      rec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
-      mediaRecRef.current = rec
-      rec.start()
-      setPhase('recording')
-    } catch {
-      setPhase('error')
-    }
-  }, [])
+    const ok = await recorder.start()
+    if (ok) { setPhase('recording'); setErrorKind(null) }
+    else { setPhase('error'); setErrorKind('mic') }
+  }, [recorder])
 
   const saveSessionResult = useCallback(async (criteriaHit: OpeningCriterion[]) => {
     try {
@@ -64,17 +40,24 @@ export function useVoicePartnerOpening(doctorId: string, lang: 'en' | 'ar') {
     }
   }, [doctorId])
 
+  // Stops recording and moves to a listen-back checkpoint — nothing uploads
+  // yet. The rep hears exactly what was captured before it's sent for
+  // transcription, so a bad take can be discarded instead of judged blind.
   const stopRecording = useCallback(async () => {
-    const rec = mediaRecRef.current
-    if (!rec) return
-    setPhase('sending')
+    await recorder.stop()
+    setPhase('review')
+  }, [recorder])
 
-    const blob: Blob = await new Promise(resolve => {
-      rec.onstop = () => resolve(new Blob(chunksRef.current, { type: rec.mimeType || 'audio/webm' }))
-      rec.stop()
-    })
-    streamRef.current?.getTracks().forEach(t => t.stop())
-    streamRef.current = null
+  const rerecord = useCallback(() => {
+    recorder.discard()
+    setPhase('idle')
+  }, [recorder])
+
+  const confirmRecording = useCallback(async () => {
+    const taken = recorder.take()
+    if (!taken) return
+    const { blob, durationSec } = taken
+    setPhase('sending')
 
     try {
       const form = new FormData()
@@ -83,40 +66,42 @@ export function useVoicePartnerOpening(doctorId: string, lang: 'en' | 'ar') {
       form.append('audio', blob, 'opening.webm')
 
       const res = await fetch('/api/voice-partner/opening-statement', { method: 'POST', body: form })
-      if (res.status === 503) { setPhase('notconfigured'); return }
-      if (res.status === 429) { setPhase('ratelimited'); return }
-      if (!res.ok) { setPhase('error'); return }
+      if (res.status === 503) { setPhase('notconfigured'); logVoiceEvent('opening', lang, 'not_configured'); return }
+      if (res.status === 429) { setPhase('ratelimited'); logVoiceEvent('opening', lang, 'rate_limited'); return }
+      if (!res.ok) { setPhase('error'); setErrorKind('api'); logVoiceEvent('opening', lang, 'api_error', { status: res.status }); return }
       const data = await res.json().catch(() => null) as { doctorText?: string; criteriaHit?: unknown } | null
-      if (!data?.doctorText) { setPhase('error'); return }
+      if (!data?.doctorText) { setPhase('error'); setErrorKind('bad_response'); logVoiceEvent('opening', lang, 'bad_response'); return }
 
-      const criteriaHit = Array.isArray(data.criteriaHit) ? data.criteriaHit.filter(isOpeningCriterion) : []
-      setResult({ doctorText: data.doctorText, criteriaHit })
+      // The judge model only sees the transcript, so it can't reliably time the
+      // statement — it guesses "concise" from wording alone. Override that one
+      // criterion with the actually-measured recording duration instead.
+      const judgedCriteria = Array.isArray(data.criteriaHit) ? data.criteriaHit.filter(isOpeningCriterion) : []
+      const concise = isConciseDuration(durationSec)
+      const criteriaHit = concise
+        ? Array.from(new Set([...judgedCriteria, 'concise' as OpeningCriterion]))
+        : judgedCriteria.filter(c => c !== 'concise')
+      setResult({ doctorText: data.doctorText, criteriaHit, durationSec })
       void saveSessionResult(criteriaHit)
+      logVoiceEvent('opening', lang, 'session_complete', { criteriaHit: criteriaHit.length, durationSec })
 
       const audio = await speak(data.doctorText, lang)
+      if (!audio) logVoiceEvent('opening', lang, 'tts_failed')
       setPhase('playing')
       if (audio) await playBase64Audio(audio)
       setPhase('idle')
     } catch {
       setPhase('error')
+      setErrorKind('network')
+      logVoiceEvent('opening', lang, 'network_error')
     }
-  }, [doctorId, lang, saveSessionResult])
+  }, [doctorId, lang, saveSessionResult, recorder])
 
   const reset = useCallback(() => {
-    // Stop the recorder before its source tracks — some browsers only fire
-    // onstop reliably when told directly, rather than inferring it from the
-    // stream going away, which left a leaving-mid-recording tap with a live
-    // mic (indicator stays lit until the tab reloads).
-    if (mediaRecRef.current && mediaRecRef.current.state !== 'inactive') {
-      try { mediaRecRef.current.stop() } catch { /* already stopping */ }
-    }
-    mediaRecRef.current = null
-    chunksRef.current = []
-    streamRef.current?.getTracks().forEach(t => t.stop())
-    streamRef.current = null
+    recorder.abort()
     setPhase('idle')
+    setErrorKind(null)
     setResult(null)
-  }, [])
+  }, [recorder])
 
-  return { phase, result, startRecording, stopRecording, reset }
+  return { phase, errorKind, result, previewUrl: recorder.previewUrl, startRecording, stopRecording, confirmRecording, rerecord, reset }
 }

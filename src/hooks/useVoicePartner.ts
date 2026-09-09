@@ -1,47 +1,32 @@
 'use client'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { XP_VALUES } from '@/lib/game-data'
 import type { VoicePartnerTurn, TurnOutcome, ObjectionType, ClearStep } from '@/lib/voice-partner-core'
 import { isObjectionType, isClearStep } from '@/lib/voice-partner-core'
+import { logVoiceEvent } from '@/lib/voice-events'
+import type { VoiceErrorKind } from '@/lib/voice-events'
+import { speak, playBase64Audio } from '@/lib/voice-tts'
+import { useAudioRecorder } from './useAudioRecorder'
 
 export type VoicePartnerPhase =
-  | 'idle' | 'opening' | 'recording' | 'sending' | 'playing' | 'notconfigured' | 'error'
-
-async function speak(text: string, lang: 'en' | 'ar'): Promise<string | null> {
-  const res = await fetch('/api/voice-partner/speak', {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text, lang }),
-  })
-  if (!res.ok) return null
-  const data = await res.json().catch(() => null) as { audio?: string } | null
-  return data?.audio ?? null
-}
-
-function playBase64Audio(base64: string): Promise<void> {
-  return new Promise(resolve => {
-    const audio = new Audio(`data:audio/mp3;base64,${base64}`)
-    audio.onended = () => resolve()
-    audio.onerror = () => resolve()
-    void audio.play().catch(() => resolve())
-  })
-}
+  | 'idle' | 'opening' | 'recording' | 'review' | 'sending' | 'playing' | 'notconfigured' | 'ratelimited' | 'error'
 
 export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
   const supabase = createClient()
   const [phase, setPhase] = useState<VoicePartnerPhase>('idle')
+  const [errorKind, setErrorKind] = useState<VoiceErrorKind | null>(null)
   const [transcript, setTranscript] = useState<VoicePartnerTurn[]>([])
   const [turnCount, setTurnCount] = useState(0)
   const [outcome, setOutcome] = useState<TurnOutcome | null>(null)
   const [openingText, setOpeningText] = useState('')
   const [objectionType, setObjectionType] = useState<ObjectionType | null>(null)
   const [clearStepsHit, setClearStepsHit] = useState<ClearStep[]>([])
-
-  const streamRef = useRef<MediaStream | null>(null)
-  const mediaRecRef = useRef<MediaRecorder | null>(null)
-  const chunksRef = useRef<Blob[]>([])
+  const recorder = useAudioRecorder('objection', lang)
 
   const startVoicePartner = useCallback(async () => {
     setPhase('opening')
+    setErrorKind(null)
     setTranscript([])
     setTurnCount(0)
     setOutcome(null)
@@ -52,37 +37,32 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ doctorId, lang }),
       })
-      if (res.status === 503) { setPhase('notconfigured'); return }
-      if (!res.ok) { setPhase('error'); return }
+      if (res.status === 503) { setPhase('notconfigured'); logVoiceEvent('objection', lang, 'not_configured', { endpoint: 'open' }); return }
+      if (res.status === 429) { setPhase('ratelimited'); logVoiceEvent('objection', lang, 'rate_limited', { endpoint: 'open' }); return }
+      if (!res.ok) { setPhase('error'); setErrorKind('api'); logVoiceEvent('objection', lang, 'api_error', { endpoint: 'open', status: res.status }); return }
       const data = await res.json().catch(() => null) as { doctorText?: string; objectionType?: string } | null
-      if (!data?.doctorText || !isObjectionType(data.objectionType)) { setPhase('error'); return }
+      if (!data?.doctorText || !isObjectionType(data.objectionType)) { setPhase('error'); setErrorKind('bad_response'); logVoiceEvent('objection', lang, 'bad_response', { endpoint: 'open' }); return }
       setOpeningText(data.doctorText)
       setObjectionType(data.objectionType)
       setTranscript([{ role: 'doctor', text: data.doctorText }])
 
       const audio = await speak(data.doctorText, lang)
+      if (!audio) logVoiceEvent('objection', lang, 'tts_failed', { endpoint: 'open' })
       setPhase('playing')
       if (audio) await playBase64Audio(audio)
       setPhase('idle')
     } catch {
       setPhase('error')
+      setErrorKind('network')
+      logVoiceEvent('objection', lang, 'network_error', { endpoint: 'open' })
     }
   }, [doctorId, lang])
 
   const startRecording = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      streamRef.current = stream
-      chunksRef.current = []
-      const rec = new MediaRecorder(stream)
-      rec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
-      mediaRecRef.current = rec
-      rec.start()
-      setPhase('recording')
-    } catch {
-      setPhase('error')
-    }
-  }, [])
+    const ok = await recorder.start()
+    if (ok) { setPhase('recording'); setErrorKind(null) }
+    else { setPhase('error'); setErrorKind('mic') }
+  }, [recorder])
 
   const awardXpOnWin = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -110,17 +90,24 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
     }
   }, [doctorId])
 
+  // Stops recording and moves to a listen-back checkpoint — nothing uploads
+  // yet. The rep hears exactly what was captured before it's sent for
+  // transcription, so a bad take can be discarded instead of judged blind.
   const stopRecording = useCallback(async () => {
-    const rec = mediaRecRef.current
-    if (!rec) return
-    setPhase('sending')
+    await recorder.stop()
+    setPhase('review')
+  }, [recorder])
 
-    const blob: Blob = await new Promise(resolve => {
-      rec.onstop = () => resolve(new Blob(chunksRef.current, { type: rec.mimeType || 'audio/webm' }))
-      rec.stop()
-    })
-    streamRef.current?.getTracks().forEach(t => t.stop())
-    streamRef.current = null
+  const rerecord = useCallback(() => {
+    recorder.discard()
+    setPhase('idle')
+  }, [recorder])
+
+  const confirmRecording = useCallback(async () => {
+    const taken = recorder.take()
+    if (!taken) return
+    const { blob } = taken
+    setPhase('sending')
 
     if (!objectionType) { setPhase('error'); return }
 
@@ -133,12 +120,13 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
       form.append('objectionType', objectionType)
 
       const res = await fetch('/api/voice-partner/turn', { method: 'POST', body: form })
-      if (res.status === 503) { setPhase('notconfigured'); return }
-      if (!res.ok) { setPhase('error'); return }
+      if (res.status === 503) { setPhase('notconfigured'); logVoiceEvent('objection', lang, 'not_configured', { endpoint: 'turn' }); return }
+      if (res.status === 429) { setPhase('ratelimited'); logVoiceEvent('objection', lang, 'rate_limited', { endpoint: 'turn' }); return }
+      if (!res.ok) { setPhase('error'); setErrorKind('api'); logVoiceEvent('objection', lang, 'api_error', { endpoint: 'turn', status: res.status }); return }
       const data = await res.json().catch(() => null) as {
         repText?: string; doctorText?: string; outcome?: TurnOutcome; turnCount?: number; clearSteps?: unknown
       } | null
-      if (!data?.repText || !data.doctorText || !data.outcome) { setPhase('error'); return }
+      if (!data?.repText || !data.doctorText || !data.outcome) { setPhase('error'); setErrorKind('bad_response'); logVoiceEvent('objection', lang, 'bad_response', { endpoint: 'turn' }); return }
 
       const nextTranscript: VoicePartnerTurn[] = [
         ...transcript, { role: 'rep', text: data.repText }, { role: 'doctor', text: data.doctorText },
@@ -156,9 +144,13 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
       if (data.outcome !== 'continue') {
         setOutcome(data.outcome)
         void saveSessionResult(data.outcome, nextTurnCount, mergedSteps, objectionType)
+        logVoiceEvent('objection', lang, 'session_complete', { outcome: data.outcome, turnCount: nextTurnCount })
+      } else {
+        logVoiceEvent('objection', lang, 'turn_complete', { turnCount: nextTurnCount })
       }
 
       const audio = await speak(data.doctorText, lang)
+      if (!audio) logVoiceEvent('objection', lang, 'tts_failed', { endpoint: 'turn' })
       setPhase('playing')
       if (audio) await playBase64Audio(audio)
 
@@ -166,32 +158,25 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
       setPhase('idle')
     } catch {
       setPhase('error')
+      setErrorKind('network')
+      logVoiceEvent('objection', lang, 'network_error', { endpoint: 'turn' })
     }
-  }, [doctorId, lang, transcript, turnCount, awardXpOnWin, objectionType, clearStepsHit, saveSessionResult])
+  }, [doctorId, lang, transcript, turnCount, awardXpOnWin, objectionType, clearStepsHit, saveSessionResult, recorder])
 
   const reset = useCallback(() => {
-    // Stop the recorder before its source tracks — some browsers only fire
-    // onstop reliably when told directly, rather than inferring it from the
-    // stream going away, which left a leaving-mid-recording tap with a live
-    // mic (indicator stays lit until the tab reloads).
-    if (mediaRecRef.current && mediaRecRef.current.state !== 'inactive') {
-      try { mediaRecRef.current.stop() } catch { /* already stopping */ }
-    }
-    mediaRecRef.current = null
-    chunksRef.current = []
-    streamRef.current?.getTracks().forEach(t => t.stop())
-    streamRef.current = null
+    recorder.abort()
     setPhase('idle')
+    setErrorKind(null)
     setTranscript([])
     setTurnCount(0)
     setOutcome(null)
     setOpeningText('')
     setObjectionType(null)
     setClearStepsHit([])
-  }, [])
+  }, [recorder])
 
   return {
-    phase, transcript, turnCount, outcome, openingText, objectionType, clearStepsHit,
-    startVoicePartner, startRecording, stopRecording, reset,
+    phase, errorKind, transcript, turnCount, outcome, openingText, objectionType, clearStepsHit, previewUrl: recorder.previewUrl,
+    startVoicePartner, startRecording, stopRecording, confirmRecording, rerecord, reset,
   }
 }

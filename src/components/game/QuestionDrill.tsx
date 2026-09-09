@@ -4,7 +4,7 @@ import { useT, useLang, useGameData } from '@/lib/i18n'
 import type { Doctor } from '@/types/game'
 import { useQuestionDrill } from '@/hooks/useQuestionDrill'
 import { LISTENING_CUES, type QuestionType, type ListeningCue } from '@/lib/voice-partner-questioning'
-import { Feedback, escapeHtml } from './helpers'
+import { Feedback, escapeHtml, RecordReviewControls, VoiceStatusAnnouncer } from './helpers'
 
 interface Props {
   doctor: Doctor
@@ -25,7 +25,7 @@ export default function QuestionDrill({ doctor, onDone }: Props) {
   const t = useT()
   const { lang } = useLang()
   const { STYLES } = useGameData()
-  const { phase, turn1, result, startRecording, stopRecording, reset } = useQuestionDrill(doctor.id, lang)
+  const { phase, errorKind, turn1, result, previewUrl, startRecording, stopRecording, confirmRecording, rerecord, reset } = useQuestionDrill(doctor.id, lang)
   const [consentChecked, setConsentChecked] = useState(false)
   const [consented, setConsented] = useState(false)
 
@@ -74,7 +74,13 @@ export default function QuestionDrill({ doctor, onDone }: Props) {
     phase === 'sending' ? t('voice.thinking') :
     phase === 'playing' ? t('voice.speaking') :
     phase === 'ratelimited' ? t('voiceQuestion.rateLimited') :
-    phase === 'error' ? t('voice.error') :
+    phase === 'error' ? (
+      errorKind === 'mic' ? t('voice.errorMic') :
+      errorKind === 'network' ? t('voice.errorNetwork') :
+      errorKind === 'api' ? t('voice.errorApi') :
+      errorKind === 'bad_response' ? t('voice.errorBadResponse') :
+      t('voice.error')
+    ) :
     t('voice.tapToSpeak')
 
   const subtitle = turn1 ? t('voiceQuestion.subtitleRespond') : t('voiceQuestion.subtitleAsk')
@@ -103,8 +109,13 @@ export default function QuestionDrill({ doctor, onDone }: Props) {
           </div>
         )}
 
-        {!result && (
+        {!result && phase === 'review' && previewUrl && (
+          <RecordReviewControls previewUrl={previewUrl} onConfirm={confirmRecording} onRerecord={rerecord} />
+        )}
+
+        {!result && phase !== 'review' && (
           <>
+            <VoiceStatusAnnouncer text={label} />
             {/* Stays enabled in the 'error' phase on purpose: an upstream
                 failure is retried by simply recording again. */}
             <button

@@ -4,7 +4,7 @@ import { useT, useLang, useGameData } from '@/lib/i18n'
 import type { Doctor } from '@/types/game'
 import { useVoicePartnerFab } from '@/hooks/useVoicePartnerFab'
 import { FAB_CRITERIA, type FabCriterion } from '@/lib/voice-partner-fab'
-import { Feedback, escapeHtml } from './helpers'
+import { Feedback, escapeHtml, RecordReviewControls, VoiceStatusAnnouncer } from './helpers'
 
 interface Props {
   doctor: Doctor
@@ -20,7 +20,7 @@ export default function VoicePartnerFab({ doctor, onDone }: Props) {
   const t = useT()
   const { lang } = useLang()
   const { STYLES } = useGameData()
-  const { phase, result, startRecording, stopRecording, reset } = useVoicePartnerFab(doctor.id, lang)
+  const { phase, errorKind, result, previewUrl, startRecording, stopRecording, confirmRecording, rerecord, reset } = useVoicePartnerFab(doctor.id, lang)
   const [consentChecked, setConsentChecked] = useState(false)
   const [consented, setConsented] = useState(false)
 
@@ -69,14 +69,21 @@ export default function VoicePartnerFab({ doctor, onDone }: Props) {
     phase === 'sending' ? t('voice.thinking') :
     phase === 'playing' ? t('voice.speaking') :
     phase === 'ratelimited' ? t('voiceFab.rateLimited') :
-    phase === 'error' ? t('voice.error') :
+    phase === 'error' ? (
+      errorKind === 'mic' ? t('voice.errorMic') :
+      errorKind === 'network' ? t('voice.errorNetwork') :
+      errorKind === 'api' ? t('voice.errorApi') :
+      errorKind === 'bad_response' ? t('voice.errorBadResponse') :
+      t('voice.error')
+    ) :
     t('voice.tapToSpeak')
 
   const checklistHtml = result
     ? `<div>${escapeHtml(result.doctorText)}</div>` +
       `<ul style="margin:8px 0 0;padding-inline-start:18px;list-style:none">` +
       FAB_CRITERIA.map(crit => `<li>${result.criteriaHit.includes(crit) ? '✓' : '—'} ${escapeHtml(t(`voiceFab.criterion.${crit}`))}</li>`).join('') +
-      `</ul>`
+      `</ul>` +
+      `<div style="margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--ink-dim)">${escapeHtml(t('voiceFab.durationLabel', { n: String(result.durationSec) }))}</div>`
     : ''
 
   return (
@@ -90,8 +97,13 @@ export default function VoicePartnerFab({ doctor, onDone }: Props) {
           </div>
         </div>
 
-        {!result && (
+        {!result && phase === 'review' && previewUrl && (
+          <RecordReviewControls previewUrl={previewUrl} onConfirm={confirmRecording} onRerecord={rerecord} />
+        )}
+
+        {!result && phase !== 'review' && (
           <>
+            <VoiceStatusAnnouncer text={label} />
             {/* Stays enabled in the 'error' phase on purpose: an upstream
                 failure is retried by simply recording again. */}
             <button

@@ -87,13 +87,6 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
       <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
 
-        <ChampionBanner
-          companyName={t('eyebrow')}
-          period={new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
-        />
-
-        <LeagueStrip />
-
         {assignment && (() => {
           const a = assignment.assignment
           const target = a.target_type === 'category'
@@ -125,6 +118,15 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
           )
         })()}
 
+        {tab === 'train' && <>
+
+        <ChampionBanner
+          companyName={t('eyebrow')}
+          period={new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
+        />
+
+        <LeagueStrip />
+
         {standings && standings.standings.length > 0 && panel(t('rank.title'),
           <>
             <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5, marginBottom:12 }}>
@@ -151,8 +153,6 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
             </div>
           </>
         )}
-
-        {tab === 'train' && <>
 
         {panel(t('group.title'), <GroupPanel />)}
 

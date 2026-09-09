@@ -18,11 +18,15 @@ import VisitPrep from './VisitPrep'
 import Colleagues from './Colleagues'
 import SpsAssessment from './SpsAssessment'
 import FieldCards from './FieldCards'
+import AppNav, { type Section } from './AppNav'
 import type { BadgeName, RepAssignment } from '@/types/game'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
 
 type Screen = 'home' | 'level' | 'result' | 'daily' | 'how' | 'prep' | 'perform' | 'assignment' | 'sps' | 'fieldcards'
+// Screens with no completed profile/onboarding state yet — no escape hatch,
+// so the forced first-run funnel (intro -> Level 1 -> SPS) can't be skipped.
+const NO_NAV_SCREENS: Screen[] = ['how', 'sps']
 const INTRO_KEY = 'styleshift_intro_done'
 
 interface LevelState {
@@ -38,6 +42,12 @@ export default function GameShell() {
   const t = useT()
   const { L2 } = useGameData()
   const [screen, setScreen] = useState<Screen>('home')
+  const [section, setSection] = useState<Section>('train')
+
+  function goToSection(s: Section) {
+    setSection(s)
+    setScreen('home')
+  }
   const [daily, setDaily] = useState<DailyLeaderboard | null>(null)
   const [standings, setStandings] = useState<Standings | null>(null)
   const [assignment, setAssignment] = useState<RepAssignment | null>(null)
@@ -167,6 +177,16 @@ export default function GameShell() {
   const [reactionCount, setReactionCount] = useState(0)
   const [confidence, setConfidence] = useState(0)
 
+  function withNav(el: React.ReactNode) {
+    if (NO_NAV_SCREENS.includes(screen)) return <>{el}</>
+    return (
+      <>
+        <AppNav activeSection={section} onSelectSection={goToSection} showBack={screen !== 'home'} onBack={() => setScreen('home')} />
+        {el}
+      </>
+    )
+  }
+
   if (loading) {
     return (
       <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh', fontFamily:'var(--mono)', fontSize:13, color:'var(--ink-dim)', letterSpacing:'.1em' }}>
@@ -235,23 +255,23 @@ export default function GameShell() {
   }
 
   if (screen === 'how') {
-    return <HowItWorks onDone={finishIntro} />
+    return withNav(<HowItWorks onDone={finishIntro} />)
   }
 
   if (screen === 'prep') {
-    return <VisitPrep onExit={() => setScreen('home')} />
+    return withNav(<VisitPrep onExit={() => setScreen('home')} />)
   }
 
   if (screen === 'fieldcards') {
-    return <FieldCards onExit={() => setScreen('home')} />
+    return withNav(<FieldCards onExit={() => setScreen('home')} />)
   }
 
   if (screen === 'perform') {
-    return <Colleagues onExit={() => setScreen('home')} />
+    return withNav(<Colleagues onExit={() => setScreen('home')} />)
   }
 
   if (screen === 'assignment' && assignQueue[assignPos]) {
-    return (
+    return withNav(
       <DailyChallenge
         key={assignQueue[assignPos]}
         level={2}
@@ -267,7 +287,7 @@ export default function GameShell() {
     const pick = dailyQueue[dailyPos]
     const total = daily?.picks.length ?? DAILY_TOTAL
     const num = total - dailyQueue.length + dailyPos + 1 // 1-based across the full set
-    return (
+    return withNav(
       <DailyChallenge
         key={pick.level}
         level={pick.level}
@@ -280,7 +300,7 @@ export default function GameShell() {
   }
 
   if (screen === 'result' && levelState) {
-    return (
+    return withNav(
       <LevelResult
         level={levelState.level}
         results={levelState.results}
@@ -293,13 +313,13 @@ export default function GameShell() {
 
   if (screen === 'level') {
     const sharedProps = { onBack: () => setScreen('home') }
-    if (activeLevel === 1) return <LevelOne {...sharedProps} onComplete={(r,x,m,b) => handleLevelComplete(r,x,m,b)} />
-    if (activeLevel === 2) return <LevelTwo {...sharedProps} onComplete={(r,x,m,b) => handleLevelComplete(r,x,m,b)} />
-    if (activeLevel === 3) return <LevelThree {...sharedProps} onComplete={(r,x,m,b) => handleLevelComplete(r,x,m,b)} />
-    if (activeLevel === 4) return <LevelFour {...sharedProps} onComplete={(r,x,m,b,meters) => handleLevelComplete(r,x,m,b,meters)} />
+    if (activeLevel === 1) return withNav(<LevelOne {...sharedProps} onComplete={(r,x,m,b) => handleLevelComplete(r,x,m,b)} />)
+    if (activeLevel === 2) return withNav(<LevelTwo {...sharedProps} onComplete={(r,x,m,b) => handleLevelComplete(r,x,m,b)} />)
+    if (activeLevel === 3) return withNav(<LevelThree {...sharedProps} onComplete={(r,x,m,b) => handleLevelComplete(r,x,m,b)} />)
+    if (activeLevel === 4) return withNav(<LevelFour {...sharedProps} onComplete={(r,x,m,b,meters) => handleLevelComplete(r,x,m,b,meters)} />)
   }
 
-  return (
+  return withNav(
     <GameHome
       xp={profile?.xp ?? 0}
       badges={badges}
@@ -319,10 +339,11 @@ export default function GameShell() {
       onUploadAvatar={updateAvatar}
       onStartDaily={startDaily}
       onShowHow={() => setScreen('how')}
-      onShowPrep={() => setScreen('prep')}
-      onShowPerform={() => setScreen('perform')}
+      onShowPrep={() => { setSection('rehearse'); setScreen('prep') }}
+      onShowPerform={() => { setSection('perform'); setScreen('perform') }}
       onShowFieldCards={() => setScreen('fieldcards')}
       onStartLevel={startLevel}
+      tab={section}
     />
   )
 }

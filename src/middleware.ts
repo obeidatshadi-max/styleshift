@@ -28,7 +28,7 @@ export async function middleware(request: NextRequest) {
   // Let /auth/* through unauthenticated: the email-confirmation route handler
   // (/auth/confirm) must run to create the session — bouncing it to /login here
   // would discard the activation token before it's ever exchanged.
-  const publicPaths = ['/login', '/auth', '/invite', '/api/rep-join', '/api/rep-login', '/api/rep-signup', '/api/manager-signup']
+  const publicPaths = ['/login', '/auth', '/invite', '/join-group', '/api/rep-join', '/api/rep-login', '/api/rep-signup', '/api/manager-signup']
   if (!user && !publicPaths.some(p => path.startsWith(p))) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
@@ -43,7 +43,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Profile-based checks — skip for API routes, onboarding, and invite pages
-  if (user && !path.startsWith('/onboarding') && !path.startsWith('/api') && !path.startsWith('/invite')) {
+  if (user && !path.startsWith('/onboarding') && !path.startsWith('/api') && !path.startsWith('/invite') && !path.startsWith('/join-group')) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('company_id, role')

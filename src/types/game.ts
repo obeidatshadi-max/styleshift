@@ -53,6 +53,7 @@ export interface Profile {
   xp: number
   last_visit: string | null
   company_id: string | null
+  group_id: string | null
   role: string
   avatar_url: string | null
   sps_top_key: SpsKey | null

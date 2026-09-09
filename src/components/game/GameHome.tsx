@@ -1,6 +1,7 @@
 'use client'
-import { useState } from 'react'
 import RankBar from './RankBar'
+import GroupPanel from './GroupPanel'
+import type { Section } from './AppNav'
 import KpiPanel from './KpiPanel'
 import type { BadgeName, RepAssignment } from '@/types/game'
 import { createClient } from '@/lib/supabase-browser'
@@ -39,11 +40,11 @@ interface Props {
   onShowPerform: () => void
   onShowFieldCards: () => void
   onStartLevel: (n: number) => void
+  tab: Section
 }
 
-export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onShowPerform, onShowFieldCards, onStartLevel }: Props) {
+export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onShowPerform, onShowFieldCards, onStartLevel, tab }: Props) {
   const unlocked = [1, ...earnedLevels.map(n => n + 1)].filter(n => n <= 4)
-  const [tab, setTab] = useState<'train' | 'rehearse' | 'perform'>('train')
   const router = useRouter()
   const t = useT()
   const badgeLabel = useBadgeLabel()
@@ -151,16 +152,9 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
           </>
         )}
 
-        <div style={{ display:'flex', gap:8, borderBottom:'1px solid var(--line)', marginBottom:2 }}>
-          {(['train', 'rehearse', 'perform'] as const).map(k => (
-            <button key={k} onClick={() => setTab(k)}
-              style={{ flex:1, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.18em', textTransform:'uppercase', padding:'12px 8px', background:'none', border:'none', borderBottom: tab === k ? '2px solid var(--cyan)' : '2px solid transparent', color: tab === k ? 'var(--cyan)' : 'var(--ink-dim)' }}>
-              {t(`nav.tab${k[0].toUpperCase()}${k.slice(1)}`)}
-            </button>
-          ))}
-        </div>
-
         {tab === 'train' && <>
+
+        {panel(t('group.title'), <GroupPanel />)}
 
         {daily && panel(t('daily.title'),
           <>

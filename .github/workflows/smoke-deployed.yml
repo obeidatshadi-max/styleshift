@@ -1,0 +1,41 @@
+name: Smoke test deployed site
+
+# Runs against the live production URL after a push to main, not against a
+# CI-built copy — Netlify's own build (with its real secrets) is what
+# actually ships, so this checks the artifact reps will hit, not a stand-in.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    env:
+      BASE_URL: https://style-shift.netlify.app
+    steps:
+      - name: Wait for Netlify to publish the new deploy
+        run: sleep 90
+
+      - name: Check critical routes for 5xx
+        run: |
+          set -e
+          routes=(
+            "/"
+            "/login"
+            "/invite/nonexistent-code"
+            "/onboarding"
+            "/dashboard"
+            "/play"
+          )
+          fail=0
+          for route in "${routes[@]}"; do
+            url="${BASE_URL}${route}"
+            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 --retry 3 --retry-delay 10 --retry-connrefused "$url")
+            echo "$status  $url"
+            if [ "$status" -ge 500 ]; then
+              echo "::error::$url returned $status"
+              fail=1
+            fi
+          done
+          exit $fail

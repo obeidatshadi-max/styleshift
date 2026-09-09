@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      # Not `next build` — it statically prerenders /login and /onboarding,
+      # whose server components construct a Supabase client that throws
+      # eagerly without NEXT_PUBLIC_SUPABASE_URL/ANON_KEY. Confirmed via a
+      # local build with those vars unset. tsc alone still catches every
+      # type error without needing that secret in this workflow; the actual
+      # production build already runs (with real secrets) on every push to
+      # main via Netlify's own build, and its result is checked below.
+      - name: Typecheck
+        run: npx tsc --noEmit

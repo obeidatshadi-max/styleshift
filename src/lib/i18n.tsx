@@ -490,6 +490,11 @@ const EN: Dict = {
   'roleplay.done': 'Done',
   'roleplay.errorMic': 'Microphone access is needed to record a roleplay. Check your browser permissions and try again.',
   'roleplay.errorDiarize': 'Something went wrong analyzing the recording. Your practice wasn\'t saved — try again.',
+  'roleplay.summaryTitle': 'Cumulative Summary',
+  'roleplay.summarySessionCount': 'Based on {n} sessions',
+  'roleplay.trendImproving': '↑ {metric} improving — up {delta} pts recently',
+  'roleplay.trendDeclining': '↓ {metric} needs attention — down {delta} pts recently',
+  'visit.roleplayHistoryTitle': 'AI Doctor Roleplay History',
   // toggle (label shows the language you switch TO)
   'toggle.switchTo': 'عربي',
 }
@@ -956,6 +961,11 @@ const AR: Dict = {
   'roleplay.done': 'تم',
   'roleplay.errorMic': 'يلزم الوصول إلى الميكروفون لتسجيل تمرين تمثيل الأدوار. تحقق من أذونات المتصفح وحاول مجدداً.',
   'roleplay.errorDiarize': 'حدث خطأ أثناء تحليل التسجيل. لم يتم حفظ تمرينك — حاول مجدداً.',
+  'roleplay.summaryTitle': 'ملخّص تراكمي',
+  'roleplay.summarySessionCount': 'استناداً إلى {n} جلسات',
+  'roleplay.trendImproving': '↑ تحسّن في {metric} — ارتفاع {delta} نقطة مؤخراً',
+  'roleplay.trendDeclining': '↓ {metric} يحتاج انتباهاً — انخفاض {delta} نقطة مؤخراً',
+  'visit.roleplayHistoryTitle': 'سجل تمثيل الأدوار مع الطبيب الافتراضي',
   'toggle.switchTo': 'EN',
 }
 

@@ -3,6 +3,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useT, useLang, useGameData } from '@/lib/i18n'
 import { useDoctors } from '@/hooks/useDoctors'
 import { useDoctorVisits } from '@/hooks/useDoctorVisits'
+import { useDoctorRoleplaySessions } from '@/hooks/useDoctorRoleplaySessions'
+import RoleplayHistorySummaryCard from './RoleplayHistorySummaryCard'
 import { deriveStyle, OBJECTION_CATEGORIES } from '@/lib/social-style'
 import type { Assertiveness, Responsiveness } from '@/lib/social-style'
 import { L2_OBJECTION } from '@/lib/scenario-meta'
@@ -213,6 +215,8 @@ export default function VisitPrep({ onExit }: Props) {
           <DoctorHistory doctorId={d.id} />,
           <button onClick={() => setView({ mode: 'logVisit', doctor: d })} style={{ ...ghostBtn, fontSize:11, padding:'6px 12px' }}>{t('visit.logVisit')}</button>
         )}
+
+        {panel(t('visit.roleplayHistoryTitle'), <DoctorRoleplayHistory doctorId={d.id} />)}
       </>
     )
   }
@@ -733,6 +737,33 @@ function DoctorHistory({ doctorId }: { doctorId: string }) {
           {v.promise_made && <div style={historyRow}><span style={historyLabel}>{t('visit.promiseMade')}:</span> {v.promise_made}</div>}
           {v.what_worked && <div style={historyRow}><span style={historyLabel}>{t('visit.whatWorked')}:</span> {v.what_worked}</div>}
           {v.note && <div style={{ ...historyRow, color:'var(--ink-dim)', marginBottom:0 }}>{v.note}</div>}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function DoctorRoleplayHistory({ doctorId }: { doctorId: string }) {
+  const t = useT()
+  const { lang } = useLang()
+  const { sessions, loading } = useDoctorRoleplaySessions(doctorId)
+
+  if (loading) return <div style={{ color:'var(--ink-dim)', fontSize:13 }}>…</div>
+  if (sessions.length === 0) return <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.5 }}>{t('perform.historyEmpty')}</div>
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+      <RoleplayHistorySummaryCard sessions={sessions} />
+      {sessions.map(s => (
+        <div key={s.id} style={{ border:'1px solid var(--line)', borderRadius:10, padding:'10px 12px', background:'rgba(0,0,0,.18)' }}>
+          <div style={{ fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-dim)', marginBottom:6 }}>
+            {new Date(s.created_at).toLocaleDateString(lang === 'ar' ? 'ar' : 'en')}
+          </div>
+          <div style={historyRow}><span style={historyLabel}>{t('roleplay.talkRatio')}:</span> {Math.round(s.talk_ratio * 100)}%</div>
+          <div style={historyRow}><span style={historyLabel}>{t('roleplay.questionRatio')}:</span> {Math.round(s.question_ratio * 100)}%</div>
+          {s.open_question_ratio != null && <div style={historyRow}><span style={historyLabel}>{t('roleplay.openQuestionRatio')}:</span> {Math.round(s.open_question_ratio * 100)}%</div>}
+          {s.paraphrase_score != null && <div style={historyRow}><span style={historyLabel}>{t('roleplay.paraphraseScore')}:</span> {Math.round(s.paraphrase_score * 100)}%</div>}
+          {s.active_listening_score != null && <div style={{ ...historyRow, marginBottom:0 }}><span style={historyLabel}>{t('roleplay.activeListeningTitle')}:</span> {s.active_listening_score}</div>}
         </div>
       ))}
     </div>

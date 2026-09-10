@@ -153,6 +153,8 @@ export default function SpsAssessment({ onComplete }: Props) {
           </div>
         )}
 
+        <p style={{ fontSize: 11.5, lineHeight: 1.5, color: 'var(--ink-dim)', opacity: .75, marginBottom: 14 }}>{t('sps.disclaimer')}</p>
+
         <button style={btnPrimary} onClick={() => onComplete(r)}>{t('sps.continue')} {fwd}</button>
       </div>
     </div>

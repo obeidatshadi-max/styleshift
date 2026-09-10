@@ -11,18 +11,23 @@ export default function OnboardingPage() {
   const [copied, setCopied] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
   const [regenerated, setRegenerated] = useState(false)
+  const [regenerateError, setRegenerateError] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError(null)
+    // A thrown network/offline error here (not just a non-2xx response) must
+    // still land the manager back in a usable, retryable state — before this
+    // caught it, a dropped connection left "Creating..." stuck forever.
     const res = await fetch('/api/onboarding', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ companyName: name }),
-    })
-    const data = await res.json()
-    if (!res.ok) { setError(data.error); setLoading(false); return }
+    }).catch(() => null)
+    if (!res) { setError('Network error — check your connection and try again.'); setLoading(false); return }
+    const data = await res.json().catch(() => null)
+    if (!res.ok || !data) { setError(data?.error ?? 'Something went wrong. Please try again.'); setLoading(false); return }
     const origin = window.location.origin
     setInviteLink(`${origin}/invite/${data.company.invite_code}`)
     setLoading(false)
@@ -37,9 +42,10 @@ export default function OnboardingPage() {
 
   async function regenerateLink() {
     setRegenerating(true)
+    setRegenerateError(false)
     const res = await fetch('/api/onboarding/regenerate-invite', { method: 'POST' }).catch(() => null)
     setRegenerating(false)
-    if (!res?.ok) return
+    if (!res?.ok) { setRegenerateError(true); return }
     const data = await res.json()
     setInviteLink(`${window.location.origin}/invite/${data.company.invite_code}`)
     setRegenerated(true)
@@ -101,6 +107,7 @@ export default function OnboardingPage() {
                 </button>
               </div>
               <div style={{ background: 'rgba(0,0,0,.3)', border: '1px solid var(--line)', borderRadius: 10, padding: '12px 14px', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--cyan)', wordBreak: 'break-all', lineHeight: 1.5 }}>{inviteLink}</div>
+              {regenerateError && <p style={{ color: 'var(--red)', fontSize: 12, marginTop: 6 }}>Couldn&apos;t generate a new link — check your connection and try again. Your current link still works.</p>}
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={copyLink} style={{ ...btnPrimary, flex: 1, width: 'auto' }}>

@@ -332,6 +332,7 @@ const EN: Dict = {
   'visit.whatWorked': 'What worked',
   'visit.generalNote': 'Note',
   'visit.save': 'Save visit',
+  'visit.saveFailed': "Couldn't save — check your connection and try again. Nothing you typed has been lost.",
   'visit.cancel': 'Cancel',
   'visit.sourceManual': 'Visit',
   'visit.sourceWarmup': 'Warm-up',
@@ -485,6 +486,7 @@ const EN: Dict = {
   'sps.complianceLevel.low': 'Low',
   'sps.complianceLevel.moderate': 'Moderate',
   'sps.complianceLevel.elevated': 'Elevated',
+  'sps.disclaimer': "This is a self-reported behavioral read, not a certified psychometric test or a performance evaluation. It's a starting point for coaching conversations — if your own sense of your style differs, that's worth raising with your manager.",
   'sps.continue': 'Continue to StyleShift →',
   // roleplay verbal mirror
   'roleplay.eyebrow': 'Roleplay Practice',
@@ -837,6 +839,7 @@ const AR: Dict = {
   'visit.whatWorked': 'ما نجح',
   'visit.generalNote': 'ملاحظة',
   'visit.save': 'احفظ الزيارة',
+  'visit.saveFailed': 'تعذّر الحفظ — تحقق من اتصالك وحاول مرة أخرى. لم تفقد ما كتبته.',
   'visit.cancel': 'إلغاء',
   'visit.sourceManual': 'زيارة',
   'visit.sourceWarmup': 'إحماء',
@@ -990,6 +993,7 @@ const AR: Dict = {
   'sps.complianceLevel.low': 'منخفض',
   'sps.complianceLevel.moderate': 'متوسط',
   'sps.complianceLevel.elevated': 'مرتفع',
+  'sps.disclaimer': 'هذا تقييم سلوكي ذاتي، وليس اختبارًا نفسيًا معتمدًا أو تقييم أداء رسمي. إنه نقطة انطلاق لمحادثات التدريب — وإذا كان تصورك لأسلوبك مختلفًا، فمن المفيد مناقشة ذلك مع مديرك.',
   'sps.continue': 'المتابعة إلى StyleShift ←',
   // roleplay verbal mirror
   'roleplay.eyebrow': 'تمرين تمثيل الأدوار',

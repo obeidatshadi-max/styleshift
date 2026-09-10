@@ -779,16 +779,22 @@ function LogVisitForm({ doctor, onDone, onCancel }: { doctor: Doctor; onDone: ()
   const [worked, setWorked] = useState('')
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState(false)
 
   async function submit() {
     setSaving(true)
-    await addVisit({
+    setSaveError(false)
+    const saved = await addVisit({
       source: 'manual',
       objection_raised: objection.trim() || null,
       promise_made: promise.trim() || null,
       what_worked: worked.trim() || null,
       note: note.trim() || null,
     })
+    // A failed insert must not silently discard what the rep just typed —
+    // keep the form open with everything still filled in, rather than
+    // navigating away as if it saved.
+    if (!saved) { setSaving(false); setSaveError(true); return }
     onDone()
   }
 
@@ -810,6 +816,7 @@ function LogVisitForm({ doctor, onDone, onCancel }: { doctor: Doctor; onDone: ()
           {field(t('visit.promiseMade'), promise, setPromise)}
           {field(t('visit.whatWorked'), worked, setWorked)}
           {field(t('visit.generalNote'), note, setNote)}
+          {saveError && <p style={{ color:'var(--red)', fontSize:13 }}>{t('visit.saveFailed')}</p>}
           <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
             <button onClick={submit} disabled={saving} style={{ ...primaryBtn, flex:1, opacity: saving ? .6 : 1 }}>{t('visit.save')}</button>
             <button onClick={onCancel} style={ghostBtn}>{t('visit.cancel')}</button>

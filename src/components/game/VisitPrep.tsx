@@ -620,7 +620,7 @@ function CompanyScenarios({ onExit }: { onExit: () => void }) {
 
   if (playing) {
     return <GeneratedDrill
-      scenario={{ name: playing.name, style: playing.style, crisis: playing.crisis, q: playing.q, opts: playing.opts }}
+      scenario={{ name: playing.name, style: playing.style, crisis: playing.crisis, q: playing.q, opts: playing.opts, category: playing.category }}
       onDone={() => setPlaying(null)}
     />
   }

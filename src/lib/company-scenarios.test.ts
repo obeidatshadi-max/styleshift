@@ -5,6 +5,7 @@ import type { CompanyScenario, CompanyScenarioInput } from '@/types/game'
 function validInput(overrides: Partial<CompanyScenarioInput> = {}): CompanyScenarioInput {
   return {
     style: 'driver',
+    category: 'evidence',
     name: 'Dr. Rossi — evidence objection',
     crisis: '"Show me the trial data or I\'m not listening."',
     q: 'How do you respond?',
@@ -43,18 +44,27 @@ describe('validateScenarioInput', () => {
     // @ts-expect-error deliberately invalid for the test
     expect(validateScenarioInput(validInput({ style: 'friendly' }))).toMatch(/style/i)
   })
+
+  it('rejects a missing category', () => {
+    expect(validateScenarioInput(validInput({ category: undefined }))).toMatch(/category/i)
+  })
+
+  it('rejects an invalid category', () => {
+    // @ts-expect-error deliberately invalid for the test
+    expect(validateScenarioInput(validInput({ category: 'weather' }))).toMatch(/category/i)
+  })
 })
 
 describe('toPlayableScenario', () => {
   it('drops the authoring/approval metadata, keeps the playable fields', () => {
     const row: CompanyScenario = {
       id: 'cs1', company_id: 'co1', created_by: 'mgr1',
-      style: 'analytical', name: 'Dr. Kim', crisis: 'crisis text', q: 'question text',
+      style: 'analytical', category: 'safety', name: 'Dr. Kim', crisis: 'crisis text', q: 'question text',
       opts: validInput().opts,
       status: 'approved', approved_by: 'mgr1', approved_at: '2026-09-10T00:00:00Z', created_at: '2026-09-01T00:00:00Z',
     }
     expect(toPlayableScenario(row)).toEqual({
-      name: 'Dr. Kim', style: 'analytical', crisis: 'crisis text', q: 'question text', opts: validInput().opts,
+      name: 'Dr. Kim', style: 'analytical', category: 'safety', crisis: 'crisis text', q: 'question text', opts: validInput().opts,
     })
   })
 })

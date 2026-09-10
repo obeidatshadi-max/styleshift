@@ -1,6 +1,7 @@
 'use client'
 import React from 'react'
 import { useT } from '@/lib/i18n'
+import type { BiasKey } from '@/lib/cognitive-biases'
 
 export function Topline({ level, title, total, idx, results }: { level: number; title: string; total: number; idx: number; results: boolean[] }) {
   return (
@@ -67,6 +68,26 @@ export function Feedback({ ok, title, body }: { ok: boolean; title: string; body
     <div style={{ marginTop:14, borderRadius:12, padding:'13px 14px', fontSize:13.5, lineHeight:1.5, border:`1px solid ${ok?'var(--green)':'var(--red)'}`, background:ok?'rgba(62,224,143,.1)':'rgba(255,93,108,.1)' }}>
       <b style={{ display:'block', fontFamily:'var(--mono)', letterSpacing:'.1em', textTransform:'uppercase', fontSize:11, marginBottom:5, color:ok?'var(--green)':'var(--red)' }}>{title}</b>
       <span dangerouslySetInnerHTML={{ __html: body }} />
+    </div>
+  )
+}
+
+/**
+ * Names the cognitive bias most likely driving this objection category —
+ * separate from Feedback (which explains why THIS response worked/failed).
+ * Bias detection is about the doctor's reasoning, not the rep's answer, so
+ * it stays visible regardless of which option the rep picked.
+ */
+export function BiasCallout({ bias }: { bias: BiasKey }) {
+  const t = useT()
+  return (
+    <div style={{ marginTop:10, borderRadius:12, padding:'13px 14px', fontSize:13, lineHeight:1.5, border:'1px solid var(--purple)', background:'rgba(176,108,255,.07)' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+        <span style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.15em', textTransform:'uppercase', color:'var(--purple)' }}>{t('bias.title')}</span>
+        <span style={{ fontSize:13, fontWeight:700, color:'var(--purple)' }}>{t(`bias.${bias}.name`)}</span>
+      </div>
+      <div style={{ marginBottom:6 }}><b style={{ color:'var(--ink-dim)', fontWeight:600 }}>{t('bias.cueLabel')}:</b> {t(`bias.${bias}.cue`)}</div>
+      <div><b style={{ color:'var(--ink-dim)', fontWeight:600 }}>{t('bias.tacticLabel')}:</b> {t(`bias.${bias}.tactic`)}</div>
     </div>
   )
 }

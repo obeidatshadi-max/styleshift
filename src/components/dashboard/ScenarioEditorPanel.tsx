@@ -1,11 +1,18 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { OBJECTION_CATEGORIES, type ObjectionCategory } from '@/lib/social-style'
 import type { CompanyScenario, StyleKey } from '@/types/game'
 
 const STYLE_LABEL: Record<StyleKey, string> = {
   driver: 'Driver', expressive: 'Expressive', amiable: 'Amiable', analytical: 'Analytical',
 }
 const STYLE_KEYS: StyleKey[] = ['driver', 'expressive', 'amiable', 'analytical']
+
+const CATEGORY_LABEL: Record<ObjectionCategory, string> = {
+  evidence: 'Evidence / data', price: 'Price / cost', safety: 'Safety / side effects',
+  time: 'Time / too busy', competitor: 'Competitor', logistics: 'Stock / delivery',
+  trust: 'Trust / relationship',
+}
 
 const STATUS_COLOR: Record<CompanyScenario['status'], string> = {
   draft: 'var(--ink-dim)', approved: 'var(--green)', archived: 'var(--red)',
@@ -40,6 +47,7 @@ export default function ScenarioEditorPanel() {
   const [scenarios, setScenarios] = useState<CompanyScenario[] | null>(null)
   const [open, setOpen] = useState(false)
   const [style, setStyle] = useState<StyleKey>('driver')
+  const [category, setCategory] = useState<ObjectionCategory>('evidence')
   const [name, setName] = useState('')
   const [crisis, setCrisis] = useState('')
   const [q, setQ] = useState('')
@@ -55,7 +63,7 @@ export default function ScenarioEditorPanel() {
   useEffect(() => { void load() }, [])
 
   function resetForm() {
-    setStyle('driver'); setName(''); setCrisis(''); setQ(''); setOpts(emptyOpts()); setError(null)
+    setStyle('driver'); setCategory('evidence'); setName(''); setCrisis(''); setQ(''); setOpts(emptyOpts()); setError(null)
   }
 
   function updateOpt(i: number, patch: Partial<DraftOpt>) {
@@ -66,7 +74,7 @@ export default function ScenarioEditorPanel() {
     setSaving(true); setError(null)
     const res = await fetch('/api/scenarios', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ style, name, crisis, q, opts }),
+      body: JSON.stringify({ style, category, name, crisis, q, opts }),
     }).catch(() => null)
     setSaving(false)
     if (!res?.ok) { setError('Check every field is filled in, and one option is marked as the winning response.'); return }
@@ -100,7 +108,7 @@ export default function ScenarioEditorPanel() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <div>
                   <span style={{ fontSize: 13.5, fontWeight: 700 }}>{s.name}</span>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-dim)', marginInlineStart: 8 }}>{STYLE_LABEL[s.style]}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-dim)', marginInlineStart: 8 }}>{STYLE_LABEL[s.style]} · {CATEGORY_LABEL[s.category]}</span>
                 </div>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: STATUS_COLOR[s.status] }}>{s.status}</span>
               </div>
@@ -134,6 +142,14 @@ export default function ScenarioEditorPanel() {
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {STYLE_KEYS.map(k => (
                 <button key={k} style={chip(style === k)} onClick={() => setStyle(k)}>{STYLE_LABEL[k]}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <span style={labelStyle}>Objection category — drives the bias callout the rep sees</span>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {OBJECTION_CATEGORIES.map(k => (
+                <button key={k} style={chip(category === k, 'var(--purple)')} onClick={() => setCategory(k)}>{CATEGORY_LABEL[k]}</button>
               ))}
             </div>
           </div>

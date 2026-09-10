@@ -3,8 +3,10 @@ import { useState, useRef } from 'react'
 import { XP_VALUES } from '@/lib/game-data'
 import { useGameData, useT } from '@/lib/i18n'
 import { pickScenarios } from '@/lib/scenario-engine'
+import { L2_OBJECTION } from '@/lib/scenario-meta'
+import { biasForCategory } from '@/lib/cognitive-biases'
 import type { BadgeName } from '@/types/game'
-import { Topline, OptBtn, Feedback, NextRow, Meter } from './helpers'
+import { Topline, OptBtn, Feedback, NextRow, Meter, BiasCallout } from './helpers'
 
 const L2_COUNT = 4
 
@@ -81,6 +83,7 @@ export default function LevelTwo({ onComplete, onBack }: Props) {
         {chosen !== null && (
           <>
             <Feedback ok={item.opts[chosen].r==='win'} title={item.opts[chosen].r==='win' ? t('l2.win') : t('l2.lose')} body={item.opts[chosen].why} />
+            {L2_OBJECTION[item.id] && <BiasCallout bias={biasForCategory(L2_OBJECTION[item.id])} />}
             <NextRow onNext={next} onBack={onBack} isLast={idx >= scenarios.length - 1} />
           </>
         )}

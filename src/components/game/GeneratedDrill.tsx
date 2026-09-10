@@ -2,7 +2,8 @@
 import { useState } from 'react'
 import { useT, useGameData } from '@/lib/i18n'
 import type { GeneratedScenario } from '@/types/game'
-import { OptBtn, Feedback } from './helpers'
+import { biasForCategory } from '@/lib/cognitive-biases'
+import { OptBtn, Feedback, BiasCallout } from './helpers'
 
 interface Props {
   scenario: GeneratedScenario
@@ -46,6 +47,7 @@ export default function GeneratedDrill({ scenario, onDone }: Props) {
         {chosen !== null && (
           <>
             <Feedback ok={scenario.opts[chosen].r === 'win'} title={scenario.opts[chosen].r === 'win' ? t('l2.win') : t('l2.lose')} body={scenario.opts[chosen].why} />
+            {scenario.category && <BiasCallout bias={biasForCategory(scenario.category)} />}
             <div style={{ marginTop:14 }}>
               <button onClick={() => onDone(scenario.opts[chosen].r === 'win')} style={{ cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.15em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'#04121c', background:'var(--cyan)', borderRadius:10, padding:'12px 18px', boxShadow:'var(--glow-cyan)', touchAction:'manipulation' }}>
                 {t('result.logContinue')}

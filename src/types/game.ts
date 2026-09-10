@@ -1,4 +1,5 @@
 import type { SpsKey, SpsResult } from '@/lib/sps-core'
+import type { ObjectionCategory } from '@/lib/social-style'
 
 export type StyleKey = 'driver' | 'expressive' | 'amiable' | 'analytical'
 
@@ -181,17 +182,21 @@ export interface AssignmentRepStatus {
 }
 
 // An AI-generated, doctor-specific objection drill (Visit Prep Layer 2).
+// `category` is optional — the AI-drill prompt doesn't ask for one (yet),
+// but a company-authored scenario always carries it, driving the bias callout.
 export interface GeneratedScenario {
   name: string
   style: StyleKey
   crisis: string
   q: string
   opts: { t: string; r: 'win' | 'escalate'; why: string }[]
+  category?: ObjectionCategory
 }
 
 // A company-authored objection drill. Same playable shape as GeneratedScenario
-// (name/style/crisis/q/opts), plus a manager-authoring/approval workflow —
-// draft is manager-only, approved is visible to the whole company's reps.
+// (name/style/crisis/q/opts/category), plus a manager-authoring/approval
+// workflow — draft is manager-only, approved is visible to the whole
+// company's reps.
 export interface CompanyScenario {
   id: string
   company_id: string
@@ -201,10 +206,11 @@ export interface CompanyScenario {
   crisis: string
   q: string
   opts: { t: string; r: 'win' | 'escalate'; why: string }[]
+  category: ObjectionCategory
   status: 'draft' | 'approved' | 'archived'
   approved_by: string | null
   approved_at: string | null
   created_at: string
 }
 
-export type CompanyScenarioInput = Pick<CompanyScenario, 'style' | 'name' | 'crisis' | 'q' | 'opts'>
+export type CompanyScenarioInput = Pick<CompanyScenario, 'style' | 'name' | 'crisis' | 'q' | 'opts' | 'category'>

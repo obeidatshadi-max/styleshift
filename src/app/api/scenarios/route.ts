@@ -28,7 +28,7 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null)
   const created = await createScenario(user.id, {
-    style: body?.style, name: String(body?.name ?? ''), crisis: String(body?.crisis ?? ''),
+    style: body?.style, category: body?.category, name: String(body?.name ?? ''), crisis: String(body?.crisis ?? ''),
     q: String(body?.q ?? ''), opts: Array.isArray(body?.opts) ? body.opts : [],
   })
   if (!created) return NextResponse.json({ error: 'Invalid scenario or not a manager' }, { status: 400 })

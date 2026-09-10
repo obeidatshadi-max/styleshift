@@ -184,7 +184,11 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
         active_listening_score: built.activeListening.score,
         rep_style: built.repRead?.style ?? null,
         rep_confidence: built.repRead?.confidence ?? null,
-        rep_metrics: built.repRead ?? null,
+        // rep_metrics is JSONB — no migration needed to add fields here.
+        // warmth/predicates ride alongside repRead's own proof (pace/pitch
+        // range/hesitation) so the tonality report can be rebuilt from
+        // history later without re-running acoustic analysis.
+        rep_metrics: built.repRead ? { ...built.repRead, warmth: built.warmth, predicates: built.predicates } : null,
       }).select('id').single()
       if (insertError) {
         console.error('roleplay_sessions insert failed:', insertError.message)

@@ -308,6 +308,8 @@ export interface RoleplayResult {
   activeListening: ActiveListeningResult
   repRead: SocialStyleRead | null
   durationSec: number
+  warmth: number
+  predicates: PredicateCounts
 }
 
 /** Builds the complete, storable roleplay result from diarized utterances plus the rep's captured acoustic samples for the whole recording (they get scoped to the rep's turns internally). */
@@ -326,7 +328,14 @@ export function buildRoleplayResult(
   const { pitchSamples: repPitch, silencePeriods: repSilence } = scopeAcousticToSpeaker(pitchSamples, silencePeriods, turns, repSpeaker)
   const repDurationSec = talkRatio.repMs / 1000
   const metrics = processAcousticData({ pitchSamples: repPitch, silencePeriods: repSilence, transcript, durationSec: repDurationSec })
+  // Both already computed by analyzeDelivery for the style classifier below —
+  // previously only .warmth was read and the rest discarded. Surfacing them
+  // on RoleplayResult is what makes the tonality/key-wording report possible
+  // without a second acoustic pass.
   const delivery = analyzeDelivery({ transcript })
   const repRead = metrics ? classifySocialStyle(metrics, delivery.warmth) : null
-  return { talkRatio, rapidTurnSwitches, questionRatio, openQuestionRatio, paraphraseScore, activeListening, repRead, durationSec: talkRatio.totalMs / 1000 }
+  return {
+    talkRatio, rapidTurnSwitches, questionRatio, openQuestionRatio, paraphraseScore, activeListening, repRead,
+    durationSec: talkRatio.totalMs / 1000, warmth: delivery.warmth, predicates: delivery.predicates,
+  }
 }

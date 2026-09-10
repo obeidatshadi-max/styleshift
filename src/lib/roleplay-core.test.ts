@@ -94,6 +94,9 @@ describe('turn-taking analysis', () => {
     expect(result.paraphraseScore).toBeGreaterThanOrEqual(0)
     expect(result.paraphraseScore).toBeLessThanOrEqual(1)
     expect(['developing', 'solid', 'excellent']).toContain(result.activeListening.label)
+    expect(result.warmth).toBeGreaterThanOrEqual(0)
+    expect(result.warmth).toBeLessThanOrEqual(1)
+    expect(['visual', 'auditory', 'kinesthetic', null]).toContain(result.predicates.dominant)
   })
 
   it('splits rep questions into open vs. closed', () => {

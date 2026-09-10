@@ -53,6 +53,10 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
     color: '#04121c', background: 'var(--cyan)', borderRadius: 10, padding: '12px 18px',
     boxShadow: 'var(--glow-cyan)', touchAction: 'manipulation',
   }
+  const chipStyle: React.CSSProperties = {
+    fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.05em',
+    border: '1px solid var(--line)', borderRadius: 20, padding: '4px 10px', color: 'var(--ink)',
+  }
   const btnGhost: React.CSSProperties = {
     width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 12,
     letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--line)',
@@ -213,6 +217,35 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
           {r.repRead
             ? <div style={{ fontSize: 14 }}>{r.repRead.style} · {r.repRead.confidence}%</div>
             : <p style={{ fontSize: 13, color: 'var(--ink-dim)', lineHeight: 1.5 }}>{t('roleplay.noStyleRead')}</p>}
+        </div>
+
+        {r.repRead && (
+          <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 16 }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('roleplay.tonalityTitle')}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+              {/* Separate namespaces per dimension — hesitationLabel and
+                  rangeLabel can both be 'moderate' but mean different things. */}
+              <span style={chipStyle}>{t(`roleplay.pace.${r.repRead.proof.paceLabel}`)}</span>
+              <span style={chipStyle}>{t(`roleplay.hesitation.${r.repRead.proof.hesitationLabel}`)}</span>
+              <span style={chipStyle}>{t(`roleplay.range.${r.repRead.proof.rangeLabel}`)}</span>
+            </div>
+            <p style={{ fontSize: 11.5, color: 'var(--ink-dim)', lineHeight: 1.5 }}>
+              {t('roleplay.tonalityDetail', { wpm: r.repRead.proof.wpm, hesitations: r.repRead.proof.totalHesitations })}
+            </p>
+          </div>
+        )}
+
+        <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 6 }}>
+            <span>{t('roleplay.rapportTitle')}</span>
+            <span style={{ fontFamily: 'var(--mono)', fontWeight: 700 }}>{Math.round(r.warmth * 100)}%</span>
+          </div>
+          <p style={{ fontSize: 11.5, color: 'var(--ink-dim)', lineHeight: 1.5, marginBottom: r.predicates.dominant ? 8 : 0 }}>{t('roleplay.rapportHint')}</p>
+          {r.predicates.dominant && (
+            <div style={{ fontSize: 12.5 }}>
+              {t('roleplay.dominantWording')} <b>{t(`roleplay.predicate.${r.predicates.dominant}`)}</b>
+            </div>
+          )}
         </div>
 
         {assignment && !assignment.completed && (

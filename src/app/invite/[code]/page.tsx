@@ -1,8 +1,9 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import { useT, useLang } from '@/lib/i18n'
+import { logInviteEvent } from '@/lib/invite-events'
 import LangToggle from '@/components/LangToggle'
 
 export default function InvitePage() {
@@ -16,6 +17,10 @@ export default function InvitePage() {
   const [mobile, setMobile] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [message, setMessage] = useState('')
+
+  // Top of the invite funnel: an anonymous visitor landing on their manager's
+  // link, before any account exists. Fired once per page load, not per retry.
+  useEffect(() => { logInviteEvent('link_opened', code) }, [code])
 
   async function handleJoin(e: React.FormEvent) {
     e.preventDefault()

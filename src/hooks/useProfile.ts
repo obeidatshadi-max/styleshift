@@ -5,6 +5,7 @@ import type { Profile, BadgeName } from '@/types/game'
 import type { SpsResult } from '@/lib/sps-core'
 import { XP_VALUES } from '@/lib/game-data'
 import { todayKey, DAILY_TOTAL } from '@/lib/daily'
+import { logInviteEvent } from '@/lib/invite-events'
 
 export function useProfile() {
   const supabase = createClient()
@@ -105,6 +106,9 @@ export function useProfile() {
     level: number, accuracy: number, xpEarned: number, avgReactionMs?: number
   ) => {
     if (!profile) return
+    // Read before the write below changes it — this is the rep's first-ever
+    // completed level exactly when completedLevels was still empty.
+    const isFirstEverDrill = completedLevels.length === 0
     await supabase.from('sessions').insert({
       rep_id: profile.id, level, accuracy, xp_earned: xpEarned,
       avg_reaction_ms: avgReactionMs ?? null,
@@ -115,7 +119,8 @@ export function useProfile() {
       })
     }
     setCompletedLevels(prev => [...new Set([...prev, level])])
-  }, [profile, supabase])
+    if (isFirstEverDrill) logInviteEvent('first_drill_completed')
+  }, [profile, supabase, completedLevels])
 
   // Records one of today's Daily Challenge questions (one row per UTC day per
   // level; the unique constraint makes re-answering a level a no-op). Awards the

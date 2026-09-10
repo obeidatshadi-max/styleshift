@@ -62,6 +62,10 @@ export async function POST(request: Request) {
       { onConflict: 'id' }
     )
 
+  // Funnel event — best-effort (insert() resolves with an error object rather
+  // than rejecting, so this can't throw and never blocks the rep's join).
+  await admin.from('invite_events').insert({ company_id: company.id, rep_id: userId, stage: 'signup_completed' })
+
   return NextResponse.json({
     token_hash: linkData.properties.hashed_token,
     company_name: company.name,

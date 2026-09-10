@@ -66,7 +66,12 @@ export default function JoinGroupPage() {
         {status === 'done' && (
           <p style={{ color: 'var(--green)', fontFamily: 'var(--mono)', fontWeight: 700 }}>{t('group.joined', { name: groupName })}</p>
         )}
-        {status === 'error' && <p style={{ color: 'var(--red)' }}>{message}</p>}
+        {status === 'error' && (
+          <>
+            <p style={{ color: 'var(--red)', marginBottom: 16 }}>{message}</p>
+            <a href="/play" style={btnStyle}>{t('group.backToGame')}</a>
+          </>
+        )}
       </div>
     </div>
   )

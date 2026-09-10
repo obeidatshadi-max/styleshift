@@ -123,6 +123,9 @@ export default function InvitePage() {
           <p style={{ color: 'var(--ink-dim)', fontSize: 12, marginTop: 12, lineHeight: 1.6 }}>
             {t('join.hint')}
           </p>
+          <a href="/login" style={{ display: 'block', textAlign: 'center', color: 'var(--cyan)', fontSize: 12.5, marginTop: 14, textDecoration: 'none' }}>
+            {t('join.alreadyHaveAccount')}
+          </a>
         </div>
       )}
     </div>

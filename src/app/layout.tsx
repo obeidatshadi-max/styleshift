@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { LanguageProvider } from '@/lib/i18n'
+import OfflineSync from '@/components/OfflineSync'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://style-shift.netlify.app'
 const TITLE = 'StyleShift — Read the room. Win the call.'
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
+        <OfflineSync />
         <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>

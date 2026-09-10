@@ -70,6 +70,10 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Exclude internals and public metadata assets (the share image, icons,
-  // robots/sitemap) so social crawlers can fetch them without the auth redirect.
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|opengraph-image|twitter-image|icon|apple-icon|robots.txt|sitemap.xml).*)'],
+  // robots/sitemap) so social crawlers can fetch them without the auth
+  // redirect. manifest.webmanifest, sw.js and /offline must also stay
+  // reachable unauthenticated — the service worker registers (and the
+  // offline fallback renders) before there's necessarily any session, and
+  // precisely when a session check might itself be unreachable.
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|opengraph-image|twitter-image|icon|apple-icon|robots.txt|sitemap.xml|manifest.webmanifest|sw.js|offline).*)'],
 }

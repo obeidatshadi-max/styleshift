@@ -188,3 +188,23 @@ export interface GeneratedScenario {
   q: string
   opts: { t: string; r: 'win' | 'escalate'; why: string }[]
 }
+
+// A company-authored objection drill. Same playable shape as GeneratedScenario
+// (name/style/crisis/q/opts), plus a manager-authoring/approval workflow —
+// draft is manager-only, approved is visible to the whole company's reps.
+export interface CompanyScenario {
+  id: string
+  company_id: string
+  created_by: string
+  style: StyleKey
+  name: string
+  crisis: string
+  q: string
+  opts: { t: string; r: 'win' | 'escalate'; why: string }[]
+  status: 'draft' | 'approved' | 'archived'
+  approved_by: string | null
+  approved_at: string | null
+  created_at: string
+}
+
+export type CompanyScenarioInput = Pick<CompanyScenario, 'style' | 'name' | 'crisis' | 'q' | 'opts'>

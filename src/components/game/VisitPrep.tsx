@@ -9,7 +9,7 @@ import { deriveStyle, OBJECTION_CATEGORIES } from '@/lib/social-style'
 import type { Assertiveness, Responsiveness } from '@/lib/social-style'
 import { L2_OBJECTION } from '@/lib/scenario-meta'
 import { shuffle } from '@/lib/scenario-engine'
-import type { Doctor, DoctorInput, DoctorVisit, StyleKey, Specialty, GeneratedScenario } from '@/types/game'
+import type { Doctor, DoctorInput, DoctorVisit, StyleKey, Specialty, GeneratedScenario, CompanyScenario } from '@/types/game'
 import DailyChallenge from './DailyChallenge'
 import GeneratedDrill from './GeneratedDrill'
 import VoiceRecorder from './VoiceRecorder'
@@ -35,6 +35,7 @@ const SPECIALTY_KEYS: Specialty[] = [
 
 type View =
   | { mode: 'list' }
+  | { mode: 'company' }
   | { mode: 'form'; doctor?: Doctor }
   | { mode: 'quickPractice' }
   | { mode: 'detail'; doctor: Doctor }
@@ -85,6 +86,11 @@ export default function VisitPrep({ onExit }: Props) {
   // ───────────────────────── WARM-UP ─────────────────────────
   if (view.mode === 'warmup') {
     return <WarmUp doctor={view.doctor} L1={L1} L2={L2} L3={L3} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
+  }
+
+  // ───────────────────────── COMPANY SCENARIOS ─────────────────────────
+  if (view.mode === 'company') {
+    return <CompanyScenarios onExit={() => setView({ mode: 'list' })} />
   }
 
   // ───────────────────────── AI BESPOKE DRILL ─────────────────────────
@@ -263,6 +269,7 @@ export default function VisitPrep({ onExit }: Props) {
           <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5, marginBottom:14 }}>{t('prep.subtitle')}</div>
           <button onClick={() => setView({ mode: 'form' })} style={{ ...primaryBtn, width:'100%' }}>{t('prep.addDoctor')}</button>
           <button onClick={() => setView({ mode: 'quickPractice' })} style={{ ...ghostBtn, width:'100%', marginTop:8 }}>{t('prep.quickPractice')}</button>
+          <button onClick={() => setView({ mode: 'company' })} style={{ ...ghostBtn, width:'100%', marginTop:8, borderColor:'var(--purple)', color:'var(--purple)' }}>{t('prep.companyScenarios')}</button>
         </>,
       )}
       {panel(t('prep.myDoctors'),
@@ -599,6 +606,53 @@ function AiDrill({ doctor, onDone }: { doctor: Doctor; onDone: () => void }) {
   )
 }
 
+// ───────────────────────── COMPANY SCENARIOS (manager-authored, approved) ─────────────────────────
+function CompanyScenarios({ onExit }: { onExit: () => void }) {
+  const t = useT()
+  const [scenarios, setScenarios] = useState<CompanyScenario[] | null>(null)
+  const [playing, setPlaying] = useState<CompanyScenario | null>(null)
+
+  useEffect(() => {
+    let active = true
+    fetch('/api/scenarios').then(res => res.ok ? res.json() : []).then(data => { if (active) setScenarios(data) }).catch(() => { if (active) setScenarios([]) })
+    return () => { active = false }
+  }, [])
+
+  if (playing) {
+    return <GeneratedDrill
+      scenario={{ name: playing.name, style: playing.style, crisis: playing.crisis, q: playing.q, opts: playing.opts }}
+      onDone={() => setPlaying(null)}
+    />
+  }
+
+  return (
+    <div style={{ position:'relative', zIndex:1, maxWidth:560, margin:'0 auto', padding:14, display:'flex', flexDirection:'column', gap:14 }}>
+      <div style={{ display:'flex', justifyContent:'flex-end' }}>
+        <button onClick={onExit} style={{ ...ghostBtn, border:'none', color:'var(--ink-dim)', padding:'4px 0' }}>{t('prep.backToList')}</button>
+      </div>
+      {panel(t('prep.companyScenarios'),
+        scenarios === null
+          ? <div style={{ color:'var(--ink-dim)', fontSize:13 }}>…</div>
+          : scenarios.length === 0
+          ? <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.5 }}>{t('prep.companyScenariosEmpty')}</div>
+          : <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5, marginBottom:6 }}>{t('prep.companyScenariosSubtitle')}</div>
+              {scenarios.map(s => (
+                <button key={s.id} onClick={() => setPlaying(s)}
+                  style={{ display:'flex', alignItems:'center', gap:12, textAlign:'start', cursor:'pointer', border:'1px solid var(--purple)', borderRadius:12, padding:'11px 13px', background:'rgba(176,108,255,.06)', color:'var(--ink)' }}>
+                  <span style={{ flex:1, minWidth:0 }}>
+                    <b style={{ fontSize:14.5, display:'block' }}>{s.name}</b>
+                    <span style={{ fontSize:12, color:'var(--ink-dim)' }}>{s.crisis}</span>
+                  </span>
+                  <span style={{ color:'var(--purple)' }}>›</span>
+                </button>
+              ))}
+            </div>
+      )}
+    </div>
+  )
+}
+
 // ───────────────────────── AI voice partner wrapper (owns doctor_visits logging) ─────────────────────────
 function VoicePartnerScreen({ doctor, onDone }: { doctor: Doctor; onDone: () => void }) {
   const t = useT()
@@ -731,7 +785,12 @@ function DoctorHistory({ doctorId }: { doctorId: string }) {
         <div key={v.id} style={{ border:'1px solid var(--line)', borderRadius:10, padding:'10px 12px', background:'rgba(0,0,0,.18)' }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
             <span style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.1em', textTransform:'uppercase', color:'var(--cyan)' }}>{t(SOURCE_LABEL_KEY[v.source])}</span>
-            <span style={{ fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-dim)' }}>{new Date(v.created_at).toLocaleDateString(lang === 'ar' ? 'ar' : 'en')}</span>
+            <span style={{ display:'flex', alignItems:'center', gap:8 }}>
+              {v.id.startsWith('offline-') && (
+                <span style={{ fontFamily:'var(--mono)', fontSize:9, letterSpacing:'.08em', textTransform:'uppercase', color:'var(--amber)', border:'1px solid var(--amber)', borderRadius:8, padding:'1px 6px' }}>{t('visit.pendingSync')}</span>
+              )}
+              <span style={{ fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-dim)' }}>{new Date(v.created_at).toLocaleDateString(lang === 'ar' ? 'ar' : 'en')}</span>
+            </span>
           </div>
           {v.objection_raised && <div style={historyRow}><span style={historyLabel}>{t('visit.objectionRaised')}:</span> {v.objection_raised}</div>}
           {v.promise_made && <div style={historyRow}><span style={historyLabel}>{t('visit.promiseMade')}:</span> {v.promise_made}</div>}

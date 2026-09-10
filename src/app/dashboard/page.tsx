@@ -13,6 +13,7 @@ import VoicePracticePanel from '@/components/dashboard/VoicePracticePanel'
 import { getVoiceStats } from '@/lib/voice-stats'
 import CoachingQueueAndAssign from '@/components/dashboard/CoachingQueueAndAssign'
 import { getCoachingQueue } from '@/lib/coaching-queue'
+import ScenarioEditorPanel from '@/components/dashboard/ScenarioEditorPanel'
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -91,6 +92,7 @@ export default async function DashboardPage() {
           queue={coachingQueue} current={assignment}
           reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))}
         />
+        <Panel title="Company Scenarios"><ScenarioEditorPanel /></Panel>
         <Panel title="Team Leaderboard"><Leaderboard reps={stats?.reps ?? []} /></Panel>
         <Panel title="Skill Gap Heatmap"><SkillHeatmap levelAccuracy={stats?.levelAccuracy ?? []} /></Panel>
         <Panel title="Voice Practice">

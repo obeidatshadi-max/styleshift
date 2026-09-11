@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase-browser'
 import { useT, useLang } from '@/lib/i18n'
 import { logInviteEvent } from '@/lib/invite-events'
 import LangToggle from '@/components/LangToggle'
@@ -15,6 +14,7 @@ export default function InvitePage() {
 
   const [name, setName] = useState('')
   const [mobile, setMobile] = useState('')
+  const [pin, setPin] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [message, setMessage] = useState('')
 
@@ -30,7 +30,7 @@ export default function InvitePage() {
     const res = await fetch('/api/rep-join', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, mobile, inviteCode: code }),
+      body: JSON.stringify({ name, mobile, pin, inviteCode: code }),
     })
     const data = await res.json()
     if (!res.ok) {
@@ -39,18 +39,7 @@ export default function InvitePage() {
       return
     }
 
-    // Exchange hashed token for a real session — no email required
-    const supabase = createClient()
-    const { error: otpError } = await supabase.auth.verifyOtp({
-      token_hash: data.token_hash,
-      type: 'magiclink',
-    })
-    if (otpError) {
-      setStatus('error')
-      setMessage(t('join.otpError'))
-      return
-    }
-
+    // Session cookie is already set by the server — nothing left to do here.
     setStatus('done')
     setMessage(t('join.welcome', { name: data.company_name }))
     setTimeout(() => {
@@ -113,6 +102,21 @@ export default function InvitePage() {
               required
               style={inputStyle}
             />
+            <input
+              type="password"
+              inputMode="numeric"
+              autoComplete="new-password"
+              maxLength={6}
+              value={pin}
+              onChange={e => setPin(e.target.value)}
+              placeholder={t('join.pinPlaceholder')}
+              aria-label={t('join.pinPlaceholder')}
+              required
+              style={inputStyle}
+            />
+            <p style={{ color: 'var(--ink-dim)', fontSize: 11.5, lineHeight: 1.5, margin: 0 }}>
+              {t('join.pinHint')}
+            </p>
             {status === 'error' && (
               <p style={{ color: 'var(--red)', fontSize: 13, fontFamily: 'var(--mono)' }}>{message}</p>
             )}

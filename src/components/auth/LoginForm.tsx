@@ -20,8 +20,7 @@ export default function LoginForm() {
   const [password, setPassword] = useState('')
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [mobile, setMobile] = useState('')
-  const [otpStep, setOtpStep] = useState<'mobile' | 'code'>('mobile')
-  const [otpCode, setOtpCode] = useState('')
+  const [pin, setPin] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [howOpen, setHowOpen] = useState(false)
@@ -34,8 +33,7 @@ export default function LoginForm() {
     setError(null)
     setLoading(false)
     setMode('login')
-    setOtpStep('mobile')
-    setOtpCode('')
+    setPin('')
   }
 
   useEffect(() => {
@@ -58,8 +56,10 @@ export default function LoginForm() {
     }
   }, [t])
 
-  // Step 1: request an SMS code for this mobile number.
-  async function handleRepLoginRequest(e: React.FormEvent) {
+  // Mobile + PIN sign-in. The server route signs in with the PIN as the
+  // account's Supabase password and writes the session cookie directly — no
+  // token ever passes through client state.
+  async function handleRepLogin(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     setLoading(true)
@@ -67,33 +67,11 @@ export default function LoginForm() {
     const res = await fetch('/api/rep-login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mobile }),
+      body: JSON.stringify({ mobile, pin }),
     })
     const data = await res.json()
-    setLoading(false)
     if (!res.ok) {
       setError(data.error)
-      return
-    }
-    setOtpStep('code')
-  }
-
-  // Step 2: verify the code the rep received by SMS. On success the server
-  // route writes the session cookie directly — no token ever passes through
-  // client state, unlike the old single-step, mobile-number-only flow.
-  async function handleRepLoginVerify(e: React.FormEvent) {
-    e.preventDefault()
-    setError(null)
-    setLoading(true)
-
-    const res = await fetch('/api/rep-login/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mobile, code: otpCode }),
-    })
-    const data = await res.json()
-    if (!res.ok) {
-      setError(data.error || t('login.otpInvalid'))
       setLoading(false)
       return
     }
@@ -228,63 +206,42 @@ export default function LoginForm() {
               ))}
             </div>
             {repMode === 'mobile' ? (
-              otpStep === 'mobile' ? (
-                <form onSubmit={handleRepLoginRequest} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--ink-dim)' }}>
-                    {t('login.mobileLabel')}
-                  </div>
-                  <input
-                    type="tel"
-                    value={mobile}
-                    onChange={e => setMobile(e.target.value)}
-                    placeholder={t('join.mobilePlaceholder')}
-                    required
-                    style={inputStyle}
-                  />
-                  {error && (
-                    <p style={{ color: 'var(--red)', fontSize: 13, fontFamily: 'var(--mono)' }}>{error}</p>
-                  )}
-                  <button type="submit" disabled={loading} style={btnPrimary}>
-                    {loading ? '…' : t('login.mobileSignIn')}
-                  </button>
-                  <p style={{ color: 'var(--ink-dim)', fontSize: 12, lineHeight: 1.5, margin: 0 }}>
-                    {t('login.mobileHint')}
-                  </p>
-                </form>
-              ) : (
-                <form onSubmit={handleRepLoginVerify} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--ink-dim)' }}>
-                    {t('login.otpLabel')}
-                  </div>
-                  <p style={{ color: 'var(--ink-dim)', fontSize: 12, margin: 0 }}>
-                    {t('login.otpSent', { number: mobile })}
-                  </p>
-                  <input
-                    type="tel"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    value={otpCode}
-                    onChange={e => setOtpCode(e.target.value)}
-                    placeholder={t('login.otpPlaceholder')}
-                    required
-                    autoFocus
-                    style={inputStyle}
-                  />
-                  {error && (
-                    <p style={{ color: 'var(--red)', fontSize: 13, fontFamily: 'var(--mono)' }}>{error}</p>
-                  )}
-                  <button type="submit" disabled={loading} style={btnPrimary}>
-                    {loading ? '…' : t('login.otpVerify')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setOtpStep('mobile'); setOtpCode(''); setError(null) }}
-                    style={{ background: 'transparent', border: 'none', color: 'var(--ink-dim)', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--sans)' }}
-                  >
-                    {t('login.otpChangeNumber')}
-                  </button>
-                </form>
-              )
+              <form onSubmit={handleRepLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--ink-dim)' }}>
+                  {t('login.mobileLabel')}
+                </div>
+                <input
+                  type="tel"
+                  value={mobile}
+                  onChange={e => setMobile(e.target.value)}
+                  placeholder={t('join.mobilePlaceholder')}
+                  required
+                  style={inputStyle}
+                />
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--ink-dim)' }}>
+                  {t('login.pinLabel')}
+                </div>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="current-password"
+                  maxLength={6}
+                  value={pin}
+                  onChange={e => setPin(e.target.value)}
+                  placeholder={t('login.pinPlaceholder')}
+                  required
+                  style={inputStyle}
+                />
+                {error && (
+                  <p style={{ color: 'var(--red)', fontSize: 13, fontFamily: 'var(--mono)' }}>{error}</p>
+                )}
+                <button type="submit" disabled={loading} style={btnPrimary}>
+                  {loading ? '…' : t('login.mobileSignIn')}
+                </button>
+                <p style={{ color: 'var(--ink-dim)', fontSize: 12, lineHeight: 1.5, margin: 0 }}>
+                  {t('login.mobileHint')}
+                </p>
+              </form>
             ) : (
               <form onSubmit={handleRepIndividualAuth} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('login.email')} aria-label={t('login.email')} required style={inputStyle} />

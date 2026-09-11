@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, clientIp } from '@/lib/rate-limit'
+import { toE164Iraq } from '@/lib/phone'
 
 export async function POST(request: Request) {
   if (!(await checkRateLimit('rep-join', clientIp(request), 10, 600)))
@@ -33,6 +34,12 @@ export async function POST(request: Request) {
   const normalizedMobile = mobile.replace(/[\s\-\(\)+]/g, '')
   const email = `${normalizedMobile}@s.styleshift.rep`
 
+  // Same validation /api/rep-login uses for SMS OTP — reject numbers here that
+  // would otherwise register fine but can never complete a later phone login.
+  const e164 = toE164Iraq(mobile)
+  if (!e164)
+    return NextResponse.json({ error: 'Enter a valid mobile number' }, { status: 400 })
+
   // Try to create new user (auto-confirmed, internal email domain — no real email sent)
   let userId: string | undefined
   const { data: created, error: createError } = await admin.auth.admin.createUser({
@@ -53,6 +60,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to create login token' }, { status: 500 })
 
   userId ??= linkData.user.id
+
+  // Set the real phone on this auth user so a later login can use SMS OTP
+  // instead of the mobile-number-only magiclink this join step still uses.
+  // Marking it confirmed here is safe: identity is already gated by the
+  // invite code above, the same trust boundary email_confirm relies on.
+  await admin.auth.admin.updateUserById(userId, { phone: e164, phone_confirm: true })
 
   // Assign to company (upsert handles both first-join and re-join)
   await admin

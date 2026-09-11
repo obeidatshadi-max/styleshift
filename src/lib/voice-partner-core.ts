@@ -108,11 +108,13 @@ export function langName(lang: 'en' | 'ar'): string {
 
 // ───────────────────────── Weighted persona (1.4) ─────────────────────────
 
-interface StyleWeights { driver: number; expressive: number; amiable: number; analytical: number }
+export interface StyleWeights { driver: number; expressive: number; amiable: number; analytical: number }
 
 /** Reads the doctor's four nullable weight columns; returns null (→ legacy
- * single-style behavior) unless at least one is set. */
-function styleWeights(d: Doctor): StyleWeights | null {
+ * single-style behavior) unless at least one is set. Exported so
+ * session-evaluator.ts's Phase 3 AdaptationAnalyzer can resolve the same
+ * profile for scoring context without re-deriving it. */
+export function styleWeights(d: Doctor): StyleWeights | null {
   if (d.style_driver == null && d.style_expressive == null && d.style_amiable == null && d.style_analytical == null) return null
   return {
     driver: d.style_driver ?? 0,

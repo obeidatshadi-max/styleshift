@@ -3,8 +3,9 @@ import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
 import {
   computeSessionSignals, buildEvaluatorPrompt, parseEvaluatorResponse, groundEvaluatorResult,
+  resolveDoctorStyleProfile,
 } from '@/lib/session-evaluator'
-import type { ConversationTurn } from '@/types/game'
+import type { ConversationTurn, Doctor } from '@/types/game'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 function isUuid(value: unknown): value is string {
@@ -73,13 +74,25 @@ export async function POST(req: Request) {
 
   const doctorId = turns.find(t => t.doctor_id)?.doctor_id ?? null
   let hasHiddenConcern = false
+  // Style profile snapshot: resolved and persisted AT ANALYSIS TIME, not
+  // re-derived live from `doctors` on every read — if a manager edits this
+  // doctor's style weights later, past sessions still explain the profile
+  // the rep was actually scored against (Explainability: a historical
+  // record must stay accurate even after the source row changes).
+  let styleProfile = resolveDoctorStyleProfile({ style: null, style_driver: null, style_expressive: null, style_amiable: null, style_analytical: null })
   if (doctorId) {
-    const { data: doctor } = await supabase.from('doctors').select('hidden_concern').eq('id', doctorId).single()
-    hasHiddenConcern = !!(doctor as { hidden_concern?: string | null } | null)?.hidden_concern?.trim()
+    const { data: doctor } = await supabase
+      .from('doctors').select('style, style_driver, style_expressive, style_amiable, style_analytical, hidden_concern')
+      .eq('id', doctorId).single()
+    const d = doctor as Pick<Doctor, 'style' | 'style_driver' | 'style_expressive' | 'style_amiable' | 'style_analytical' | 'hidden_concern'> | null
+    if (d) {
+      hasHiddenConcern = !!d.hidden_concern?.trim()
+      styleProfile = resolveDoctorStyleProfile(d)
+    }
   }
 
   const signals = computeSessionSignals(turns, hasHiddenConcern)
-  const prompt = buildEvaluatorPrompt(turns, signals, lang)
+  const prompt = buildEvaluatorPrompt(turns, signals, styleProfile, lang)
 
   let text = await callEvaluator(anthropicKey, prompt)
   let raw = text ? parseEvaluatorResponse(text) : null
@@ -89,11 +102,13 @@ export async function POST(req: Request) {
   }
   if (!raw) return NextResponse.json({ error: 'invalid' }, { status: 422 })
 
-  const { competencies, criticalMoments } = groundEvaluatorResult(raw, turns)
+  const { competencies, adaptation, adaptationScore, adaptationRecommendation, criticalMoments } = groundEvaluatorResult(raw, turns)
 
   const { error: scorecardError } = await supabase.from('session_scorecards').upsert({
     session_id: sessionId, rep_id: user.id, doctor_id: doctorId,
     competencies, signals, model: 'claude-haiku-4-5-20251001', updated_at: new Date().toISOString(),
+    adaptation, adaptation_score: adaptationScore, adaptation_recommendation: adaptationRecommendation,
+    doctor_style_profile: styleProfile,
   }, { onConflict: 'session_id' })
   if (scorecardError) return NextResponse.json({ error: 'insert_failed' }, { status: 500 })
 
@@ -111,5 +126,8 @@ export async function POST(req: Request) {
     if (momentsError) return NextResponse.json({ error: 'insert_failed' }, { status: 500 })
   }
 
-  return NextResponse.json({ competencies, signals, criticalMoments })
+  return NextResponse.json({
+    competencies, signals, criticalMoments,
+    adaptation, adaptationScore, adaptationRecommendation, doctorStyleProfile: styleProfile,
+  })
 }

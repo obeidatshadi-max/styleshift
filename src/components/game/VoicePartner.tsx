@@ -5,7 +5,7 @@ import type { Doctor } from '@/types/game'
 import { useVoicePartner } from '@/hooks/useVoicePartner'
 import { useSessionAnalysis } from '@/hooks/useSessionAnalysis'
 import { TURN_CAP, CLEAR_STEPS, DIFFICULTY_LEVELS, DEFAULT_DIFFICULTY, type Difficulty } from '@/lib/voice-partner-core'
-import { COMPETENCY_DIMENSIONS } from '@/lib/session-evaluator'
+import { COMPETENCY_DIMENSIONS, ADAPTATION_DIMENSIONS } from '@/lib/session-evaluator'
 import { Feedback, RecordReviewControls, VoiceStatusAnnouncer } from './helpers'
 
 interface Props {
@@ -209,6 +209,46 @@ export default function VoicePartner({ doctor, onDone }: Props) {
                     )
                   })}
                 </div>
+
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 8 }}>
+                  {t('voice.deepAnalysis.adaptationTitle')}
+                </div>
+                <div style={{ marginBottom: 8, fontSize: 12.5, color: 'var(--ink-dim)' }}>
+                  {analysis.doctorStyleProfile.dominant
+                    ? t('voice.deepAnalysis.adaptationWhy', {
+                        name: doctor.name,
+                        pct: Math.round(analysis.doctorStyleProfile.weights[analysis.doctorStyleProfile.dominant] * 100),
+                        style: STYLES[analysis.doctorStyleProfile.dominant].name,
+                        blurb: STYLES[analysis.doctorStyleProfile.dominant].blurb,
+                      })
+                    : t('voice.deepAnalysis.adaptationUnknownStyle')}
+                </div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--cyan)', marginBottom: 8 }}>
+                  {t('voice.deepAnalysis.adaptationOverall', {
+                    score: analysis.adaptationScore == null ? t('voice.deepAnalysis.insufficientData') : `${analysis.adaptationScore}`,
+                  })}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+                  {ADAPTATION_DIMENSIONS.map(dim => {
+                    const a = analysis.adaptation[dim]
+                    return (
+                      <div key={dim} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                        <span style={{ color: 'var(--ink-dim)' }}>{t(`voice.adaptation.${dim}`)}</span>
+                        <span style={{ fontFamily: 'var(--mono)', color: a.score == null ? 'var(--ink-dim)' : 'var(--cyan)' }}>
+                          {a.score == null ? t('voice.deepAnalysis.insufficientData') : `${a.score}`}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+                {analysis.adaptationRecommendation && (
+                  <div style={{ marginBottom: 16, fontSize: 12.5, lineHeight: 1.5 }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 4 }}>
+                      {t('voice.deepAnalysis.adaptationRecommendationTitle')}
+                    </div>
+                    {analysis.adaptationRecommendation}
+                  </div>
+                )}
 
                 {analysis.criticalMoments.length > 0 && (
                   <>

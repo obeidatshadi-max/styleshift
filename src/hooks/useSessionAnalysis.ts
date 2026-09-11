@@ -1,6 +1,6 @@
 'use client'
 import { useCallback, useState } from 'react'
-import type { CompetencyScores, CriticalMoment, SessionSignals } from '@/lib/session-evaluator'
+import type { AdaptationScores, CompetencyScores, CriticalMoment, DoctorStyleProfile, SessionSignals } from '@/lib/session-evaluator'
 
 export type SessionAnalysisStatus = 'idle' | 'loading' | 'ready' | 'notconfigured' | 'ratelimited' | 'error'
 
@@ -8,6 +8,10 @@ export interface SessionAnalysisResult {
   competencies: CompetencyScores
   signals: SessionSignals
   criticalMoments: CriticalMoment[]
+  adaptation: AdaptationScores
+  adaptationScore: number | null
+  adaptationRecommendation: string
+  doctorStyleProfile: DoctorStyleProfile
 }
 
 // Deep Analysis is deliberately lazy/on-demand (see session-analysis/route.ts's

@@ -200,6 +200,7 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
 
   return {
     phase, errorKind, transcript, turnCount, outcome, openingText, objectionType, clearStepsHit, previewUrl: recorder.previewUrl,
+    sessionId,
     startVoicePartner, startRecording, stopRecording, confirmRecording, rerecord, reset,
   }
 }

@@ -124,6 +124,27 @@ export interface DoctorVisit {
 export type DoctorVisitInput = Pick<DoctorVisit, 'source'> &
   Partial<Pick<DoctorVisit, 'objection_raised' | 'promise_made' | 'what_worked' | 'note'>>
 
+// A single persisted turn in an AI-Doctor voice-partner session — the
+// evidence store Phase 2 (docs/ai-doctor-phase-1-plan.md's "Deferred" list)
+// reads to ground every score/critical-moment in a real transcript line.
+// See supabase/migrations/026_ai_doctor_phase1.sql.
+export interface ConversationTurn {
+  id: string
+  session_id: string
+  rep_id: string
+  doctor_id: string | null
+  turn_index: number
+  role: 'doctor' | 'rep'
+  text: string
+  objection_type: string | null
+  clear_steps_hit: string[]
+  trust: number | null
+  skepticism: number | null
+  engagement: number | null
+  time_pressure: number | null
+  created_at: string
+}
+
 // A named practice colleague — deliberately minimal (see `colleagues`
 // migration comment): a practice partner's identity, not a prep target.
 export interface Colleague {

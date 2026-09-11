@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react'
 import { useT, useLang, useGameData } from '@/lib/i18n'
 import type { Doctor } from '@/types/game'
 import { useVoicePartner } from '@/hooks/useVoicePartner'
+import { useSessionAnalysis } from '@/hooks/useSessionAnalysis'
 import { TURN_CAP, CLEAR_STEPS, DIFFICULTY_LEVELS, DEFAULT_DIFFICULTY, type Difficulty } from '@/lib/voice-partner-core'
+import { COMPETENCY_DIMENSIONS } from '@/lib/session-evaluator'
 import { Feedback, RecordReviewControls, VoiceStatusAnnouncer } from './helpers'
 
 interface Props {
@@ -25,7 +27,8 @@ export default function VoicePartner({ doctor, onDone }: Props) {
   const t = useT()
   const { lang } = useLang()
   const { STYLES } = useGameData()
-  const { phase, errorKind, transcript, turnCount, outcome, openingText, objectionType, clearStepsHit, previewUrl, startVoicePartner, startRecording, stopRecording, confirmRecording, rerecord, reset } = useVoicePartner(doctor.id, lang)
+  const { phase, errorKind, transcript, turnCount, outcome, openingText, objectionType, clearStepsHit, previewUrl, sessionId, startVoicePartner, startRecording, stopRecording, confirmRecording, rerecord, reset } = useVoicePartner(doctor.id, lang)
+  const { status: analysisStatus, data: analysis, fetchAnalysis } = useSessionAnalysis()
   const [consentChecked, setConsentChecked] = useState(false)
   const [consented, setConsented] = useState(false)
   // Defaults to 'realistic' so a rep who never touches this picker gets
@@ -176,6 +179,59 @@ export default function VoicePartner({ doctor, onDone }: Props) {
         {outcome && outcome !== 'continue' && (
           <>
             <Feedback ok={outcome === 'won'} title={outcome === 'won' ? t('voice.won') : t('voice.escalated')} body={clearSummaryHtml} />
+
+            {sessionId && analysisStatus === 'idle' && (
+              <button onClick={() => fetchAnalysis(sessionId, lang)} style={{ ...ghostBtn, width: '100%', marginTop: 10 }}>
+                {t('voice.deepAnalysis.button')}
+              </button>
+            )}
+            {analysisStatus === 'loading' && (
+              <div style={{ marginTop: 10, fontSize: 12.5, color: 'var(--ink-dim)', fontFamily: 'var(--mono)' }}>{t('voice.deepAnalysis.loading')}</div>
+            )}
+            {(analysisStatus === 'error' || analysisStatus === 'ratelimited' || analysisStatus === 'notconfigured') && (
+              <div style={{ marginTop: 10, fontSize: 12.5, color: 'var(--ink-dim)' }}>{t('voice.deepAnalysis.error')}</div>
+            )}
+            {analysisStatus === 'ready' && analysis && (
+              <div style={{ marginTop: 14, borderTop: '1px solid var(--line)', paddingTop: 14 }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 8 }}>
+                  {t('voice.deepAnalysis.scorecardTitle')}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+                  {COMPETENCY_DIMENSIONS.map(dim => {
+                    const c = analysis.competencies[dim]
+                    return (
+                      <div key={dim} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                        <span style={{ color: 'var(--ink-dim)' }}>{t(`voice.competency.${dim}`)}</span>
+                        <span style={{ fontFamily: 'var(--mono)', color: c.score == null ? 'var(--ink-dim)' : 'var(--cyan)' }}>
+                          {c.score == null ? t('voice.deepAnalysis.insufficientData') : `${c.score}`}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {analysis.criticalMoments.length > 0 && (
+                  <>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 8 }}>
+                      {t('voice.deepAnalysis.momentsTitle')}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {analysis.criticalMoments.map(m => (
+                        <div key={m.turnIndex} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, lineHeight: 1.5 }}>
+                          <div style={{ fontStyle: 'italic', color: 'var(--ink)', marginBottom: 4 }}>
+                            {m.role === 'doctor' ? t('voice.speakerDoctor') : t('voice.speakerYou')}: &ldquo;{m.quote}&rdquo;
+                          </div>
+                          <div style={{ color: 'var(--ink-dim)' }}>{t('voice.deepAnalysis.observed')}: {m.observedBehavior}</div>
+                          {m.missedOpportunity && <div style={{ color: 'var(--ink-dim)' }}>{t('voice.deepAnalysis.missed')}: {m.missedOpportunity}</div>}
+                          {m.alternative && <div style={{ color: 'var(--ink-dim)' }}>{t('voice.deepAnalysis.alternative')}: {m.alternative}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
             <div style={{ marginTop: 14 }}>
               <button
                 onClick={() => onDone(outcome === 'won', { turns: turnCount, openingCrisis: openingText })}

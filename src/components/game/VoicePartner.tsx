@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useT, useLang, useGameData } from '@/lib/i18n'
 import type { Doctor } from '@/types/game'
 import { useVoicePartner } from '@/hooks/useVoicePartner'
-import { TURN_CAP, CLEAR_STEPS } from '@/lib/voice-partner-core'
+import { TURN_CAP, CLEAR_STEPS, DIFFICULTY_LEVELS, DEFAULT_DIFFICULTY, type Difficulty } from '@/lib/voice-partner-core'
 import { Feedback, RecordReviewControls, VoiceStatusAnnouncer } from './helpers'
 
 interface Props {
@@ -15,6 +15,11 @@ const COLOR: Record<string, string> = { driver: 'var(--purple)', expressive: 'va
 
 const primaryBtn: React.CSSProperties = { width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 12, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', color: '#04121c', background: 'var(--cyan)', borderRadius: 10, padding: '12px 18px', boxShadow: 'var(--glow-cyan)', touchAction: 'manipulation' }
 const ghostBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 12, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', color: 'var(--cyan)', background: 'transparent', borderRadius: 10, padding: '12px 18px', touchAction: 'manipulation' }
+const difficultyChip = (active: boolean): React.CSSProperties => ({
+  cursor: 'pointer', textAlign: 'start', fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: 1.4, borderRadius: 10, padding: '9px 12px',
+  border: `1px solid ${active ? 'var(--cyan)' : 'var(--line)'}`, color: active ? 'var(--cyan)' : 'var(--ink-dim)',
+  background: active ? 'rgba(56,214,255,.1)' : 'transparent', touchAction: 'manipulation', width: '100%',
+})
 
 export default function VoicePartner({ doctor, onDone }: Props) {
   const t = useT()
@@ -23,8 +28,12 @@ export default function VoicePartner({ doctor, onDone }: Props) {
   const { phase, errorKind, transcript, turnCount, outcome, openingText, objectionType, clearStepsHit, previewUrl, startVoicePartner, startRecording, stopRecording, confirmRecording, rerecord, reset } = useVoicePartner(doctor.id, lang)
   const [consentChecked, setConsentChecked] = useState(false)
   const [consented, setConsented] = useState(false)
+  // Defaults to 'realistic' so a rep who never touches this picker gets
+  // today's exact unchanged behavior — the picker is optional polish, not a
+  // forced extra step for returning users' muscle memory.
+  const [difficulty, setDifficulty] = useState<Difficulty>(DEFAULT_DIFFICULTY)
 
-  useEffect(() => { if (consented) void startVoicePartner() }, [consented, startVoicePartner])
+  useEffect(() => { if (consented) void startVoicePartner(difficulty) }, [consented, startVoicePartner, difficulty])
 
   const style = doctor.style
   const s = style ? STYLES[style] : null
@@ -40,6 +49,16 @@ export default function VoicePartner({ doctor, onDone }: Props) {
             <input type="checkbox" checked={consentChecked} onChange={e => setConsentChecked(e.target.checked)} style={{ marginTop: 3, accentColor: 'var(--cyan)' }} />
             {t('voice.consentCheckbox')}
           </label>
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('voice.difficultyTitle')}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {DIFFICULTY_LEVELS.map(level => (
+                <button key={level} onClick={() => setDifficulty(level)} style={difficultyChip(difficulty === level)}>
+                  {t(`voice.difficulty.${level}`)}
+                </button>
+              ))}
+            </div>
+          </div>
           <button
             style={{ ...primaryBtn, opacity: consentChecked ? 1 : 0.5, cursor: consentChecked ? 'pointer' : 'not-allowed' }}
             disabled={!consentChecked}

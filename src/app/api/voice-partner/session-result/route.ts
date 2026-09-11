@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { isObjectionType, isClearStep, type ClearStep } from '@/lib/voice-partner-core'
+import { isObjectionType, isClearStep, isDifficulty, type ClearStep } from '@/lib/voice-partner-core'
 import type { Doctor } from '@/types/game'
 
 // Stricter than voice-partner-core's AI-judge-output parsing: this route
@@ -10,6 +10,11 @@ import type { Doctor } from '@/types/game'
 function parseClearSteps(raw: unknown): ClearStep[] | null {
   if (!Array.isArray(raw)) return null
   return raw.every(isClearStep) ? (raw as ClearStep[]) : null
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+function isUuid(value: unknown): value is string {
+  return typeof value === 'string' && UUID_RE.test(value)
 }
 
 export async function POST(req: Request) {
@@ -29,6 +34,7 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null) as {
     doctorId?: string; objectionType?: string; outcome?: string; clearSteps?: unknown; turnCount?: number
+    sessionId?: string; difficulty?: string
   } | null
   if (!body?.doctorId) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   if (!isObjectionType(body.objectionType)) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
@@ -37,6 +43,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   const clearSteps = parseClearSteps(body.clearSteps)
   if (!clearSteps) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
+  // Optional: older clients (or this route called before sessionId/difficulty
+  // shipped) still work — id defaults to the column's own gen_random_uuid()
+  // and difficulty stays null, exactly today's behavior.
+  if (body.sessionId !== undefined && !isUuid(body.sessionId)) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
+  if (body.difficulty !== undefined && !isDifficulty(body.difficulty)) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
 
   // RLS ensures the rep can only read their own doctor; look style up
   // server-side rather than trusting a client-supplied value.
@@ -44,6 +55,7 @@ export async function POST(req: Request) {
   if (!doctor) return NextResponse.json({ error: 'not_found' }, { status: 404 })
 
   const { error } = await supabase.from('voice_partner_sessions').insert({
+    ...(body.sessionId ? { id: body.sessionId } : {}),
     rep_id: user.id,
     doctor_id: body.doctorId,
     style: (doctor as Doctor).style,
@@ -51,6 +63,7 @@ export async function POST(req: Request) {
     outcome: body.outcome,
     clear_steps_hit: clearSteps,
     turn_count: body.turnCount,
+    ...(body.difficulty ? { difficulty: body.difficulty } : {}),
   })
   if (error) return NextResponse.json({ error: 'insert_failed' }, { status: 500 })
 

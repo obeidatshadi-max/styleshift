@@ -91,6 +91,17 @@ export interface Doctor {
   notes: string | null
   created_at: string
   updated_at: string
+  // Phase 1 AI-Doctor additions (all nullable/optional — no UI authors these
+  // yet, so every existing row and every existing literal keeps compiling
+  // and behaving exactly as before). See docs/ai-doctor-phase-1-plan.md 1.4/1.5/1.8.
+  style_driver?: number | null
+  style_expressive?: number | null
+  style_amiable?: number | null
+  style_analytical?: number | null
+  hidden_concern?: string | null
+  product_context?: string | null
+  meeting_stage?: string | null
+  available_time_min?: number | null
 }
 
 // Fields a rep can set when creating/editing a doctor profile.

@@ -32,6 +32,7 @@ const SPECIALTY_KEYS: Specialty[] = [
   'cardiology', 'endocrinology', 'oncology', 'pediatrics',
   'general_practice', 'dermatology', 'respiratory', 'psychiatry_neurology',
 ]
+const MEETING_STAGES = ['first_visit', 'follow_up', 'closing'] as const
 
 type View =
   | { mode: 'list' }
@@ -313,6 +314,9 @@ function DoctorForm({ doctor, styles, specialties, onSave, onCancel, onDelete }:
   const [keyPhrases, setKeyPhrases] = useState(doctor?.key_phrases ?? '')
   const [notes, setNotes] = useState(doctor?.notes ?? '')
   const [objections, setObjections] = useState<string[]>(doctor?.objections ?? [])
+  const [productContext, setProductContext] = useState(doctor?.product_context ?? '')
+  const [meetingStage, setMeetingStage] = useState(doctor?.meeting_stage ?? '')
+  const [availableTimeMin, setAvailableTimeMin] = useState(doctor?.available_time_min != null ? String(doctor.available_time_min) : '')
   const [styleMode, setStyleMode] = useState<'known' | 'help'>(doctor?.assertiveness ? 'help' : 'known')
   const [style, setStyle] = useState<StyleKey | null>(doctor?.style ?? null)
   const [assert, setAssert] = useState<Assertiveness | null>(doctor?.assertiveness ?? null)
@@ -329,11 +333,15 @@ function DoctorForm({ doctor, styles, specialties, onSave, onCancel, onDelete }:
 
   function submit() {
     if (!name.trim()) return
+    const parsedTime = availableTimeMin.trim() ? parseInt(availableTimeMin, 10) : NaN
     onSave({
       name: name.trim(), specialty: specialty || null, workplace: workplace || null,
       style: effectiveStyle, assertiveness: styleMode === 'help' ? assert : null,
       responsiveness: styleMode === 'help' ? resp : null,
       key_phrases: keyPhrases || null, objections, objection_notes: null, notes: notes || null,
+      product_context: productContext.trim() || null,
+      meeting_stage: meetingStage || null,
+      available_time_min: Number.isFinite(parsedTime) && parsedTime > 0 ? parsedTime : null,
     }, doctor?.id)
   }
 
@@ -401,6 +409,23 @@ function DoctorForm({ doctor, styles, specialties, onSave, onCancel, onDelete }:
                 const active = objections.includes(o)
                 return <button key={o} onClick={() => setObjections(prev => active ? prev.filter(x => x !== o) : [...prev, o])} style={chip(active)}>{t(`obj.${o}`)}</button>
               })}
+            </div>
+          </div>
+
+          {/* Scenario context — optional, feeds the AI voice-partner's prompt when set (see docs/ai-doctor-phase-1-plan.md 1.8); null leaves today's behavior unchanged. */}
+          <div>
+            <span style={labelStyle}>{t('prep.scenarioContext')}</span>
+            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+              <input value={productContext} onChange={e => setProductContext(e.target.value)} placeholder={t('prep.productContextHint')} aria-label={t('prep.productContext')} style={inputStyle} />
+              <div>
+                <span style={{ ...labelStyle, color:'var(--ink-dim)', marginBottom:6 }}>{t('prep.meetingStage')}</span>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+                  {MEETING_STAGES.map(stg => (
+                    <button key={stg} onClick={() => setMeetingStage(prev => prev === stg ? '' : stg)} style={chip(meetingStage === stg)}>{t(`prep.meetingStage.${stg}`)}</button>
+                  ))}
+                </div>
+              </div>
+              <input type="number" min={1} value={availableTimeMin} onChange={e => setAvailableTimeMin(e.target.value)} placeholder={t('prep.availableTime')} aria-label={t('prep.availableTime')} style={inputStyle} />
             </div>
           </div>
 

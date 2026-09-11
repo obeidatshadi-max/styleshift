@@ -2,8 +2,8 @@
 import { useCallback, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { XP_VALUES } from '@/lib/game-data'
-import type { VoicePartnerTurn, TurnOutcome, ObjectionType, ClearStep } from '@/lib/voice-partner-core'
-import { isObjectionType, isClearStep } from '@/lib/voice-partner-core'
+import type { VoicePartnerTurn, TurnOutcome, ObjectionType, ClearStep, PhysicianState, Difficulty } from '@/lib/voice-partner-core'
+import { isObjectionType, isClearStep, isPhysicianState, isDifficulty } from '@/lib/voice-partner-core'
 import { logVoiceEvent } from '@/lib/voice-events'
 import type { VoiceErrorKind } from '@/lib/voice-events'
 import { speak, playBase64Audio } from '@/lib/voice-tts'
@@ -22,9 +22,12 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
   const [openingText, setOpeningText] = useState('')
   const [objectionType, setObjectionType] = useState<ObjectionType | null>(null)
   const [clearStepsHit, setClearStepsHit] = useState<ClearStep[]>([])
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [physicianState, setPhysicianState] = useState<PhysicianState | null>(null)
+  const [difficulty, setDifficulty] = useState<Difficulty | null>(null)
   const recorder = useAudioRecorder('objection', lang, () => setPhase('review'))
 
-  const startVoicePartner = useCallback(async () => {
+  const startVoicePartner = useCallback(async (difficultyChoice?: Difficulty) => {
     setPhase('opening')
     setErrorKind(null)
     setTranscript([])
@@ -32,18 +35,28 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
     setOutcome(null)
     setObjectionType(null)
     setClearStepsHit([])
+    setSessionId(null)
+    setPhysicianState(null)
+    setDifficulty(null)
     try {
       const res = await fetch('/api/voice-partner/open', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ doctorId, lang }),
+        body: JSON.stringify({ doctorId, lang, ...(difficultyChoice ? { difficulty: difficultyChoice } : {}) }),
       })
       if (res.status === 503) { setPhase('notconfigured'); logVoiceEvent('objection', lang, 'not_configured', { endpoint: 'open' }); return }
       if (res.status === 429) { setPhase('ratelimited'); logVoiceEvent('objection', lang, 'rate_limited', { endpoint: 'open' }); return }
       if (!res.ok) { setPhase('error'); setErrorKind('api'); logVoiceEvent('objection', lang, 'api_error', { endpoint: 'open', status: res.status }); return }
-      const data = await res.json().catch(() => null) as { doctorText?: string; objectionType?: string } | null
-      if (!data?.doctorText || !isObjectionType(data.objectionType)) { setPhase('error'); setErrorKind('bad_response'); logVoiceEvent('objection', lang, 'bad_response', { endpoint: 'open' }); return }
+      const data = await res.json().catch(() => null) as {
+        doctorText?: string; objectionType?: string; sessionId?: string; state?: PhysicianState; difficulty?: string
+      } | null
+      if (!data?.doctorText || !isObjectionType(data.objectionType) || !data.sessionId || !isPhysicianState(data.state)) {
+        setPhase('error'); setErrorKind('bad_response'); logVoiceEvent('objection', lang, 'bad_response', { endpoint: 'open' }); return
+      }
       setOpeningText(data.doctorText)
       setObjectionType(data.objectionType)
+      setSessionId(data.sessionId)
+      setPhysicianState(data.state)
+      setDifficulty(isDifficulty(data.difficulty) ? data.difficulty : null)
       setTranscript([{ role: 'doctor', text: data.doctorText }])
 
       const audio = await speak(data.doctorText, lang)
@@ -79,7 +92,10 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
     try {
       const res = await fetch('/api/voice-partner/session-result', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ doctorId, objectionType: type, outcome: finalOutcome, clearSteps: finalClearSteps, turnCount: finalTurnCount }),
+        body: JSON.stringify({
+          doctorId, objectionType: type, outcome: finalOutcome, clearSteps: finalClearSteps, turnCount: finalTurnCount,
+          ...(sessionId ? { sessionId } : {}), ...(difficulty ? { difficulty } : {}),
+        }),
       })
       // Best-effort — the rep still sees their end-of-session summary either
       // way. Warn (not error) so a systematically-failing save is still
@@ -88,7 +104,7 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
     } catch (err) {
       console.warn('voice partner session-result save failed:', err)
     }
-  }, [doctorId])
+  }, [doctorId, sessionId, difficulty])
 
   // Stops recording and moves to a listen-back checkpoint — nothing uploads
   // yet. The rep hears exactly what was captured before it's sent for
@@ -109,24 +125,28 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
     const { blob } = taken
     setPhase('sending')
 
-    if (!objectionType) { setPhase('error'); return }
+    if (!objectionType || !sessionId || !physicianState) { setPhase('error'); return }
 
     try {
       const form = new FormData()
       form.append('doctorId', doctorId)
+      form.append('sessionId', sessionId)
       form.append('lang', lang)
       form.append('history', JSON.stringify(transcript))
       form.append('audio', blob, 'turn.webm')
       form.append('objectionType', objectionType)
+      form.append('state', JSON.stringify(physicianState))
+      form.append('clearStepsHit', JSON.stringify(clearStepsHit))
 
       const res = await fetch('/api/voice-partner/turn', { method: 'POST', body: form })
       if (res.status === 503) { setPhase('notconfigured'); logVoiceEvent('objection', lang, 'not_configured', { endpoint: 'turn' }); return }
       if (res.status === 429) { setPhase('ratelimited'); logVoiceEvent('objection', lang, 'rate_limited', { endpoint: 'turn' }); return }
       if (!res.ok) { setPhase('error'); setErrorKind('api'); logVoiceEvent('objection', lang, 'api_error', { endpoint: 'turn', status: res.status }); return }
       const data = await res.json().catch(() => null) as {
-        repText?: string; doctorText?: string; outcome?: TurnOutcome; turnCount?: number; clearSteps?: unknown
+        repText?: string; doctorText?: string; outcome?: TurnOutcome; turnCount?: number; clearSteps?: unknown; state?: PhysicianState
       } | null
       if (!data?.repText || !data.doctorText || !data.outcome) { setPhase('error'); setErrorKind('bad_response'); logVoiceEvent('objection', lang, 'bad_response', { endpoint: 'turn' }); return }
+      if (isPhysicianState(data.state)) setPhysicianState(data.state)
 
       const nextTranscript: VoicePartnerTurn[] = [
         ...transcript, { role: 'rep', text: data.repText }, { role: 'doctor', text: data.doctorText },
@@ -161,7 +181,7 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
       setErrorKind('network')
       logVoiceEvent('objection', lang, 'network_error', { endpoint: 'turn' })
     }
-  }, [doctorId, lang, transcript, turnCount, awardXpOnWin, objectionType, clearStepsHit, saveSessionResult, recorder])
+  }, [doctorId, lang, transcript, turnCount, awardXpOnWin, objectionType, clearStepsHit, saveSessionResult, recorder, sessionId, physicianState])
 
   const reset = useCallback(() => {
     recorder.abort()
@@ -173,6 +193,9 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
     setOpeningText('')
     setObjectionType(null)
     setClearStepsHit([])
+    setSessionId(null)
+    setPhysicianState(null)
+    setDifficulty(null)
   }, [recorder])
 
   return {

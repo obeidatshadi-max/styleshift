@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { buildHistoryContext } from '@/lib/doctor-context'
-import { SYSTEM, TURN_CAP, buildJudgePrompt, parseJudgeResponse, resolveTurn, isObjectionType, transcribeAudio, type VoicePartnerTurn } from '@/lib/voice-partner-core'
+import {
+  SYSTEM, TURN_CAP, buildJudgePrompt, parseJudgeResponse, resolveTurn, isObjectionType, transcribeAudio,
+  applyStateDelta, isPhysicianState, isClearStep, type VoicePartnerTurn, type ClearStep,
+} from '@/lib/voice-partner-core'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { validateAudioUpload } from '@/lib/audio-upload'
 import type { Doctor, DoctorVisit } from '@/types/game'
@@ -28,6 +31,17 @@ function parseHistory(raw: FormDataEntryValue | null): VoicePartnerTurn[] | null
   return turns
 }
 
+/** The cumulative CLEAR steps the client has seen hit so far this session —
+ * resent each turn the same way `history` is, so the server can gate the
+ * hidden-concern reveal (1.5) without needing session state of its own. */
+function parseClearStepsHit(raw: FormDataEntryValue | null): ClearStep[] | null {
+  if (typeof raw !== 'string') return []
+  let parsed: unknown
+  try { parsed = JSON.parse(raw) } catch { return null }
+  if (!Array.isArray(parsed)) return null
+  return parsed.every(isClearStep) ? parsed : null
+}
+
 export async function POST(req: Request) {
   const anthropicKey = process.env.ANTHROPIC_API_KEY
   const openaiKey = process.env.OPENAI_API_KEY
@@ -47,10 +61,12 @@ export async function POST(req: Request) {
   if (!form) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
 
   const doctorId = form.get('doctorId')
+  const sessionId = form.get('sessionId')
   const lang = form.get('lang') === 'ar' ? 'ar' : 'en'
   const historyRaw = form.get('history')
   const audioCheck = validateAudioUpload(form.get('audio'))
   if (typeof doctorId !== 'string' || !doctorId) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
+  if (typeof sessionId !== 'string' || !sessionId) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   if (!audioCheck.ok) return NextResponse.json({ error: audioCheck.error }, { status: audioCheck.status })
   const audio = audioCheck.blob
 
@@ -58,6 +74,18 @@ export async function POST(req: Request) {
   if (typeof objectionTypeRaw !== 'string' || !isObjectionType(objectionTypeRaw)) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   }
+
+  // The physician state is carried by the client turn to turn (this route is
+  // stateless per-request, same pattern as `history`) — malformed state fails
+  // loudly rather than silently reseeding, which would quietly reset the
+  // doctor's trajectory mid-conversation.
+  let state: unknown
+  try { state = JSON.parse(String(form.get('state') ?? '')) } catch { state = null }
+  if (!isPhysicianState(state)) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
+
+  const clearStepsHit = parseClearStepsHit(form.get('clearStepsHit'))
+  if (clearStepsHit === null) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
+  const clarifyUnlocked = clearStepsHit.includes('clarify')
 
   // The client resends the whole conversation each turn, so `history` is
   // untrusted input that gets interpolated verbatim into the guardrailed judge
@@ -82,7 +110,9 @@ export async function POST(req: Request) {
   if (!repText) return NextResponse.json({ error: 'upstream' }, { status: 502 })
 
   const turnCount = history.filter(h => h.role === 'rep').length + 1
-  const prompt = buildJudgePrompt(doctor as Doctor, style, lang, historyContext, history, repText, turnCount, objectionTypeRaw)
+  const prompt = buildJudgePrompt(
+    doctor as Doctor, style, lang, historyContext, history, repText, turnCount, objectionTypeRaw, state, clarifyUnlocked,
+  )
 
   let res: Response
   try {
@@ -105,7 +135,28 @@ export async function POST(req: Request) {
   const judged = parseJudgeResponse(data?.content?.[0]?.text ?? '')
   if (!judged) return NextResponse.json({ error: 'invalid' }, { status: 422 })
 
-  const outcome = resolveTurn(turnCount, judged.verdict)
+  const outcome = resolveTurn(turnCount, judged.personaState)
+  const nextState = applyStateDelta(state, judged.stateDelta)
 
-  return NextResponse.json({ repText, doctorText: judged.doctorReply, outcome, turnCount, clearSteps: judged.clearSteps })
+  // Best-effort evidence store (see open/route.ts's insert for the same
+  // rationale) — insert the rep's line and the doctor's reply as two rows,
+  // never blocking the turn response on it.
+  const baseIndex = history.length
+  const { error: turnInsertError } = await supabase.from('conversation_turns').insert([
+    {
+      session_id: sessionId, rep_id: user.id, doctor_id: doctorId, turn_index: baseIndex,
+      role: 'rep', text: repText, objection_type: objectionTypeRaw, clear_steps_hit: judged.clearSteps,
+      trust: nextState.trust, skepticism: nextState.skepticism, engagement: nextState.engagement, time_pressure: nextState.timePressure,
+    },
+    {
+      session_id: sessionId, rep_id: user.id, doctor_id: doctorId, turn_index: baseIndex + 1,
+      role: 'doctor', text: judged.doctorReply, objection_type: objectionTypeRaw, clear_steps_hit: [],
+      trust: nextState.trust, skepticism: nextState.skepticism, engagement: nextState.engagement, time_pressure: nextState.timePressure,
+    },
+  ])
+  if (turnInsertError) console.warn('conversation_turns insert failed (turn):', turnInsertError.message)
+
+  return NextResponse.json({
+    repText, doctorText: judged.doctorReply, outcome, turnCount, clearSteps: judged.clearSteps, state: nextState,
+  })
 }

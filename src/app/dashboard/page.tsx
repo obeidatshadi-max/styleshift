@@ -14,6 +14,8 @@ import { getVoiceStats } from '@/lib/voice-stats'
 import CoachingQueueAndAssign from '@/components/dashboard/CoachingQueueAndAssign'
 import { getCoachingQueue } from '@/lib/coaching-queue'
 import ScenarioEditorPanel from '@/components/dashboard/ScenarioEditorPanel'
+import BehavioralTrendsPanel from '@/components/dashboard/BehavioralTrendsPanel'
+import { getBehavioralTrendsForReps } from '@/lib/behavioral-trends-dashboard'
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -41,6 +43,7 @@ export default async function DashboardPage() {
   const leagueBoard = await getLeagueBoard(user.id)
   const voiceStats = await getVoiceStats(stats.reps.map(r => r.id))
   const coachingQueue = await getCoachingQueue(user.id)
+  const behavioralTrends = await getBehavioralTrendsForReps(stats.reps.map(r => r.id))
 
   const flagCount = stats?.reps.filter(r => r.flag).length ?? 0
   const avgAccuracy = stats?.reps.length
@@ -97,6 +100,9 @@ export default async function DashboardPage() {
         <Panel title="Skill Gap Heatmap"><SkillHeatmap levelAccuracy={stats?.levelAccuracy ?? []} /></Panel>
         <Panel title="Voice Practice">
           <VoicePracticePanel stats={voiceStats} reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} />
+        </Panel>
+        <Panel title="Behavioral Trends">
+          <BehavioralTrendsPanel reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} trendsByRep={behavioralTrends} />
         </Panel>
         <Panel title="Activity This Week"><ActivityBar activity={stats?.activity ?? []} /></Panel>
         {stats?.inviteCode && (

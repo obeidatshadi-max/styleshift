@@ -8,7 +8,7 @@ import {
 import { XP_VALUES } from '@/lib/game-data'
 
 export type RecorderPhase = 'idle' | 'recording' | 'processing' | 'pick-speaker' | 'done' | 'error'
-export type RecorderError = 'mic' | 'diarize' | 'session'
+export type RecorderError = 'mic' | 'diarize' | 'session' | 'speakers'
 
 export interface RawSpeakerPreview { speaker: string; sample: string }
 
@@ -172,8 +172,8 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
       utterancesRef.current = utterances
       const speakers = Array.from(new Set(utterances.map(u => u.speaker)))
       if (speakers.length < 2) {
-        console.error('roleplay stop: diarization found <2 speakers — talk louder/closer to the mic, or the colleague\'s voice was too quiet to separate')
-        setError('diarize')
+        console.error(`roleplay stop: diarization found ${speakers.length} distinct speaker(s), ${utterances.length} utterance(s) — one voice was likely too quiet/far from the mic, or only one person spoke`)
+        setError('speakers')
         setPhase('error')
         return
       }

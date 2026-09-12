@@ -5,6 +5,7 @@ import {
   computeSessionSignals, buildEvaluatorPrompt, parseEvaluatorResponse, groundEvaluatorResult,
   resolveDoctorStyleProfile,
 } from '@/lib/session-evaluator'
+import { computePressureShift } from '@/lib/pressure-shift'
 import type { ConversationTurn, Doctor } from '@/types/game'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -92,7 +93,8 @@ export async function POST(req: Request) {
   }
 
   const signals = computeSessionSignals(turns, hasHiddenConcern)
-  const prompt = buildEvaluatorPrompt(turns, signals, styleProfile, lang)
+  const pressureShift = computePressureShift(turns)
+  const prompt = buildEvaluatorPrompt(turns, signals, styleProfile, lang, pressureShift)
 
   let text = await callEvaluator(anthropicKey, prompt)
   let raw = text ? parseEvaluatorResponse(text) : null
@@ -102,13 +104,17 @@ export async function POST(req: Request) {
   }
   if (!raw) return NextResponse.json({ error: 'invalid' }, { status: 422 })
 
-  const { competencies, adaptation, adaptationScore, adaptationRecommendation, criticalMoments } = groundEvaluatorResult(raw, turns)
+  const { competencies, adaptation, adaptationScore, adaptationRecommendation, criticalMoments, pressureShiftInsight } = groundEvaluatorResult(raw, turns)
 
   const { error: scorecardError } = await supabase.from('session_scorecards').upsert({
     session_id: sessionId, rep_id: user.id, doctor_id: doctorId,
     competencies, signals, model: 'claude-haiku-4-5-20251001', updated_at: new Date().toISOString(),
     adaptation, adaptation_score: adaptationScore, adaptation_recommendation: adaptationRecommendation,
     doctor_style_profile: styleProfile,
+    pressure_shift_turn_index: pressureShift?.moment.turnIndex ?? null,
+    pressure_shift_before: pressureShift?.before ?? null,
+    pressure_shift_after: pressureShift?.after ?? null,
+    pressure_shift_insight: pressureShiftInsight || null,
   }, { onConflict: 'session_id' })
   if (scorecardError) return NextResponse.json({ error: 'insert_failed' }, { status: 500 })
 
@@ -129,5 +135,6 @@ export async function POST(req: Request) {
   return NextResponse.json({
     competencies, signals, criticalMoments,
     adaptation, adaptationScore, adaptationRecommendation, doctorStyleProfile: styleProfile,
+    pressureShift, pressureShiftInsight,
   })
 }

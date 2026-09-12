@@ -2,6 +2,7 @@ import type { ConversationTurn, Doctor, StyleKey } from '@/types/game'
 import { classifyQuestions, type Turn } from '@/lib/roleplay-core'
 import { isClearStep, isObjectionType, langName, styleWeights, type ClearStep, type ObjectionType } from '@/lib/voice-partner-core'
 import { STYLES } from '@/lib/game-data'
+import type { PressureShiftResult } from '@/lib/pressure-shift'
 
 // ───────────────────────── ConversationObserver ─────────────────────────
 // Phase 2 ("every score has evidence" — docs/ai-doctor-phase-1-plan.md's
@@ -136,6 +137,12 @@ interface RawEvaluatorResponse {
   adaptation: Record<string, { score: unknown; turnRefs: unknown; rationale: unknown }>
   adaptationRecommendation: unknown
   criticalMoments: RawCriticalMoment[]
+  /** One sentence interpreting the Phase 4 before/after Pressure Shift
+   * numbers (see pressure-shift.ts) — only requested when a pressure moment
+   * was actually detected. Never a source of the numbers themselves; those
+   * are computed deterministically and passed IN to the prompt, same
+   * "server derives, model only interprets" rule as everything else here. */
+  pressureShiftInsight?: unknown
 }
 
 /** Fully grounded critical moment — `quote`/`role`/`createdAt` are copied
@@ -232,8 +239,28 @@ export interface AdaptationDimensionScore {
 }
 export type AdaptationScores = Record<AdaptationDimension, AdaptationDimensionScore>
 
+// DECISION: Pressure Shift's before/after numbers are computed
+// deterministically (pressure-shift.ts) and handed to the model as CONTEXT,
+// not derived by it — same anti-hallucination split as `signals` above. The
+// model only writes one interpretive sentence, and only when a moment was
+// actually found; when `pressureShift` is null (no doctor turn crossed the
+// threshold this session) the prompt omits the section entirely and asks for
+// an empty string, rather than asking the model to guess whether pressure
+// occurred.
+function pressureShiftLine(pressureShift: PressureShiftResult | null): string {
+  if (!pressureShift) {
+    return 'No Pressure Shift moment was detected in this session (the physician\'s trust/skepticism/engagement/time-pressure state never swung sharply against the rep) — leave pressureShiftInsight as an empty string.'
+  }
+  const { moment, before, after } = pressureShift
+  return `A Pressure Shift moment was detected at turn_index ${moment.turnIndex} (the doctor's trust dropped ${-moment.trustDelta} and skepticism rose ${moment.skepticismDelta}). Compare the rep's own behavior just BEFORE this moment vs. AFTER it (already computed from real turns, not for you to re-derive):
+- Before: ${before.turnCount} rep turn(s), avg ${before.avgWordsPerTurn} words/turn, ${Math.round(before.questionRatio * 100)}% of turns were questions (${Math.round(before.openQuestionRatio * 100)}% open-ended), ${before.clearStepsPerTurn.toFixed(1)} CLEAR steps/turn.
+- After: ${after.turnCount} rep turn(s), avg ${after.avgWordsPerTurn} words/turn, ${Math.round(after.questionRatio * 100)}% of turns were questions (${Math.round(after.openQuestionRatio * 100)}% open-ended), ${after.clearStepsPerTurn.toFixed(1)} CLEAR steps/turn.
+Write ONE sentence for pressureShiftInsight describing how the rep's communication actually changed once pressure hit (e.g. went quieter/more clipped, kept asking open questions, stopped using CLEAR steps) and whether that shift helped or hurt them with this doctor. Ground it only in the numbers above — do not invent tone/emotion the numbers don't support.`
+}
+
 export function buildEvaluatorPrompt(
   turns: ConversationTurn[], signals: SessionSignals, styleProfile: DoctorStyleProfile, lang: 'en' | 'ar',
+  pressureShift: PressureShiftResult | null = null,
 ): string {
   const sorted = [...turns].sort((a, b) => a.turn_index - b.turn_index)
   const transcript = sorted.map(t => `[${t.turn_index}] ${t.role === 'doctor' ? 'Doctor' : 'Rep'}: ${t.text}`).join('\n')
@@ -256,6 +283,8 @@ Then write ONE concrete adaptationRecommendation sentence. It MUST name this doc
 
 Then identify 3 to 7 Critical Moments — points where the conversation materially changed (an objection landed, the rep missed an opening, a strong recovery, etc). For each: the turnIndex (one of the [N] numbers above), what the rep's behavior was (observedBehavior), what they missed if anything (missedOpportunity, or null if nothing was missed), and one concrete alternative response (alternative, or null if not applicable). Do NOT include the quoted text yourself — just the turnIndex; the exact words will be looked up separately.
 
+${pressureShiftLine(pressureShift)}
+
 Return JSON exactly in this shape, all ${COMPETENCY_DIMENSIONS.length} competency keys and all ${ADAPTATION_DIMENSIONS.length} adaptation keys present:
 {
   "competencies": {
@@ -270,7 +299,8 @@ Return JSON exactly in this shape, all ${COMPETENCY_DIMENSIONS.length} competenc
   "adaptationRecommendation": "one sentence naming this doctor's dominant style, grounded in real transcript evidence",
   "criticalMoments": [
     { "turnIndex": 3, "observedBehavior": "...", "missedOpportunity": "..." , "alternative": "..." }
-  ]
+  ],
+  "pressureShiftInsight": "one sentence, or empty string if no Pressure Shift moment was described above"
 }
 Output ONLY the JSON object. No markdown fences, no commentary.`
 }
@@ -323,7 +353,10 @@ export function parseEvaluatorResponse(text: string): RawEvaluatorResponse | nul
   if (!adaptation) return null
   if (!Array.isArray(o.criticalMoments)) return null
   const criticalMoments = o.criticalMoments.filter(isRawCriticalMoment)
-  return { competencies, adaptation, adaptationRecommendation: o.adaptationRecommendation, criticalMoments }
+  return {
+    competencies, adaptation, adaptationRecommendation: o.adaptationRecommendation, criticalMoments,
+    pressureShiftInsight: o.pressureShiftInsight,
+  }
 }
 
 /** Grounds the raw model response against the real transcript: clamps/
@@ -336,7 +369,7 @@ export function groundEvaluatorResult(
   raw: RawEvaluatorResponse, turns: ConversationTurn[],
 ): {
   competencies: CompetencyScores; adaptation: AdaptationScores; adaptationScore: number | null
-  adaptationRecommendation: string; criticalMoments: CriticalMoment[]
+  adaptationRecommendation: string; criticalMoments: CriticalMoment[]; pressureShiftInsight: string
 } {
   const byIndex = new Map(turns.map(t => [t.turn_index, t]))
   const validIndex = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && byIndex.has(n)
@@ -381,5 +414,7 @@ export function groundEvaluatorResult(
   }
   criticalMoments.sort((a, b) => a.turnIndex - b.turnIndex)
 
-  return { competencies, adaptation, adaptationScore, adaptationRecommendation, criticalMoments }
+  const pressureShiftInsight = typeof raw.pressureShiftInsight === 'string' ? raw.pressureShiftInsight : ''
+
+  return { competencies, adaptation, adaptationScore, adaptationRecommendation, criticalMoments, pressureShiftInsight }
 }

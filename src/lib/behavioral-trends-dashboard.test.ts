@@ -16,8 +16,8 @@ describe('buildBehavioralTrendsByRep', () => {
   it('returns an entry for every requested rep, even with zero sessions', () => {
     const result = buildBehavioralTrendsByRep(['rep-a', 'rep-b'], [], [])
     expect(result.size).toBe(2)
-    expect(result.get('rep-a')).toEqual({ gravity: null, unusedResources: [] })
-    expect(result.get('rep-b')).toEqual({ gravity: null, unusedResources: [] })
+    expect(result.get('rep-a')).toEqual({ gravity: null, unusedResources: [], mastermindInsights: [] })
+    expect(result.get('rep-b')).toEqual({ gravity: null, unusedResources: [], mastermindInsights: [] })
   })
 
   it('scopes sessions to the correct rep and ignores sessions for reps outside the requested set', () => {
@@ -41,7 +41,7 @@ describe('buildBehavioralTrendsByRep', () => {
     ]
     const scorecards = [{ rep_id: 'rep-a', session_id: 's2', signals: signals() }]
     const result = buildBehavioralTrendsByRep(['rep-a'], sessions, scorecards)
-    expect(result.get('rep-a')).toEqual({ gravity: null, unusedResources: [] })
+    expect(result.get('rep-a')).toEqual({ gravity: null, unusedResources: [], mastermindInsights: [] })
   })
 
   it('detects an unused-resource finding across two reps independently once enough sessions exist', () => {
@@ -60,6 +60,6 @@ describe('buildBehavioralTrendsByRep', () => {
     const result = buildBehavioralTrendsByRep(['rep-a', 'rep-b'], sessions, scorecards)
     const findings = result.get('rep-a')!.unusedResources
     expect(findings.some(f => f.step === 'clarify' && f.provenContext === 'doubt' && f.underusedContext === 'indifference')).toBe(true)
-    expect(result.get('rep-b')).toEqual({ gravity: null, unusedResources: [] })
+    expect(result.get('rep-b')).toEqual({ gravity: null, unusedResources: [], mastermindInsights: [] })
   })
 })

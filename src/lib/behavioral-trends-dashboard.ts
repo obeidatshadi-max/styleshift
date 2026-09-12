@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { isObjectionType, isClearStep, type ClearStep } from '@/lib/voice-partner-core'
 import { computeBehavioralGravity, type GravitySessionRow, type BehavioralGravityResult } from '@/lib/behavioral-gravity'
 import { detectUnusedResources, type CapabilityUsageRow, type UnusedResourceFinding } from '@/lib/unused-resource-detector'
+import { buildMastermindInsights, type MastermindInsight } from '@/lib/mastermind-coach'
 import type { SessionSignals } from '@/lib/session-evaluator'
 
 // Manager-dashboard surfacing for AI Doctor Phase 5 ("Behavioral Pattern
@@ -44,6 +45,11 @@ function asSessionSignals(v: unknown): SessionSignals | null {
 export interface RepBehavioralTrends {
   gravity: BehavioralGravityResult | null
   unusedResources: UnusedResourceFinding[]
+  /** Phase 6 (Mastermind Coach) - derived entirely from the two fields
+   * above via buildMastermindInsights, added here so callers (the dashboard
+   * panel, coaching-queue.ts) get it for free without a second pass over
+   * gravity/unusedResources. */
+  mastermindInsights: MastermindInsight[]
 }
 
 /** Pure: groups already-fetched raw rows by rep, then runs the existing
@@ -89,10 +95,9 @@ export function buildBehavioralTrendsByRep(
 
   const result = new Map<string, RepBehavioralTrends>()
   for (const repId of repIds) {
-    result.set(repId, {
-      gravity: computeBehavioralGravity(gravityByRep.get(repId) ?? []),
-      unusedResources: detectUnusedResources(usageByRep.get(repId) ?? []),
-    })
+    const gravity = computeBehavioralGravity(gravityByRep.get(repId) ?? [])
+    const unusedResources = detectUnusedResources(usageByRep.get(repId) ?? [])
+    result.set(repId, { gravity, unusedResources, mastermindInsights: buildMastermindInsights(gravity, unusedResources) })
   }
   return result
 }

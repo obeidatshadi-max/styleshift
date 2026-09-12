@@ -43,6 +43,16 @@ export default function CoachingQueuePanel({ queue, onSuggest }: Props) {
               </span>
             ))}
           </div>
+          {entry.recommendedFocus && (
+            // Phase 6: a specific trigger-targeted suggestion from that
+            // rep's top Mastermind Coach insight, alongside the generic
+            // "Suggest Level" button above — informational only, not wired
+            // to createAssignment (see mastermind-coach.ts's Experiment
+            // decision note: the two objection taxonomies stay unmerged).
+            <div style={{ fontSize: 11.5, color: 'var(--ink-dim)', marginTop: 8 }}>
+              Specifically: {entry.recommendedFocus.label}
+            </div>
+          )}
         </div>
       ))}
     </div>

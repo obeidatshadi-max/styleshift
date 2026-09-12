@@ -2,8 +2,30 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { getTeamStatsForUser } from '@/lib/team-stats'
 import { getVoiceStats } from '@/lib/voice-stats'
 import { getAssignmentForManager } from '@/lib/assignments'
+import { getBehavioralTrendsForReps } from '@/lib/behavioral-trends-dashboard'
+import type { ObjectionType, ClearStep } from '@/lib/voice-partner-core'
 
 export type CoachingFlag = 'low_accuracy' | 'inactive' | 'assignment_overdue' | 'no_voice_practice'
+
+// Phase 6 ("Adaptive Coaching" - personalized re-practice, gap-analysis's
+// "coaching-queue.ts suggests a level; not scenario/trigger-targeted" row).
+// `suggestedLevel` (below) is untouched - it is this game's OTHER, older
+// level system (daily-challenge L1/L2/L3 from the `sessions` table),
+// unrelated to AI-Doctor/voice-partner data entirely. `recommendedFocus` is
+// additive: when Phase 5/6 (behavioral-trends-dashboard.ts) has already
+// found this rep's top Mastermind Coach insight, its Experiment (a specific
+// ObjectionType + ClearStep pairing) is surfaced alongside the generic
+// level suggestion - a manager sees BOTH "practice level 2" (the existing,
+// broad hint) AND, when available, "specifically: Doubt objections,
+// Listen step" (the new, trigger-targeted one). Deliberately not a
+// replacement: a rep with no AI-Doctor history yet (most reps today, since
+// the feature just went live) still gets the existing generic suggestion
+// rather than nothing.
+export interface RecommendedFocus {
+  objectionType: ObjectionType
+  focusStep: ClearStep
+  label: string
+}
 
 export interface CoachingQueueInput {
   rep_id: string
@@ -14,6 +36,7 @@ export interface CoachingQueueInput {
   isAssignmentOverdue: boolean
   hasVoicePractice: boolean
   levelAccuracies: { level: number; avg: number }[]
+  recommendedFocus?: RecommendedFocus | null
 }
 
 export interface CoachingQueueEntry {
@@ -22,6 +45,7 @@ export interface CoachingQueueEntry {
   avgAccuracy: number
   flags: CoachingFlag[]
   suggestedLevel: number
+  recommendedFocus: RecommendedFocus | null
 }
 
 const INACTIVE_DAYS_THRESHOLD = 3
@@ -54,7 +78,10 @@ export function buildCoachingQueue(inputs: CoachingQueueInput[], nowMs: number):
       ? input.levelAccuracies.reduce((worst, cur) => (cur.avg < worst.avg ? cur : worst)).level
       : 1
 
-    entries.push({ rep_id: input.rep_id, name: input.name, avgAccuracy: input.avgAccuracy, flags, suggestedLevel })
+    entries.push({
+      rep_id: input.rep_id, name: input.name, avgAccuracy: input.avgAccuracy, flags, suggestedLevel,
+      recommendedFocus: input.recommendedFocus ?? null,
+    })
   }
 
   entries.sort((a, b) => b.flags.length - a.flags.length || a.avgAccuracy - b.avgAccuracy)
@@ -67,9 +94,10 @@ export async function getCoachingQueue(managerId: string): Promise<CoachingQueue
   if (!stats || stats.reps.length === 0) return []
 
   const repIds = stats.reps.map(r => r.id)
-  const [voiceStats, assignmentView] = await Promise.all([
+  const [voiceStats, assignmentView, behavioralTrends] = await Promise.all([
     getVoiceStats(repIds),
     getAssignmentForManager(managerId),
+    getBehavioralTrendsForReps(repIds),
   ])
 
   const overdueRepIds = new Set(
@@ -91,6 +119,7 @@ export async function getCoachingQueue(managerId: string): Promise<CoachingQueue
       byLevel.set(row.level, cur)
     }
     const levelAccuracies = [...byLevel.entries()].map(([level, { sum, n }]) => ({ level, avg: sum / n }))
+    const topInsight = behavioralTrends.get(rep.id)?.mastermindInsights[0]
 
     return {
       rep_id: rep.id,
@@ -101,6 +130,7 @@ export async function getCoachingQueue(managerId: string): Promise<CoachingQueue
       isAssignmentOverdue: overdueRepIds.has(rep.id),
       hasVoicePractice: (voiceStats.byRep.get(rep.id)?.sessionsCompleted ?? 0) > 0,
       levelAccuracies,
+      recommendedFocus: topInsight ? { ...topInsight.experiment } : null,
     }
   })
 

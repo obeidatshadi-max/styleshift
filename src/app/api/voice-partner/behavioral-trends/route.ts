@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import { isObjectionType, isClearStep, type ClearStep } from '@/lib/voice-partner-core'
 import { computeBehavioralGravity, type GravitySessionRow } from '@/lib/behavioral-gravity'
 import { detectUnusedResources, type CapabilityUsageRow } from '@/lib/unused-resource-detector'
+import { buildMastermindInsights } from '@/lib/mastermind-coach'
 import type { SessionSignals } from '@/lib/session-evaluator'
 
 // Phase 5 ("Behavioral Pattern Intelligence") surfacing route — computed
@@ -79,8 +80,12 @@ export async function GET() {
     usageRows.push({ sessionId: session.id, objectionType: session.objection_type, clearStepsHit })
   }
 
-  return NextResponse.json({
-    gravity: computeBehavioralGravity(gravityRows),
-    unusedResources: detectUnusedResources(usageRows),
-  })
+  const gravity = computeBehavioralGravity(gravityRows)
+  const unusedResources = detectUnusedResources(usageRows)
+
+  // Phase 6 (Mastermind Coach): included here for parity with the manager
+  // dashboard read path (behavioral-trends-dashboard.ts), computed for free
+  // from the same rows above. No rep-facing UI consumes this yet — that's a
+  // deferred decision, not an oversight; see project memory.
+  return NextResponse.json({ gravity, unusedResources, mastermindInsights: buildMastermindInsights(gravity, unusedResources) })
 }

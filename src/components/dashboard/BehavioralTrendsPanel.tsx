@@ -44,6 +44,10 @@ export default function BehavioralTrendsPanel({ reps, trendsByRep }: Props) {
     .map(r => ({ rep: r, findings: trendsByRep.get(r.id)?.unusedResources ?? [] }))
     .filter(r => r.findings.length > 0)
 
+  const mastermindRows = reps
+    .map(r => ({ rep: r, insights: trendsByRep.get(r.id)?.mastermindInsights ?? [] }))
+    .filter(r => r.insights.length > 0)
+
   const anyRepHasEnoughHistory = reps.some(r => (trendsByRep.get(r.id)?.gravity?.overallSessionCount ?? 0) > 0)
 
   if (!anyRepHasEnoughHistory) {
@@ -90,6 +94,30 @@ export default function BehavioralTrendsPanel({ reps, trendsByRep }: Props) {
                   <div key={f.step} style={metaStyle}>
                     <strong>{CLEAR_STEP_LABEL[f.step]}</strong> — proven in {OBJECTION_LABEL[f.provenContext]} ({f.provenRate}% of {f.provenSessionCount} sessions),
                     {' '}rarely used in {OBJECTION_LABEL[f.underusedContext]} ({f.underusedRate}% of {f.underusedSessionCount} sessions).
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <div style={sectionLabelStyle}>Mastermind Coach</div>
+        {mastermindRows.length === 0 ? (
+          <div style={{ color: 'var(--ink-dim)', fontSize: 12.5 }}>No coaching insight generated yet for any rep.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {mastermindRows.map(({ rep, insights }) => (
+              <div key={rep.id} style={cardStyle}>
+                <div style={repNameStyle}>{rep.name ?? 'Rep'}</div>
+                {insights.map((insight, i) => (
+                  <div key={i} style={{ ...metaStyle, marginTop: i === 0 ? 4 : 10, paddingTop: i === 0 ? 0 : 10, borderTop: i === 0 ? undefined : '1px solid var(--line)' }}>
+                    <div><strong>Observation:</strong> {insight.observation}</div>
+                    <div><strong>Pattern:</strong> {insight.pattern}</div>
+                    <div><strong>Impact:</strong> {insight.impact}</div>
+                    <div><strong>Alternative:</strong> {insight.alternative}</div>
+                    <div><strong>Experiment:</strong> {insight.experiment.label}</div>
                   </div>
                 ))}
               </div>

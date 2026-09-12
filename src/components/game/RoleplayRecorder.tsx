@@ -144,8 +144,22 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
     )
   }
 
-  // phase === 'done'
-  const r = result!
+  if (phase !== 'done' || !result) {
+    // Covers 'idle': setConsented(true) re-renders synchronously, before
+    // start()'s first await resolves and moves phase off 'idle' — without
+    // this guard that render fell through to the block below with result
+    // still null and crashed ("Cannot read properties of null (reading
+    // 'talkRatio')"), taking the whole page down via error.tsx.
+    return (
+      <div style={wrap}>
+        <div style={card}>
+          {eyebrow(t('roleplay.title'))}
+          <p style={{ color: 'var(--ink-dim)', fontSize: 13.5 }}>…</p>
+        </div>
+      </div>
+    )
+  }
+  const r = result
   const talkPct = Math.round(r.talkRatio.repRatio * 100)
   const questionPct = Math.round(r.questionRatio * 100)
   const openQuestionPct = Math.round(r.openQuestionRatio * 100)

@@ -92,7 +92,11 @@ exports.handler = async function (event) {
       const response = await fetch('https://api.assemblyai.com/v2/transcript', {
         method: 'POST',
         headers: { authorization: apiKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audio_url: body.audio_url, speaker_labels: true }),
+        // speakers_expected hints AssemblyAI's diarization clustering — this
+        // recording is always exactly one rep + one practice partner, and
+        // without the hint short/close-together same-mic recordings were
+        // consistently clustering both voices into a single speaker.
+        body: JSON.stringify({ audio_url: body.audio_url, speaker_labels: true, speakers_expected: 2 }),
       })
       const data = await response.json()
       if (!response.ok) console.error('assemblyai submit failed:', response.status, JSON.stringify(data))
@@ -112,7 +116,7 @@ exports.handler = async function (event) {
         console.error('assemblyai poll failed:', response.status, JSON.stringify(data))
       } else if (data.status === 'completed') {
         const speakerCount = new Set((data.utterances || []).map(u => u.speaker)).size
-        console.log(`assemblyai poll completed: ${speakerCount} distinct speakers, ${(data.utterances || []).length} utterances, audio_duration=${data.audio_duration}`)
+        console.log(`assemblyai poll completed: ${speakerCount} distinct speakers, ${(data.utterances || []).length} utterances, audio_duration=${data.audio_duration}, text_length=${(data.text || '').length}`)
       } else if (data.status === 'error') {
         console.error('assemblyai transcription error:', data.error)
       } else {

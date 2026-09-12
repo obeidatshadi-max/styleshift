@@ -84,7 +84,16 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
 
     let stream: MediaStream
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      // Chrome's default audio constraints (echoCancellation/noiseSuppression/
+      // autoGainControl all default true) are tuned for a single-speaker VOIP
+      // call — on a shared-phone two-person recording they auto-level and
+      // noise-gate the quieter of the two voices, sometimes hard enough that
+      // AssemblyAI's diarization (and even its speech detection) only finds
+      // one voice, or none, however clearly both people actually spoke.
+      // Turning them off preserves the real dynamic range diarization needs.
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+      })
     } catch (err) {
       console.error('roleplay start: getUserMedia failed:', err)
       setError('mic')

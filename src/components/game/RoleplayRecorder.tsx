@@ -91,7 +91,7 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
         <div style={card}>
           {eyebrow(t('roleplay.title'))}
           <p style={{ color: 'var(--red)', fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
-            {error === 'mic' ? t('roleplay.errorMic') : t('roleplay.errorDiarize')}
+            {error === 'mic' ? t('roleplay.errorMic') : error === 'session' ? t('roleplay.errorSession') : t('roleplay.errorDiarize')}
           </p>
           <button style={btnPrimary} onClick={() => { reset(); setConsented(false); setConsentChecked(false) }}>{t('roleplay.done')}</button>
         </div>

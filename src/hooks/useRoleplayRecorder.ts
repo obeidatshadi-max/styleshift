@@ -8,6 +8,7 @@ import {
 import { XP_VALUES } from '@/lib/game-data'
 
 export type RecorderPhase = 'idle' | 'recording' | 'processing' | 'pick-speaker' | 'done' | 'error'
+export type RecorderError = 'mic' | 'diarize' | 'session'
 
 export interface RawSpeakerPreview { speaker: string; sample: string }
 
@@ -40,7 +41,7 @@ function autoCorrelate(bufIn: Float32Array, sampleRate: number): number {
 export function useRoleplayRecorder(doctorId: string | null, colleagueId: string | null) {
   const supabase = createClient()
   const [phase, setPhase] = useState<RecorderPhase>('idle')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<RecorderError | null>(null)
   const [elapsedSec, setElapsedSec] = useState(0)
   const [speakerPreviews, setSpeakerPreviews] = useState<RawSpeakerPreview[]>([])
   const [result, setResult] = useState<RoleplayResult | null>(null)
@@ -60,12 +61,32 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
   const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const utterancesRef = useRef<DiarizedUtterance[]>([])
 
+  const cleanupCapture = useCallback(() => {
+    if (pitchIntervalRef.current) { clearInterval(pitchIntervalRef.current); pitchIntervalRef.current = null }
+    if (elapsedIntervalRef.current) { clearInterval(elapsedIntervalRef.current); elapsedIntervalRef.current = null }
+    if (audioCtxRef.current) { audioCtxRef.current.close().catch(() => {}); audioCtxRef.current = null }
+    analyserRef.current = null
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null }
+  }, [])
+
   const start = useCallback(async () => {
     setError(null)
+
+    // Fail fast if the session is already gone — otherwise the rep records
+    // the whole roleplay and only finds out it can't be saved at the end.
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      console.error('roleplay start: no Supabase session')
+      setError('session')
+      setPhase('error')
+      return
+    }
+
     let stream: MediaStream
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    } catch {
+    } catch (err) {
+      console.error('roleplay start: getUserMedia failed:', err)
       setError('mic')
       setPhase('error')
       return
@@ -112,21 +133,25 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     }, 500)
 
     chunksRef.current = []
-    const mediaRec = new MediaRecorder(stream)
+    let mediaRec: MediaRecorder
+    try {
+      mediaRec = new MediaRecorder(stream)
+    } catch (err) {
+      // Throws synchronously on browsers/devices with no MediaRecorder
+      // support (e.g. old iOS Safari) — was uncaught before, so recording
+      // silently never started with no error shown to the rep.
+      console.error('roleplay start: MediaRecorder unsupported:', err)
+      cleanupCapture()
+      setError('mic')
+      setPhase('error')
+      return
+    }
     mediaRec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
     mediaRec.start()
     mediaRecRef.current = mediaRec
 
     setPhase('recording')
-  }, [])
-
-  const cleanupCapture = useCallback(() => {
-    if (pitchIntervalRef.current) { clearInterval(pitchIntervalRef.current); pitchIntervalRef.current = null }
-    if (elapsedIntervalRef.current) { clearInterval(elapsedIntervalRef.current); elapsedIntervalRef.current = null }
-    if (audioCtxRef.current) { audioCtxRef.current.close().catch(() => {}); audioCtxRef.current = null }
-    analyserRef.current = null
-    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null }
-  }, [])
+  }, [supabase, cleanupCapture])
 
   const stop = useCallback(async () => {
     const mediaRec = mediaRecRef.current
@@ -147,6 +172,7 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
       utterancesRef.current = utterances
       const speakers = Array.from(new Set(utterances.map(u => u.speaker)))
       if (speakers.length < 2) {
+        console.error('roleplay stop: diarization found <2 speakers — talk louder/closer to the mic, or the colleague\'s voice was too quiet to separate')
         setError('diarize')
         setPhase('error')
         return
@@ -156,8 +182,16 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
         sample: utterances.find(u => u.speaker === speaker)?.text ?? '',
       })))
       setPhase('pick-speaker')
-    } catch {
-      setError('diarize')
+    } catch (err) {
+      console.error('roleplay stop: diarizeAudio failed:', err)
+      // Session can expire mid-recording (long roleplay + idle token) — the
+      // whole practice is lost either way, but at least tell the rep why
+      // instead of the generic "analysis failed" message.
+      if (err instanceof Error && err.message === 'Not signed in.') {
+        setError('session')
+      } else {
+        setError('diarize')
+      }
       setPhase('error')
     }
   }, [cleanupCapture])

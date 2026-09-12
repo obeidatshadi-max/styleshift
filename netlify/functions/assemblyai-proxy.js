@@ -74,12 +74,14 @@ exports.handler = async function (event) {
     if (body.action === 'upload') {
       if (!body.audio) return { statusCode: 400, headers, body: JSON.stringify({ error: 'No audio provided.' }) }
       const buffer = Buffer.from(body.audio, 'base64')
+      console.log(`assemblyai upload: ${buffer.length} bytes`)
       const response = await fetch('https://api.assemblyai.com/v2/upload', {
         method: 'POST',
         headers: { authorization: apiKey },
         body: buffer,
       })
       const data = await response.json()
+      if (!response.ok) console.error('assemblyai upload failed:', response.status, JSON.stringify(data))
       return { statusCode: response.status, headers, body: JSON.stringify(data) }
     }
 
@@ -93,6 +95,8 @@ exports.handler = async function (event) {
         body: JSON.stringify({ audio_url: body.audio_url, speaker_labels: true }),
       })
       const data = await response.json()
+      if (!response.ok) console.error('assemblyai submit failed:', response.status, JSON.stringify(data))
+      else console.log('assemblyai submit ok, transcript id:', data.id)
       return { statusCode: response.status, headers, body: JSON.stringify(data) }
     }
 
@@ -104,6 +108,16 @@ exports.handler = async function (event) {
         headers: { authorization: apiKey },
       })
       const data = await response.json()
+      if (!response.ok) {
+        console.error('assemblyai poll failed:', response.status, JSON.stringify(data))
+      } else if (data.status === 'completed') {
+        const speakerCount = new Set((data.utterances || []).map(u => u.speaker)).size
+        console.log(`assemblyai poll completed: ${speakerCount} distinct speakers, ${(data.utterances || []).length} utterances, audio_duration=${data.audio_duration}`)
+      } else if (data.status === 'error') {
+        console.error('assemblyai transcription error:', data.error)
+      } else {
+        console.log('assemblyai poll status:', data.status)
+      }
       return { statusCode: response.status, headers, body: JSON.stringify(data) }
     }
 

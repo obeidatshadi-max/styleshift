@@ -168,13 +168,34 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     if (silenceStartRef.current !== null && lastSpeechTimeRef.current !== null) {
       silencePeriodsRef.current.push({ start: silenceStartRef.current, end: Date.now() - startTimeRef.current })
     }
-    cleanupCapture()
     setPhase('processing')
 
-    const blob: Blob = await new Promise(resolve => {
-      mediaRec.onstop = () => resolve(new Blob(chunksRef.current, { type: mediaRec.mimeType || 'audio/webm' }))
-      mediaRec.stop()
-    })
+    // mediaRec.onstop MUST be attached and mediaRec.stop() called before
+    // cleanupCapture() touches the underlying MediaStream tracks. Stopping
+    // the tracks first (the old order) can make the browser auto-stop the
+    // recorder and fire its own 'stop' event before our handler is attached
+    // — the promise below then never resolves and the UI hangs forever on
+    // "Separating speakers…" with no network request ever sent. A timeout
+    // is also added so any other stall surfaces an error instead of a
+    // silent freeze.
+    let blob: Blob
+    try {
+      blob = await new Promise<Blob>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('MediaRecorder stop timed out')), 15000)
+        mediaRec.onstop = () => {
+          clearTimeout(timeout)
+          resolve(new Blob(chunksRef.current, { type: mediaRec.mimeType || 'audio/webm' }))
+        }
+        mediaRec.stop()
+      })
+    } catch (err) {
+      console.error('roleplay stop: MediaRecorder failed to stop:', err)
+      cleanupCapture()
+      setError('diarize')
+      setPhase('error')
+      return
+    }
+    cleanupCapture()
 
     try {
       const utterances = await diarizeAudio(blob)

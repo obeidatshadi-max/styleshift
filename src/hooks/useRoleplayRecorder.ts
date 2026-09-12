@@ -258,8 +258,11 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
       if (sessionId) {
         // Rep went back and re-picked the other speaker — update the same
         // row instead of inserting a duplicate session and double-awarding XP.
-        const { error: updateError } = await supabase.from('roleplay_sessions').update(payload).eq('id', sessionId)
+        // .select() so an RLS policy silently blocking the write (returns no
+        // error, zero rows) is still caught, not just a real error.
+        const { data: updated, error: updateError } = await supabase.from('roleplay_sessions').update(payload).eq('id', sessionId).select('id')
         if (updateError) console.error('roleplay_sessions update failed:', updateError.message)
+        else if (!updated || updated.length === 0) console.error('roleplay_sessions update affected 0 rows (RLS?) for session', sessionId)
       } else {
         const { data: inserted, error: insertError } = await supabase.from('roleplay_sessions').insert(payload).select('id').single()
         if (insertError) {

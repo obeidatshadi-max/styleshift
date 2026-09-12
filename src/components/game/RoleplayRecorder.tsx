@@ -8,7 +8,7 @@ interface Props { doctorId: string | null; colleagueId: string | null; onDone: (
 
 export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Props) {
   const t = useT()
-  const { phase, error, elapsedSec, speakerPreviews, result, sessionId, start, stop, pickSpeaker, reset } = useRoleplayRecorder(doctorId, colleagueId)
+  const { phase, error, elapsedSec, speakerPreviews, result, sessionId, start, stop, pickSpeaker, backToPickSpeaker, reset } = useRoleplayRecorder(doctorId, colleagueId)
   const [consentChecked, setConsentChecked] = useState(false)
   const [consented, setConsented] = useState(false)
 
@@ -278,6 +278,7 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
           )
         )}
 
+        <button style={btnGhost} onClick={backToPickSpeaker}>{t('roleplay.pickDifferentSpeaker')}</button>
         <button style={btnPrimary} onClick={onDone}>{t('roleplay.done')}</button>
       </div>
     </div>

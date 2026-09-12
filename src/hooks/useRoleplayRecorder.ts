@@ -235,7 +235,7 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
 
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      const { data: inserted, error: insertError } = await supabase.from('roleplay_sessions').insert({
+      const payload = {
         rep_id: user.id,
         doctor_id: doctorId,
         colleague_id: colleagueId,
@@ -253,23 +253,39 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
         // range/hesitation) so the tonality report can be rebuilt from
         // history later without re-running acoustic analysis.
         rep_metrics: built.repRead ? { ...built.repRead, warmth: built.warmth, predicates: built.predicates } : null,
-      }).select('id').single()
-      if (insertError) {
-        console.error('roleplay_sessions insert failed:', insertError.message)
+      }
+
+      if (sessionId) {
+        // Rep went back and re-picked the other speaker — update the same
+        // row instead of inserting a duplicate session and double-awarding XP.
+        const { error: updateError } = await supabase.from('roleplay_sessions').update(payload).eq('id', sessionId)
+        if (updateError) console.error('roleplay_sessions update failed:', updateError.message)
       } else {
-        setSessionId(inserted.id)
-        const { data: profile, error: profileError } = await supabase.from('profiles').select('xp').eq('id', user.id).single()
-        if (profileError) {
-          console.error('profile xp read failed:', profileError.message)
-        } else if (profile) {
-          const { error: xpError } = await supabase.from('profiles').update({ xp: profile.xp + XP_VALUES.roleplayComplete }).eq('id', user.id)
-          if (xpError) console.error('profile xp update failed:', xpError.message)
+        const { data: inserted, error: insertError } = await supabase.from('roleplay_sessions').insert(payload).select('id').single()
+        if (insertError) {
+          console.error('roleplay_sessions insert failed:', insertError.message)
+        } else {
+          setSessionId(inserted.id)
+          const { data: profile, error: profileError } = await supabase.from('profiles').select('xp').eq('id', user.id).single()
+          if (profileError) {
+            console.error('profile xp read failed:', profileError.message)
+          } else if (profile) {
+            const { error: xpError } = await supabase.from('profiles').update({ xp: profile.xp + XP_VALUES.roleplayComplete }).eq('id', user.id)
+            if (xpError) console.error('profile xp update failed:', xpError.message)
+          }
         }
       }
     }
 
     setPhase('done')
-  }, [doctorId, colleagueId, supabase])
+  }, [doctorId, colleagueId, supabase, sessionId])
+
+  // Lets the rep back out of the result screen to re-pick the other speaker
+  // (e.g. they tapped the wrong one) without re-recording or losing the
+  // already-saved session — pickSpeaker() above updates it in place.
+  const backToPickSpeaker = useCallback(() => {
+    setPhase('pick-speaker')
+  }, [])
 
   const reset = useCallback(() => {
     cleanupCapture()
@@ -282,5 +298,5 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     setPhase('idle')
   }, [cleanupCapture])
 
-  return { phase, error, elapsedSec, speakerPreviews, result, sessionId, start, stop, pickSpeaker, reset }
+  return { phase, error, elapsedSec, speakerPreviews, result, sessionId, start, stop, pickSpeaker, backToPickSpeaker, reset }
 }

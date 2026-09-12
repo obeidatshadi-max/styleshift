@@ -287,16 +287,45 @@ export function repTranscript(turns: Turn[], repSpeaker: string): string {
   return turns.filter(t => t.speaker === repSpeaker).map(t => t.text).join(' ')
 }
 
+/** Scopes captured pitch samples / silence periods down to a given set of turn windows. */
+function scopeAcousticToTurns(
+  pitchSamples: PitchSample[], silencePeriods: SilencePeriod[], turns: Turn[]
+): { pitchSamples: PitchSample[]; silencePeriods: SilencePeriod[] } {
+  const inTurn = (t: number) => turns.some(turn => t >= turn.start && t <= turn.end)
+  return {
+    pitchSamples: pitchSamples.filter(s => inTurn(s.t)),
+    silencePeriods: silencePeriods.filter(s => inTurn(s.start)),
+  }
+}
+
 /** Scopes captured pitch samples / silence periods down to the time windows a given speaker held the floor. */
 export function scopeAcousticToSpeaker(
   pitchSamples: PitchSample[], silencePeriods: SilencePeriod[], turns: Turn[], speaker: string
 ): { pitchSamples: PitchSample[]; silencePeriods: SilencePeriod[] } {
-  const speakerTurns = turns.filter(t => t.speaker === speaker)
-  const inSpeakerTurn = (t: number) => speakerTurns.some(turn => t >= turn.start && t <= turn.end)
-  return {
-    pitchSamples: pitchSamples.filter(s => inSpeakerTurn(s.t)),
-    silencePeriods: silencePeriods.filter(s => inSpeakerTurn(s.start)),
-  }
+  return scopeAcousticToTurns(pitchSamples, silencePeriods, turns.filter(t => t.speaker === speaker))
+}
+
+export interface AdaptationResult { score: number; label: 'mismatched' | 'aligned' | 'mirrored' }
+
+/**
+ * How closely the rep's style matches the practice partner's actual style,
+ * both read from the same recording (no pre-known persona profile exists
+ * for a real colleague, unlike AI Doctor's doctor-profile version) — the
+ * Euclidean distance between the two on the same assertiveness x
+ * responsiveness grid classifySocialStyle uses, normalized to 0-100 where
+ * closer styles score higher.
+ */
+export function computeAdaptationScore(
+  repRead: SocialStyleRead | null, partnerRead: SocialStyleRead | null
+): AdaptationResult | null {
+  if (!repRead || !partnerRead) return null
+  const dx = repRead.assertiveness - partnerRead.assertiveness
+  const dy = repRead.responsiveness - partnerRead.responsiveness
+  const dist = Math.sqrt(dx * dx + dy * dy)
+  const maxDist = Math.sqrt(100 * 100 + 100 * 100)
+  const score = Math.round(clamp01(100 - (dist / maxDist) * 100))
+  const label: AdaptationResult['label'] = score >= 75 ? 'mirrored' : score >= 45 ? 'aligned' : 'mismatched'
+  return { score, label }
 }
 
 export interface RoleplayResult {
@@ -307,6 +336,8 @@ export interface RoleplayResult {
   paraphraseScore: number
   activeListening: ActiveListeningResult
   repRead: SocialStyleRead | null
+  partnerRead: SocialStyleRead | null
+  adaptationScore: AdaptationResult | null
   durationSec: number
   warmth: number
   predicates: PredicateCounts
@@ -334,8 +365,22 @@ export function buildRoleplayResult(
   // without a second acoustic pass.
   const delivery = analyzeDelivery({ transcript })
   const repRead = metrics ? classifySocialStyle(metrics, delivery.warmth) : null
+
+  // Partner's style read the same way as the rep's, from whichever turns
+  // aren't the rep's — mirrors computeTalkRatio's existing "everyone else"
+  // aggregation rather than requiring exactly one other diarized label.
+  const partnerTurns = turns.filter(t => t.speaker !== repSpeaker)
+  const partnerTranscript = partnerTurns.map(t => t.text).join(' ')
+  const { pitchSamples: partnerPitch, silencePeriods: partnerSilence } = scopeAcousticToTurns(pitchSamples, silencePeriods, partnerTurns)
+  const partnerDurationSec = talkRatio.partnerMs / 1000
+  const partnerMetrics = processAcousticData({ pitchSamples: partnerPitch, silencePeriods: partnerSilence, transcript: partnerTranscript, durationSec: partnerDurationSec })
+  const partnerDelivery = analyzeDelivery({ transcript: partnerTranscript })
+  const partnerRead = partnerMetrics ? classifySocialStyle(partnerMetrics, partnerDelivery.warmth) : null
+  const adaptationScore = computeAdaptationScore(repRead, partnerRead)
+
   return {
     talkRatio, rapidTurnSwitches, questionRatio, openQuestionRatio, paraphraseScore, activeListening, repRead,
+    partnerRead, adaptationScore,
     durationSec: talkRatio.totalMs / 1000, warmth: delivery.warmth, predicates: delivery.predicates,
   }
 }

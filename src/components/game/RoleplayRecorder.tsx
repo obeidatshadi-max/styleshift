@@ -253,6 +253,23 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
         )}
 
         <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 16 }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('roleplay.adaptationTitle')}</div>
+          {r.adaptationScore && r.repRead && r.partnerRead ? (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 6 }}>
+                <span>{t('roleplay.adaptationYouVsPartner', { you: r.repRead.style, partner: r.partnerRead.style })}</span>
+                <span style={{ fontFamily: 'var(--mono)', fontWeight: 700 }}>{r.adaptationScore.score}%</span>
+              </div>
+              <p style={{ fontSize: 11.5, color: 'var(--ink-dim)', lineHeight: 1.5 }}>
+                {t(`roleplay.adaptationLabel.${r.adaptationScore.label}`)}
+              </p>
+            </>
+          ) : (
+            <p style={{ fontSize: 13, color: 'var(--ink-dim)', lineHeight: 1.5 }}>{t('roleplay.noAdaptationRead')}</p>
+          )}
+        </div>
+
+        <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 6 }}>
             <span>{t('roleplay.rapportTitle')}</span>
             <span style={{ fontFamily: 'var(--mono)', fontWeight: 700 }}>{Math.round(r.warmth * 100)}%</span>

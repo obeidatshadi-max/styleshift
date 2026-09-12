@@ -3,8 +3,8 @@ import {
   processAcousticData, classifySocialStyle, buildTurns, computeTalkRatio,
   computeRapidTurnSwitches, computeQuestionRatio, classifyQuestions, computeParaphraseScore,
   computeActiveListeningScore, repTranscript,
-  scopeAcousticToSpeaker, buildRoleplayResult,
-  type Utterance, type PitchSample, type SilencePeriod,
+  scopeAcousticToSpeaker, buildRoleplayResult, computeAdaptationScore,
+  type Utterance, type PitchSample, type SilencePeriod, type SocialStyleRead,
 } from './roleplay-core'
 
 describe('processAcousticData + classifySocialStyle (ported acoustic engine)', () => {
@@ -156,6 +156,64 @@ describe('paraphrase score', () => {
   it('returns 0 when no rep turn follows a partner turn', () => {
     const turns = buildTurns([{ speaker: 'A', text: 'hello there', start: 0, end: 500 }])
     expect(computeParaphraseScore(turns, 'A')).toBe(0)
+  })
+})
+
+describe('adaptation score', () => {
+  const makeRead = (assertiveness: number, responsiveness: number): SocialStyleRead => ({
+    style: 'driver', confidence: 80, assertiveness, responsiveness,
+    proof: { paceLabel: 'fast', rangeLabel: 'flat', hesitationLabel: 'fluent', wpm: 180, pitchRange: 40, totalHesitations: 0 },
+  })
+
+  it('scores identical rep/partner styles as fully mirrored', () => {
+    const read = makeRead(70, 30)
+    const result = computeAdaptationScore(read, read)
+    expect(result).not.toBeNull()
+    expect(result!.score).toBe(100)
+    expect(result!.label).toBe('mirrored')
+  })
+
+  it('scores opposite-corner styles as mismatched', () => {
+    const result = computeAdaptationScore(makeRead(100, 0), makeRead(0, 100))
+    expect(result!.score).toBe(0)
+    expect(result!.label).toBe('mismatched')
+  })
+
+  it('returns null when either read is unavailable', () => {
+    expect(computeAdaptationScore(null, makeRead(50, 50))).toBeNull()
+    expect(computeAdaptationScore(makeRead(50, 50), null)).toBeNull()
+    expect(computeAdaptationScore(null, null)).toBeNull()
+  })
+})
+
+describe('buildRoleplayResult partner analysis', () => {
+  it('computes a partner style read and adaptation score when the partner speaks enough for a reliable read', () => {
+    const utterances: Utterance[] = [
+      { speaker: 'A', text: 'Good morning, thanks for seeing me today, I appreciate your time.', start: 0, end: 4000 },
+      { speaker: 'B', text: 'Sure, glad to help, what do you have for me today then.', start: 4200, end: 8000 },
+      { speaker: 'A', text: 'This new formulation reduces dosing frequency for your patients.', start: 8100, end: 12000 },
+      { speaker: 'B', text: 'Interesting, does it interact with anything we should worry about.', start: 12100, end: 16000 },
+    ]
+    // Every 500ms from 0-16000 lands plenty of samples in both A's and B's
+    // turn windows (each ~8s total) — well over the 5-sample minimum.
+    const pitchSamples: PitchSample[] = Array.from({ length: 33 }, (_, i) => ({ f0: 130 + (i % 3) * 10, vol: 30, t: i * 500 }))
+    const result = buildRoleplayResult(utterances, 'A', pitchSamples, [])
+    expect(result.partnerRead).not.toBeNull()
+    expect(result.adaptationScore).not.toBeNull()
+    expect(result.adaptationScore!.score).toBeGreaterThanOrEqual(0)
+    expect(result.adaptationScore!.score).toBeLessThanOrEqual(100)
+  })
+
+  it('returns null partnerRead/adaptationScore when the partner barely speaks', () => {
+    const utterances: Utterance[] = [
+      { speaker: 'A', text: 'Good morning, thanks for seeing me today, I appreciate your time very much indeed.', start: 0, end: 8000 },
+      { speaker: 'B', text: 'Sure.', start: 8100, end: 8600 },
+    ]
+    // All samples land inside A's window; none inside B's tiny 500ms window.
+    const pitchSamples: PitchSample[] = Array.from({ length: 10 }, (_, i) => ({ f0: 130, vol: 30, t: i * 800 }))
+    const result = buildRoleplayResult(utterances, 'A', pitchSamples, [])
+    expect(result.partnerRead).toBeNull()
+    expect(result.adaptationScore).toBeNull()
   })
 })
 

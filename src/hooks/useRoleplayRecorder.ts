@@ -253,6 +253,9 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
         // range/hesitation) so the tonality report can be rebuilt from
         // history later without re-running acoustic analysis.
         rep_metrics: built.repRead ? { ...built.repRead, warmth: built.warmth, predicates: built.predicates } : null,
+        partner_style: built.partnerRead?.style ?? null,
+        partner_confidence: built.partnerRead?.confidence ?? null,
+        adaptation_score: built.adaptationScore?.score ?? null,
       }
 
       if (sessionId) {

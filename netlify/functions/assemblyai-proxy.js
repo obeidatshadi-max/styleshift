@@ -116,7 +116,10 @@ exports.handler = async function (event) {
         console.error('assemblyai poll failed:', response.status, JSON.stringify(data))
       } else if (data.status === 'completed') {
         const speakerCount = new Set((data.utterances || []).map(u => u.speaker)).size
-        console.log(`assemblyai poll completed: ${speakerCount} distinct speakers, ${(data.utterances || []).length} utterances, audio_duration=${data.audio_duration}, text_length=${(data.text || '').length}`)
+        const wordSpeakers = new Set((data.words || []).map(w => w.speaker)).size
+        console.log(`assemblyai poll completed: ${speakerCount} distinct speakers (utterances), ${wordSpeakers} distinct speakers (words), ${(data.utterances || []).length} utterances, ${(data.words || []).length} words, audio_duration=${data.audio_duration}, text_length=${(data.text || '').length}`)
+        console.log('assemblyai transcript snippet:', JSON.stringify((data.text || '').slice(0, 200)))
+        console.log('assemblyai speaker_labels config used:', data.speaker_labels, 'speakers_expected:', data.speakers_expected)
       } else if (data.status === 'error') {
         console.error('assemblyai transcription error:', data.error)
       } else {

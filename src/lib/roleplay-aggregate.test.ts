@@ -13,6 +13,7 @@ function session(overrides: Partial<RoleplaySessionSummary> & { created_at: stri
     active_listening_score: null,
     rep_style: null,
     rep_confidence: null,
+    adaptation_score: null,
     ...overrides,
   }
 }
@@ -75,6 +76,18 @@ describe('summarizeRoleplayHistory', () => {
     ]
     const out = summarizeRoleplayHistory(sessions)!
     expect(out.trend).toBeNull()
+  })
+
+  it('averages and trends adaptation score like the other higher-is-better metrics', () => {
+    const sessions = [
+      session({ created_at: '2026-01-04', adaptation_score: 80 }),
+      session({ created_at: '2026-01-03', adaptation_score: 80 }),
+      session({ created_at: '2026-01-02', adaptation_score: 40 }),
+      session({ created_at: '2026-01-01', adaptation_score: 40 }),
+    ]
+    const out = summarizeRoleplayHistory(sessions)!
+    expect(out.averages.adaptationScore).toBeCloseTo(60)
+    expect(out.trend).toEqual({ metric: 'adaptationScore', direction: 'improving', delta: 40 })
   })
 
   it('picks the largest-delta metric as the headline trend', () => {

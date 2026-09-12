@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useT } from '@/lib/i18n'
 import { useRoleplayRecorder } from '@/hooks/useRoleplayRecorder'
+import { buildRoleplayInsight } from '@/lib/roleplay-insight'
 import type { RepAssignment } from '@/types/game'
 
 interface Props { doctorId: string | null; colleagueId: string | null; onDone: () => void }
@@ -167,12 +168,20 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
   const questionPct = Math.round(r.questionRatio * 100)
   const openQuestionPct = Math.round(r.openQuestionRatio * 100)
   const paraphrasePct = Math.round(r.paraphraseScore * 100)
+  const insight = buildRoleplayInsight(r)
 
   return (
     <div style={wrap}>
       <div style={{ ...card, maxWidth: 520 }}>
         {eyebrow(t('roleplay.resultEyebrow'))}
         <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 16 }}>{t('roleplay.resultTitle')}</h2>
+
+        {insight && (
+          <div style={{ border: '1px solid var(--amber)', borderRadius: 12, padding: '13px 14px', marginBottom: 16, background: 'rgba(255,190,80,.06)' }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--amber)', marginBottom: 6 }}>{t('roleplay.insightTitle')}</div>
+            <p style={{ fontSize: 13.5, lineHeight: 1.5 }}>{t(`roleplay.insight.${insight.metric}`, { value: insight.value })}</p>
+          </div>
+        )}
 
         <div style={{ marginBottom: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 4 }}>

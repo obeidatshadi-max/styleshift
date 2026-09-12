@@ -9,9 +9,10 @@ const METRIC_LABEL_KEY: Record<RoleplayMetricKey, string> = {
   openQuestionRatio: 'roleplay.openQuestionRatio',
   paraphraseScore: 'roleplay.paraphraseScore',
   activeListening: 'roleplay.activeListeningTitle',
+  adaptationScore: 'roleplay.adaptationTitle',
 }
 
-const METRIC_ORDER: RoleplayMetricKey[] = ['talkRatio', 'questionRatio', 'openQuestionRatio', 'paraphraseScore', 'activeListening']
+const METRIC_ORDER: RoleplayMetricKey[] = ['talkRatio', 'questionRatio', 'openQuestionRatio', 'paraphraseScore', 'activeListening', 'adaptationScore']
 
 const row: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 6 }
 const label: React.CSSProperties = { color: 'var(--ink-dim)' }

@@ -170,6 +170,7 @@ export interface RoleplaySessionSummary {
   active_listening_score: number | null
   rep_style: StyleKey | null
   rep_confidence: number | null
+  adaptation_score: number | null
 }
 
 // A coaching assignment: the manager targets one objection category or one

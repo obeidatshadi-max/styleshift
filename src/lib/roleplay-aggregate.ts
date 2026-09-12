@@ -1,6 +1,6 @@
 import type { RoleplaySessionSummary } from '@/types/game'
 
-export type RoleplayMetricKey = 'talkRatio' | 'questionRatio' | 'openQuestionRatio' | 'paraphraseScore' | 'activeListening'
+export type RoleplayMetricKey = 'talkRatio' | 'questionRatio' | 'openQuestionRatio' | 'paraphraseScore' | 'activeListening' | 'adaptationScore'
 
 // Whether a higher number is the better outcome for this metric. talk_ratio
 // is the one exception — the coaching goal (see sps "Field Action Tip") is
@@ -11,16 +11,19 @@ const HIGHER_IS_BETTER: Record<RoleplayMetricKey, boolean> = {
   openQuestionRatio: true,
   paraphraseScore: true,
   activeListening: true,
+  adaptationScore: true,
 }
 
 // Ratios (talk/question/openQuestion/paraphrase) are stored 0-1 and compared
-// in percentage points; active listening is already stored 0-100.
+// in percentage points; active listening and adaptation score are already
+// stored 0-100.
 const SCALE: Record<RoleplayMetricKey, number> = {
   talkRatio: 100,
   questionRatio: 100,
   openQuestionRatio: 100,
   paraphraseScore: 100,
   activeListening: 1,
+  adaptationScore: 1,
 }
 
 function metricValue(s: RoleplaySessionSummary, key: RoleplayMetricKey): number | null {
@@ -30,6 +33,7 @@ function metricValue(s: RoleplaySessionSummary, key: RoleplayMetricKey): number 
     case 'openQuestionRatio': return s.open_question_ratio
     case 'paraphraseScore': return s.paraphrase_score
     case 'activeListening': return s.active_listening_score
+    case 'adaptationScore': return s.adaptation_score
   }
 }
 
@@ -50,7 +54,7 @@ export interface RoleplayHistorySummary {
   trend: RoleplayTrend | null
 }
 
-const METRICS: RoleplayMetricKey[] = ['talkRatio', 'questionRatio', 'openQuestionRatio', 'paraphraseScore', 'activeListening']
+const METRICS: RoleplayMetricKey[] = ['talkRatio', 'questionRatio', 'openQuestionRatio', 'paraphraseScore', 'activeListening', 'adaptationScore']
 
 // A trend needs at least this many display-scale points of movement to be
 // worth surfacing — otherwise session-to-session noise reads as a "trend".

@@ -80,6 +80,20 @@ describe('computeSessionSignals', () => {
     expect(s.questionCount).toBe(0)
     expect(s.avgRepTurnLength).toBe(0)
   })
+
+  it('includes realtimeSignals when turns carry real timing', () => {
+    const turns = [
+      turn({ turn_index: 0, role: 'doctor', started_at: '2026-01-01T00:00:00.000Z', ended_at: '2026-01-01T00:00:02.000Z' }),
+      turn({ turn_index: 1, role: 'rep', started_at: '2026-01-01T00:00:03.000Z', ended_at: '2026-01-01T00:00:06.000Z' }),
+    ]
+    const signals = computeSessionSignals(turns, false)
+    expect(signals.realtimeSignals).not.toBeNull()
+    expect(signals.realtimeSignals!.talkRatio.repMs).toBe(3000)
+  })
+
+  it('leaves realtimeSignals null for a text-based-path session with no timing', () => {
+    expect(computeSessionSignals(sampleSession, false).realtimeSignals).toBeNull()
+  })
 })
 
 describe('buildEvaluatorPrompt', () => {

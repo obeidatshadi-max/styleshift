@@ -3,6 +3,7 @@ import { classifyQuestions, type Turn } from '@/lib/roleplay-core'
 import { isClearStep, isObjectionType, langName, styleWeights, type ClearStep, type ObjectionType } from '@/lib/voice-partner-core'
 import { STYLES } from '@/lib/game-data'
 import type { PressureShiftResult } from '@/lib/pressure-shift'
+import { computeRealtimeSignals, type RealtimeSignals } from '@/lib/voice-partner-timing'
 
 // ───────────────────────── ConversationObserver ─────────────────────────
 // Phase 2 ("every score has evidence" — docs/ai-doctor-phase-1-plan.md's
@@ -34,6 +35,10 @@ export interface SessionSignals {
    * LLM guess. Null when there's no hidden concern to reveal, or the rep
    * never unlocked it. */
   hiddenConcernRevealTurnIndex: number | null
+  /** Null for a text-based-path session (no speech timing exists to derive
+   * this from) — see voice-partner-timing.ts's "report not applicable
+   * rather than fabricate" rule. */
+  realtimeSignals: RealtimeSignals | null
 }
 
 /** Adapts a persisted turn row to roleplay-core's `Turn` shape so its
@@ -94,6 +99,7 @@ export function computeSessionSignals(turns: ConversationTurn[], hasHiddenConcer
     clearStepsSequence,
     turnsToResolution: repTurns.length,
     hiddenConcernRevealTurnIndex,
+    realtimeSignals: computeRealtimeSignals(sorted),
   }
 }
 

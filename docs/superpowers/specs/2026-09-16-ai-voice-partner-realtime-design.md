@@ -103,29 +103,42 @@ them directly.
 
 ## Vendor / stack
 
-- **Transport:** Daily (WebRTC), via Pipecat Cloud's native integration.
-  New account/API key (`DAILY_API_KEY`), used only for realtime rooms —
-  not related to anything else in the stack.
-- **STT:** Deepgram streaming (`DEEPGRAM_API_KEY`) — replaces OpenAI
-  Whisper for this feature only; `/api/transcribe` (used elsewhere) is
-  untouched.
+- **Transport:** Daily (WebRTC) — provisioned automatically by Pipecat
+  Cloud's session-start API (`createDailyRoom: true`), not a separate
+  Daily developer account. No new Daily API key for this app.
+- **STT:** Deepgram streaming — replaces OpenAI Whisper for this feature
+  only; `/api/transcribe` (used elsewhere) is untouched. Credential lives
+  in the bot's Pipecat Cloud secret set, not this app's environment.
 - **LLM:** Claude Haiku via Anthropic — same vendor, same model tier as
-  `generate-scenario` and the turn-based voice partner.
-- **TTS:** ElevenLabs streaming (`ELEVENLABS_API_KEY`) — replaces OpenAI
-  TTS for this feature only, for prosody/emotion and per-language voice
-  quality (including Arabic, still unverified until built — same
-  fallback-to-English-only-voice escape hatch as the turn-based spec if
-  quality proves weak in testing).
-- **Hosting:** Pipecat Cloud (`PIPECAT_CLOUD_API_KEY`) runs the bot
-  process — no persistent server for this app to operate; Netlify stays
-  Next.js-only.
+  `generate-scenario` and the turn-based voice partner. Still called only
+  from Next.js (`/open`, `/turn`) — the bot itself never calls Anthropic.
+- **TTS:** ElevenLabs streaming — replaces OpenAI TTS for this feature
+  only, for prosody/emotion and per-language voice quality (including
+  Arabic, still unverified until built — same fallback-to-English-only-
+  voice escape hatch as the turn-based spec if quality proves weak in
+  testing). Credential lives in the bot's Pipecat Cloud secret set.
+- **Hosting:** Pipecat Cloud runs the bot process — no persistent server
+  for this app to operate; Netlify stays Next.js-only. Next.js calls
+  `POST https://api.pipecat.daily.co/v1/public/{agent_name}/start` with
+  `createDailyRoom: true` and a `body` payload carrying the bot token +
+  session context; the response's `dailyRoom`/`dailyToken` are what the
+  browser joins with.
+
+Two separate credential surfaces, deliberately: **Next.js/Netlify env**
+gets `PIPECAT_CLOUD_API_KEY` (to call the start-session endpoint) and the
+new `VOICE_PARTNER_BOT_TOKEN_SECRET`, alongside the existing
+`ANTHROPIC_API_KEY`. **Pipecat Cloud's own secret set** (uploaded via
+`pipecat cloud secrets set`, never touches Netlify) gets
+`DEEPGRAM_API_KEY` + `ELEVENLABS_API_KEY` + the bot-callback base URL —
+the bot never needs Supabase or Anthropic credentials at all.
 
 New feature flag: `AI_VOICE_PARTNER_ENABLED` (reused, not renamed — it's
 the same user-facing feature, just rebuilt). Requires
 `AI_VOICE_PARTNER_ENABLED=true` + `ANTHROPIC_API_KEY` +
-`DAILY_API_KEY` + `DEEPGRAM_API_KEY` + `ELEVENLABS_API_KEY` +
-`PIPECAT_CLOUD_API_KEY`. Same 503 `{error:'not_configured'}` /
-"Premium · Coming soon" teaser pattern as before when unset.
+`PIPECAT_CLOUD_API_KEY` + `VOICE_PARTNER_BOT_TOKEN_SECRET` in Next.js's
+env (the bot's own deploy-time secrets are a separate prerequisite, not
+gated by this flag). Same 503 `{error:'not_configured'}` / "Premium ·
+Coming soon" teaser pattern as before when unset.
 
 ## Persona + guardrail
 
@@ -171,17 +184,20 @@ query on the bearer-token path.
 **`POST /api/voice-partner/pipecat-session`** (new) — auth-gated
 (existing cookie pattern; browser calls this right after `/open`
 resolves). Body: `{ doctorId, sessionId, lang, openingText }`. Server
-signs a bot token via `signBotToken`, creates a Daily room, and starts a
-Pipecat Cloud bot session passing it: the Daily room URL/token, the bot
-token, `sessionId`, `lang`, and `openingText` (spoken first, before any
-rep turn — no separate opening-prompt call needed inside the bot).
-Returns:
+signs a bot token via `signBotToken`, then calls
+`POST https://api.pipecat.daily.co/v1/public/{agent_name}/start` with
+`createDailyRoom: true` and `body: { botToken, sessionId, doctorId, lang, openingText, turnCallbackBaseUrl }`
+(`turnCallbackBaseUrl` is this deployment's own origin, so the bot knows
+where to POST `/turn`/`/session-result` — needed because the bot runs on
+Pipecat Cloud's infrastructure, not this app's). Relays the start
+response back to the browser:
 
 ```ts
 { roomUrl: string; roomToken: string }
 ```
 
-which the browser hands to `@daily-co/daily-js` to join.
+(mapped from Pipecat Cloud's `dailyRoom`/`dailyToken`), which the browser
+hands to `@daily-co/daily-js` to join.
 
 **`POST /api/voice-partner/turn`** — modified, additively. Currently
 requires an `audio` blob and transcribes it via Whisper

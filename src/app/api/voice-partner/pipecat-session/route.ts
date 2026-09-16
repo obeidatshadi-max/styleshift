@@ -6,7 +6,7 @@ import { isObjectionType, isPhysicianState, isDifficulty } from '@/lib/voice-par
 
 export async function POST(req: Request) {
   const pipecatKey = process.env.PIPECAT_CLOUD_API_KEY
-  if (process.env.AI_VOICE_PARTNER_ENABLED !== 'true' || !pipecatKey) {
+  if (process.env.AI_VOICE_PARTNER_ENABLED !== 'true' || !pipecatKey || !process.env.VOICE_PARTNER_BOT_TOKEN_SECRET) {
     return NextResponse.json({ error: 'not_configured' }, { status: 503 })
   }
 

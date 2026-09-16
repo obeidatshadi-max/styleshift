@@ -27,7 +27,7 @@ export default function VoicePartner({ doctor, onDone }: Props) {
   const t = useT()
   const { lang } = useLang()
   const { STYLES } = useGameData()
-  const { phase, errorKind, transcript, turnCount, outcome, openingText, objectionType, clearStepsHit, previewUrl, sessionId, startVoicePartner, startRecording, stopRecording, confirmRecording, rerecord, reset } = useVoicePartner(doctor.id, lang)
+  const { phase, errorKind, transcript, turnCount, outcome, openingText, objectionType, clearStepsHit, sessionId, startVoicePartner, reset } = useVoicePartner(doctor.id, lang)
   const { status: analysisStatus, data: analysis, fetchAnalysis } = useSessionAnalysis()
   const [consentChecked, setConsentChecked] = useState(false)
   const [consented, setConsented] = useState(false)
@@ -97,9 +97,8 @@ export default function VoicePartner({ doctor, onDone }: Props) {
 
   const label =
     phase === 'opening' ? t('voice.connecting') :
-    phase === 'recording' ? t('voice.listening') :
-    phase === 'sending' ? t('voice.thinking') :
-    phase === 'playing' ? t('voice.speaking') :
+    phase === 'connecting' ? t('voice.connecting') :
+    phase === 'live' ? t('voice.listening') :
     phase === 'ratelimited' ? t('voice.rateLimited') :
     phase === 'error' ? errorLabel :
     t('voice.tapToSpeak')
@@ -138,35 +137,20 @@ export default function VoicePartner({ doctor, onDone }: Props) {
           ))}
         </div>
 
-        {!outcome && phase === 'review' && previewUrl && (
-          <RecordReviewControls previewUrl={previewUrl} onConfirm={confirmRecording} onRerecord={rerecord} />
-        )}
-
-        {!outcome && phase !== 'review' && (
+        {!outcome && (
           <>
             <VoiceStatusAnnouncer text={label} />
-            {/* Stays enabled in the 'error' phase on purpose: an upstream failure
-                is retried by simply speaking again — the client-held transcript
-                and turn count are untouched, per the spec's error contract. */}
-            <button
-              onClick={phase === 'recording' ? stopRecording : startRecording}
-              disabled={phase === 'opening' || phase === 'sending' || phase === 'playing'}
-              style={{
-                width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 13, letterSpacing: '.1em', textTransform: 'uppercase',
-                border: `1px solid ${phase === 'recording' ? 'var(--red)' : 'var(--cyan)'}`,
-                color: phase === 'recording' ? 'var(--red)' : '#04121c',
-                background: phase === 'recording' ? 'rgba(255,80,80,.08)' : 'var(--cyan)',
-                borderRadius: 10, padding: '14px 18px', touchAction: 'manipulation',
-                opacity: (phase === 'opening' || phase === 'sending' || phase === 'playing') ? 0.6 : 1,
-              }}
-            >
+            <div style={{
+              width: '100%', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 13,
+              letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--cyan)',
+              border: '1px solid var(--cyan)', borderRadius: 10, padding: '14px 18px',
+            }}>
               🎙️ {label}
-            </button>
+            </div>
             {/* Always-available exit from an unresolved session. `reset()`
-                releases any live mic stream/recorder first — tapping this
-                mid-recording must not strand the microphone. Reports turns: 0
-                so the wrapper's `meta.turns > 0` guard skips logging a
-                phantom visit. */}
+                leaves the Daily call first — tapping this mid-session must
+                not strand the mic connection. Reports turns: 0 so the
+                wrapper's `meta.turns > 0` guard skips logging a phantom visit. */}
             <button
               onClick={() => { reset(); onDone(false, { turns: 0, openingCrisis: '' }) }}
               style={{ ...ghostBtn, marginTop: 10 }}

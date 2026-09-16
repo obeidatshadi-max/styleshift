@@ -38,36 +38,68 @@ slot once it's verified working; the turn-based code is removed, not kept
 as a fallback (no dual-maintenance burden, and Pipecat Cloud's SLA is the
 availability fallback, not a slower local mode).
 
+## Correction from initial draft
+
+The first draft of this spec was written from the 2026-09-04 turn-based
+spec alone and assumed a plain conversational LLM loop with an invented
+`resolve_session` tool-call. The shipped system has grown well past that
+doc: a physician-state engine (`trust`/`skepticism`/`engagement`/`timePressure`,
+`src/lib/voice-partner-core.ts:170-240`), difficulty levels that seed it,
+a CLEAR-step judge that returns structured JSON every turn
+(`personaState`/`clearSteps`/`stateDelta`, not free text), a deterministic
+`resolveTurn()` that turns `personaState` into win/escalate/continue, a
+`conversation_turns` evidence table, weighted objection-type selection
+against session history, and hidden-concern reveals gated on CLEAR steps.
+None of that is a conversational LLM's job to decide — it is already a
+well-tested, deterministic TypeScript layer
+(`src/lib/voice-partner-core.test.ts`) sitting in front of one structured
+Claude call per turn. Reimplementing it in Python inside the bot, or
+replacing it with a tool-call, would fork scoring logic into two places
+that drift. This revision keeps 100% of that logic exactly where it is —
+Pipecat only replaces the audio I/O and turn-taking layer around it.
+
 ## Architecture
 
 ```
 Browser (Daily JS SDK)
-  ── WebRTC audio ──▶  Daily room
-                          │
-                          ▼
-                    Pipecat Cloud bot session
-              ┌─────────────────────────────────┐
-              │ DailyTransport (in/out audio)    │
-              │   → Deepgram streaming STT       │
-              │   → Claude Haiku (Anthropic)     │
-              │       persona + guardrail prompt │
-              │       + resolve_session tool     │
-              │   → ElevenLabs streaming TTS     │
-              │   → DailyTransport (out audio)   │
-              │ RTVI data channel (transcript,    │
-              │   verdict/tool-call events)      │
-              └─────────────────────────────────┘
-                          │
-                          ▼
-         Next.js API routes (session create / resolve)
-                          │
-                          ▼
-                     Supabase (doctor_visits)
+  ── WebRTC audio ──▶  Daily room ◀── WebRTC audio ──  Pipecat Cloud bot
+                                                          │
+                                          Deepgram streaming STT (VAD/turn-
+                                          detection segments rep speech)
+                                                          │
+                                          repText per completed rep turn
+                                                          │
+                                                          ▼
+                                    POST /api/voice-partner/turn
+                                    (existing route, bearer-token auth path
+                                     added; repText branch added — see below)
+                                                          │
+                          buildJudgePrompt → Claude Haiku → parseJudgeResponse
+                          → resolveTurn → applyStateDelta → conversation_turns
+                                        insert   (ALL UNCHANGED)
+                                                          │
+                                          { doctorText, outcome, state,
+                                            clearSteps }
+                                                          ▼
+                                          ElevenLabs streaming TTS
+                                                          │
+                                          spoken back over Daily (interruptible)
+                                                          │
+                          on outcome !== 'continue': POST /session-result
+                          (existing route, same bearer-token auth added)
 ```
 
-Turn-based's stateless-per-request model doesn't apply here — a Pipecat
-Cloud bot session is a live process for the duration of the practice
-session (auth-gated at creation, torn down on resolution or timeout).
+The browser also gets a live transcript via Daily's app-message data
+channel: the bot broadcasts `{type:'rep_text'|'doctor_text', text}` and
+`{type:'outcome', outcome, state}` events as they happen, which
+`useVoicePartner.ts` renders into the same bubble UI — no polling, no
+second connection.
+
+Turn-based's stateless-per-request model still applies to `/turn` and
+`/session-result` themselves (each call is independent, same as today) —
+what's new is a live bot process for the session's duration sitting
+between the browser and those routes, rather than the browser calling
+them directly.
 
 ## Vendor / stack
 
@@ -97,52 +129,94 @@ the same user-facing feature, just rebuilt). Requires
 
 ## Persona + guardrail
 
-Same `generate-scenario` `SYSTEM` prompt hard rules verbatim (never
-invent clinical data/figures/drug names; refer to the product only as
-"your product"; coach communication style, not medical claims) plus the
-doctor's `style`, `key_phrases`, `objections`, and last-5-`doctor_visits`
-history via the existing `buildHistoryContext` helper — unchanged inputs,
-injected into the Pipecat bot's LLM service config at session creation
-instead of into a per-request judge prompt.
+Unchanged. `SYSTEM`, `personaLines`, `buildOpeningPrompt`,
+`buildJudgePrompt` (`src/lib/voice-partner-core.ts`) are not touched by
+this spec — they keep running inside `/api/voice-partner/open` and
+`/api/voice-partner/turn` exactly as today, called by those routes
+instead of by the browser directly. The doctor's `style`, `key_phrases`,
+`objections`, weighted persona, hidden concern, scenario context,
+physician-state block, and last-5-`doctor_visits` history all keep
+flowing through the same functions, same tests.
 
-Extended with the same turn-loop rules as the turn-based spec (stay in
-character, adjust resistance to argument quality, never break character
-to narrate score) plus one new rule for the tool: call `resolve_session`
-with `verdict: 'win' | 'escalate'` when the exchange reaches a natural
-conclusion — a clear concession or a clear doctor walk-away — not on a
-fixed turn count. The 5-turn hard cap (tracked server-side from
-transcript events, not client-side) still forces `escalate` if the model
-never resolves.
+## Auth bridging (new)
+
+The Pipecat Cloud bot runs as its own server process — it has no
+Supabase session cookie, so it can't call the existing cookie-authed
+`/open`/`/turn`/`/session-result` routes as the browser does. New
+mechanism: a short-lived, session-scoped bearer token.
+
+**`lib/voice-partner-bot-token.ts`** (new): `signBotToken({ userId, doctorId, sessionId })`
+returns an HMAC-signed token (via `jose` or Node's `crypto`, using a new
+`VOICE_PARTNER_BOT_TOKEN_SECRET` env var) with a 10-minute expiry — long
+enough for a full 5-turn session, short enough that a leaked token is
+useless soon after. `verifyBotToken(token)` returns the claims or `null`.
+
+**`lib/voice-partner-auth.ts`** (new): `authenticateVoicePartnerRequest(req)`
+checks `Authorization: Bearer <token>` first (verifies via
+`verifyBotToken`, returns `{ userId, doctorId, sessionId, viaToken: true }`);
+falls back to the existing cookie-session check
+(`createClient()` + `getUser()`) if no bearer header is present, returning
+`{ userId, viaToken: false }`. Existing browser-direct callers (if any
+remain, e.g. a non-realtime fallback) keep working unchanged.
+
+Routes authenticated via bearer token can't use the user's RLS-scoped
+Supabase client (no session = no RLS context), so they use
+`createAdminClient()` (`src/lib/supabase-admin.ts`, existing pattern) for
+the DB read/write instead, with the ownership check RLS would have done
+made explicit: `.eq('rep_id', userId)` added to every `doctors`/session
+query on the bearer-token path.
 
 ## API routes
 
-**`POST /api/voice-partner/session`** — auth-gated (existing
-`createClient()` + `getUser()`). Body: `{ doctorId, lang }`. Server
-builds the persona/guardrail prompt (same inputs as today), creates a
-Daily room + Pipecat Cloud bot session with that prompt and the
-`resolve_session` tool definition, returns:
+**`POST /api/voice-partner/pipecat-session`** (new) — auth-gated
+(existing cookie pattern; browser calls this right after `/open`
+resolves). Body: `{ doctorId, sessionId, lang, openingText }`. Server
+signs a bot token via `signBotToken`, creates a Daily room, and starts a
+Pipecat Cloud bot session passing it: the Daily room URL/token, the bot
+token, `sessionId`, `lang`, and `openingText` (spoken first, before any
+rep turn — no separate opening-prompt call needed inside the bot).
+Returns:
 
 ```ts
-{ roomUrl: string; token: string; sessionId: string }
+{ roomUrl: string; roomToken: string }
 ```
 
-**`POST /api/voice-partner/resolve`** — called once by the client when
-the bot's `resolve_session` tool-call event arrives (or the 5-turn cap
-fires). Body: `{ sessionId, doctorId, verdict, transcript, turnCount }`.
-Does the same `doctor_visits` insert + XP award the turn-based version
-did on `onDone`, then instructs Pipecat Cloud to tear down the bot
-session. Centralizing the write here (not client-direct-to-Supabase)
-keeps the same server-validates-the-outcome shape the turn-based route
-had, rather than trusting the client with the win/escalate write.
+which the browser hands to `@daily-co/daily-js` to join.
+
+**`POST /api/voice-partner/turn`** — modified, additively. Currently
+requires an `audio` blob and transcribes it via Whisper
+(`transcribeAudio`, `voice-partner-core.ts:370`). New: accepts an
+optional `repText` field; when present, skips `transcribeAudio` entirely
+and uses it directly as the rep's line (this is what the bot sends —
+Deepgram already transcribed it). `audio` stays required when `repText`
+is absent, so any existing non-realtime caller is unaffected. Auth check
+swaps from a bare `getUser()` call to
+`authenticateVoicePartnerRequest(req)`; on the bearer-token path, the
+`doctors` lookup adds `.eq('rep_id', userId)` via `createAdminClient()`
+instead of relying on RLS. Response shape unchanged:
+`{ repText, doctorText, outcome, turnCount, clearSteps, state }`.
+
+**`POST /api/voice-partner/session-result`** — same auth swap
+(`authenticateVoicePartnerRequest` + admin client on the bearer path),
+body and behavior otherwise unchanged. Called by the bot once, when
+`outcome !== 'continue'` comes back from a `/turn` call.
 
 ## Client
 
-`useVoicePartner.ts` rewritten around `@daily-co/daily-js`:
-`idle → connecting → live → resolving → idle` state machine. `live`
-covers the whole continuous conversation, not one turn — mic is always
-open once connected (Daily handles the actual streaming; the hook tracks
-connection state, the running transcript from RTVI data-channel events,
-and turn count for the client-visible counter).
+`useVoicePartner.ts` rewritten around `@daily-co/daily-js`. Flow:
+`startVoicePartner` still calls `/open` first, unchanged (gets
+`sessionId`, `openingText`, `objectionType`, seeded `state`,
+`difficulty`), then calls the new `/pipecat-session` with those results
+and joins the returned Daily room. Phase machine becomes
+`idle → opening → connecting → live → resolving → idle` — `live` covers
+the whole continuous conversation, not one turn; mic is always open once
+connected (Daily handles the actual streaming). The hook listens for
+Daily app-messages and updates `transcript`, `turnCount`, `clearStepsHit`,
+and `physicianState` from `{type:'rep_text'|'doctor_text'}` and
+`{type:'outcome', outcome, state, clearSteps}` events exactly as it
+updated them from `/turn`'s JSON response before — same state shape,
+different event source. `objectionType` and `difficulty` still come from
+`/open`'s response, unchanged.
 
 `VoicePartner.tsx` keeps the same visual shell (doctor avatar/header,
 scrolling transcript bubbles, turn counter, win/escalate `Feedback`
@@ -154,11 +228,20 @@ the bot's audio out when the rep's VAD triggers mid-reply).
 
 ## Persistence
 
-Same as turn-based: one `doctor_visits` insert on resolution, no new
-table, same `DoctorVisit['source']` value (`'voice_partner'` — no new
-enum member, this is the same feature). Same `XP_VALUES.voicePartnerWin`
-(`40`), awarded only on `won`, only from `/api/voice-partner/resolve` (not
-client-side) now that resolution is server-confirmed.
+Unchanged, split the same way it is today across two tiers:
+
+- **Per-turn evidence** (`conversation_turns` from `/open`+`/turn`) and
+  **session outcome** (`voice_partner_sessions` from `/session-result`)
+  — server writes, now triggered by the bot (via the bearer-token path)
+  instead of the browser, but same insert shape.
+- **`doctor_visits` insert + XP award** — stay exactly where they are
+  today: client-side, in `VisitPrep.tsx`'s `VoicePartnerScreen` wrapper
+  (`onDone` handler, `VisitPrep.tsx:687-702`) and
+  `useVoicePartner.ts`'s `awardXpOnWin` (`useVoicePartner.ts:80-87`).
+  The client already learns the final outcome from the same data-channel
+  `{type:'outcome'}` event that ends the `live` phase — one trigger
+  point, same as today's `/turn` response ending the loop, so there's no
+  new race to introduce by moving this server-side.
 
 ## Language
 
@@ -181,24 +264,35 @@ hatch as before, not a blocker for shipping v1.
   prompt; if reconnect fails, the rep restarts fresh (matches the
   turn-based spec's "lost connection mid-conversation means the rep
   restarts" — still out of scope to persist in-progress sessions).
-- No partial-turn writes to `doctor_visits` — only `/api/voice-partner/resolve`
-  writes, and only once, same as before.
+- No partial-turn writes to `doctor_visits` — only the client's `onDone`
+  handler writes it, and only once, triggered by the terminal `outcome`
+  event, same as before.
 
 ## Testing
 
-Pure-function unit tests (vitest) for the server-side turn-cap/verdict
-logic in `/api/voice-partner/resolve` (given a verdict + turn count, does
-it resolve correctly, does the hard cap override an unresolved session) —
-same shape as the turn-based spec's tests, adapted for the new resolve
-route instead of the old per-turn route.
+`voice-partner-core.test.ts`'s existing coverage of `resolveTurn`/
+`applyStateDelta`/`parseJudgeResponse` needs no changes — untouched
+logic. New pure-function unit tests (vitest):
+
+- `voice-partner-bot-token.test.ts`: `signBotToken` → `verifyBotToken`
+  round-trips correctly; an expired token, a tampered token, and a token
+  signed for a different `sessionId` all fail verification.
+- `voice-partner-auth.test.ts` (or inline in the route tests):
+  `authenticateVoicePartnerRequest` picks the bearer path when the header
+  is present and valid, falls back to cookie auth otherwise, rejects an
+  invalid/expired bearer token outright rather than falling back to
+  cookie auth (a bad token should never silently downgrade to a weaker
+  check).
+- `/api/voice-partner/turn`'s existing test coverage (if any) gets a case
+  for the `repText`-present branch skipping `transcribeAudio`.
 
 Manual browser verification (the realtime pipeline itself isn't
 unit-testable): full Daily join → live conversation → barge-in works
-(interrupt the doctor mid-line, doctor's audio actually stops) → natural
-resolution via tool-call → hard-cap escalate path → both languages →
-guardrail spot-check (no invented clinical claims across several
-sessions) → `doctor_visits` row + XP land correctly → "coming soon"
-teaser renders with the flag off.
+(interrupt the doctor mid-line, doctor's audio actually stops) →
+`resolveTurn` ends the session correctly on `won`/`escalated` → hard-cap
+escalate path at turn 5 → both languages → guardrail spot-check (no
+invented clinical claims across several sessions) → `doctor_visits` row +
+XP land correctly → "coming soon" teaser renders with the flag off.
 
 Use the `pipecat-context-hub` MCP server during implementation to pull
 current Pipecat API reference (transport setup, Anthropic LLM service

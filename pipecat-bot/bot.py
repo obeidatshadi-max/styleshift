@@ -1,17 +1,25 @@
 import asyncio
 import json
 import os
+import time
+from datetime import datetime, timezone
 
 import httpx
+from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.frames.frames import (
+    BotStartedSpeakingFrame,
+    BotStoppedSpeakingFrame,
     EndFrame,
     EndWorkerFrame,
     OutputTransportMessageUrgentFrame,
     TranscriptionFrame,
     TTSSpeakFrame,
+    VADUserStartedSpeakingFrame,
+    VADUserStoppedSpeakingFrame,
 )
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineWorker
+from pipecat.processors.audio.vad_processor import VADProcessor
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat.runner.types import DailyRunnerArguments
 from pipecat.services.deepgram.stt import DeepgramSTTService
@@ -27,6 +35,10 @@ TURN_CAP = 5  # mirrors voice-partner-core.ts TURN_CAP — the server is
 DEEPGRAM_MODEL_BY_LANG = {"ar": "nova-2-general", "en": "nova-3-general"}
 
 
+def _iso(epoch_seconds: float) -> str:
+    return datetime.fromtimestamp(epoch_seconds, tz=timezone.utc).isoformat()
+
+
 class VoicePartnerJudgeProcessor(FrameProcessor):
     """Replaces the usual LLM node. On each final transcript, calls back
     into the existing Next.js /turn route (all persona/guardrail/judge
@@ -40,6 +52,9 @@ class VoicePartnerJudgeProcessor(FrameProcessor):
         self._state = session["state"]
         self._clear_steps_hit: list[str] = []
         self._turn_count = 0
+        self._rep_speech_started_at: float | None = None
+        self._pending_doctor_turn_index: int | None = None
+        self._doctor_speech_started_at: float | None = None
         self._client = httpx.AsyncClient(
             base_url=session["turnCallbackBaseUrl"],
             headers={"authorization": f"Bearer {session['botToken']}"},
@@ -49,14 +64,43 @@ class VoicePartnerJudgeProcessor(FrameProcessor):
     async def process_frame(self, frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
 
+        if isinstance(frame, VADUserStartedSpeakingFrame):
+            self._rep_speech_started_at = time.time()
+        elif isinstance(frame, BotStartedSpeakingFrame):
+            self._doctor_speech_started_at = time.time()
+        elif isinstance(frame, BotStoppedSpeakingFrame):
+            await self._report_doctor_timing()
+
         if isinstance(frame, TranscriptionFrame) and frame.text.strip():
             await self._handle_rep_turn(frame.text.strip())
             return  # don't forward the raw transcription frame further
 
         await self.push_frame(frame, direction)
 
+    async def _report_doctor_timing(self):
+        """Fires once the doctor's TTS line finishes playing — the only point
+        both start and end are known for that turn (see turn/route.ts's
+        comment on why this can't be included in the /turn POST itself)."""
+        if self._pending_doctor_turn_index is None or self._doctor_speech_started_at is None:
+            return
+        ended_at = time.time()
+        try:
+            await self._client.post("/api/voice-partner/turn-timing", json={
+                "sessionId": self._session["sessionId"],
+                "turnIndex": self._pending_doctor_turn_index,
+                "startedAt": _iso(self._doctor_speech_started_at),
+                "endedAt": _iso(ended_at),
+            })
+        except Exception:
+            pass  # best-effort, never blocks the pipeline (matches turn/route.ts's insert tolerance)
+        self._pending_doctor_turn_index = None
+        self._doctor_speech_started_at = None
+
     async def _handle_rep_turn(self, rep_text: str):
         await self._broadcast({"type": "rep_text", "text": rep_text})
+        rep_started_at = self._rep_speech_started_at
+        rep_ended_at = time.time()
+        self._rep_speech_started_at = None
 
         form = {
             "doctorId": self._session["doctorId"],
@@ -68,6 +112,9 @@ class VoicePartnerJudgeProcessor(FrameProcessor):
             "state": json.dumps(self._state),
             "clearStepsHit": json.dumps(self._clear_steps_hit),
         }
+        if rep_started_at is not None:
+            form["repStartedAt"] = _iso(rep_started_at)
+            form["repEndedAt"] = _iso(rep_ended_at)
         # No `audio` field at all — the /turn route only requires one
         # when `repText` is absent.
         resp = await self._client.post("/api/voice-partner/turn", data=form)
@@ -76,6 +123,11 @@ class VoicePartnerJudgeProcessor(FrameProcessor):
             return
 
         data = resp.json()
+        # Two rows were just inserted server-side at turn_index = baseIndex
+        # (rep) and baseIndex + 1 (doctor) — baseIndex is len(self._history)
+        # at POST time, mirroring turn/route.ts's own baseIndex computation
+        # exactly, since history is the same array just sent in this request.
+        self._pending_doctor_turn_index = len(self._history) + 1
         self._history.append({"role": "rep", "text": rep_text})
         self._history.append({"role": "doctor", "text": data["doctorText"]})
         self._state = data["state"]
@@ -137,7 +189,8 @@ async def bot(args: DailyRunnerArguments):
     )
     judge = VoicePartnerJudgeProcessor(session)
 
-    pipeline = Pipeline([transport.input(), stt, judge, tts, transport.output()])
+    vad = VADProcessor(vad_analyzer=SileroVADAnalyzer())
+    pipeline = Pipeline([transport.input(), vad, stt, judge, tts, transport.output()])
     worker = PipelineWorker(pipeline)
 
     @transport.event_handler("on_first_participant_joined")

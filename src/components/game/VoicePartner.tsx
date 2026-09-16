@@ -248,6 +248,17 @@ export default function VoicePartner({ doctor, onDone }: Props) {
                           <div style={{ color: 'var(--ink-dim)' }}>{t('voice.deepAnalysis.observed')}: {m.observedBehavior}</div>
                           {m.missedOpportunity && <div style={{ color: 'var(--ink-dim)' }}>{t('voice.deepAnalysis.missed')}: {m.missedOpportunity}</div>}
                           {m.alternative && <div style={{ color: 'var(--ink-dim)' }}>{t('voice.deepAnalysis.alternative')}: {m.alternative}</div>}
+                          {sessionId && (
+                            <button
+                              onClick={() => void startVoicePartner(difficulty, {
+                                sourceSessionId: sessionId,
+                                turnIndex: m.role === 'doctor' ? m.turnIndex : m.turnIndex - 1,
+                              })}
+                              style={{ ...ghostBtn, marginTop: 8, padding: '6px 10px', fontSize: 10 }}
+                            >
+                              {t('voice.deepAnalysis.retryMoment')}
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>

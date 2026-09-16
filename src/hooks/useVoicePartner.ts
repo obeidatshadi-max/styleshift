@@ -53,7 +53,14 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
     }
   }, [lang])
 
-  const startVoicePartner = useCallback(async (difficultyChoice?: Difficulty) => {
+  const startVoicePartner = useCallback(async (
+    difficultyChoice?: Difficulty,
+    // Replay-This-Moment: when provided, skips /open's fresh-scenario pick
+    // and re-seeds from a past detected moment instead (see
+    // /api/voice-partner/replay-context, whose response shape mirrors
+    // /open's on purpose so the rest of this flow needs no branching below).
+    replaySeed?: { sourceSessionId: string; turnIndex: number },
+  ) => {
     setPhase('opening')
     setErrorKind(null)
     setTranscript([])
@@ -66,18 +73,23 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
     setDifficulty(null)
 
     try {
-      const openRes = await fetch('/api/voice-partner/open', {
+      const openEndpoint = replaySeed ? 'replay-context' : 'open'
+      const openRes = await fetch(`/api/voice-partner/${openEndpoint}`, {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ doctorId, lang, ...(difficultyChoice ? { difficulty: difficultyChoice } : {}) }),
+        body: JSON.stringify(
+          replaySeed
+            ? { sourceSessionId: replaySeed.sourceSessionId, turnIndex: replaySeed.turnIndex }
+            : { doctorId, lang, ...(difficultyChoice ? { difficulty: difficultyChoice } : {}) },
+        ),
       })
-      if (openRes.status === 503) { setPhase('notconfigured'); logVoiceEvent('objection', lang, 'not_configured', { endpoint: 'open' }); return }
-      if (openRes.status === 429) { setPhase('ratelimited'); logVoiceEvent('objection', lang, 'rate_limited', { endpoint: 'open' }); return }
-      if (!openRes.ok) { setPhase('error'); setErrorKind('api'); logVoiceEvent('objection', lang, 'api_error', { endpoint: 'open', status: openRes.status }); return }
+      if (openRes.status === 503) { setPhase('notconfigured'); logVoiceEvent('objection', lang, 'not_configured', { endpoint: openEndpoint }); return }
+      if (openRes.status === 429) { setPhase('ratelimited'); logVoiceEvent('objection', lang, 'rate_limited', { endpoint: openEndpoint }); return }
+      if (!openRes.ok) { setPhase('error'); setErrorKind('api'); logVoiceEvent('objection', lang, 'api_error', { endpoint: openEndpoint, status: openRes.status }); return }
       const openData = await openRes.json().catch(() => null) as {
         doctorText?: string; objectionType?: string; sessionId?: string; state?: PhysicianState; difficulty?: string
       } | null
       if (!openData?.doctorText || !isObjectionType(openData.objectionType) || !openData.sessionId || !isPhysicianState(openData.state)) {
-        setPhase('error'); setErrorKind('bad_response'); logVoiceEvent('objection', lang, 'bad_response', { endpoint: 'open' }); return
+        setPhase('error'); setErrorKind('bad_response'); logVoiceEvent('objection', lang, 'bad_response', { endpoint: openEndpoint }); return
       }
 
       setPhase('connecting')

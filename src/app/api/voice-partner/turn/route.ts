@@ -79,6 +79,11 @@ export async function POST(req: Request) {
     audio = audioCheck.blob
   }
 
+  const repStartedAtRaw = form.get('repStartedAt')
+  const repEndedAtRaw = form.get('repEndedAt')
+  const repStartedAt = typeof repStartedAtRaw === 'string' && !Number.isNaN(Date.parse(repStartedAtRaw)) ? repStartedAtRaw : null
+  const repEndedAt = typeof repEndedAtRaw === 'string' && !Number.isNaN(Date.parse(repEndedAtRaw)) ? repEndedAtRaw : null
+
   const objectionTypeRaw = form.get('objectionType')
   if (typeof objectionTypeRaw !== 'string' || !isObjectionType(objectionTypeRaw)) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
@@ -157,11 +162,13 @@ export async function POST(req: Request) {
       session_id: sessionId, rep_id: user.id, doctor_id: doctorId, turn_index: baseIndex,
       role: 'rep', text: repText, objection_type: objectionTypeRaw, clear_steps_hit: judged.clearSteps,
       trust: nextState.trust, skepticism: nextState.skepticism, engagement: nextState.engagement, time_pressure: nextState.timePressure,
+      started_at: repStartedAt, ended_at: repEndedAt,
     },
     {
       session_id: sessionId, rep_id: user.id, doctor_id: doctorId, turn_index: baseIndex + 1,
       role: 'doctor', text: judged.doctorReply, objection_type: objectionTypeRaw, clear_steps_hit: [],
       trust: nextState.trust, skepticism: nextState.skepticism, engagement: nextState.engagement, time_pressure: nextState.timePressure,
+      started_at: null, ended_at: null, // patched by /api/voice-partner/turn-timing once TTS finishes playing
     },
   ])
   if (turnInsertError) console.warn('conversation_turns insert failed (turn):', turnInsertError.message)

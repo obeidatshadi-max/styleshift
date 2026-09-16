@@ -6,7 +6,8 @@ function turn(overrides: Partial<ConversationTurn>): ConversationTurn {
   return {
     id: 't1', session_id: 's1', rep_id: 'r1', doctor_id: 'd1', turn_index: 0,
     role: 'doctor', text: 'It costs too much.', objection_type: null, clear_steps_hit: [],
-    trust: 50, skepticism: 50, engagement: 50, time_pressure: 30, created_at: '2026-01-01T00:00:00Z',
+    trust: 50, skepticism: 50, engagement: 50, time_pressure: 30,
+    started_at: null, ended_at: null, created_at: '2026-01-01T00:00:00Z',
     ...overrides,
   }
 }

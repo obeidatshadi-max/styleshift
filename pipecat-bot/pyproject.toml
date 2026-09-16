@@ -3,7 +3,7 @@ name = "styleshift-voice-partner-bot"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
-  "pipecat-ai[daily,deepgram,elevenlabs]",
+  "pipecat-ai[daily,deepgram,elevenlabs]==1.10.0",
   "httpx",
 ]
 

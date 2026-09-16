@@ -183,10 +183,16 @@ query on the bearer-token path.
 
 **`POST /api/voice-partner/pipecat-session`** (new) — auth-gated
 (existing cookie pattern; browser calls this right after `/open`
-resolves). Body: `{ doctorId, sessionId, lang, openingText }`. Server
-signs a bot token via `signBotToken`, then calls
+resolves, forwarding `/open`'s own response fields). Body:
+`{ doctorId, sessionId, lang, openingText, objectionType, state, difficulty }`
+— everything the bot needs to keep calling `/turn` itself, since it now
+owns the conversation loop the browser used to own (`/turn` requires
+`objectionType` and `state` on every call; the bot must carry them
+forward the same way `useVoicePartner.ts` did, starting `clearStepsHit`
+at `[]`). Server signs a bot token via `signBotToken`, then calls
 `POST https://api.pipecat.daily.co/v1/public/{agent_name}/start` with
-`createDailyRoom: true` and `body: { botToken, sessionId, doctorId, lang, openingText, turnCallbackBaseUrl }`
+`createDailyRoom: true` and
+`body: { botToken, sessionId, doctorId, lang, openingText, objectionType, state, turnCallbackBaseUrl }`
 (`turnCallbackBaseUrl` is this deployment's own origin, so the bot knows
 where to POST `/turn`/`/session-result` — needed because the bot runs on
 Pipecat Cloud's infrastructure, not this app's). Relays the start

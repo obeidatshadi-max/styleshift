@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { authenticateVoicePartnerRequest } from '@/lib/voice-partner-auth'
 import { isObjectionType, isClearStep, isDifficulty, type ClearStep } from '@/lib/voice-partner-core'
 import type { Doctor } from '@/types/game'
 
@@ -22,9 +24,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'not_configured' }, { status: 503 })
   }
 
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const auth = await authenticateVoicePartnerRequest(req)
+  if (!auth) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const user = { id: auth.userId }
+  const supabase = auth.viaToken ? createAdminClient() : await createClient()
 
   // Shared bucket with open/turn/speak (see open/route.ts) — this route makes
   // no upstream AI call, but one insert per session is a negligible addition
@@ -51,7 +54,8 @@ export async function POST(req: Request) {
 
   // RLS ensures the rep can only read their own doctor; look style up
   // server-side rather than trusting a client-supplied value.
-  const { data: doctor } = await supabase.from('doctors').select('*').eq('id', body.doctorId).single()
+  const { data: doctor } = await supabase.from('doctors').select('*')
+    .eq('id', body.doctorId).eq('rep_id', user.id).single()
   if (!doctor) return NextResponse.json({ error: 'not_found' }, { status: 404 })
 
   const { error } = await supabase.from('voice_partner_sessions').insert({

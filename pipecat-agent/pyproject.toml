@@ -1,0 +1,11 @@
+[project]
+name = "styleshift-voice"
+version = "0.1.0"
+description = "StyleShift Iraqi Arabic and English doctor roleplay agent"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "pipecat-ai[daily,google,webrtc,runner]==1.10.0",
+  "python-dotenv>=1.0,<2",
+]
+[dependency-groups]
+dev = ["pytest>=8,<10"]

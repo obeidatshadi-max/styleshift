@@ -1,0 +1,6 @@
+agent_name = "styleshift-voice"
+secret_set = "styleshift-voice-secrets"
+
+[scaling]
+min_agents = 0
+max_agents = 2

@@ -1,0 +1,12 @@
+{
+  "lang": "ar",
+  "difficulty": "realistic",
+  "doctor": {
+    "name": "Dr. Ali",
+    "style": "analytical",
+    "specialty": "general practice",
+    "objections": [
+      "needs evidence before considering a change"
+    ]
+  }
+}

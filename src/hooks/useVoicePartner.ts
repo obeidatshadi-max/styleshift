@@ -1,19 +1,21 @@
 'use client'
-import { useCallback, useState } from 'react'
-import { createClient } from '@/lib/supabase-browser'
-import { XP_VALUES } from '@/lib/game-data'
+import { useCallback, useRef, useState } from 'react'
+import Daily, { type DailyCall } from '@daily-co/daily-js'
 import type { VoicePartnerTurn, TurnOutcome, ObjectionType, ClearStep, PhysicianState, Difficulty } from '@/lib/voice-partner-core'
 import { isObjectionType, isClearStep, isPhysicianState, isDifficulty } from '@/lib/voice-partner-core'
 import { logVoiceEvent } from '@/lib/voice-events'
 import type { VoiceErrorKind } from '@/lib/voice-events'
-import { speak, playBase64Audio } from '@/lib/voice-tts'
-import { useAudioRecorder } from './useAudioRecorder'
 
 export type VoicePartnerPhase =
-  | 'idle' | 'opening' | 'recording' | 'review' | 'sending' | 'playing' | 'notconfigured' | 'ratelimited' | 'error'
+  | 'idle' | 'opening' | 'connecting' | 'live' | 'notconfigured' | 'ratelimited' | 'error'
+
+type AppMessage =
+  | { type: 'rep_text'; text: string }
+  | { type: 'doctor_text'; text: string; outcome: TurnOutcome; turnCount: number; clearSteps: ClearStep[]; state: PhysicianState }
+  | { type: 'outcome'; outcome: 'won' | 'escalated'; state: PhysicianState }
+  | { type: 'error'; stage: string; status: number }
 
 export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
-  const supabase = createClient()
   const [phase, setPhase] = useState<VoicePartnerPhase>('idle')
   const [errorKind, setErrorKind] = useState<VoiceErrorKind | null>(null)
   const [transcript, setTranscript] = useState<VoicePartnerTurn[]>([])
@@ -25,7 +27,31 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [physicianState, setPhysicianState] = useState<PhysicianState | null>(null)
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null)
-  const recorder = useAudioRecorder('objection', lang, () => setPhase('review'))
+  const callRef = useRef<DailyCall | null>(null)
+
+  const handleAppMessage = useCallback((msg: AppMessage) => {
+    if (msg.type === 'rep_text') {
+      setTranscript(prev => [...prev, { role: 'rep', text: msg.text }])
+      return
+    }
+    if (msg.type === 'doctor_text') {
+      setTranscript(prev => [...prev, { role: 'doctor', text: msg.text }])
+      setTurnCount(msg.turnCount)
+      setClearStepsHit(prev => Array.from(new Set([...prev, ...msg.clearSteps.filter(isClearStep)])))
+      setPhysicianState(msg.state)
+      logVoiceEvent('objection', lang, msg.outcome !== 'continue' ? 'session_complete' : 'turn_complete', { turnCount: msg.turnCount })
+      return
+    }
+    if (msg.type === 'outcome') {
+      setOutcome(msg.outcome)
+      setPhysicianState(msg.state)
+      return
+    }
+    if (msg.type === 'error') {
+      setErrorKind('api')
+      logVoiceEvent('objection', lang, 'api_error', { endpoint: msg.stage, status: msg.status })
+    }
+  }, [lang])
 
   const startVoicePartner = useCallback(async (difficultyChoice?: Difficulty) => {
     setPhase('opening')
@@ -38,153 +64,79 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
     setSessionId(null)
     setPhysicianState(null)
     setDifficulty(null)
+
     try {
-      const res = await fetch('/api/voice-partner/open', {
+      const openRes = await fetch('/api/voice-partner/open', {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ doctorId, lang, ...(difficultyChoice ? { difficulty: difficultyChoice } : {}) }),
       })
-      if (res.status === 503) { setPhase('notconfigured'); logVoiceEvent('objection', lang, 'not_configured', { endpoint: 'open' }); return }
-      if (res.status === 429) { setPhase('ratelimited'); logVoiceEvent('objection', lang, 'rate_limited', { endpoint: 'open' }); return }
-      if (!res.ok) { setPhase('error'); setErrorKind('api'); logVoiceEvent('objection', lang, 'api_error', { endpoint: 'open', status: res.status }); return }
-      const data = await res.json().catch(() => null) as {
+      if (openRes.status === 503) { setPhase('notconfigured'); logVoiceEvent('objection', lang, 'not_configured', { endpoint: 'open' }); return }
+      if (openRes.status === 429) { setPhase('ratelimited'); logVoiceEvent('objection', lang, 'rate_limited', { endpoint: 'open' }); return }
+      if (!openRes.ok) { setPhase('error'); setErrorKind('api'); logVoiceEvent('objection', lang, 'api_error', { endpoint: 'open', status: openRes.status }); return }
+      const openData = await openRes.json().catch(() => null) as {
         doctorText?: string; objectionType?: string; sessionId?: string; state?: PhysicianState; difficulty?: string
       } | null
-      if (!data?.doctorText || !isObjectionType(data.objectionType) || !data.sessionId || !isPhysicianState(data.state)) {
+      if (!openData?.doctorText || !isObjectionType(openData.objectionType) || !openData.sessionId || !isPhysicianState(openData.state)) {
         setPhase('error'); setErrorKind('bad_response'); logVoiceEvent('objection', lang, 'bad_response', { endpoint: 'open' }); return
       }
-      setOpeningText(data.doctorText)
-      setObjectionType(data.objectionType)
-      setSessionId(data.sessionId)
-      setPhysicianState(data.state)
-      setDifficulty(isDifficulty(data.difficulty) ? data.difficulty : null)
-      setTranscript([{ role: 'doctor', text: data.doctorText }])
 
-      const audio = await speak(data.doctorText, lang)
-      if (!audio) logVoiceEvent('objection', lang, 'tts_failed', { endpoint: 'open' })
-      setPhase('playing')
-      if (audio) await playBase64Audio(audio)
-      setPhase('idle')
+      setPhase('connecting')
+      const sessionRes = await fetch('/api/voice-partner/pipecat-session', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          doctorId, lang, sessionId: openData.sessionId, openingText: openData.doctorText,
+          objectionType: openData.objectionType, state: openData.state,
+          ...(isDifficulty(openData.difficulty) ? { difficulty: openData.difficulty } : {}),
+        }),
+      })
+      if (sessionRes.status === 503) { setPhase('notconfigured'); logVoiceEvent('objection', lang, 'not_configured', { endpoint: 'pipecat-session' }); return }
+      if (sessionRes.status === 429) { setPhase('ratelimited'); logVoiceEvent('objection', lang, 'rate_limited', { endpoint: 'pipecat-session' }); return }
+      if (!sessionRes.ok) { setPhase('error'); setErrorKind('api'); logVoiceEvent('objection', lang, 'api_error', { endpoint: 'pipecat-session', status: sessionRes.status }); return }
+      const sessionData = await sessionRes.json().catch(() => null) as { roomUrl?: string; roomToken?: string } | null
+      if (!sessionData?.roomUrl || !sessionData.roomToken) {
+        setPhase('error'); setErrorKind('bad_response'); logVoiceEvent('objection', lang, 'bad_response', { endpoint: 'pipecat-session' }); return
+      }
+
+      setOpeningText(openData.doctorText)
+      setObjectionType(openData.objectionType)
+      setSessionId(openData.sessionId)
+      setPhysicianState(openData.state)
+      setDifficulty(isDifficulty(openData.difficulty) ? openData.difficulty : null)
+      setTranscript([{ role: 'doctor', text: openData.doctorText }])
+
+      const call = Daily.createCallObject()
+      callRef.current = call
+      call.on('app-message', (ev: { data: AppMessage }) => handleAppMessage(ev.data))
+      call.on('left-meeting', () => { setPhase('idle') })
+
+      try {
+        await call.join({ url: sessionData.roomUrl, token: sessionData.roomToken })
+      } catch (joinErr) {
+        // Daily's join() requests mic access internally; a denied
+        // getUserMedia prompt surfaces as a DOMException named
+        // NotAllowedError — distinguish that from a real connection
+        // failure so the UI shows the right guidance (matches the
+        // 'mic' error state the old MediaRecorder path used).
+        const isMicDenied = joinErr instanceof DOMException && joinErr.name === 'NotAllowedError'
+        setPhase('error')
+        setErrorKind(isMicDenied ? 'mic' : 'network')
+        logVoiceEvent('objection', lang, isMicDenied ? 'mic_denied' : 'network_error', { endpoint: 'daily_join' })
+        call.destroy()
+        callRef.current = null
+        return
+      }
+      setPhase('live')
     } catch {
       setPhase('error')
       setErrorKind('network')
       logVoiceEvent('objection', lang, 'network_error', { endpoint: 'open' })
     }
-  }, [doctorId, lang])
-
-  const startRecording = useCallback(async () => {
-    const ok = await recorder.start()
-    if (ok) { setPhase('recording'); setErrorKind(null) }
-    else { setPhase('error'); setErrorKind('mic') }
-  }, [recorder])
-
-  const awardXpOnWin = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    const { data: profile, error: profileError } = await supabase.from('profiles').select('xp').eq('id', user.id).single()
-    if (profileError || !profile) return
-    const { error: xpError } = await supabase.from('profiles').update({ xp: profile.xp + XP_VALUES.voicePartnerWin }).eq('id', user.id)
-    if (xpError) console.error('voice partner xp update failed:', xpError.message)
-  }, [supabase])
-
-  const saveSessionResult = useCallback(async (
-    finalOutcome: 'won' | 'escalated', finalTurnCount: number, finalClearSteps: ClearStep[], type: ObjectionType,
-  ) => {
-    try {
-      const res = await fetch('/api/voice-partner/session-result', {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          doctorId, objectionType: type, outcome: finalOutcome, clearSteps: finalClearSteps, turnCount: finalTurnCount,
-          ...(sessionId ? { sessionId } : {}), ...(difficulty ? { difficulty } : {}),
-        }),
-      })
-      // Best-effort — the rep still sees their end-of-session summary either
-      // way. Warn (not error) so a systematically-failing save is still
-      // discoverable without looking like an app-breaking error in prod logs.
-      if (!res.ok) console.warn('voice partner session-result save failed:', res.status)
-    } catch (err) {
-      console.warn('voice partner session-result save failed:', err)
-    }
-  }, [doctorId, sessionId, difficulty])
-
-  // Stops recording and moves to a listen-back checkpoint — nothing uploads
-  // yet. The rep hears exactly what was captured before it's sent for
-  // transcription, so a bad take can be discarded instead of judged blind.
-  const stopRecording = useCallback(async () => {
-    await recorder.stop()
-    setPhase('review')
-  }, [recorder])
-
-  const rerecord = useCallback(() => {
-    recorder.discard()
-    setPhase('idle')
-  }, [recorder])
-
-  const confirmRecording = useCallback(async () => {
-    const taken = recorder.take()
-    if (!taken) return
-    const { blob } = taken
-    setPhase('sending')
-
-    if (!objectionType || !sessionId || !physicianState) { setPhase('error'); return }
-
-    try {
-      const form = new FormData()
-      form.append('doctorId', doctorId)
-      form.append('sessionId', sessionId)
-      form.append('lang', lang)
-      form.append('history', JSON.stringify(transcript))
-      form.append('audio', blob, 'turn.webm')
-      form.append('objectionType', objectionType)
-      form.append('state', JSON.stringify(physicianState))
-      form.append('clearStepsHit', JSON.stringify(clearStepsHit))
-
-      const res = await fetch('/api/voice-partner/turn', { method: 'POST', body: form })
-      if (res.status === 503) { setPhase('notconfigured'); logVoiceEvent('objection', lang, 'not_configured', { endpoint: 'turn' }); return }
-      if (res.status === 429) { setPhase('ratelimited'); logVoiceEvent('objection', lang, 'rate_limited', { endpoint: 'turn' }); return }
-      if (!res.ok) { setPhase('error'); setErrorKind('api'); logVoiceEvent('objection', lang, 'api_error', { endpoint: 'turn', status: res.status }); return }
-      const data = await res.json().catch(() => null) as {
-        repText?: string; doctorText?: string; outcome?: TurnOutcome; turnCount?: number; clearSteps?: unknown; state?: PhysicianState
-      } | null
-      if (!data?.repText || !data.doctorText || !data.outcome) { setPhase('error'); setErrorKind('bad_response'); logVoiceEvent('objection', lang, 'bad_response', { endpoint: 'turn' }); return }
-      if (isPhysicianState(data.state)) setPhysicianState(data.state)
-
-      const nextTranscript: VoicePartnerTurn[] = [
-        ...transcript, { role: 'rep', text: data.repText }, { role: 'doctor', text: data.doctorText },
-      ]
-      setTranscript(nextTranscript)
-      const nextTurnCount = data.turnCount ?? turnCount + 1
-      setTurnCount(nextTurnCount)
-
-      const newSteps = Array.isArray(data.clearSteps) ? data.clearSteps.filter(isClearStep) : []
-      const mergedSteps = Array.from(new Set([...clearStepsHit, ...newSteps]))
-      setClearStepsHit(mergedSteps)
-
-      // `outcome` means "the session has resolved" everywhere it's read — a
-      // non-terminal 'continue' must leave it null so the mic stays available.
-      if (data.outcome !== 'continue') {
-        setOutcome(data.outcome)
-        void saveSessionResult(data.outcome, nextTurnCount, mergedSteps, objectionType)
-        logVoiceEvent('objection', lang, 'session_complete', { outcome: data.outcome, turnCount: nextTurnCount })
-      } else {
-        logVoiceEvent('objection', lang, 'turn_complete', { turnCount: nextTurnCount })
-      }
-
-      const audio = await speak(data.doctorText, lang)
-      if (!audio) logVoiceEvent('objection', lang, 'tts_failed', { endpoint: 'turn' })
-      setPhase('playing')
-      if (audio) await playBase64Audio(audio)
-
-      if (data.outcome === 'won') await awardXpOnWin()
-      setPhase('idle')
-    } catch {
-      setPhase('error')
-      setErrorKind('network')
-      logVoiceEvent('objection', lang, 'network_error', { endpoint: 'turn' })
-    }
-  }, [doctorId, lang, transcript, turnCount, awardXpOnWin, objectionType, clearStepsHit, saveSessionResult, recorder, sessionId, physicianState])
+  }, [doctorId, lang, handleAppMessage])
 
   const reset = useCallback(() => {
-    recorder.abort()
+    callRef.current?.leave()
+    callRef.current?.destroy()
+    callRef.current = null
     setPhase('idle')
     setErrorKind(null)
     setTranscript([])
@@ -196,11 +148,11 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
     setSessionId(null)
     setPhysicianState(null)
     setDifficulty(null)
-  }, [recorder])
+  }, [])
 
   return {
-    phase, errorKind, transcript, turnCount, outcome, openingText, objectionType, clearStepsHit, previewUrl: recorder.previewUrl,
-    sessionId,
-    startVoicePartner, startRecording, stopRecording, confirmRecording, rerecord, reset,
+    phase, errorKind, transcript, turnCount, outcome, openingText, objectionType, clearStepsHit,
+    sessionId, physicianState,
+    startVoicePartner, reset,
   }
 }

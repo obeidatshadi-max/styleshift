@@ -47,3 +47,4 @@ next-env.d.ts
 
 # Superpowers worktrees (scratch, per-plan isolated workspaces)
 .claude/worktrees/
+.worktrees/

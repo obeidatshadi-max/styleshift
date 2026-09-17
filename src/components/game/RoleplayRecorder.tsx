@@ -9,7 +9,7 @@ interface Props { doctorId: string | null; colleagueId: string | null; onDone: (
 
 export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Props) {
   const t = useT()
-  const { phase, error, elapsedSec, speakerPreviews, result, sessionId, start, stop, pickSpeaker, backToPickSpeaker, reset } = useRoleplayRecorder(doctorId, colleagueId)
+  const { phase, error, previewUrl, saveError, retryAnalysis, elapsedSec, speakerPreviews, result, sessionId, start, stop, pickSpeaker, backToPickSpeaker, reset } = useRoleplayRecorder(doctorId, colleagueId)
   const [consentChecked, setConsentChecked] = useState(false)
   const [consented, setConsented] = useState(false)
 
@@ -95,8 +95,19 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
             {error === 'mic' ? t('roleplay.errorMic')
               : error === 'session' ? t('roleplay.errorSession')
               : error === 'speakers' ? t('roleplay.errorSpeakers')
+              : error === 'timeout' ? t('roleplay.errorTimeout')
+              : error === 'too_large' ? t('roleplay.errorTooLarge')
               : t('roleplay.errorDiarize')}
           </p>
+          {previewUrl && (
+            <>
+              <audio controls src={previewUrl} style={{ width: '100%', marginBottom: 12 }} />
+              <a href={previewUrl} download="styleshift-roleplay" style={{ display: 'block', marginBottom: 16, color: 'var(--cyan)' }}>{t('roleplay.saveRecording')}</a>
+              {error !== 'speakers' && error !== 'too_large' && error !== 'session' && (
+                <button style={btnPrimary} onClick={retryAnalysis}>{t('roleplay.retryAnalysis')}</button>
+              )}
+            </>
+          )}
           <button style={btnPrimary} onClick={() => { reset(); setConsented(false); setConsentChecked(false) }}>{t('roleplay.done')}</button>
         </div>
       </div>
@@ -175,6 +186,7 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
       <div style={{ ...card, maxWidth: 520 }}>
         {eyebrow(t('roleplay.resultEyebrow'))}
         <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 16 }}>{t('roleplay.resultTitle')}</h2>
+        {saveError && <p role="alert" style={{ color: 'var(--amber)', marginBottom: 16 }}>{t('roleplay.errorSave')}</p>}
 
         {insight && (
           <div style={{ border: '1px solid var(--amber)', borderRadius: 12, padding: '13px 14px', marginBottom: 16, background: 'rgba(255,190,80,.06)' }}>

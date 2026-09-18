@@ -215,6 +215,21 @@ function contentWords(text: string): Set<string> {
   return new Set(words.filter(w => w.length > 2 && !STOPWORDS.has(w)))
 }
 
+/** Jaccard similarity (|intersection| / |union|) between the rep's and the
+ * partner's distinct content vocabulary across the whole conversation — a
+ * rapport signal (shared terminology/mirroring), distinct from paraphrase
+ * score (which measures immediate reply-echoes turn-by-turn, not overall
+ * vocabulary convergence). 0 when either side has no content words. */
+export function computeTermOverlap(turns: Turn[], repSpeaker: string): number {
+  const repWords = contentWords(turns.filter(t => t.speaker === repSpeaker).map(t => t.text).join(' '))
+  const partnerWords = contentWords(turns.filter(t => t.speaker !== repSpeaker).map(t => t.text).join(' '))
+  if (repWords.size === 0 || partnerWords.size === 0) return 0
+  const union = new Set([...repWords, ...partnerWords])
+  let intersectionSize = 0
+  for (const w of repWords) if (partnerWords.has(w)) intersectionSize++
+  return intersectionSize / union.size
+}
+
 /**
  * For each rep turn that immediately follows a partner turn, scores what
  * fraction of the partner's content words the rep's reply echoes back — a
@@ -317,8 +332,10 @@ export interface RoleplayResult {
   talkRatio: TalkRatio
   rapidTurnSwitches: number
   questionRatio: number
+  questionCount: number
   openQuestionRatio: number
   paraphraseScore: number
+  termOverlap: number
   activeListening: ActiveListeningResult
   repRead: SocialStyleRead | null
   partnerRead: SocialStyleRead | null
@@ -337,8 +354,10 @@ export function buildRoleplayResult(
   const talkRatio = computeTalkRatio(turns, repSpeaker)
   const rapidTurnSwitches = computeRapidTurnSwitches(turns)
   const questionRatio = computeQuestionRatio(turns, repSpeaker)
-  const openQuestionRatio = classifyQuestions(turns, repSpeaker).openRatio
+  const questionBreakdown = classifyQuestions(turns, repSpeaker)
+  const openQuestionRatio = questionBreakdown.openRatio
   const paraphraseScore = computeParaphraseScore(turns, repSpeaker)
+  const termOverlap = computeTermOverlap(turns, repSpeaker)
   const activeListening = computeActiveListeningScore(talkRatio, rapidTurnSwitches, paraphraseScore)
   const transcript = repTranscript(turns, repSpeaker)
   const { pitchSamples: repPitch, silencePeriods: repSilence } = scopeAcousticToSpeaker(pitchSamples, silencePeriods, turns, repSpeaker)
@@ -364,8 +383,8 @@ export function buildRoleplayResult(
   const adaptationScore = computeAdaptationScore(repRead, partnerRead)
 
   return {
-    talkRatio, rapidTurnSwitches, questionRatio, openQuestionRatio, paraphraseScore, activeListening, repRead,
-    partnerRead, adaptationScore,
+    talkRatio, rapidTurnSwitches, questionRatio, questionCount: questionBreakdown.total, openQuestionRatio,
+    paraphraseScore, termOverlap, activeListening, repRead, partnerRead, adaptationScore,
     durationSec: talkRatio.totalMs / 1000, warmth: delivery.warmth, predicates: delivery.predicates,
   }
 }

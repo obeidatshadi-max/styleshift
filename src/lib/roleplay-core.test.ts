@@ -3,7 +3,7 @@ import {
   processAcousticData, classifySocialStyle, buildTurns, computeTalkRatio,
   computeRapidTurnSwitches, computeQuestionRatio, classifyQuestions, computeParaphraseScore,
   computeActiveListeningScore, repTranscript,
-  scopeAcousticToSpeaker, buildRoleplayResult, computeAdaptationScore,
+  scopeAcousticToSpeaker, buildRoleplayResult, computeAdaptationScore, computeTermOverlap,
   type Utterance, type PitchSample, type SilencePeriod, type SocialStyleRead,
 } from './roleplay-core'
 
@@ -230,6 +230,32 @@ describe('active listening score', () => {
     const result = computeActiveListeningScore(talkRatio, 20, 0)
     expect(result.score).toBe(15)
     expect(result.label).toBe('developing')
+  })
+})
+
+describe('computeTermOverlap', () => {
+  const turn = (text: string, speaker: string) => ({ text, speaker, start: 0, end: 1000, durationMs: 1000 })
+
+  it('is 100% when both speakers use exactly the same content words', () => {
+    const turns = [turn('the pricing model works well', 'rep'), turn('pricing model works well', 'partner')]
+    expect(computeTermOverlap(turns, 'rep')).toBe(1)
+  })
+
+  it('is 0% when the two speakers share no content words', () => {
+    const turns = [turn('completely different topics here', 'rep'), turn('another unrelated subject entirely', 'partner')]
+    expect(computeTermOverlap(turns, 'rep')).toBe(0)
+  })
+
+  it('is a partial ratio for partial overlap, ignoring stopwords and short words', () => {
+    // rep content words: {pricing, model, great}; partner: {concerned, pricing, model}
+    // union = {pricing, model, great, concerned} (4), intersection = {pricing, model} (2) -> 0.5
+    const turns = [turn('the pricing model is great', 'rep'), turn('I am concerned but the pricing model', 'partner')]
+    expect(computeTermOverlap(turns, 'rep')).toBeCloseTo(0.5, 5)
+  })
+
+  it('returns 0 rather than dividing by zero when one side has no content words at all', () => {
+    const turns = [turn('a', 'rep'), turn('pricing model', 'partner')]
+    expect(computeTermOverlap(turns, 'rep')).toBe(0)
   })
 })
 

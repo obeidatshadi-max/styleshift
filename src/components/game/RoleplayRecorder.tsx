@@ -188,6 +188,19 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
         <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 16 }}>{t('roleplay.resultTitle')}</h2>
         {saveError && <p role="alert" style={{ color: 'var(--amber)', marginBottom: 16 }}>{t('roleplay.errorSave')}</p>}
 
+        {/* Whole-interaction framing before the "You vs. partner" breakdown
+            below — surfaced here because reps found the per-metric cards
+            confusing without first knowing what the numbers are about. */}
+        <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 16, background: 'rgba(0,0,0,.12)' }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('roleplay.interactionSummaryTitle')}</div>
+          <p style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--ink)' }}>
+            {t('roleplay.interactionSummaryDuration', { mmss: `${String(Math.floor(r.durationSec / 60)).padStart(2, '0')}:${String(Math.round(r.durationSec) % 60).padStart(2, '0')}` })}
+            {' '}{t('roleplay.interactionSummaryQuestions', { count: r.questionCount })}
+            {r.adaptationScore && <> {t('roleplay.interactionSummaryToneMatch', { pct: r.adaptationScore.score })}</>}
+            {' '}{t('roleplay.interactionSummaryTermOverlap', { pct: Math.round(r.termOverlap * 100) })}
+          </p>
+        </div>
+
         {insight && (
           <div style={{ border: '1px solid var(--amber)', borderRadius: 12, padding: '13px 14px', marginBottom: 16, background: 'rgba(255,190,80,.06)' }}>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--amber)', marginBottom: 6 }}>{t('roleplay.insightTitle')}</div>

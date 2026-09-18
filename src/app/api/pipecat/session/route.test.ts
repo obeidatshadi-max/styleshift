@@ -8,6 +8,7 @@ let fetchMock: ReturnType<typeof vi.fn>
 let query: Record<string, ReturnType<typeof vi.fn>>
 beforeEach(() => {
   vi.stubEnv('PIPECAT_CLOUD_PUBLIC_KEY', 'test-key')
+  vi.stubEnv('AI_VOICE_PARTNER_LIVE_ENABLED', 'true')
   query = { select: vi.fn(), eq: vi.fn(), single: vi.fn() }
   query.select.mockReturnValue(query)
   query.eq.mockReturnValue(query)
@@ -48,6 +49,17 @@ describe('shared Pipecat session endpoint', () => {
     mocks.createClient.mockResolvedValue({ auth: { getUser: async () => ({ data: { user: null } }) } })
     expect((await POST(request({ doctorId: 'doctor' }))).status).toBe(401)
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+  it('rejects when PIPECAT_CLOUD_PUBLIC_KEY is not configured', async () => {
+    vi.stubEnv('PIPECAT_CLOUD_PUBLIC_KEY', '')
+    expect((await POST(request({ doctorId: 'doctor' }))).status).toBe(503)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+  it('rejects when AI_VOICE_PARTNER_LIVE_ENABLED is not true even with a public key set', async () => {
+    vi.stubEnv('PIPECAT_CLOUD_PUBLIC_KEY', 'pk_test')
+    vi.stubEnv('AI_VOICE_PARTNER_LIVE_ENABLED', 'false')
+    const res = await POST(request({ doctorId: 'd1' }))
+    expect(res.status).toBe(503)
   })
   it('rejects a doctor the user cannot access', async () => {
     query.single.mockResolvedValue({ data: null })

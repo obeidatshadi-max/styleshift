@@ -6,7 +6,9 @@ const AGENT_NAME = process.env.PIPECAT_AGENT_NAME ?? 'styleshift-voice-partner'
 
 export async function POST(req: Request) {
   const publicKey = process.env.PIPECAT_CLOUD_PUBLIC_KEY
-  if (!publicKey) return NextResponse.json({ error: 'pipecat_not_configured' }, { status: 503 })
+  if (process.env.AI_VOICE_PARTNER_LIVE_ENABLED !== 'true' || !publicKey) {
+    return NextResponse.json({ error: 'pipecat_not_configured' }, { status: 503 })
+  }
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })

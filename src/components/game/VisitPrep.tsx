@@ -790,7 +790,7 @@ function VoicePartnerClosingScreen({ doctor, onDone }: { doctor: Doctor; onDone:
 
 // ───────────────────────── Doctor history (Digital Twin) ─────────────────────────
 const SOURCE_LABEL_KEY: Record<DoctorVisit['source'], string> = {
-  manual: 'visit.sourceManual', warmup: 'visit.sourceWarmup', ai_drill: 'visit.sourceAiDrill', voice_partner: 'visit.sourceVoicePartner', voice_partner_opening: 'visit.sourceVoicePartnerOpening', voice_partner_question: 'visit.sourceVoicePartnerQuestion', voice_partner_fab: 'visit.sourceVoicePartnerFab', voice_partner_closing: 'visit.sourceVoicePartnerClosing',
+  manual: 'visit.sourceManual', warmup: 'visit.sourceWarmup', ai_drill: 'visit.sourceAiDrill', voice_partner: 'visit.sourceVoicePartner', voice_partner_opening: 'visit.sourceVoicePartnerOpening', voice_partner_question: 'visit.sourceVoicePartnerQuestion', voice_partner_fab: 'visit.sourceVoicePartnerFab', voice_partner_closing: 'visit.sourceVoicePartnerClosing', voice_partner_live: 'visit.sourceVoicePartnerLive',
 }
 
 const historyRow: React.CSSProperties = { fontSize:13, lineHeight:1.5, marginBottom:3 }

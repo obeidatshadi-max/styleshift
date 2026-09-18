@@ -113,7 +113,7 @@ export interface DoctorVisit {
   id: string
   doctor_id: string
   rep_id: string
-  source: 'manual' | 'warmup' | 'ai_drill' | 'voice_partner' | 'voice_partner_opening' | 'voice_partner_question' | 'voice_partner_fab' | 'voice_partner_closing'
+  source: 'manual' | 'warmup' | 'ai_drill' | 'voice_partner' | 'voice_partner_opening' | 'voice_partner_question' | 'voice_partner_fab' | 'voice_partner_closing' | 'voice_partner_live'
   objection_raised: string | null
   promise_made: string | null
   what_worked: string | null

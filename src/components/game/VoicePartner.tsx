@@ -134,6 +134,14 @@ export default function VoicePartner({ doctor, onDone }: Props) {
                 {turn.role === 'doctor' ? t('voice.speakerDoctor') : t('voice.speakerYou')}
               </span>
               {turn.text}
+              {lang === 'en' && turn.role === 'rep' && turn.vocalFeedback && (
+                <details style={{ marginTop: 8, fontSize: 12, color: 'var(--ink-dim)' }}>
+                  <summary style={{ cursor: 'pointer' }}>Vocal delivery</summary>
+                  {turn.vocalFeedback.emotions.length > 0 && <p>Emotion signals: {turn.vocalFeedback.emotions.map(item => `${item.label} (${Math.round(item.score * 100)}%)`).join(', ')}</p>}
+                  {turn.vocalFeedback.styles.length > 0 && <p>Speaking style: {turn.vocalFeedback.styles.map(item => `${item.label} (${Math.round(item.score * 100)}%)`).join(', ')}</p>}
+                  <p>Oruk model scores describe this recording's vocal expression, not your feelings or Social Style. Each signal is scored independently.</p>
+                </details>
+              )}
             </div>
           ))}
         </div>

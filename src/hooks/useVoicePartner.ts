@@ -8,6 +8,7 @@ import { logVoiceEvent } from '@/lib/voice-events'
 import type { VoiceErrorKind } from '@/lib/voice-events'
 import { speak, playBase64Audio } from '@/lib/voice-tts'
 import { useAudioRecorder } from './useAudioRecorder'
+import type { VocalFeedback } from '@/lib/oruk'
 
 export type VoicePartnerPhase =
   | 'idle' | 'opening' | 'recording' | 'review' | 'sending' | 'playing' | 'notconfigured' | 'ratelimited' | 'error'
@@ -143,13 +144,13 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
       if (res.status === 429) { setPhase('ratelimited'); logVoiceEvent('objection', lang, 'rate_limited', { endpoint: 'turn' }); return }
       if (!res.ok) { setPhase('error'); setErrorKind('api'); logVoiceEvent('objection', lang, 'api_error', { endpoint: 'turn', status: res.status }); return }
       const data = await res.json().catch(() => null) as {
-        repText?: string; doctorText?: string; outcome?: TurnOutcome; turnCount?: number; clearSteps?: unknown; state?: PhysicianState
+        repText?: string; doctorText?: string; outcome?: TurnOutcome; turnCount?: number; clearSteps?: unknown; state?: PhysicianState; vocalFeedback?: VocalFeedback | null
       } | null
       if (!data?.repText || !data.doctorText || !data.outcome) { setPhase('error'); setErrorKind('bad_response'); logVoiceEvent('objection', lang, 'bad_response', { endpoint: 'turn' }); return }
       if (isPhysicianState(data.state)) setPhysicianState(data.state)
 
       const nextTranscript: VoicePartnerTurn[] = [
-        ...transcript, { role: 'rep', text: data.repText }, { role: 'doctor', text: data.doctorText },
+        ...transcript, { role: 'rep', text: data.repText, vocalFeedback: data.vocalFeedback }, { role: 'doctor', text: data.doctorText },
       ]
       setTranscript(nextTranscript)
       const nextTurnCount = data.turnCount ?? turnCount + 1

@@ -2,6 +2,10 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function proxy(request: NextRequest) {
+  // This function checks its own Bearer token; do not turn JSON into login HTML.
+  if (request.nextUrl.pathname === '/.netlify/functions/assemblyai-proxy') {
+    return NextResponse.next({ request })
+  }
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(

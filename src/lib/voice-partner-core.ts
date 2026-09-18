@@ -1,10 +1,11 @@
 import type { Doctor, StyleKey, Specialty } from '@/types/game'
+import type { VocalFeedback } from '@/lib/oruk'
 import { DRIVE } from '@/lib/doctor-context'
 import { SPECIALTIES, SPECIALTY_ORDER } from '@/lib/game-data'
 
 export const TURN_CAP = 5
 
-export type VoicePartnerTurn = { role: 'doctor' | 'rep'; text: string }
+export type VoicePartnerTurn = { role: 'doctor' | 'rep'; text: string; vocalFeedback?: VocalFeedback | null }
 export type TurnOutcome = 'continue' | 'won' | 'escalated'
 
 // Hard guardrail shared by both the opening line and every judged reply —

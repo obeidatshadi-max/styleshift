@@ -11,17 +11,21 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@netlify/blobs@^11.0.3",
+        "npm:@opentelemetry/api@^1.9.1",
         "npm:@supabase/ssr@~0.10.3",
         "npm:@supabase/supabase-js@^2.107.0",
         "npm:@tailwindcss/postcss@4",
         "npm:@types/node@20",
         "npm:@types/react-dom@19",
         "npm:@types/react@19",
+        "npm:html-to-image@^1.11.13",
         "npm:next@16.2.7",
         "npm:react-dom@19.2.4",
         "npm:react@19.2.4",
         "npm:tailwindcss@4",
-        "npm:typescript@5"
+        "npm:typescript@5",
+        "npm:vitest@^2.1.9"
       ]
     }
   }

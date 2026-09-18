@@ -1,6 +1,5 @@
-"""Pipecat Cloud entry point. Audio goes through Daily and Gemini Live."""
+"""Pipecat Cloud entry point. Shared audio pipeline for Gemini Live and GPT-Live."""
 import asyncio
-import os
 from contextlib import suppress
 
 from dotenv import load_dotenv
@@ -11,34 +10,26 @@ from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair
 from pipecat.runner.types import RunnerArguments
 from pipecat.runner.utils import create_transport
-from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService
 from pipecat.transports.base_transport import TransportParams
 from pipecat.transports.daily.transport import DailyParams
 from pipecat.workers.runner import WorkerRunner
 
 from scenario import build_prompt
+from live_provider import create_live_provider
 
 load_dotenv(override=False)
 
 async def bot(runner_args: RunnerArguments):
-    prompt = build_prompt(getattr(runner_args, "body", None))
-    api_key = os.environ.get("GOOGLE_API_KEY")
-    if not api_key:
-        raise RuntimeError("Set GOOGLE_API_KEY in the agent secret set")
-    model = os.environ.get("GEMINI_LIVE_MODEL", "gemini-3.1-flash-live-preview")
+    body = getattr(runner_args, "body", None)
+    prompt = build_prompt(body)
+    provider = create_live_provider(prompt, body)
     transport = await create_transport(runner_args, {
         "daily": lambda: DailyParams(audio_in_enabled=True, audio_out_enabled=True),
         "webrtc": lambda: TransportParams(audio_in_enabled=True, audio_out_enabled=True),
     })
-    llm = GeminiLiveLLMService(
-        api_key=api_key,
-        settings=GeminiLiveLLMService.Settings(
-            model=model, voice=os.environ.get("GEMINI_VOICE", "Charon"),
-            system_instruction=prompt,
-        ),
-    )
+    llm = provider.service
     context = LLMContext()
-    user, assistant = LLMContextAggregatorPair(context)
+    user, assistant = LLMContextAggregatorPair(context, user_params=provider.user_params)
     pipeline = Pipeline([transport.input(), user, llm, transport.output(), assistant])
     worker = PipelineWorker(
         pipeline,

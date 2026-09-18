@@ -1,5 +1,5 @@
-agent_name = "styleshift-voice"
-secret_set = "styleshift-voice-secrets"
+agent_name = "styleshift-voice-partner"
+secret_set = "styleshift-voice-partner-secrets"
 
 [scaling]
 min_agents = 0

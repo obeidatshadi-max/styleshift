@@ -8,6 +8,7 @@ import {
 import { checkRateLimit } from '@/lib/rate-limit'
 import { validateAudioUpload } from '@/lib/audio-upload'
 import { analyzeVocalDelivery } from '@/lib/oruk'
+import { transcribeWithDeepgram } from '@/lib/deepgram'
 import type { Doctor, DoctorVisit } from '@/types/game'
 
 // A full conversation is at most TURN_CAP rep lines plus TURN_CAP doctor lines.
@@ -107,8 +108,13 @@ export async function POST(req: Request) {
     .order('created_at', { ascending: false }).limit(5)
   const historyContext = buildHistoryContext((visits as DoctorVisit[]) ?? [])
 
+  // Dialect-aware Deepgram Nova-3 (ar-IQ) trialed against generic Whisper
+  // for the Arabic path only — gated on its own key so it's a straight A/B
+  // comparison, not a silent fallback chain. English is untouched.
   const [repText, vocalFeedback] = await Promise.all([
-    transcribeAudio(audio, openaiKey, lang),
+    lang === 'ar' && process.env.DEEPGRAM_API_KEY
+      ? transcribeWithDeepgram(audio, lang)
+      : transcribeAudio(audio, openaiKey, lang),
     analyzeVocalDelivery(audio, lang),
   ])
   if (!repText) return NextResponse.json({ error: 'upstream' }, { status: 502 })

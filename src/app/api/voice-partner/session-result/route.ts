@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { isObjectionType, isClearStep, isDifficulty, type ClearStep } from '@/lib/voice-partner-core'
+import { isLiveDifficulty } from '@/lib/voice-live-core'
 import type { Doctor } from '@/types/game'
 
 // Stricter than voice-partner-core's AI-judge-output parsing: this route
@@ -47,7 +48,12 @@ export async function POST(req: Request) {
   // shipped) still work — id defaults to the column's own gen_random_uuid()
   // and difficulty stays null, exactly today's behavior.
   if (body.sessionId !== undefined && !isUuid(body.sessionId)) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
-  if (body.difficulty !== undefined && !isDifficulty(body.difficulty)) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
+  // This route is shared by the 5 turn-based modes (Difficulty: supportive/
+  // realistic/resistant/pressure_test) and the live mode (LiveDifficulty:
+  // supportive/realistic/challenging, migration 031) — accept either set.
+  if (body.difficulty !== undefined && !isDifficulty(body.difficulty) && !isLiveDifficulty(body.difficulty)) {
+    return NextResponse.json({ error: 'bad_request' }, { status: 400 })
+  }
 
   // RLS ensures the rep can only read their own doctor; look style up
   // server-side rather than trusting a client-supplied value.

@@ -357,6 +357,31 @@ describe('buildJudgePrompt', () => {
     expect(prompt).toContain('the rep has not spoken yet')
   })
 
+  it("annotates a rep turn's vocal delivery when Oruk data is present", () => {
+    const withVocal: VoicePartnerTurn[] = [
+      { role: 'doctor', text: 'Your product costs too much.' },
+      { role: 'rep', text: 'I hear you.', vocalFeedback: { emotions: [{ label: 'anxious', score: 0.7 }], styles: [{ label: 'hesitant', score: 0.6 }] } },
+    ]
+    const prompt = buildJudgePrompt(doctorFixture(), 'driver', 'en', '', withVocal, 'reply', 2, 'doubt')
+    expect(prompt).toContain('Rep: I hear you.')
+    expect(prompt).toContain('anxious')
+    expect(prompt).toContain('hesitant')
+  })
+
+  it('renders a rep turn with no vocal data exactly as before, with no stray annotation', () => {
+    const noVocal: VoicePartnerTurn[] = [{ role: 'rep', text: 'Plain reply.' }]
+    const prompt = buildJudgePrompt(doctorFixture(), 'driver', 'en', '', noVocal, 'reply', 2, 'doubt')
+    expect(prompt).toContain('Rep: Plain reply.\n')
+    expect(prompt).not.toContain('vocal')
+  })
+
+  it('does not annotate a doctor turn even if it carried vocalFeedback', () => {
+    const weirdTurn: VoicePartnerTurn[] = [{ role: 'doctor', text: 'Hi.', vocalFeedback: { emotions: [{ label: 'calm', score: 0.5 }], styles: [] } }]
+    const prompt = buildJudgePrompt(doctorFixture(), 'driver', 'en', '', weirdTurn, 'reply', 2, 'doubt')
+    expect(prompt).toContain('Doctor: Hi.\n')
+    expect(prompt).not.toContain('calm')
+  })
+
   it('includes the specialty, key phrases, and objections when the doctor has them', () => {
     const prompt = buildJudgePrompt(doctorFixture({
       specialty: 'Oncology',

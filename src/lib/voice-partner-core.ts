@@ -298,12 +298,26 @@ export function parseOpeningResponse(text: string): string | null {
  * deterministic function — is what turns this into a pedagogical outcome. */
 export type PersonaState = 'resistant' | 'satisfied' | 'disengaged'
 
+/** The judge previously scored a rep turn on its text alone — `vocalFeedback`
+ * was computed (Oruk) and attached to the turn object but never reached the
+ * prompt. Rep-only, and only when Oruk actually returned something. */
+function vocalDeliveryNote(turn: VoicePartnerTurn): string {
+  if (turn.role !== 'rep' || !turn.vocalFeedback) return ''
+  const { emotions, styles } = turn.vocalFeedback
+  if (emotions.length === 0 && styles.length === 0) return ''
+  const parts: string[] = []
+  if (emotions.length) parts.push(`emotion: ${emotions.map(e => e.label).join(', ')}`)
+  if (styles.length) parts.push(`style: ${styles.map(s => s.label).join(', ')}`)
+  return ` [vocal delivery — ${parts.join(' · ')}]`
+}
+
 export function buildJudgePrompt(
   doctor: Doctor, style: StyleKey, lang: 'en' | 'ar', historyContext: string,
   turns: VoicePartnerTurn[], repReply: string, turnCount: number, objectionType: ObjectionType,
   state?: PhysicianState, clarifyUnlocked = false,
 ): string {
-  const transcript = turns.map(t => `${t.role === 'doctor' ? 'Doctor' : 'Rep'}: ${t.text}`).join('\n')
+  const transcript = turns.map(t => `${t.role === 'doctor' ? 'Doctor' : 'Rep'}: ${t.text}${vocalDeliveryNote(t)}`).join('\n')
+  const hasVocalData = turns.some(t => vocalDeliveryNote(t) !== '')
   return `${personaLines(doctor, style, lang)}
 ${historyContext}
 
@@ -314,7 +328,7 @@ Conversation so far:
 ${transcript || '(this is the opening line — the rep has not spoken yet)'}
 Rep: ${repReply}
 
-This is rep reply #${turnCount} of a maximum ${TURN_CAP}. React as the doctor would, in character, given your persona and internal state above.
+This is rep reply #${turnCount} of a maximum ${TURN_CAP}. React as the doctor would, in character, given your persona and internal state above.${hasVocalData ? ' Some rep lines carry a bracketed [vocal delivery] note from independent voice analysis — weigh it as you would tone of voice, alongside the words themselves, never instead of them.' : ''}
 
 Separately (as an objective observer, not a judgment of the rep), identify which of the CLEAR objection-handling steps the rep's reply demonstrated, if any:
 - "clarify": asked an open-ended question to understand your concern better

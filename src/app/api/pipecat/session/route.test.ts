@@ -1,14 +1,16 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { POST } from './route'
 
-const mocks = vi.hoisted(() => ({ createClient: vi.fn() }))
+const mocks = vi.hoisted(() => ({ createClient: vi.fn(), checkRateLimit: vi.fn() }))
 vi.mock('@/lib/supabase-server', () => ({ createClient: mocks.createClient }))
+vi.mock('@/lib/rate-limit', () => ({ checkRateLimit: mocks.checkRateLimit }))
 
 let fetchMock: ReturnType<typeof vi.fn>
 let query: Record<string, ReturnType<typeof vi.fn>>
 beforeEach(() => {
   vi.stubEnv('PIPECAT_CLOUD_PUBLIC_KEY', 'test-key')
   vi.stubEnv('AI_VOICE_PARTNER_LIVE_ENABLED', 'true')
+  mocks.checkRateLimit.mockResolvedValue(true)
   query = { select: vi.fn(), eq: vi.fn(), single: vi.fn() }
   query.select.mockReturnValue(query)
   query.eq.mockReturnValue(query)
@@ -43,6 +45,22 @@ describe('shared Pipecat session endpoint', () => {
   it.each([null, [], { doctorId: 'doctor', provider: 'unknown' }, { doctorId: 'doctor', provider: null },
     { doctorId: 'doctor', difficulty: 'bad' }, { doctorId: 'doctor', lang: 'fr' }])('rejects malformed session data', async body => {
     expect((await POST(request(body))).status).toBe(400)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+  it.each(['supportive', 'realistic', 'challenging'])('accepts the live difficulty level %s', async difficulty => {
+    const response = await POST(request({ doctorId: 'doctor', difficulty }))
+    expect(response.status).toBe(200)
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).body.difficulty).toBe(difficulty)
+  })
+  it.each(['resistant', 'pressure_test'])('rejects the turn-based-only level %s', async difficulty => {
+    expect((await POST(request({ doctorId: 'doctor', difficulty }))).status).toBe(400)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+  it('rate limits on the shared voice-partner bucket before starting a billed agent', async () => {
+    mocks.checkRateLimit.mockResolvedValue(false)
+    const res = await POST(request({ doctorId: 'doctor' }))
+    expect(res.status).toBe(429)
+    expect(mocks.checkRateLimit).toHaveBeenCalledWith('voice-partner', 'rep', 20, 3600)
     expect(fetchMock).not.toHaveBeenCalled()
   })
   it('requires authentication', async () => {

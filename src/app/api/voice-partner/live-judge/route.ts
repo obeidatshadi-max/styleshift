@@ -2,12 +2,14 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { SYSTEM, isDifficulty } from '@/lib/voice-partner-core'
-import { shouldSkipJudge, buildLiveJudgePrompt, parseLiveJudgeResponse, transcriptToConversationTurns, type LiveTranscriptTurn } from '@/lib/voice-live-core'
+import { SYSTEM } from '@/lib/voice-partner-core'
+import { shouldSkipJudge, buildLiveJudgePrompt, parseLiveJudgeResponse, transcriptToConversationTurns, isLiveDifficulty, type LiveTranscriptTurn } from '@/lib/voice-live-core'
 import type { Doctor } from '@/types/game'
 
 const MAX_TRANSCRIPT_ENTRIES = 200
 const MAX_TURN_CHARS = 2000
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function parseTranscript(raw: unknown): LiveTranscriptTurn[] | null {
   if (!Array.isArray(raw) || raw.length > MAX_TRANSCRIPT_ENTRIES) return null
@@ -36,9 +38,18 @@ export async function POST(req: Request) {
   if (!(await checkRateLimit('voice-partner', user.id, 20, 3600)))
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
 
-  const body = await req.json().catch(() => null) as { doctorId?: string; difficulty?: string; sessionId?: string; transcript?: unknown } | null
+  const body = await req.json().catch(() => null) as { doctorId?: string; difficulty?: string; lang?: string; sessionId?: string; transcript?: unknown } | null
   if (!body || typeof body.doctorId !== 'string' || !body.doctorId) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
-  if (body.difficulty !== undefined && !isDifficulty(body.difficulty)) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
+  // The LIVE difficulty vocabulary (supportive/realistic/challenging), not
+  // voice-partner-core's turn-based one — validating against the turn-based
+  // set here would 400 exactly the level the Pipecat agent actually runs.
+  if (body.difficulty !== undefined && !isLiveDifficulty(body.difficulty)) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
+  if (body.lang !== undefined && body.lang !== 'en' && body.lang !== 'ar') return NextResponse.json({ error: 'bad_request' }, { status: 400 })
+  // Client-minted so the same id also lands on the `voice_partner_sessions`
+  // row via session-result; it goes straight into `conversation_turns.session_id`,
+  // so it's shape-checked the same way session-result checks its own.
+  if (body.sessionId !== undefined && (typeof body.sessionId !== 'string' || !UUID_RE.test(body.sessionId)))
+    return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   const transcript = parseTranscript(body.transcript)
   if (!transcript) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   if (shouldSkipJudge(transcript)) return NextResponse.json({ error: 'empty_transcript' }, { status: 400 })
@@ -50,7 +61,11 @@ export async function POST(req: Request) {
   if (!style) return NextResponse.json({ error: 'no_style' }, { status: 422 })
 
   const turnCount = transcript.filter(t => t.role === 'rep').length
-  const prompt = buildLiveJudgePrompt(doctor as Doctor, style, 'en', transcript)
+  // Judge in the rep's own language — `personaLines` inside the prompt tells
+  // the model which language to write in, so a hardcoded 'en' produced an
+  // English judgement (and English CLEAR reasoning) for an Arabic call.
+  const lang: 'en' | 'ar' = body.lang === 'ar' ? 'ar' : 'en'
+  const prompt = buildLiveJudgePrompt(doctor as Doctor, style, lang, transcript)
 
   let res: Response
   try {

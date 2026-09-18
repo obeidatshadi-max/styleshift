@@ -3,6 +3,46 @@ import { type ObjectionType, isObjectionType, type ClearStep, isClearStep, perso
 
 export type LiveTranscriptTurn = { role: 'rep' | 'doctor'; text: string }
 
+/**
+ * Difficulty levels for the LIVE (realtime Pipecat) mode only — deliberately
+ * NOT `voice-partner-core`'s `DIFFICULTY_LEVELS`.
+ *
+ * The two sets are genuinely different vocabularies owned by different
+ * runtimes and must not be conflated:
+ * - the 5 turn-based modes use `supportive | realistic | resistant |
+ *   pressure_test` (each seeds a physician-state delta in
+ *   `DIFFICULTY_SEED`, and `voice_partner_sessions.difficulty` has a CHECK
+ *   constraint on exactly those four — migration 026);
+ * - the deployed Pipecat agent (`pipecat-agent/scenario.py`) and
+ *   `/api/pipecat/session` only know `supportive | realistic | challenging`.
+ *
+ * Rendering the turn-based list in the live UI made "Resistant"/"Pressure
+ * Test" 400 at session start (a permanent, unrecoverable error screen) while
+ * hiding the agent's real third level, "challenging", entirely. This constant
+ * is the single source of truth for the live set, shared by the component,
+ * `/api/pipecat/session` and `/api/voice-partner/live-judge` so the UI and
+ * the routes can no longer drift apart.
+ */
+export const LIVE_DIFFICULTY_LEVELS = ['supportive', 'realistic', 'challenging'] as const
+export type LiveDifficulty = (typeof LIVE_DIFFICULTY_LEVELS)[number]
+export const DEFAULT_LIVE_DIFFICULTY: LiveDifficulty = 'realistic'
+
+export function isLiveDifficulty(value: unknown): value is LiveDifficulty {
+  return typeof value === 'string' && (LIVE_DIFFICULTY_LEVELS as readonly string[]).includes(value)
+}
+
+/**
+ * The live set overlaps but does not equal the turn-based set that
+ * `voice_partner_sessions.difficulty`'s CHECK constraint allows (migration
+ * 026: supportive/realistic/resistant/pressure_test). `challenging` has no
+ * equivalent there, so it is dropped rather than persisted as a wrong-but-
+ * accepted neighbour ('resistant') or sent through to fail the insert —
+ * the column is nullable precisely for rows that can't name one.
+ */
+export function persistableDifficulty(difficulty: LiveDifficulty): 'supportive' | 'realistic' | undefined {
+  return difficulty === 'challenging' ? undefined : difficulty
+}
+
 /** No rep turn exists yet — nothing to score. Mirrors the empty/near-empty
  * transcript skip rule from the design spec: never spend a judge call, or
  * save a session, on a call the rep never actually spoke in. */

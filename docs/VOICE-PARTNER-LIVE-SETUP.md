@@ -8,7 +8,10 @@ Set on Netlify (production context) and locally in `.env.local`:
 
 ```
 AI_VOICE_PARTNER_LIVE_ENABLED=true
+AI_VOICE_PARTNER_ENABLED=true
 ```
+
+**Both flags are required.** `AI_VOICE_PARTNER_LIVE_ENABLED` gates this mode's own routes (`/api/pipecat/session`, `/api/voice-partner/live-judge`), but the post-call save goes through `/api/voice-partner/session-result`, which is **shared with the 5 turn-based modes and gated by the older `AI_VOICE_PARTNER_ENABLED`**. With only the new flag set, live calls connect and get judged normally but every session save returns 503 — no `voice_partner_sessions` row, no XP, and nothing in the doctor's history. Set `AI_VOICE_PARTNER_ENABLED=true` as well (it already is in Netlify production, from the turn-based Voice Partner activation — this matters mainly for local `.env.local` and any new environment).
 
 Already set in Netlify production as of 2026-09-18: `PIPECAT_AGENT_NAME`, `PIPECAT_CLOUD_PUBLIC_KEY`. Already set on the Pipecat Cloud agent's secret set (`styleshift-voice-partner-secrets`): `GOOGLE_API_KEY`, `OPENAI_API_KEY`, `LIVE_PROVIDER`. `ANTHROPIC_API_KEY` (for the post-call judge) is already set in Netlify production from the existing turn-based Voice Partner activation.
 

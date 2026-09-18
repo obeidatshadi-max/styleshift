@@ -1,10 +1,13 @@
 // src/components/game/VoicePartnerLive.tsx
 'use client'
 import { useState } from 'react'
-import { useT } from '@/lib/i18n'
+import { useT, useLang } from '@/lib/i18n'
 import type { Doctor } from '@/types/game'
 import { useVoiceLive } from '@/hooks/useVoiceLive'
-import { DIFFICULTY_LEVELS, DEFAULT_DIFFICULTY, type Difficulty } from '@/lib/voice-partner-core'
+import {
+  LIVE_DIFFICULTY_LEVELS, DEFAULT_LIVE_DIFFICULTY, persistableDifficulty,
+  type LiveDifficulty, type LiveTranscriptTurn,
+} from '@/lib/voice-live-core'
 import { XP_VALUES } from '@/lib/game-data'
 import { createClient } from '@/lib/supabase-browser'
 
@@ -21,14 +24,29 @@ const difficultyChip = (active: boolean): React.CSSProperties => ({
   background: active ? 'rgba(56,214,255,.1)' : 'transparent', touchAction: 'manipulation', width: '100%',
 })
 
+/** What the parent needs to log a visit for this call, derived from whatever
+ * transcript the call actually produced. Used by both the normal end-of-call
+ * path and the error screen — an errored call that already had real content
+ * must not be reported as `turns: 0`. */
+function transcriptMeta(transcript: LiveTranscriptTurn[]): { turns: number; openingCrisis: string } {
+  return {
+    turns: transcript.filter(entry => entry.role === 'rep').length,
+    openingCrisis: transcript.find(entry => entry.role === 'doctor')?.text ?? '',
+  }
+}
+
 export default function VoicePartnerLive({ doctor, onDone }: Props) {
   const t = useT()
-  const { state, errorKind, transcript, connect, disconnect } = useVoiceLive(doctor.id, 'en')
+  const { lang } = useLang()
+  const { state, errorKind, transcript, connect, disconnect } = useVoiceLive(doctor.id, lang)
   const [consentChecked, setConsentChecked] = useState(false)
   const [consented, setConsented] = useState(false)
-  const [difficulty, setDifficulty] = useState<Difficulty>(DEFAULT_DIFFICULTY)
+  const [difficulty, setDifficulty] = useState<LiveDifficulty>(DEFAULT_LIVE_DIFFICULTY)
   const [scoring, setScoring] = useState(false)
-  const [unscored, setUnscored] = useState(false)
+  // Holds the meta for the deferred `onDone` while the unscored notice is on
+  // screen — non-null means "show the notice and wait for the rep to tap
+  // Continue", rather than navigating away before it can ever render.
+  const [unscored, setUnscored] = useState<{ turns: number; openingCrisis: string } | null>(null)
 
   // Same inline pattern as useVoicePartner.ts's awardXpOnWin (not exported
   // there, and only that one of the 5 turn-based modes awards XP directly —
@@ -47,15 +65,21 @@ export default function VoicePartnerLive({ doctor, onDone }: Props) {
   const finishCall = async () => {
     await disconnect()
     setScoring(true)
-    const turns = transcript.filter(entry => entry.role === 'rep').length
-    if (turns === 0) { setScoring(false); onDone(false, { turns: 0, openingCrisis: '' }); return }
-    const openingCrisis = transcript.find(entry => entry.role === 'doctor')?.text ?? ''
+    const meta = transcriptMeta(transcript)
+    if (meta.turns === 0) { setScoring(false); onDone(false, meta); return }
+    // One id minted here and sent to BOTH routes, so `live-judge`'s
+    // `conversation_turns` backfill and `session-result`'s
+    // `voice_partner_sessions` row share a `session_id`. Without it each
+    // route generated its own and `session-analysis` (Deep Analysis,
+    // Pressure Shift, Behavioral Gravity — all keyed by session_id) found
+    // zero turns and 404'd for every live session.
+    const sessionId = crypto.randomUUID()
     try {
       let res: Response
       try {
         res = await fetch('/api/voice-partner/live-judge', {
           method: 'POST', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ doctorId: doctor.id, difficulty, transcript }),
+          body: JSON.stringify({ doctorId: doctor.id, difficulty, lang, sessionId, transcript }),
         })
       } catch {
         // Network-level failure (dropped connection, DNS, etc.) — fetch()
@@ -65,26 +89,36 @@ export default function VoicePartnerLive({ doctor, onDone }: Props) {
         // rejection here would skip onDone entirely and strand the user on
         // a dead-end screen (state stays 'ended', which no render branch
         // explicitly handles).
-        setUnscored(true)
-        onDone(false, { turns, openingCrisis })
+        setUnscored(meta)
         return
       }
+      // A 400/404/429/503 body is an `{ error }` shape, never a judged
+      // result — parsing it as one would silently read every field as
+      // undefined and fall through to the "nothing saved, no notice" path.
+      // Same handling as the explicit `scored: false` case.
+      if (!res.ok) { setUnscored(meta); return }
       const data = await res.json().catch(() => null) as { objectionType?: string; outcome?: 'won' | 'escalated'; clearSteps?: string[]; turnCount?: number; scored?: boolean } | null
-      if (data?.scored === false) {
-        setUnscored(true)
-        onDone(false, { turns, openingCrisis })
-        return
-      }
+      if (data?.scored === false) { setUnscored(meta); return }
       if (data?.objectionType && data.outcome && data.clearSteps && typeof data.turnCount === 'number') {
-        await fetch('/api/voice-partner/session-result', {
+        const persisted = persistableDifficulty(difficulty)
+        const saved = await fetch('/api/voice-partner/session-result', {
           method: 'POST', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ doctorId: doctor.id, objectionType: data.objectionType, outcome: data.outcome, clearSteps: data.clearSteps, turnCount: data.turnCount, difficulty }),
-        }).catch(() => {})
-        if (data.outcome === 'won') await awardXpOnWin()
-        onDone(data.outcome === 'won', { turns, openingCrisis })
+          body: JSON.stringify({
+            doctorId: doctor.id, sessionId,
+            objectionType: data.objectionType, outcome: data.outcome,
+            clearSteps: data.clearSteps, turnCount: data.turnCount,
+            ...(persisted ? { difficulty: persisted } : {}),
+          }),
+        }).then(r => r.ok).catch(() => false)
+        // XP only for a session that actually persisted — otherwise the
+        // profile's xp and the saved session history diverge permanently.
+        // The call still happened, so the rep is still handed back to the
+        // result screen with the real outcome either way.
+        if (saved && data.outcome === 'won') await awardXpOnWin()
+        onDone(data.outcome === 'won', meta)
         return
       }
-      onDone(false, { turns, openingCrisis })
+      onDone(false, meta)
     } finally {
       setScoring(false)
     }
@@ -103,7 +137,7 @@ export default function VoicePartnerLive({ doctor, onDone }: Props) {
           <div style={{ marginBottom: 18 }}>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('voiceLive.difficultyTitle')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {DIFFICULTY_LEVELS.map(level => (
+              {LIVE_DIFFICULTY_LEVELS.map(level => (
                 <button key={level} onClick={() => setDifficulty(level)} style={difficultyChip(difficulty === level)}>
                   {t(`voice.difficulty.${level}`)}
                 </button>
@@ -137,7 +171,22 @@ export default function VoicePartnerLive({ doctor, onDone }: Props) {
     return (
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14, textAlign: 'center' }}>
         <p style={{ color: 'var(--ink-dim)', fontSize: 14, marginBottom: 16 }}>{errorKind === 'mic' ? t('voiceLive.errorMic') : t('voiceLive.errorNetwork')}</p>
-        <button onClick={() => onDone(false, { turns: 0, openingCrisis: '' })} style={ghostBtn}>{t('voiceLive.back')}</button>
+        {/* Report whatever the call really produced before it errored — a
+            mid-call failure after several real exchanges is still a visit
+            worth logging, and hardcoding turns: 0 threw that away. */}
+        <button onClick={() => onDone(false, transcriptMeta(transcript))} style={ghostBtn}>{t('voiceLive.back')}</button>
+      </div>
+    )
+  }
+
+  // Rendered instead of navigating straight out, so the notice is actually
+  // reachable: every setUnscored used to be followed immediately by onDone,
+  // which unmounted this component before any re-render could show it.
+  if (unscored) {
+    return (
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14, textAlign: 'center' }}>
+        <p style={{ color: 'var(--ink-dim)', fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>{t('voiceLive.unscoredNotice')}</p>
+        <button onClick={() => onDone(false, unscored)} style={{ ...primaryBtn, maxWidth: 280, margin: '0 auto' }}>{t('voiceLive.continue')}</button>
       </div>
     )
   }
@@ -151,7 +200,6 @@ export default function VoicePartnerLive({ doctor, onDone }: Props) {
       <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 20 }}>
         {state === 'connecting' ? t('voiceLive.connecting') : t('voiceLive.live')}
       </div>
-      {unscored && <p style={{ color: 'var(--ink-dim)', fontSize: 13, marginBottom: 16 }}>{t('voiceLive.unscoredNotice')}</p>}
       {state === 'live' && (
         <button onClick={() => void finishCall()} style={{ ...primaryBtn, maxWidth: 280 }}>{t('voiceLive.endCall')}</button>
       )}

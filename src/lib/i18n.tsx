@@ -510,6 +510,12 @@ const EN: Dict = {
   'voiceLive.back': 'Back',
   'voiceLive.scoring': 'Scoring your call…',
   'voiceLive.unscoredNotice': "We couldn't score this call, but your practice was logged.",
+  'voiceLive.continue': 'Continue',
+  // Live-mode-only difficulty label. 'supportive'/'realistic' reuse the
+  // turn-based `voice.difficulty.*` labels; the live agent's third level is
+  // 'challenging' (it has no 'resistant'/'pressure_test'), so it needs its
+  // own label here.
+  'voice.difficulty.challenging': 'Challenging — pushes back hard',
   // rep mobile login
   'login.repTab': 'Rep',
   'login.managerTab': 'Manager · Email',
@@ -1157,6 +1163,8 @@ const AR: Dict = {
   'voiceLive.back': 'رجوع',
   'voiceLive.scoring': 'جارٍ تقييم مكالمتك…',
   'voiceLive.unscoredNotice': 'تعذّر تقييم هذه المكالمة، لكن تم تسجيل تمرينك.',
+  'voiceLive.continue': 'متابعة',
+  'voice.difficulty.challenging': 'صعب — يعترض بقوة',
   // rep mobile login
   'login.repTab': 'مندوب',
   'login.managerTab': 'مدير · بريد',

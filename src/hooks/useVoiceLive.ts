@@ -1,9 +1,8 @@
 'use client'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { PipecatClient, type TranscriptData, type BotLLMTextData } from '@pipecat-ai/client-js'
 import { DailyTransport } from '@pipecat-ai/daily-transport'
-import type { Difficulty } from '@/lib/voice-partner-core'
-import type { LiveTranscriptTurn } from '@/lib/voice-live-core'
+import type { LiveDifficulty, LiveTranscriptTurn } from '@/lib/voice-live-core'
 
 export type VoiceLiveState = 'idle' | 'connecting' | 'live' | 'ended' | 'error' | 'notconfigured'
 export type VoiceLiveErrorKind = 'mic' | 'network' | null
@@ -49,7 +48,20 @@ export function useVoiceLive(doctorId: string, lang: 'en' | 'ar') {
   const [transcript, setTranscript] = useState<LiveTranscriptTurn[]>([])
   const clientRef = useRef<InstanceType<typeof PipecatClient> | null>(null)
 
-  const connect = useCallback(async (difficulty: Difficulty) => {
+  // Unmounting while a call is connected (the error screen's Back button, a
+  // route change, the parent swapping views) otherwise leaves the Daily
+  // connection and the mic track open: the browser's mic indicator stays lit
+  // and the billed Pipecat agent keeps running until its own server-side
+  // timeout. Runs once on unmount only — deliberately no deps, so a
+  // re-render never tears down a live call.
+  useEffect(() => () => {
+    // Best-effort: a cleanup function must never throw, and disconnect() can
+    // fail either synchronously or as a rejected promise.
+    try { void clientRef.current?.disconnect()?.catch(() => {}) } catch { /* already gone */ }
+    clientRef.current = null
+  }, [])
+
+  const connect = useCallback(async (difficulty: LiveDifficulty) => {
     setState('connecting'); setErrorKind(null); setTranscript([])
     let res: Response
     try {

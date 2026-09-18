@@ -14,6 +14,7 @@ import PrivacyPanel from './PrivacyPanel'
 import ChampionBanner from './ChampionBanner'
 import LeagueStrip from './LeagueStrip'
 import NextActionCard from './NextActionCard'
+import MyCoachingInsights from './MyCoachingInsights'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
 
@@ -115,6 +116,8 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
         />
 
         <LeagueStrip />
+
+        <MyCoachingInsights />
 
         {standings && standings.standings.length > 0 && panel(t('rank.title'),
           <>

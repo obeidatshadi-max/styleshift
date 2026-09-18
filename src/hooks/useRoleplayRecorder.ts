@@ -1,14 +1,14 @@
 'use client'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
-import { diarizeAudio, type DiarizedUtterance } from '@/lib/assemblyai-client'
+import { diarizeAudio, DiarizationError, type DiarizationJob, type DiarizedUtterance } from '@/lib/assemblyai-client'
 import {
   buildRoleplayResult, type PitchSample, type SilencePeriod, type Utterance, type RoleplayResult,
 } from '@/lib/roleplay-core'
 import { XP_VALUES } from '@/lib/game-data'
 
 export type RecorderPhase = 'idle' | 'recording' | 'processing' | 'pick-speaker' | 'done' | 'error'
-export type RecorderError = 'mic' | 'diarize' | 'session' | 'speakers'
+export type RecorderError = 'mic' | 'diarize' | 'session' | 'speakers' | 'timeout' | 'too_large'
 
 export interface RawSpeakerPreview { speaker: string; sample: string }
 
@@ -47,6 +47,13 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
   const [result, setResult] = useState<RoleplayResult | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
 
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState(false)
+  const blobRef = useRef<Blob | null>(null)
+  const previewRef = useRef<string | null>(null)
+  const jobRef = useRef<DiarizationJob>({})
+  const analysisRef = useRef<AbortController | null>(null)
+
   const streamRef = useRef<MediaStream | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
@@ -68,6 +75,13 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     analyserRef.current = null
     if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null }
   }, [])
+
+  useEffect(() => () => {
+    analysisRef.current?.abort()
+    if (mediaRecRef.current?.state === 'recording') mediaRecRef.current.stop()
+    cleanupCapture()
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current)
+  }, [cleanupCapture])
 
   const start = useCallback(async () => {
     setError(null)
@@ -144,7 +158,7 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     chunksRef.current = []
     let mediaRec: MediaRecorder
     try {
-      mediaRec = new MediaRecorder(stream)
+      mediaRec = new MediaRecorder(stream, { audioBitsPerSecond: 64_000 })
     } catch (err) {
       // Throws synchronously on browsers/devices with no MediaRecorder
       // support (e.g. old iOS Safari) — was uncaught before, so recording
@@ -162,9 +176,41 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     setPhase('recording')
   }, [supabase, cleanupCapture])
 
+  const analyzeRecording = useCallback(async () => {
+    const blob = blobRef.current
+    if (!blob) return
+    analysisRef.current?.abort()
+    const controller = new AbortController()
+    analysisRef.current = controller
+    setError(null)
+    setPhase('processing')
+    try {
+      const utterances = await diarizeAudio(blob, jobRef.current, controller.signal)
+      if (controller.signal.aborted) return
+      utterancesRef.current = utterances
+      const speakers = Array.from(new Set(utterances.map(u => u.speaker)))
+      if (speakers.length < 2) {
+        console.error(`roleplay stop: diarization found ${speakers.length} distinct speaker(s), ${utterances.length} utterance(s) — one voice was likely too quiet/far from the mic, or only one person spoke`)
+        setError('speakers')
+        setPhase('error')
+        return
+      }
+      setSpeakerPreviews(speakers.map(speaker => ({
+        speaker,
+        sample: utterances.find(u => u.speaker === speaker)?.text ?? '',
+      })))
+      setPhase('pick-speaker')
+    } catch (err) {
+      if (controller.signal.aborted) return
+      console.error('roleplay analysis failed:', err)
+      setError(err instanceof DiarizationError ? err.code : 'diarize')
+      setPhase('error')
+    }
+  }, [])
+
   const stop = useCallback(async () => {
     const mediaRec = mediaRecRef.current
-    if (!mediaRec) return
+    if (!mediaRec || mediaRec.state !== 'recording') return
     if (silenceStartRef.current !== null && lastSpeechTimeRef.current !== null) {
       silencePeriodsRef.current.push({ start: silenceStartRef.current, end: Date.now() - startTimeRef.current })
     }
@@ -197,34 +243,12 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     }
     cleanupCapture()
 
-    try {
-      const utterances = await diarizeAudio(blob)
-      utterancesRef.current = utterances
-      const speakers = Array.from(new Set(utterances.map(u => u.speaker)))
-      if (speakers.length < 2) {
-        console.error(`roleplay stop: diarization found ${speakers.length} distinct speaker(s), ${utterances.length} utterance(s) — one voice was likely too quiet/far from the mic, or only one person spoke`)
-        setError('speakers')
-        setPhase('error')
-        return
-      }
-      setSpeakerPreviews(speakers.map(speaker => ({
-        speaker,
-        sample: utterances.find(u => u.speaker === speaker)?.text ?? '',
-      })))
-      setPhase('pick-speaker')
-    } catch (err) {
-      console.error('roleplay stop: diarizeAudio failed:', err)
-      // Session can expire mid-recording (long roleplay + idle token) — the
-      // whole practice is lost either way, but at least tell the rep why
-      // instead of the generic "analysis failed" message.
-      if (err instanceof Error && err.message === 'Not signed in.') {
-        setError('session')
-      } else {
-        setError('diarize')
-      }
-      setPhase('error')
-    }
-  }, [cleanupCapture])
+    blobRef.current = blob
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current)
+    previewRef.current = URL.createObjectURL(blob)
+    setPreviewUrl(previewRef.current)
+    await analyzeRecording()
+  }, [cleanupCapture, analyzeRecording])
 
   const pickSpeaker = useCallback(async (repSpeaker: string) => {
     const utterances: Utterance[] = utterancesRef.current.map(u => ({
@@ -232,58 +256,63 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     }))
     const built = buildRoleplayResult(utterances, repSpeaker, pitchSamplesRef.current, silencePeriodsRef.current)
     setResult(built)
+    setSaveError(false)
+    setPhase('done')
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      const payload = {
-        rep_id: user.id,
-        doctor_id: doctorId,
-        colleague_id: colleagueId,
-        duration_sec: Math.round(built.durationSec),
-        talk_ratio: built.talkRatio.repRatio,
-        rapid_turn_switches: built.rapidTurnSwitches,
-        question_ratio: built.questionRatio,
-        open_question_ratio: built.openQuestionRatio,
-        paraphrase_score: built.paraphraseScore,
-        active_listening_score: built.activeListening.score,
-        rep_style: built.repRead?.style ?? null,
-        rep_confidence: built.repRead?.confidence ?? null,
-        // rep_metrics is JSONB — no migration needed to add fields here.
-        // warmth/predicates ride alongside repRead's own proof (pace/pitch
-        // range/hesitation) so the tonality report can be rebuilt from
-        // history later without re-running acoustic analysis.
-        rep_metrics: built.repRead ? { ...built.repRead, warmth: built.warmth, predicates: built.predicates } : null,
-        partner_style: built.partnerRead?.style ?? null,
-        partner_confidence: built.partnerRead?.confidence ?? null,
-        adaptation_score: built.adaptationScore?.score ?? null,
-      }
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Session expired before saving report')
+      if (user) {
+        const payload = {
+          rep_id: user.id,
+          doctor_id: doctorId,
+          colleague_id: colleagueId,
+          duration_sec: Math.round(built.durationSec),
+          talk_ratio: built.talkRatio.repRatio,
+          rapid_turn_switches: built.rapidTurnSwitches,
+          question_ratio: built.questionRatio,
+          open_question_ratio: built.openQuestionRatio,
+          paraphrase_score: built.paraphraseScore,
+          active_listening_score: built.activeListening.score,
+          rep_style: built.repRead?.style ?? null,
+          rep_confidence: built.repRead?.confidence ?? null,
+          // rep_metrics is JSONB — no migration needed to add fields here.
+          // warmth/predicates ride alongside repRead's own proof (pace/pitch
+          // range/hesitation) so the tonality report can be rebuilt from
+          // history later without re-running acoustic analysis.
+          rep_metrics: built.repRead ? { ...built.repRead, warmth: built.warmth, predicates: built.predicates } : null,
+          partner_style: built.partnerRead?.style ?? null,
+          partner_confidence: built.partnerRead?.confidence ?? null,
+          adaptation_score: built.adaptationScore?.score ?? null,
+        }
 
-      if (sessionId) {
-        // Rep went back and re-picked the other speaker — update the same
-        // row instead of inserting a duplicate session and double-awarding XP.
-        // .select() so an RLS policy silently blocking the write (returns no
-        // error, zero rows) is still caught, not just a real error.
-        const { data: updated, error: updateError } = await supabase.from('roleplay_sessions').update(payload).eq('id', sessionId).select('id')
-        if (updateError) console.error('roleplay_sessions update failed:', updateError.message)
-        else if (!updated || updated.length === 0) console.error('roleplay_sessions update affected 0 rows (RLS?) for session', sessionId)
-      } else {
-        const { data: inserted, error: insertError } = await supabase.from('roleplay_sessions').insert(payload).select('id').single()
-        if (insertError) {
-          console.error('roleplay_sessions insert failed:', insertError.message)
+        if (sessionId) {
+          // Rep went back and re-picked the other speaker — update the same
+          // row instead of inserting a duplicate session and double-awarding XP.
+          // .select() so an RLS policy silently blocking the write (returns no
+          // error, zero rows) is still caught, not just a real error.
+          const { data: updated, error: updateError } = await supabase.from('roleplay_sessions').update(payload).eq('id', sessionId).select('id')
+          if (updateError || !updated?.length) throw new Error('Roleplay report could not be saved')
         } else {
-          setSessionId(inserted.id)
-          const { data: profile, error: profileError } = await supabase.from('profiles').select('xp').eq('id', user.id).single()
-          if (profileError) {
-            console.error('profile xp read failed:', profileError.message)
-          } else if (profile) {
-            const { error: xpError } = await supabase.from('profiles').update({ xp: profile.xp + XP_VALUES.roleplayComplete }).eq('id', user.id)
-            if (xpError) console.error('profile xp update failed:', xpError.message)
+          const { data: inserted, error: insertError } = await supabase.from('roleplay_sessions').insert(payload).select('id').single()
+          if (insertError) {
+            throw new Error('Roleplay report could not be saved')
+          } else {
+            setSessionId(inserted.id)
+            const { data: profile, error: profileError } = await supabase.from('profiles').select('xp').eq('id', user.id).single()
+            if (profileError) {
+              console.error('profile xp read failed:', profileError.message)
+            } else if (profile) {
+              const { error: xpError } = await supabase.from('profiles').update({ xp: profile.xp + XP_VALUES.roleplayComplete }).eq('id', user.id)
+              if (xpError) console.error('profile xp update failed:', xpError.message)
+            }
           }
         }
       }
+    } catch (err) {
+      console.error('roleplay report save failed:', err)
+      setSaveError(true)
     }
-
-    setPhase('done')
   }, [doctorId, colleagueId, supabase, sessionId])
 
   // Lets the rep back out of the result screen to re-pick the other speaker
@@ -294,7 +323,16 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
   }, [])
 
   const reset = useCallback(() => {
+    analysisRef.current?.abort()
+    if (mediaRecRef.current?.state === 'recording') mediaRecRef.current.stop()
+    mediaRecRef.current = null
     cleanupCapture()
+    blobRef.current = null
+    jobRef.current = {}
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current)
+    previewRef.current = null
+    setPreviewUrl(null)
+    setSaveError(false)
     utterancesRef.current = []
     setSpeakerPreviews([])
     setResult(null)
@@ -304,5 +342,5 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     setPhase('idle')
   }, [cleanupCapture])
 
-  return { phase, error, elapsedSec, speakerPreviews, result, sessionId, start, stop, pickSpeaker, backToPickSpeaker, reset }
+  return { phase, error, previewUrl, saveError, retryAnalysis: analyzeRecording, elapsedSec, speakerPreviews, result, sessionId, start, stop, pickSpeaker, backToPickSpeaker, reset }
 }

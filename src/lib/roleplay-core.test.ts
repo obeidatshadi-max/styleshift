@@ -4,6 +4,7 @@ import {
   computeRapidTurnSwitches, computeQuestionRatio, classifyQuestions, computeParaphraseScore,
   computeActiveListeningScore, repTranscript,
   scopeAcousticToSpeaker, buildRoleplayResult, computeAdaptationScore, computeTermOverlap,
+  isLowSampleSession, MIN_RELIABLE_TURNS,
   type Utterance, type PitchSample, type SilencePeriod, type SocialStyleRead,
 } from './roleplay-core'
 
@@ -88,6 +89,7 @@ describe('turn-taking analysis', () => {
     const result = buildRoleplayResult(utterances, 'A', pitchSamples, [])
     expect(result.talkRatio.repRatio).toBeGreaterThan(0.5)
     expect(result.rapidTurnSwitches).toBe(3)
+    expect(result.turnCount).toBeGreaterThan(0)
     expect(result.questionRatio).toBe(0)
     expect(result.durationSec).toBeCloseTo(14, 0)
     expect(result.openQuestionRatio).toBe(0) // rep (A) asked no questions in this fixture
@@ -230,6 +232,22 @@ describe('active listening score', () => {
     const result = computeActiveListeningScore(talkRatio, 20, 0)
     expect(result.score).toBe(15)
     expect(result.label).toBe('developing')
+  })
+})
+
+describe('isLowSampleSession', () => {
+  // No coded minimum existed for the ratio-based metrics (talk ratio,
+  // question ratio, term overlap, active listening) before this — only
+  // the acoustic pitch-sample gate (processAcousticData, line 26) had one.
+  // 10 total turns ~= 5 real exchanges each way, the practical floor below
+  // which these percentages are dominated by noise, not signal.
+  it('flags a session below the reliable-turn floor', () => {
+    expect(isLowSampleSession(MIN_RELIABLE_TURNS - 1)).toBe(true)
+  })
+
+  it('does not flag a session at or above the floor', () => {
+    expect(isLowSampleSession(MIN_RELIABLE_TURNS)).toBe(false)
+    expect(isLowSampleSession(MIN_RELIABLE_TURNS + 5)).toBe(false)
   })
 })
 

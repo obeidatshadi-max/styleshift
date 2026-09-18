@@ -6,6 +6,7 @@ function result(overrides: Partial<RoleplayResult> = {}): RoleplayResult {
   return {
     talkRatio: { repMs: 5000, partnerMs: 5000, totalMs: 10000, repRatio: 0.5 },
     rapidTurnSwitches: 0,
+    turnCount: 12,
     questionRatio: 0.3,
     questionCount: 3,
     openQuestionRatio: 0.5,

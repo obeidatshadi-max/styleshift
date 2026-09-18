@@ -328,9 +328,23 @@ export function computeAdaptationScore(
   return { score, label }
 }
 
+/** No coded minimum existed for the ratio-based metrics (talk ratio,
+ * question ratio, term overlap, active listening) before this — only the
+ * acoustic pitch-sample gate (processAcousticData) had one. 10 total turns
+ * ~= 5 real exchanges each way, the practical floor below which these
+ * percentages are dominated by noise, not signal. Not a validated number —
+ * same status as the AI Doctor cross-session thresholds: a reasoned
+ * starting point, revisit once real session-length data exists. */
+export const MIN_RELIABLE_TURNS = 10
+
+export function isLowSampleSession(turnCount: number): boolean {
+  return turnCount < MIN_RELIABLE_TURNS
+}
+
 export interface RoleplayResult {
   talkRatio: TalkRatio
   rapidTurnSwitches: number
+  turnCount: number
   questionRatio: number
   questionCount: number
   openQuestionRatio: number
@@ -383,7 +397,7 @@ export function buildRoleplayResult(
   const adaptationScore = computeAdaptationScore(repRead, partnerRead)
 
   return {
-    talkRatio, rapidTurnSwitches, questionRatio, questionCount: questionBreakdown.total, openQuestionRatio,
+    talkRatio, rapidTurnSwitches, turnCount: turns.length, questionRatio, questionCount: questionBreakdown.total, openQuestionRatio,
     paraphraseScore, termOverlap, activeListening, repRead, partnerRead, adaptationScore,
     durationSec: talkRatio.totalMs / 1000, warmth: delivery.warmth, predicates: delivery.predicates,
   }

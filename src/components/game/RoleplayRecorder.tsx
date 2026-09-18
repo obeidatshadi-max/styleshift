@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useT } from '@/lib/i18n'
 import { useRoleplayRecorder } from '@/hooks/useRoleplayRecorder'
 import { buildRoleplayInsight } from '@/lib/roleplay-insight'
+import { isLowSampleSession } from '@/lib/roleplay-core'
 import type { RepAssignment } from '@/types/game'
 
 interface Props { doctorId: string | null; colleagueId: string | null; onDone: () => void }
@@ -199,6 +200,11 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
             {r.adaptationScore && <> {t('roleplay.interactionSummaryToneMatch', { pct: r.adaptationScore.score })}</>}
             {' '}{t('roleplay.interactionSummaryTermOverlap', { pct: Math.round(r.termOverlap * 100) })}
           </p>
+          {isLowSampleSession(r.turnCount) && (
+            <p style={{ fontSize: 11.5, color: 'var(--amber)', lineHeight: 1.5, marginTop: 8 }}>
+              ⚠ {t('roleplay.lowSampleWarning')}
+            </p>
+          )}
         </div>
 
         {insight && (

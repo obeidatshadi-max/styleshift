@@ -249,6 +249,12 @@ function stateInstructionBlock(state: PhysicianState): string {
  * doctor. Reads the Phase 1 weighted-persona/hidden-concern/scenario-context
  * columns straight off `d` when present; every existing call site keeps
  * working unchanged since the signature hasn't changed. */
+// Matches pipecat-agent/scenario.py's realtime dialect steering — the
+// turn-based persona previously just said "Write ALL text in Arabic" (bare
+// langName), which OpenAI TTS then rendered as generic MSA. Real Iraqi
+// vocabulary examples, same as scenario.py, keep both surfaces consistent.
+const IRAQI_DIALECT_LINE = 'Write ALL text in natural spoken Iraqi Arabic — not Modern Standard Arabic, and not Egyptian or Levantine dialect. Use real Iraqi vocabulary and phrasing (e.g. شنو، هسه، أكو، ماكو) where it fits naturally.'
+
 export function personaLines(d: Doctor, style: StyleKey, lang: 'en' | 'ar'): string {
   const specialtyLabel = d.specialty ? (isSpecialty(d.specialty) ? SPECIALTIES[d.specialty].name : d.specialty) : ''
   const specialty = specialtyLabel ? `, ${specialtyLabel}` : ''
@@ -256,7 +262,8 @@ export function personaLines(d: Doctor, style: StyleKey, lang: 'en' | 'ar'): str
   const phrases = d.key_phrases?.trim() ? `They often say things like: "${d.key_phrases.trim()}".` : ''
   const objections = d.objections?.length ? `Objection theme(s) they are likely to raise: ${d.objections.join(', ')}.` : ''
   const descriptor = styleDescriptor(styleWeights(d), style)
-  return `You are ${d.name}${specialty}, ${descriptor}. Write ALL text in ${langName(lang)}.
+  const languageLine = lang === 'ar' ? IRAQI_DIALECT_LINE : `Write ALL text in ${langName(lang)}.`
+  return `You are ${d.name}${specialty}, ${descriptor}. ${languageLine}
 ${domainFlavor}
 ${phrases}
 ${objections}${hiddenConcernLine(d)}${scenarioContextLine(d)}`

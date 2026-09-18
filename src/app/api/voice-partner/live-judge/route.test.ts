@@ -99,7 +99,7 @@ describe('POST /api/voice-partner/live-judge', () => {
     vi.stubGlobal('fetch', fetcher)
     await POST(request({ doctorId: 'd1', lang: 'ar', transcript: [{ role: 'rep', text: 'Hello doctor' }] }))
     const prompt = JSON.parse(fetcher.mock.calls[0][1].body).messages[0].content
-    expect(prompt).toContain('Write ALL text in Arabic')
+    expect(prompt).toContain('Iraqi Arabic')
   })
   it('defaults the judge prompt to English when lang is omitted', async () => {
     vi.stubEnv('AI_VOICE_PARTNER_LIVE_ENABLED', 'true'); vi.stubEnv('ANTHROPIC_API_KEY', 'key')

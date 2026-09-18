@@ -216,6 +216,30 @@ describe('personaLines via buildOpeningPrompt — specialty domain-flavor', () =
   })
 })
 
+describe('personaLines — Arabic dialect steering', () => {
+  // The realtime Pipecat bot's scenario.py already steers Iraqi dialect
+  // explicitly; the turn-based doctor persona previously just said "Arabic"
+  // (langName), which OpenAI TTS then rendered as generic MSA — a documented
+  // gap (docs/ai-doctor-gap-analysis.md). This aligns the two.
+  it('steers the doctor persona toward Iraqi dialect, not generic Arabic, for ar', () => {
+    const prompt = buildOpeningPrompt(doctorFixture(), 'analytical', 'ar', '', 'doubt')
+    expect(prompt).toContain('Iraqi')
+    expect(prompt).not.toContain('Write ALL text in Arabic.')
+  })
+
+  it('explicitly rules out Modern Standard Arabic and neighboring dialects', () => {
+    const prompt = buildOpeningPrompt(doctorFixture(), 'analytical', 'ar', '', 'doubt')
+    expect(prompt).toMatch(/not.*Modern Standard Arabic/i)
+    expect(prompt).toMatch(/Egyptian|Levantine/)
+  })
+
+  it('leaves English untouched', () => {
+    const prompt = buildOpeningPrompt(doctorFixture(), 'analytical', 'en', '', 'doubt')
+    expect(prompt).toContain('Write ALL text in English.')
+    expect(prompt).not.toContain('Iraqi')
+  })
+})
+
 describe('personaLines — weighted style blend (1.4)', () => {
   it('uses the legacy single-style line when no weight columns are set', () => {
     const prompt = buildOpeningPrompt(doctorFixture(), 'analytical', 'en', '', 'doubt')

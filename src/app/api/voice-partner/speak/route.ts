@@ -28,8 +28,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   }
   const lang = body.lang === 'ar' ? 'ar' : 'en'
+  // Matches personaLines' Iraqi dialect steering (voice-partner-core.ts) and
+  // the realtime bot's scenario.py — previously said "Modern Standard
+  // Arabic" here specifically, contradicting both, a documented gap
+  // (docs/ai-doctor-gap-analysis.md).
   const instructions = lang === 'ar'
-    ? 'Speak in clear, natural Modern Standard Arabic.'
+    ? 'Speak in natural spoken Iraqi Arabic, not Modern Standard Arabic and not Egyptian or Levantine dialect.'
     : 'Speak in clear, natural English.'
 
   let res: Response

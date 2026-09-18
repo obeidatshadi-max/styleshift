@@ -277,6 +277,20 @@ export default function VoicePartner({ doctor, onDone }: Props) {
                     </div>
                   </>
                 )}
+
+                {analysis.pressureShift && analysis.pressureShiftInsight && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 8 }}>
+                      {t('voice.deepAnalysis.pressureTitle')}
+                    </div>
+                    <div style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, lineHeight: 1.5 }}>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-dim)', marginBottom: 4 }}>
+                        {t('voice.deepAnalysis.pressureTurn', { turn: analysis.pressureShift.moment.turnIndex })}
+                      </div>
+                      <div style={{ color: 'var(--ink)' }}>{analysis.pressureShiftInsight}</div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

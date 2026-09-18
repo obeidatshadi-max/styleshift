@@ -166,6 +166,12 @@ const EN: Dict = {
   'champion.empty': 'No champion yet — be the first this week',
   'champion.share': 'Share to WhatsApp',
   'champion.thisWeek': 'This Week',
+  // mastermind coaching insights
+  'mastermind.title': 'Coaching Insights',
+  'mastermind.pattern': 'Pattern',
+  'mastermind.impact': 'Impact',
+  'mastermind.alternative': 'Try instead',
+  'mastermind.experiment': 'Experiment',
   // cross-team league
   'league.title': 'Team League',
   'league.yourRank': 'your team #{n} of {total}',
@@ -427,6 +433,8 @@ const EN: Dict = {
   'voice.deepAnalysis.adaptationWhy': "{name} leans {pct}% {style} — {blurb}",
   'voice.deepAnalysis.adaptationUnknownStyle': "This doctor's style profile isn't configured yet, so adaptation is scored cautiously.",
   'voice.deepAnalysis.adaptationRecommendationTitle': 'Try next time',
+  'voice.deepAnalysis.pressureTitle': 'Pressure Moment',
+  'voice.deepAnalysis.pressureTurn': 'Turn {turn}',
   'voice.adaptation.pace': 'Pace',
   'voice.adaptation.detail': 'Detail',
   'voice.adaptation.evidence_orientation': 'Evidence orientation',
@@ -822,6 +830,12 @@ const AR: Dict = {
   'champion.empty': 'لا يوجد بطل بعد — كن أول أبطال هذا الأسبوع',
   'champion.share': 'شارك عبر واتساب',
   'champion.thisWeek': 'هذا الأسبوع',
+  // mastermind coaching insights
+  'mastermind.title': 'رؤى تدريبية',
+  'mastermind.pattern': 'النمط',
+  'mastermind.impact': 'الأثر',
+  'mastermind.alternative': 'جرّب بدلاً من ذلك',
+  'mastermind.experiment': 'تجربة',
   // cross-team league
   'league.title': 'دوري الفرق',
   'league.yourRank': 'فريقك #{n} من {total}',
@@ -1080,6 +1094,8 @@ const AR: Dict = {
   'voice.deepAnalysis.adaptationWhy': 'يميل {name} بنسبة {pct}٪ إلى الطراز {style} — {blurb}',
   'voice.deepAnalysis.adaptationUnknownStyle': 'لم يُحدَّد طراز هذا الطبيب بعد، لذا يُقيَّم التكيّف بحذر.',
   'voice.deepAnalysis.adaptationRecommendationTitle': 'جرّب في المرة القادمة',
+  'voice.deepAnalysis.pressureTitle': 'لحظة الضغط',
+  'voice.deepAnalysis.pressureTurn': 'الجولة {turn}',
   'voice.adaptation.pace': 'السرعة',
   'voice.adaptation.detail': 'التفصيل',
   'voice.adaptation.evidence_orientation': 'التوجه نحو الأدلة',

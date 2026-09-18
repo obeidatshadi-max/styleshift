@@ -11,8 +11,9 @@ export type LiveTranscriptTurn = { role: 'rep' | 'doctor'; text: string }
  * runtimes and must not be conflated:
  * - the 5 turn-based modes use `supportive | realistic | resistant |
  *   pressure_test` (each seeds a physician-state delta in
- *   `DIFFICULTY_SEED`, and `voice_partner_sessions.difficulty` has a CHECK
- *   constraint on exactly those four — migration 026);
+ *   `DIFFICULTY_SEED`; `voice_partner_sessions.difficulty`'s CHECK
+ *   constraint originally allowed only those four — migration 026 — widened
+ *   by migration 031 to also allow 'challenging');
  * - the deployed Pipecat agent (`pipecat-agent/scenario.py`) and
  *   `/api/pipecat/session` only know `supportive | realistic | challenging`.
  *
@@ -32,15 +33,15 @@ export function isLiveDifficulty(value: unknown): value is LiveDifficulty {
 }
 
 /**
- * The live set overlaps but does not equal the turn-based set that
- * `voice_partner_sessions.difficulty`'s CHECK constraint allows (migration
- * 026: supportive/realistic/resistant/pressure_test). `challenging` has no
- * equivalent there, so it is dropped rather than persisted as a wrong-but-
- * accepted neighbour ('resistant') or sent through to fail the insert —
- * the column is nullable precisely for rows that can't name one.
+ * `voice_partner_sessions.difficulty`'s CHECK constraint (migration 026)
+ * originally allowed only the turn-based set (supportive/realistic/
+ * resistant/pressure_test) — migration 031 widened it to also allow
+ * 'challenging', so the full live set now persists as-is. Kept as a named
+ * pass-through (not inlined at the call site) so a future narrowing of
+ * either vocabulary has one place to express the mapping again.
  */
-export function persistableDifficulty(difficulty: LiveDifficulty): 'supportive' | 'realistic' | undefined {
-  return difficulty === 'challenging' ? undefined : difficulty
+export function persistableDifficulty(difficulty: LiveDifficulty): LiveDifficulty {
+  return difficulty
 }
 
 /** No rep turn exists yet — nothing to score. Mirrors the empty/near-empty

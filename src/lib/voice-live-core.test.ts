@@ -30,21 +30,10 @@ describe('live difficulty vocabulary', () => {
 })
 
 describe('persistableDifficulty', () => {
-  // voice_partner_sessions.difficulty CHECK (migration 026) allows only the
-  // turn-based set, so 'challenging' must be dropped rather than sent.
-  it('passes through the levels the sessions table can hold', () => {
-    expect(persistableDifficulty('supportive')).toBe('supportive')
-    expect(persistableDifficulty('realistic')).toBe('realistic')
-  })
-  it('drops the live-only level the column has no value for', () => {
-    expect(persistableDifficulty('challenging')).toBeUndefined()
-  })
-  it('only ever returns a value the shared column accepts', () => {
-    const turnBased = DIFFICULTY_LEVELS as readonly string[]
-    for (const level of LIVE_DIFFICULTY_LEVELS) {
-      const persisted = persistableDifficulty(level)
-      if (persisted !== undefined) expect(turnBased).toContain(persisted)
-    }
+  // voice_partner_sessions.difficulty CHECK was widened by migration 031 to
+  // also allow 'challenging', so every live level now persists as-is.
+  it('passes every live level through unchanged', () => {
+    for (const level of LIVE_DIFFICULTY_LEVELS) expect(persistableDifficulty(level)).toBe(level)
   })
 })
 

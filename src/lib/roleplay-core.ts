@@ -174,45 +174,30 @@ export function computeRapidTurnSwitches(turns: Turn[], thresholdMs = 400): numb
   return count
 }
 
-const QUESTION_STARTERS_AR = /^(هل|ماذا|كيف|متى|لماذا|أين|من|كم)\b/
+// Unicode boundaries work with Arabic; speech transcripts may omit punctuation.
+function questionKind(text: string): 'open' | 'closed' | null {
+  const normalized = text.normalize('NFKC').replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[أإآ]/g, 'ا').trim()
+  const clauses = normalized.split(/[.!؟?،,;؛\n]+/).map(part => part.trim().replace(/^(?:(?:دكتور|دكتورة|يا دكتور|يا دكتورة|طيب|تمام|لو سمحت|شكرا|doctor|sure|okay|thanks)\s+)+/iu, ''))
+  const openAr = /^(?:و?(?:ماذا|كيف|متى|لماذا|اين|كم|شو|ايش|ليش|وين|مين|شلون|ازاي|ايه)|اخبرني|احكيلي|احكي لي|خبرني|اشرح لي)(?![\p{L}\p{N}])/u
+  const closedAr = /^(?:هل|ممكن|بتقدر|تقدر|يمكنك)(?![\p{L}\p{N}])/u
+  const openEn = /^(?:what|how|why|when|where|which|who|tell me|walk me through|describe|explain)\b/i
+  const closedEn = /^(?:can|could|would|will|do|does|did|is|are|have|has|should)\s+(?:you|we|i|it|this|that|there|your|the)\b/i
+  if (clauses.some(part => openAr.test(part) || openEn.test(part) || (/^من(?![\p{L}\p{N}])/u.test(part) && /[?؟]/.test(text)))) return 'open'
+  if (clauses.some(part => closedAr.test(part) || closedEn.test(part)) || /[?؟]/.test(text)) return 'closed'
+  return null
+}
 
 export function computeQuestionRatio(turns: Turn[], repSpeaker: string): number {
   const repTurns = turns.filter(t => t.speaker === repSpeaker)
-  if (!repTurns.length) return 0
-  const isQuestion = (text: string) => {
-    const trimmed = text.trim()
-    return trimmed.endsWith('?') || trimmed.endsWith('؟') || QUESTION_STARTERS_AR.test(trimmed)
-  }
-  const questions = repTurns.filter(t => isQuestion(t.text)).length
-  return questions / repTurns.length
+  return repTurns.length ? repTurns.filter(t => questionKind(t.text) !== null).length / repTurns.length : 0
 }
-
-// "Contains" rather than "starts with" — a wh-word or yes/no marker rarely
-// opens the sentence exactly ("Sure, what have you got?"), so anchoring to
-// the start would miss it.
-const OPEN_MARKERS_EN = /\b(what|how|why|when|where|which|tell me|walk me through|describe|explain)\b/i
-const OPEN_MARKERS_AR = /^(?:ماذا|كيف|متى|لماذا|أين|من|كم)(?![\p{L}\p{N}])/u
 
 export interface QuestionBreakdown { total: number; open: number; closed: number; openRatio: number }
 
-/**
- * Splits a speaker's questions into open-ended (wh-word / "tell me" / "walk
- * me through" style — invites the other person to elaborate) vs. closed
- * (yes/no-shaped, or a question with no open marker). A question with no
- * detected open marker defaults to closed rather than "undetermined" — most
- * unmarked questions ("This works for you?") are yes/no-shaped in practice.
- */
+/** Counts question-bearing turns consistently with computeQuestionRatio. */
 export function classifyQuestions(turns: Turn[], repSpeaker: string): QuestionBreakdown {
-  const repTurns = turns.filter(t => t.speaker === repSpeaker)
-  const isQuestion = (text: string) => {
-    const trimmed = text.trim()
-    return trimmed.endsWith('?') || trimmed.endsWith('؟') || QUESTION_STARTERS_AR.test(trimmed)
-  }
-  const questions = repTurns.map(t => t.text).filter(isQuestion)
-  const open = questions.filter(q => {
-    const trimmed = q.trim()
-    return OPEN_MARKERS_EN.test(trimmed) || OPEN_MARKERS_AR.test(trimmed)
-  }).length
+  const questions = turns.filter(t => t.speaker === repSpeaker).map(t => questionKind(t.text)).filter(kind => kind !== null)
+  const open = questions.filter(kind => kind === 'open').length
   const total = questions.length
   return { total, open, closed: total - open, openRatio: total > 0 ? open / total : 0 }
 }

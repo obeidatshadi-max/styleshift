@@ -61,3 +61,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
 }
+
+/* Arabic voice practice needs more room for joined glyphs. */
+.voice-practice:lang(ar) { --voice-min-font: 16px; --sans: Tahoma, "Segoe UI", Arial, sans-serif; --mono: var(--sans); --ink-dim: #b5c5e8; }
+.voice-practice:lang(ar), .voice-practice:lang(ar) * { letter-spacing: normal !important; line-height: 1.85 !important; }

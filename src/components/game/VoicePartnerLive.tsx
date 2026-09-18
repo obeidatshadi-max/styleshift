@@ -16,10 +16,10 @@ interface Props {
   onDone: (won: boolean, meta: { turns: number; openingCrisis: string }) => void
 }
 
-const primaryBtn: React.CSSProperties = { width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 12, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', color: '#04121c', background: 'var(--cyan)', borderRadius: 10, padding: '12px 18px', boxShadow: 'var(--glow-cyan)', touchAction: 'manipulation' }
-const ghostBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 12, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', color: 'var(--cyan)', background: 'transparent', borderRadius: 10, padding: '12px 18px', touchAction: 'manipulation' }
+const primaryBtn: React.CSSProperties = { width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 'max(12px, var(--voice-min-font, 0px))', letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', color: '#04121c', background: 'var(--cyan)', borderRadius: 10, padding: '12px 18px', boxShadow: 'var(--glow-cyan)', touchAction: 'manipulation' }
+const ghostBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 'max(12px, var(--voice-min-font, 0px))', letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', color: 'var(--cyan)', background: 'transparent', borderRadius: 10, padding: '12px 18px', touchAction: 'manipulation' }
 const difficultyChip = (active: boolean): React.CSSProperties => ({
-  cursor: 'pointer', textAlign: 'start', fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: 1.4, borderRadius: 10, padding: '9px 12px',
+  cursor: 'pointer', textAlign: 'start', fontFamily: 'var(--sans)', fontSize: 'max(12.5px, var(--voice-min-font, 0px))', lineHeight: 1.4, borderRadius: 10, padding: '9px 12px',
   border: `1px solid ${active ? 'var(--cyan)' : 'var(--line)'}`, color: active ? 'var(--cyan)' : 'var(--ink-dim)',
   background: active ? 'rgba(56,214,255,.1)' : 'transparent', touchAction: 'manipulation', width: '100%',
 })
@@ -126,16 +126,16 @@ export default function VoicePartnerLive({ doctor, onDone }: Props) {
 
   if (!consented) {
     return (
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14 }}>
+      <div className="voice-practice" style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14 }}>
         <div style={{ background: 'linear-gradient(180deg,var(--panel),#0a1430)', border: '1px solid var(--line)', borderRadius: 16, padding: 16, boxShadow: '0 12px 40px rgba(0,0,0,.45)' }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.4em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 10 }}>{t('voiceLive.consentTitle')}</div>
-          <p style={{ color: 'var(--ink-dim)', fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>{t('voiceLive.consentBody')}</p>
-          <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 13.5, lineHeight: 1.5, marginBottom: 18, cursor: 'pointer' }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 'max(11px, var(--voice-min-font, 0px))', letterSpacing: '.4em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 10 }}>{t('voiceLive.consentTitle')}</div>
+          <p style={{ color: 'var(--ink-dim)', fontSize: 'max(14px, var(--voice-min-font, 0px))', lineHeight: 1.6, marginBottom: 16 }}>{t('voiceLive.consentBody')}</p>
+          <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 'max(13.5px, var(--voice-min-font, 0px))', lineHeight: 1.5, marginBottom: 18, cursor: 'pointer' }}>
             <input type="checkbox" checked={consentChecked} onChange={e => setConsentChecked(e.target.checked)} style={{ marginTop: 3, accentColor: 'var(--cyan)' }} />
             {t('voiceLive.consentCheckbox')}
           </label>
           <div style={{ marginBottom: 18 }}>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('voiceLive.difficultyTitle')}</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 'max(10px, var(--voice-min-font, 0px))', letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('voiceLive.difficultyTitle')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {LIVE_DIFFICULTY_LEVELS.map(level => (
                 <button key={level} onClick={() => setDifficulty(level)} style={difficultyChip(difficulty === level)}>
@@ -158,10 +158,10 @@ export default function VoicePartnerLive({ doctor, onDone }: Props) {
 
   if (state === 'notconfigured') {
     return (
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14 }}>
-        <div style={{ display: 'inline-block', fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--purple)', border: '1px solid var(--purple)', borderRadius: 20, padding: '4px 11px', marginBottom: 14, background: 'rgba(176,108,255,.08)' }}>{t('voiceLive.premium')}</div>
-        <div style={{ fontSize: 14.5, lineHeight: 1.6, color: 'var(--ink)', marginBottom: 10 }}>{t('voiceLive.teaser', { name: doctor.name })}</div>
-        <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--ink-dim)', marginBottom: 14 }}>{t('voiceLive.notConfigured')}</div>
+      <div className="voice-practice" style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14 }}>
+        <div style={{ display: 'inline-block', fontFamily: 'var(--mono)', fontSize: 'max(10px, var(--voice-min-font, 0px))', letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--purple)', border: '1px solid var(--purple)', borderRadius: 20, padding: '4px 11px', marginBottom: 14, background: 'rgba(176,108,255,.08)' }}>{t('voiceLive.premium')}</div>
+        <div style={{ fontSize: 'max(14.5px, var(--voice-min-font, 0px))', lineHeight: 1.6, color: 'var(--ink)', marginBottom: 10 }}>{t('voiceLive.teaser', { name: doctor.name })}</div>
+        <div style={{ fontSize: 'max(13px, var(--voice-min-font, 0px))', lineHeight: 1.6, color: 'var(--ink-dim)', marginBottom: 14 }}>{t('voiceLive.notConfigured')}</div>
         <button onClick={() => onDone(false, { turns: 0, openingCrisis: '' })} style={ghostBtn}>{t('voiceLive.back')}</button>
       </div>
     )
@@ -169,8 +169,8 @@ export default function VoicePartnerLive({ doctor, onDone }: Props) {
 
   if (state === 'error') {
     return (
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14, textAlign: 'center' }}>
-        <p style={{ color: 'var(--ink-dim)', fontSize: 14, marginBottom: 16 }}>{errorKind === 'mic' ? t('voiceLive.errorMic') : t('voiceLive.errorNetwork')}</p>
+      <div className="voice-practice" style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14, textAlign: 'center' }}>
+        <p style={{ color: 'var(--ink-dim)', fontSize: 'max(14px, var(--voice-min-font, 0px))', marginBottom: 16 }}>{errorKind === 'mic' ? t('voiceLive.errorMic') : t('voiceLive.errorNetwork')}</p>
         {/* Report whatever the call really produced before it errored — a
             mid-call failure after several real exchanges is still a visit
             worth logging, and hardcoding turns: 0 threw that away. */}
@@ -184,20 +184,20 @@ export default function VoicePartnerLive({ doctor, onDone }: Props) {
   // which unmounted this component before any re-render could show it.
   if (unscored) {
     return (
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14, textAlign: 'center' }}>
-        <p style={{ color: 'var(--ink-dim)', fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>{t('voiceLive.unscoredNotice')}</p>
+      <div className="voice-practice" style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14, textAlign: 'center' }}>
+        <p style={{ color: 'var(--ink-dim)', fontSize: 'max(14px, var(--voice-min-font, 0px))', lineHeight: 1.6, marginBottom: 20 }}>{t('voiceLive.unscoredNotice')}</p>
         <button onClick={() => onDone(false, unscored)} style={{ ...primaryBtn, maxWidth: 280, margin: '0 auto' }}>{t('voiceLive.continue')}</button>
       </div>
     )
   }
 
   if (scoring) {
-    return <div style={{ textAlign: 'center', padding: 40, color: 'var(--ink-dim)', fontSize: 14 }}>{t('voiceLive.scoring')}</div>
+    return <div style={{ textAlign: 'center', padding: 40, color: 'var(--ink-dim)', fontSize: 'max(14px, var(--voice-min-font, 0px))' }}>{t('voiceLive.scoring')}</div>
   }
 
   return (
-    <div style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14, textAlign: 'center' }}>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 20 }}>
+    <div className="voice-practice" style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14, textAlign: 'center' }}>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 'max(11px, var(--voice-min-font, 0px))', letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 20 }}>
         {state === 'connecting' ? t('voiceLive.connecting') : t('voiceLive.live')}
       </div>
       {state === 'live' && (

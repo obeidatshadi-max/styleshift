@@ -440,16 +440,17 @@ export async function POST(req: Request) {
     ? parseLiveJudgeResponse((await res.json().catch(() => null) as { content?: { text?: string }[] } | null)?.content?.[0]?.text ?? '')
     : null
 
-  // Judge failed (upstream error or malformed output): don't drop a
-  // completed call — insert a minimal, unscored session record directly
-  // (session-result's contract requires objectionType/outcome/clearSteps,
-  // which we don't have here) and tell the client not to expect a score.
+  // Judge failed (upstream error or malformed output): `voice_partner_sessions`
+  // has NOT NULL constraints on objection_type/outcome (migration
+  // 014_voice_partner_sessions.sql) and its own header comment states
+  // "sessions that never resolve are never persisted" — a minimal/unscored
+  // row is not a row this table can structurally hold. Don't attempt an
+  // insert that would just fail its own NOT NULL constraint; tell the
+  // client the call happened but couldn't be scored, and let the
+  // VisitPrep-level wrapper's `doctor_visits` log (Task 8) be the only
+  // record of this session, same as it already is for any turn-based
+  // session that never reaches session-result.
   if (!judged) {
-    const { error } = await supabase.from('voice_partner_sessions').insert({
-      rep_id: user.id, doctor_id: body.doctorId, style, turn_count: turnCount,
-      ...(body.sessionId ? { id: body.sessionId } : {}), ...(body.difficulty ? { difficulty: body.difficulty } : {}),
-    })
-    if (error) console.warn('voice_partner_sessions fallback insert failed:', error.message)
     return NextResponse.json({ ok: true, scored: false, turnCount })
   }
 

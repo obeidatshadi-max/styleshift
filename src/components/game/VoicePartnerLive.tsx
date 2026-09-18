@@ -49,13 +49,27 @@ export default function VoicePartnerLive({ doctor, onDone }: Props) {
     setScoring(true)
     const turns = transcript.filter(entry => entry.role === 'rep').length
     if (turns === 0) { setScoring(false); onDone(false, { turns: 0, openingCrisis: '' }); return }
+    const openingCrisis = transcript.find(entry => entry.role === 'doctor')?.text ?? ''
     try {
-      const res = await fetch('/api/voice-partner/live-judge', {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ doctorId: doctor.id, difficulty, transcript }),
-      })
+      let res: Response
+      try {
+        res = await fetch('/api/voice-partner/live-judge', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ doctorId: doctor.id, difficulty, transcript }),
+        })
+      } catch {
+        // Network-level failure (dropped connection, DNS, etc.) — fetch()
+        // itself rejected before any response was received. Treat this the
+        // same as a judge call that completed but couldn't be scored,
+        // rather than letting the exception escape uncaught: an uncaught
+        // rejection here would skip onDone entirely and strand the user on
+        // a dead-end screen (state stays 'ended', which no render branch
+        // explicitly handles).
+        setUnscored(true)
+        onDone(false, { turns, openingCrisis })
+        return
+      }
       const data = await res.json().catch(() => null) as { objectionType?: string; outcome?: 'won' | 'escalated'; clearSteps?: string[]; turnCount?: number; scored?: boolean } | null
-      const openingCrisis = transcript.find(entry => entry.role === 'doctor')?.text ?? ''
       if (data?.scored === false) {
         setUnscored(true)
         onDone(false, { turns, openingCrisis })

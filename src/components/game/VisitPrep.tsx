@@ -23,6 +23,7 @@ import VoicePartnerFab from './VoicePartnerFab'
 import { FAB_CRITERIA } from '@/lib/voice-partner-fab'
 import VoicePartnerClosing from './VoicePartnerClosing'
 import { CLOSING_CRITERIA } from '@/lib/voice-partner-closing'
+import VoicePartnerLive from './VoicePartnerLive'
 
 interface Props { onExit: () => void }
 
@@ -49,6 +50,7 @@ type View =
   | { mode: 'questionDrill'; doctor: Doctor }
   | { mode: 'voiceFab'; doctor: Doctor }
   | { mode: 'voiceClosing'; doctor: Doctor }
+  | { mode: 'voiceLive'; doctor: Doctor }
 
 const inputStyle: React.CSSProperties = {
   background:'rgba(0,0,0,.3)', border:'1px solid var(--line)', borderRadius:10,
@@ -134,6 +136,11 @@ export default function VisitPrep({ onExit }: Props) {
     return <VoicePartnerClosingScreen doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
   }
 
+  // ───────────────────────── AI VOICE PARTNER: LIVE CALL ─────────────────────────
+  if (view.mode === 'voiceLive') {
+    return <VoicePartnerLiveScreen doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
+  }
+
   // ───────────────────────── DETAIL / PREP ─────────────────────────
   if (view.mode === 'detail') {
     const d = view.doctor
@@ -211,6 +218,10 @@ export default function VisitPrep({ onExit }: Props) {
             <button onClick={() => setView({ mode: 'voiceClosing', doctor: d })}
               style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               {t('voiceClosing.entryButton')} · {t('voice.premium')}
+            </button>
+            <button onClick={() => setView({ mode: 'voiceLive', doctor: d })}
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              🎙 {t('voiceLive.entryButton')} · {t('voiceLive.premium')}
             </button>
           </div>
         )}
@@ -780,6 +791,28 @@ function VoicePartnerClosingScreen({ doctor, onDone }: { doctor: Doctor; onDone:
           void addVisit({
             source: 'voice_partner_closing',
             note: t('visit.voicePartnerClosingNote', { hit: meta.criteriaHit.length, total: CLOSING_CRITERIA.length }),
+          })
+        }
+        onDone()
+      }}
+    />
+  )
+}
+
+// ───────────────────────── AI voice partner (live call) wrapper (owns doctor_visits logging) ─────────────────────────
+function VoicePartnerLiveScreen({ doctor, onDone }: { doctor: Doctor; onDone: () => void }) {
+  const t = useT()
+  const { addVisit } = useDoctorVisits(doctor.id)
+
+  return (
+    <VoicePartnerLive
+      doctor={doctor}
+      onDone={(won, meta) => {
+        if (meta.turns > 0) {
+          void addVisit({
+            source: 'voice_partner_live',
+            objection_raised: meta.openingCrisis || null,
+            note: t('visit.voicePartnerNote', { turns: meta.turns, outcome: won ? t('visit.aiDrillWin') : t('visit.aiDrillEscalate') }),
           })
         }
         onDone()

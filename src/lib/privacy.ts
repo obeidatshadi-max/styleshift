@@ -10,6 +10,7 @@ const HISTORY_TABLES = [
   'voice_partner_question_sessions',
   'voice_partner_fab_sessions',
   'voice_partner_closing_sessions',
+  'agent_sessions',
 ] as const
 
 export interface VoiceHistoryCounts {
@@ -19,6 +20,7 @@ export interface VoiceHistoryCounts {
   voice_partner_question_sessions: number
   voice_partner_fab_sessions: number
   voice_partner_closing_sessions: number
+  agent_sessions: number
   total: number
 }
 
@@ -41,7 +43,7 @@ export async function getVoiceHistoryCounts(userId: string): Promise<VoiceHistor
   return result
 }
 
-/** Deletes every practice-history row belonging to this rep, across all 6 tables. */
+/** Deletes every practice-history row belonging to this rep, across all 7 tables. */
 export async function deleteVoiceHistory(userId: string): Promise<void> {
   const admin = createAdminClient()
   await Promise.all(HISTORY_TABLES.map(table => admin.from(table).delete().eq('rep_id', userId)))

@@ -80,7 +80,7 @@ const OBJECTION_INSTRUCTIONS: Record<ObjectionType, string> = {
   false_objection: 'State a reason that is not a real reason — a stated excuse you reach for reflexively rather than something you actually believe or care about (distinct from indifference, which is low engagement with no stated reason at all; here you DO state a reason, it just is not your true one). Do not defend this stated reason hard if challenged directly — it should feel thin. The rep is meant to stay patient, not argue the stated reason, and ask questions to surface what is actually behind it — reward that patience and curiosity over a rep who takes the stated reason at face value and tries to counter it directly.',
 }
 
-function objectionInstruction(type: ObjectionType): string {
+export function objectionInstruction(type: ObjectionType): string {
   return OBJECTION_INSTRUCTIONS[type]
 }
 
@@ -236,7 +236,7 @@ export function isPhysicianState(value: unknown): value is PhysicianState {
 
 /** Internal-only prompt block describing current state — never surfaced to
  * the rep; the SYSTEM guardrail also forbids naming these values directly. */
-function stateInstructionBlock(state: PhysicianState): string {
+export function stateInstructionBlock(state: PhysicianState): string {
   return `\nInternal state (never reveal these numbers or mention them — they only shape your tone): trust ${state.trust}/100, skepticism ${state.skepticism}/100, engagement ${state.engagement}/100, time pressure ${state.timePressure}/100. Lower trust → shorter, more guarded replies. Higher skepticism → demand more evidence before conceding. Lower engagement → terser, less curious. Higher time pressure → want to wrap up quickly, less patience for a long pitch.`
 }
 
@@ -253,7 +253,7 @@ function stateInstructionBlock(state: PhysicianState): string {
 // turn-based persona previously just said "Write ALL text in Arabic" (bare
 // langName), which OpenAI TTS then rendered as generic MSA. Real Iraqi
 // vocabulary examples, same as scenario.py, keep both surfaces consistent.
-const IRAQI_DIALECT_LINE = 'Write ALL text in natural spoken Iraqi Arabic — not Modern Standard Arabic, and not Egyptian or Levantine dialect. Use real Iraqi vocabulary and phrasing (e.g. شنو، هسه، أكو، ماكو) where it fits naturally.'
+export const IRAQI_DIALECT_LINE = 'Write ALL text in natural spoken Iraqi Arabic — not Modern Standard Arabic, and not Egyptian or Levantine dialect. Use real Iraqi vocabulary and phrasing (e.g. شنو، هسه، أكو، ماكو) where it fits naturally.'
 
 export function personaLines(d: Doctor, style: StyleKey, lang: 'en' | 'ar'): string {
   const specialtyLabel = d.specialty ? (isSpecialty(d.specialty) ? SPECIALTIES[d.specialty].name : d.specialty) : ''

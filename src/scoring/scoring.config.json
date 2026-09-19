@@ -1,0 +1,76 @@
+{
+  "version": "1.0.0",
+  "description": "Tunable rules for turning Behavior Analyst observations into 0-100 competency scores. Each behavior has fixed points; edit numbers here, no code change needed. source=user marks values you specified; source=proposed marks defaults added to fill the catalog - review them.",
+  "baseScore": 50,
+  "minScore": 0,
+  "maxScore": 100,
+  "pointScale": 1,
+  "minConfidence": 0.3,
+  "minObservations": 1,
+  "repeatDecay": 0.75,
+  "difficultyMultiplier": {
+    "supportive": 0.9,
+    "realistic": 1,
+    "resistant": 1.1,
+    "pressure_test": 1.2
+  },
+  "competencies": {
+    "questioning": {
+      "weight": 1,
+      "behaviors": {
+        "open_question":        { "points": 5,  "source": "user",     "description": "Asked an open-ended question that invites the doctor to explain." },
+        "leading_question":     { "points": -3, "source": "proposed", "description": "Asked a question that pushes the doctor toward the rep's preferred answer." }
+      }
+    },
+    "active_listening": {
+      "weight": 1,
+      "behaviors": {
+        "paraphrasing":         { "points": 8,  "source": "user",     "description": "Restated or reflected the doctor's words or concern back to them." },
+        "empathy_statement":    { "points": 6,  "source": "proposed", "description": "Acknowledged how the doctor feels or thinks about the issue." },
+        "interruption":         { "points": -6, "source": "user",     "description": "Cut in on or talked over the doctor before they finished." }
+      }
+    },
+    "discovery": {
+      "weight": 1.2,
+      "behaviors": {
+        "clarification":        { "points": 7,  "source": "user",     "description": "Asked the doctor to clarify or expand on a concern, need or statement." },
+        "need_uncovered":       { "points": 8,  "source": "proposed", "description": "Drew out a specific need, patient type or reason behind an objection." },
+        "premature_pitch":      { "points": -5, "source": "user",     "description": "Pitched the product before understanding the doctor's situation." }
+      }
+    },
+    "adaptation": {
+      "weight": 1.2,
+      "behaviors": {
+        "style_matched":        { "points": 8,  "source": "proposed", "description": "Pace, depth and tone fit this doctor's style and current mood." },
+        "adjusted_to_reaction": { "points": 6,  "source": "proposed", "description": "Visibly changed approach after the doctor's reaction changed." },
+        "style_mismatch":       { "points": -6, "source": "proposed", "description": "Kept a pace or depth that clashed with the doctor's style or mood." }
+      }
+    },
+    "objection_handling": {
+      "weight": 1.5,
+      "behaviors": {
+        "objection_acknowledged": { "points": 6,  "source": "proposed", "description": "Acknowledged the doctor's objection before responding to it." },
+        "evidence_referenced":    { "points": 8,  "source": "proposed", "description": "Answered the objection with generic evidence, not bare reassurance." },
+        "resolution_checked":     { "points": 6,  "source": "proposed", "description": "Asked whether the answer resolved the concern." },
+        "ignored_objection":      { "points": -8, "source": "user",     "description": "Passed over or dismissed an objection the doctor raised." },
+        "argued_with_doctor":     { "points": -6, "source": "proposed", "description": "Countered the doctor's stated reason head-on instead of exploring it." }
+      }
+    },
+    "value_communication": {
+      "weight": 1.2,
+      "behaviors": {
+        "benefit_tied_to_need":   { "points": 8,  "source": "proposed", "description": "Linked the product to something this doctor said they care about." },
+        "generic_claim":          { "points": -4, "source": "proposed", "description": "Made a broad claim not connected to the doctor's situation." },
+        "unsupported_claim":      { "points": -6, "source": "proposed", "description": "Asserted a strong benefit with no reference to evidence." }
+      }
+    },
+    "closing": {
+      "weight": 1,
+      "behaviors": {
+        "next_step_proposed":     { "points": 8,  "source": "proposed", "description": "Proposed a concrete next step or commitment." },
+        "summarized":             { "points": 5,  "source": "proposed", "description": "Summarized what was agreed or understood before closing." },
+        "no_next_step":           { "points": -5, "source": "proposed", "description": "Ended the conversation without any next step." }
+      }
+    }
+  }
+}

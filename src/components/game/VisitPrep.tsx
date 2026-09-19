@@ -24,6 +24,7 @@ import { FAB_CRITERIA } from '@/lib/voice-partner-fab'
 import VoicePartnerClosing from './VoicePartnerClosing'
 import { CLOSING_CRITERIA } from '@/lib/voice-partner-closing'
 import VoicePartnerLive from './VoicePartnerLive'
+import TextSimulation from './TextSimulation'
 
 interface Props { onExit: () => void }
 
@@ -51,6 +52,7 @@ type View =
   | { mode: 'voiceFab'; doctor: Doctor }
   | { mode: 'voiceClosing'; doctor: Doctor }
   | { mode: 'voiceLive'; doctor: Doctor }
+  | { mode: 'textSim'; doctor: Doctor }
 
 const inputStyle: React.CSSProperties = {
   background:'rgba(0,0,0,.3)', border:'1px solid var(--line)', borderRadius:10,
@@ -141,6 +143,11 @@ export default function VisitPrep({ onExit }: Props) {
     return <VoicePartnerLiveScreen doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
   }
 
+  // ───────────────────────── MULTI-AGENT TEXT SIMULATION ─────────────────────────
+  if (view.mode === 'textSim') {
+    return <TextSimulation doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
+  }
+
   // ───────────────────────── DETAIL / PREP ─────────────────────────
   if (view.mode === 'detail') {
     const d = view.doctor
@@ -222,6 +229,10 @@ export default function VisitPrep({ onExit }: Props) {
             <button onClick={() => setView({ mode: 'voiceLive', doctor: d })}
               style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               🎙 {t('voiceLive.entryButton')} · {t('voiceLive.premium')}
+            </button>
+            <button onClick={() => setView({ mode: 'textSim', doctor: d })}
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              {t('sim.entryButton')} · {t('voice.premium')}
             </button>
           </div>
         )}

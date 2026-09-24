@@ -2230,7 +2230,7 @@ git commit -m "feat: add report fetch + speaker-correction regeneration endpoint
 
 **Files:**
 - Create: `src/components/report/ConversationReport.tsx`
-- Test: `src/components/report/ConversationReport.test.tsx` (uses `@testing-library/react` + `jsdom`, already a devDependency per the investigation)
+- Test: `src/components/report/ConversationReport.test.ts` (note the `.ts`, not `.tsx` — this repo's vitest config's `include` glob is `src/**/*.test.ts` only; a `.test.tsx` file is silently never picked up by a full `npx vitest run`. Component tests in this repo (see `src/components/game/TextSimulation.test.ts`) are therefore plain `.ts` files that build elements with `React.createElement` instead of JSX syntax, and opt into a DOM with a per-file `// @vitest-environment jsdom` pragma at the top of the file, since the project-wide vitest environment is `'node'`. Follow that exact convention here — read `TextSimulation.test.ts`'s first 15 lines for the pattern before writing this file.)
 
 **Interfaces:**
 - Consumes: `ConversationReport` (Task 2), `useT()` (`src/lib/i18n.tsx`).
@@ -2238,13 +2238,17 @@ git commit -m "feat: add report fetch + speaker-correction regeneration endpoint
 
 - [ ] **Step 1: Write the failing test**
 
-```tsx
-// src/components/report/ConversationReport.test.tsx
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+```ts
+// src/components/report/ConversationReport.test.ts
+// @vitest-environment jsdom
+import { describe, it, expect, afterEach } from 'vitest'
+import { createElement } from 'react'
+import { render, screen, cleanup } from '@testing-library/react'
 import { ConversationReport } from './ConversationReport'
-import { LangProvider } from '@/lib/i18n'
+import { LanguageProvider } from '@/lib/i18n'
 import type { ConversationReport as Report } from '@/schemas/conversationReport'
+
+afterEach(() => cleanup())
 
 function minimalReport(overrides: Partial<Report> = {}): Report {
   return {
@@ -2261,21 +2265,25 @@ function minimalReport(overrides: Partial<Report> = {}): Report {
   }
 }
 
+function renderReport(props: { report: Report; outdated: boolean; audioAvailable?: boolean }) {
+  return render(createElement(LanguageProvider, null, createElement(ConversationReport, props)))
+}
+
 describe('ConversationReport', () => {
   it('renders the visit summary without inventing an objective when none was supplied', () => {
-    render(<LangProvider><ConversationReport report={minimalReport()} outdated={false} /></LangProvider>)
+    renderReport({ report: minimalReport(), outdated: false })
     expect(screen.getByText('Short intro visit.')).toBeInTheDocument()
     expect(screen.queryByText(/objective:/i)?.textContent).not.toMatch(/undefined|null/i)
   })
   it('shows an outdated banner when outdated=true', () => {
-    render(<LangProvider><ConversationReport report={minimalReport()} outdated={true} /></LangProvider>)
+    renderReport({ report: minimalReport(), outdated: true })
     expect(screen.getByTestId('report-outdated-banner')).toBeInTheDocument()
   })
   it('never renders a playback control for a segment with no startMs', () => {
     const report = minimalReport({
       coachingPriority: { behavior: 'x', evidence: [{ segmentIndex: 0, speakerRole: 'rep', quote: 'no audio here' }], betterPhrase: 'y', practiceExercise: 'z', successLooksLike: 'w' },
     })
-    render(<LangProvider><ConversationReport report={report} outdated={false} audioAvailable={false} /></LangProvider>)
+    renderReport({ report, outdated: false, audioAvailable: false })
     expect(screen.queryByRole('button', { name: /play/i })).not.toBeInTheDocument()
   })
 })
@@ -2283,7 +2291,7 @@ describe('ConversationReport', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npx vitest run src/components/report/ConversationReport.test.tsx`
+Run: `npx vitest run src/components/report/ConversationReport.test.ts`
 Expected: FAIL — module not found.
 
 - [ ] **Step 3: Write the component**
@@ -2415,13 +2423,13 @@ export function ConversationReport({ report, outdated, audioAvailable = false }:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `npx vitest run src/components/report/ConversationReport.test.tsx`
+Run: `npx vitest run src/components/report/ConversationReport.test.ts`
 Expected: PASS (once Task 17's i18n keys exist — if run before Task 17, `t()` returns the key itself per `useT()`'s existing fallback behavior, which does not fail these assertions since they check specific rendered text, not translation-key resolution).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/components/report/ConversationReport.tsx src/components/report/ConversationReport.test.tsx
+git add src/components/report/ConversationReport.tsx src/components/report/ConversationReport.test.ts
 git commit -m "feat: add shared ConversationReport UI component"
 ```
 
@@ -2432,7 +2440,7 @@ git commit -m "feat: add shared ConversationReport UI component"
 **Files:**
 - Create: `src/components/report/SocialStyleCard.tsx`
 - Modify: `src/components/report/ConversationReport.tsx` (replace the inline social-style `<details>` body with `<SocialStyleCard section={report.socialStyle} />`)
-- Test: `src/components/report/SocialStyleCard.test.tsx`
+- Test: `src/components/report/SocialStyleCard.test.ts` (note the `.ts`, not `.tsx` — same reason as Task 14: this repo's vitest `include` glob is `src/**/*.test.ts` only. Use `React.createElement` instead of JSX syntax and the `// @vitest-environment jsdom` pragma, exactly like Task 14's test file.)
 
 **Interfaces:**
 - Consumes: `SocialStyleSection` (Task 2).
@@ -2440,13 +2448,17 @@ git commit -m "feat: add shared ConversationReport UI component"
 
 - [ ] **Step 1: Write the failing test**
 
-```tsx
-// src/components/report/SocialStyleCard.test.tsx
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+```ts
+// src/components/report/SocialStyleCard.test.ts
+// @vitest-environment jsdom
+import { describe, it, expect, afterEach } from 'vitest'
+import { createElement } from 'react'
+import { render, screen, cleanup } from '@testing-library/react'
 import { SocialStyleCard } from './SocialStyleCard'
-import { LangProvider } from '@/lib/i18n'
+import { LanguageProvider } from '@/lib/i18n'
 import type { SocialStyleSection } from '@/schemas/conversationReport'
+
+afterEach(() => cleanup())
 
 function section(overrides: Partial<SocialStyleSection> = {}): SocialStyleSection {
   return {
@@ -2457,15 +2469,19 @@ function section(overrides: Partial<SocialStyleSection> = {}): SocialStyleSectio
   }
 }
 
+function renderCard(section: SocialStyleSection) {
+  return render(createElement(LanguageProvider, null, createElement(SocialStyleCard, { section })))
+}
+
 describe('SocialStyleCard', () => {
   it('never renders a bare confidence percentage next to the style label', () => {
     const s = section({ customer: { subject: 'customer', strongestSignals: [{ text: 'x', evidence: { segmentIndex: 0, speakerRole: 'counterpart', quote: 'x' }, category: 'directness' }], possibleStyle: 'driver', mixedEvidenceNote: null, alternativeExplanation: null, savedProfile: null, profileDrift: false, isSimulationSetting: false } })
-    render(<LangProvider><SocialStyleCard section={s} /></LangProvider>)
+    renderCard(s)
     expect(screen.queryByText(/\d+%/)).not.toBeInTheDocument()
   })
   it('shows the drift banner when profileDrift is true', () => {
     const s = section({ customer: { subject: 'customer', strongestSignals: [], possibleStyle: 'expressive', mixedEvidenceNote: null, alternativeExplanation: null, savedProfile: 'analytical', profileDrift: true, isSimulationSetting: false } })
-    render(<LangProvider><SocialStyleCard section={s} /></LangProvider>)
+    renderCard(s)
     expect(screen.getByTestId('social-style-drift')).toBeInTheDocument()
   })
 })
@@ -2473,7 +2489,7 @@ describe('SocialStyleCard', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npx vitest run src/components/report/SocialStyleCard.test.tsx`
+Run: `npx vitest run src/components/report/SocialStyleCard.test.ts`
 Expected: FAIL — module not found.
 
 - [ ] **Step 3: Write the component**
@@ -2541,13 +2557,13 @@ and add `import { SocialStyleCard } from './SocialStyleCard'` to its imports.
 
 - [ ] **Step 5: Run both component test files to verify they pass**
 
-Run: `npx vitest run src/components/report`
+Run: `npx vitest run src/components/report/ConversationReport.test.ts src/components/report/SocialStyleCard.test.ts`
 Expected: PASS
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/components/report/SocialStyleCard.tsx src/components/report/SocialStyleCard.test.tsx src/components/report/ConversationReport.tsx
+git add src/components/report/SocialStyleCard.tsx src/components/report/SocialStyleCard.test.ts src/components/report/ConversationReport.tsx
 git commit -m "feat: extract SocialStyleCard, never render a bare style-confidence percentage"
 ```
 
@@ -2559,7 +2575,7 @@ git commit -m "feat: extract SocialStyleCard, never render a bare style-confiden
 - Modify: whichever page/component currently renders `<TextSimulationReport />` (locate via `grep -rn "TextSimulationReport" src/app src/components`)
 - Modify: `src/agents/orchestrator/index.ts` or its calling route — after `phase: 'reported'`, call `POST /api/reports/generate` with `{ sessionType: 'ai_doctor_text', sessionId }` instead of (or in addition to, during transition) using `assembleReport()`'s existing `SessionReport`
 - Delete: `src/components/game/TextSimulationReport.tsx` (only after the replacement is verified rendering correctly — do this as the last step)
-- Test: update or remove `src/components/game/TextSimulationReport.test.tsx` if it exists; add an integration check that the page renders `ConversationReport` for an `ai_doctor_text` session
+- Test: the real existing test file is `src/components/game/TextSimulation.test.ts` (confirmed — `.ts`, not `.tsx`, and it covers the whole live simulation flow AND `TextSimulationReport` together in one file, not a separate report-only test file). Do NOT delete this file — it must keep passing for the flow itself; only remove or replace the specific assertions that render/check `TextSimulationReport`. Add a new check (in this file or a new one) that the page renders `ConversationReport` for an `ai_doctor_text` session.
 
 **Interfaces:**
 - Consumes: `ConversationReport` component (Task 14), `/api/reports/generate` (Task 12).

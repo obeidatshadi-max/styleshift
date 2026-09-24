@@ -38,6 +38,11 @@ export function SocialStyleCard({ section }: { section: SocialStyleSection }) {
       )}
       {section.coachingCard && (
         <div>
+          <p><strong>{t('report.socialStyle.observedSignals')}:</strong> {section.coachingCard.observedSignals}</p>
+          <p><strong>{t('report.socialStyle.possiblePreference')}:</strong> {section.coachingCard.possiblePreference}</p>
+          <p><strong>{t('report.socialStyle.evidenceAndAlternative')}:</strong> {section.coachingCard.evidenceAndAlternative}</p>
+          <p><strong>{t('report.socialStyle.repResponse')}:</strong> {section.coachingCard.repResponse}</p>
+          <p><strong>{t('report.socialStyle.adjustment')}:</strong> {section.coachingCard.mostUsefulAdjustment}</p>
           <p><strong>{t('report.socialStyle.wording')}:</strong> {section.coachingCard.suggestedWordingNextVisit}</p>
         </div>
       )}

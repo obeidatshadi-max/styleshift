@@ -28,6 +28,14 @@ describe('extractSocialSignals', () => {
     const signals = extractSocialSignals(segments, 'counterpart')
     expect(signals[0].evidence).toEqual({ segmentIndex: 2, speakerRole: 'counterpart', quote: 'Can we move faster on this decision?' })
   })
+  it('detects a reassurance-request signal in Iraqi Arabic (hamza-on-alef form)', () => {
+    // Uses the hamza-on-alef spelling (متأكد) a real transcript would contain,
+    // not the bare-alef form the pattern is written with — this exercises the
+    // normalizeForMatch() hamza-folding path, not just a literal string match.
+    const segments = [seg(0, 'counterpart', 'متأكد هذا الدواء ما يعطي اثار جانبية؟')]
+    const signals = extractSocialSignals(segments, 'counterpart')
+    expect(signals.some(s => s.category === 'reassurance_request')).toBe(true)
+  })
   it('only reads segments from the requested speaker', () => {
     const segments = [seg(0, 'rep', 'Just the bottom line for you.'), seg(1, 'counterpart', 'Take your time explaining.')]
     const signals = extractSocialSignals(segments, 'counterpart')

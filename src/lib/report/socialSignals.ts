@@ -20,8 +20,8 @@ const RULES: SignalRule[] = [
   { category: 'results_focus', pattern: /\b(results?|outcome|decision|faster|move (this |the )?forward)\b|نتيجة|نتائج|قرار|اسرع/i },
   { category: 'relationship_language', pattern: /\b(how (are|is) (you|your family)|appreciate you|good to see you)\b|شلونك|شخبار|حبيبي|العائلة|شكرا الك/i },
   { category: 'possibility_interest', pattern: /\b(what if|possibilit(y|ies)|could this|imagine|down the (road|line))\b|شنو لو|ممكن بالمستقبل|تخيل/i },
-  { category: 'reassurance_request', pattern: /\b(are you sure|what happens if|support (after|later)|guarantee)\b|متأكد|شنو الضمان|دعم بعدين/i },
-  { category: 'pace_preference', pattern: /\b(more time|slow down|take (your|my) time|not (yet|ready))\b|خذ\s?لك\s?(وقت|وكت)|مو جاهز|ببطء|بروية/i },
+  { category: 'reassurance_request', pattern: /\b(are you sure|what happens if|support (after|later)|guarantee)\b|متاكد|شنو الضمان|دعم بعدين/i },
+  { category: 'pace_preference', pattern: /\b(more time|slow down|take (your|my) time|not (yet|ready))\b|خذ\s?لك\s?(وقت|وكت)|مو جاهز|ببطء/i },
 ]
 
 /**

@@ -1,6 +1,7 @@
 'use client'
 import { useT } from '@/lib/i18n'
 import type { ConversationReport as ReportType, EvidenceRef } from '@/schemas/conversationReport'
+import { SocialStyleCard } from './SocialStyleCard'
 
 function Evidence({ evidence, audioAvailable }: { evidence: EvidenceRef; audioAvailable: boolean }) {
   const t = useT()
@@ -113,18 +114,7 @@ export function ConversationReport({ report, outdated, audioAvailable = false }:
 
       <details>
         <summary>{t('report.socialStyle.title')}</summary>
-        {report.socialStyle.coachingCard ? (
-          <div>
-            <p><strong>{t('report.socialStyle.observedSignals')}:</strong> {report.socialStyle.coachingCard.observedSignals}</p>
-            <p><strong>{t('report.socialStyle.possiblePreference')}:</strong> {report.socialStyle.coachingCard.possiblePreference}</p>
-            <p><strong>{t('report.socialStyle.evidenceAndAlternative')}:</strong> {report.socialStyle.coachingCard.evidenceAndAlternative}</p>
-            <p><strong>{t('report.socialStyle.repResponse')}:</strong> {report.socialStyle.coachingCard.repResponse}</p>
-            <p><strong>{t('report.socialStyle.adjustment')}:</strong> {report.socialStyle.coachingCard.mostUsefulAdjustment}</p>
-            <p><strong>{t('report.socialStyle.wording')}:</strong> {report.socialStyle.coachingCard.suggestedWordingNextVisit}</p>
-          </div>
-        ) : <p>{t('report.socialStyle.insufficientEvidence')}</p>}
-        {report.socialStyle.customer.isSimulationSetting && <p style={{ opacity: 0.7 }}>{t('report.socialStyle.simulationNote')}</p>}
-        {report.socialStyle.customer.profileDrift && <p style={{ color: '#b45309' }}>{t('report.socialStyle.profileDrift')}</p>}
+        <SocialStyleCard section={report.socialStyle} />
       </details>
     </div>
   )

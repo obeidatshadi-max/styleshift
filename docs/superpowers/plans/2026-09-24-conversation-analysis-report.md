@@ -2477,12 +2477,12 @@ describe('SocialStyleCard', () => {
   it('never renders a bare confidence percentage next to the style label', () => {
     const s = section({ customer: { subject: 'customer', strongestSignals: [{ text: 'x', evidence: { segmentIndex: 0, speakerRole: 'counterpart', quote: 'x' }, category: 'directness' }], possibleStyle: 'driver', mixedEvidenceNote: null, alternativeExplanation: null, savedProfile: null, profileDrift: false, isSimulationSetting: false } })
     renderCard(s)
-    expect(screen.queryByText(/\d+%/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/\d+%/)).toBeNull()
   })
   it('shows the drift banner when profileDrift is true', () => {
     const s = section({ customer: { subject: 'customer', strongestSignals: [], possibleStyle: 'expressive', mixedEvidenceNote: null, alternativeExplanation: null, savedProfile: 'analytical', profileDrift: true, isSimulationSetting: false } })
     renderCard(s)
-    expect(screen.getByTestId('social-style-drift')).toBeInTheDocument()
+    expect(screen.getByTestId('social-style-drift')).toBeTruthy()
   })
 })
 ```

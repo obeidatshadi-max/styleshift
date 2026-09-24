@@ -44,4 +44,15 @@ describe('ConversationReport', () => {
     renderReport({ report, outdated: false, audioAvailable: false })
     expect(screen.queryByRole('button', { name: /play/i })).toBeNull()
   })
+  it('renders only voice measurements marked available', () => {
+    const report = minimalReport({
+      voiceMeasurements: [
+        { metric: 'speaking_rate', value: 132, unit: 'wpm', explanation: 'Visible measurement.', available: true },
+        { metric: 'pauses', value: 4, unit: 'count', explanation: 'Hidden measurement.', available: false },
+      ],
+    })
+    renderReport({ report, outdated: false })
+    expect(screen.getByText('Visible measurement.')).toBeTruthy()
+    expect(screen.queryByText('Hidden measurement.')).toBeNull()
+  })
 })

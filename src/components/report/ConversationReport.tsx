@@ -3,10 +3,11 @@ import { useT } from '@/lib/i18n'
 import type { ConversationReport as ReportType, EvidenceRef } from '@/schemas/conversationReport'
 
 function Evidence({ evidence, audioAvailable }: { evidence: EvidenceRef; audioAvailable: boolean }) {
+  const t = useT()
   return (
     <blockquote dir="auto" style={{ margin: '4px 0', paddingInlineStart: 12, borderInlineStart: '2px solid #ccc' }}>
       "{evidence.quote}" <span style={{ opacity: 0.6 }}>({evidence.speakerRole})</span>
-      {audioAvailable && <button type="button" aria-label="play">▶</button>}
+      {audioAvailable && <button type="button" aria-label={t('report.evidence.play')}>▶</button>}
     </blockquote>
   )
 }
@@ -70,6 +71,17 @@ export function ConversationReport({ report, outdated, audioAvailable = false }:
             <p>{m.observedBehavior}</p>
             <p><em>{t(`report.certainty.${m.interpretationCertainty}`)}:</em> {m.interpretation}</p>
             {m.betterResponseExample && <p><strong>{t('report.criticalMoments.better')}:</strong> {m.betterResponseExample}</p>}
+          </div>
+        ))}
+      </details>
+
+      <details>
+        <summary>{t('report.voiceMeasurements.title')}</summary>
+        {report.voiceMeasurements.filter(m => m.available).map((m, i) => (
+          <div key={i}>
+            <h4>{t(`report.voiceMeasurements.metric.${m.metric}`)}</h4>
+            <p>{m.value} {m.unit}</p>
+            <p>{m.explanation}</p>
           </div>
         ))}
       </details>

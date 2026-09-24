@@ -25,12 +25,20 @@ function autoCorrelate(bufIn: Float32Array, sampleRate: number): number {
   for (let i = 0; i < SIZE / 2; i++) { if (Math.abs(buf[i]) < thres) { r1 = i; break } }
   for (let i = 1; i < SIZE / 2; i++) { if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break } }
   buf = buf.slice(r1, r2); SIZE = buf.length
-  const c = new Array(SIZE).fill(0)
-  for (let i = 0; i < SIZE; i++) for (let j = 0; j < SIZE - i; j++) c[i] += buf[j] * buf[j + i]
+  // Only lags covering the accepted pitch range (60-600Hz) matter to the
+  // caller — it discards anything outside that band a few lines down at the
+  // call site. Correlating every lag up to SIZE (the old code did) burns
+  // ~10x the CPU for lags that can never be picked, called every 100ms for
+  // the whole recording. On mid-range phones that sustained full-buffer
+  // correlation was enough to starve the main thread and freeze the Stop
+  // button a couple minutes in — capping the search window is the fix.
+  const maxLag = Math.min(SIZE - 1, Math.ceil(sampleRate / 55))
+  const c = new Array(maxLag + 2).fill(0)
+  for (let i = 0; i <= maxLag + 1; i++) for (let j = 0; j < SIZE - i; j++) c[i] += buf[j] * buf[j + i]
   let d = 0
-  while (d < SIZE && c[d] > c[d + 1]) d++
+  while (d < maxLag && c[d] > c[d + 1]) d++
   let maxval = -1, maxpos = -1
-  for (let i = d; i < SIZE; i++) if (c[i] > maxval) { maxval = c[i]; maxpos = i }
+  for (let i = d; i <= maxLag; i++) if (c[i] > maxval) { maxval = c[i]; maxpos = i }
   let T0 = maxpos
   const x1 = c[T0 - 1], x2 = c[T0], x3 = c[T0 + 1]
   const a = (x1 + x3 - 2 * x2) / 2, b = (x3 - x1) / 2
@@ -38,14 +46,32 @@ function autoCorrelate(bufIn: Float32Array, sampleRate: number): number {
   return sampleRate / T0
 }
 
+// Report was only ever kept in this hook's React state — leaving the page
+// (back button, tab switch, app backgrounding on mobile) unmounts the
+// component and the just-finished report is gone for good, even though it
+// was already saved to Supabase. Mirroring it into sessionStorage lets a
+// remount of the same doctor/colleague roleplay screen restore straight to
+// the 'done' report instead of forcing a brand-new recording.
+function reportStorageKey(doctorId: string | null, colleagueId: string | null) {
+  return `styleshift.roleplayReport.${doctorId ?? 'x'}.${colleagueId ?? 'x'}`
+}
+
 export function useRoleplayRecorder(doctorId: string | null, colleagueId: string | null) {
   const supabase = createClient()
-  const [phase, setPhase] = useState<RecorderPhase>('idle')
+  const storageKey = reportStorageKey(doctorId, colleagueId)
+  const restored = (() => {
+    if (typeof window === 'undefined') return null
+    try {
+      const raw = window.sessionStorage.getItem(storageKey)
+      return raw ? (JSON.parse(raw) as { result: RoleplayResult; sessionId: string | null }) : null
+    } catch { return null }
+  })()
+  const [phase, setPhase] = useState<RecorderPhase>(restored ? 'done' : 'idle')
   const [error, setError] = useState<RecorderError | null>(null)
   const [elapsedSec, setElapsedSec] = useState(0)
   const [speakerPreviews, setSpeakerPreviews] = useState<RawSpeakerPreview[]>([])
-  const [result, setResult] = useState<RoleplayResult | null>(null)
-  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [result, setResult] = useState<RoleplayResult | null>(restored?.result ?? null)
+  const [sessionId, setSessionId] = useState<string | null>(restored?.sessionId ?? null)
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [saveError, setSaveError] = useState(false)
@@ -67,6 +93,12 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
   const pitchIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const utterancesRef = useRef<DiarizedUtterance[]>([])
+
+  const persistReport = useCallback((r: RoleplayResult, sid: string | null) => {
+    try {
+      window.sessionStorage.setItem(storageKey, JSON.stringify({ result: r, sessionId: sid }))
+    } catch { /* storage unavailable (private mode, quota) — report still shows for this mount */ }
+  }, [storageKey])
 
   const cleanupCapture = useCallback(() => {
     if (pitchIntervalRef.current) { clearInterval(pitchIntervalRef.current); pitchIntervalRef.current = null }
@@ -258,6 +290,7 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     setResult(built)
     setSaveError(false)
     setPhase('done')
+    persistReport(built, sessionId)
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -299,6 +332,7 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
             throw new Error('Roleplay report could not be saved')
           } else {
             setSessionId(inserted.id)
+            persistReport(built, inserted.id)
             const { data: profile, error: profileError } = await supabase.from('profiles').select('xp').eq('id', user.id).single()
             if (profileError) {
               console.error('profile xp read failed:', profileError.message)
@@ -313,7 +347,7 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
       console.error('roleplay report save failed:', err)
       setSaveError(true)
     }
-  }, [doctorId, colleagueId, supabase, sessionId])
+  }, [doctorId, colleagueId, supabase, sessionId, persistReport])
 
   // Lets the rep back out of the result screen to re-pick the other speaker
   // (e.g. they tapped the wrong one) without re-recording or losing the
@@ -340,7 +374,8 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     setError(null)
     setElapsedSec(0)
     setPhase('idle')
-  }, [cleanupCapture])
+    try { window.sessionStorage.removeItem(storageKey) } catch { /* ignore */ }
+  }, [cleanupCapture, storageKey])
 
   return { phase, error, previewUrl, saveError, retryAnalysis: analyzeRecording, elapsedSec, speakerPreviews, result, sessionId, start, stop, pickSpeaker, backToPickSpeaker, reset }
 }

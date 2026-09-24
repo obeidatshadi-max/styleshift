@@ -66,7 +66,11 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
     touchAction: 'manipulation', marginTop: 10,
   }
 
-  if (!consented) {
+  // phase === 'done' on first mount means useRoleplayRecorder restored a
+  // report saved to sessionStorage from before this component unmounted
+  // (e.g. the rep left the page and came back) — skip the mic-consent gate
+  // and go straight to showing it instead of forcing a re-record.
+  if (!consented && phase !== 'done') {
     return (
       <div style={wrap}>
         <div style={card}>
@@ -336,6 +340,7 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
         )}
 
         <button style={btnGhost} onClick={backToPickSpeaker}>{t('roleplay.pickDifferentSpeaker')}</button>
+        <button style={btnGhost} onClick={() => { reset(); setConsented(false); setConsentChecked(false) }}>{t('roleplay.recordAnother')}</button>
         <button style={btnPrimary} onClick={onDone}>{t('roleplay.done')}</button>
       </div>
     </div>

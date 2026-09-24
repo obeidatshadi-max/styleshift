@@ -69,9 +69,10 @@ export function useCustomerVisitRecorder(visitId: string) {
     if (!user) { setError('session'); setPhase('error'); return }
 
     const otherSpeaker = speakerPreviews.find(p => p.speaker !== repSpeaker)?.speaker ?? null
-    await supabase.from('customer_visits').update({
+    const { data: updated, error: updateError } = await supabase.from('customer_visits').update({
       speaker_label_rep: repSpeaker, speaker_label_customer: otherSpeaker, status: 'ready', updated_at: new Date().toISOString(),
-    }).eq('id', visitId)
+    }).eq('id', visitId).select('id')
+    if (updateError || !updated?.length) { setError('visit'); setPhase('error'); return }
 
     const result = await persistTranscriptSegments(supabase, {
       utterances: utterancesRef.current.map(u => ({ speaker: u.speaker, text: u.text, start: u.start, end: u.end })),

@@ -2,6 +2,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 
+// Must match the check constraint on customer_visits.status in
+// supabase/migrations/033_conversation_reports.sql.
+const VALID_STATUSES = ['recording', 'transcribing', 'pick_speaker', 'ready', 'failed']
+
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
@@ -12,6 +16,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     speakerLabelRep?: string; speakerLabelCustomer?: string; status?: string
   } | null
   if (!body) return NextResponse.json({ error: 'Invalid body' }, { status: 400 })
+  if (body.status !== undefined && !VALID_STATUSES.includes(body.status))
+    return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
 
   const patch: Record<string, string> = {}
   if (body.speakerLabelRep) patch.speaker_label_rep = body.speakerLabelRep

@@ -76,6 +76,10 @@ export function useTextSimulation(doctorId: string, lang: 'en' | 'ar') {
     if (!sessionRef.current || busyRef.current) return
     busyRef.current = true
     setErrorKind(null); setPhase('ending')
+    // The legacy per-agent report is no longer rendered (the shared
+    // ConversationReport pipeline replaces it — see TextSimulation.tsx), but
+    // this call still has to run: it's what drives the session to
+    // phase: 'reported' and persists the transcript the new pipeline reads.
     const res = await post<{ report: SessionReport }>('/api/simulation/end', { sessionId: sessionRef.current })
     busyRef.current = false
     // Pressing End again resumes server-side. A failed coaching retry goes back
@@ -86,5 +90,5 @@ export function useTextSimulation(doctorId: string, lang: 'en' | 'ar') {
     setPhase('report')
   }, [])
 
-  return { phase, errorKind, messages, report, start, send, end }
+  return { phase, errorKind, messages, report, sessionId: sessionRef.current, start, send, end }
 }

@@ -74,7 +74,7 @@ describe('simulation i18n coverage', () => {
 
   it('every sim.* key the UI can request exists in both English and Arabic', () => {
     const keys = new Set<string>()
-    for (const file of ['components/game/TextSimulation.tsx', 'components/game/TextSimulationReport.tsx']) {
+    for (const file of ['components/game/TextSimulation.tsx']) {
       const src = fs.readFileSync(path.join(root, file), 'utf-8')
       for (const m of src.matchAll(/t\('(sim\.[\w.]+)'/g)) keys.add(m[1])
     }

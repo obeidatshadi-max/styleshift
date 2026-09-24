@@ -6,6 +6,7 @@ import {
   buildRoleplayResult, type PitchSample, type SilencePeriod, type Utterance, type RoleplayResult,
 } from '@/lib/roleplay-core'
 import { XP_VALUES } from '@/lib/game-data'
+import { persistTranscriptSegments } from '@/lib/transcript-segments'
 
 export type RecorderPhase = 'idle' | 'recording' | 'processing' | 'pick-speaker' | 'done' | 'error'
 export type RecorderError = 'mic' | 'diarize' | 'session' | 'speakers' | 'timeout' | 'too_large'
@@ -326,6 +327,16 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
           // error, zero rows) is still caught, not just a real error.
           const { data: updated, error: updateError } = await supabase.from('roleplay_sessions').update(payload).eq('id', sessionId).select('id')
           if (updateError || !updated?.length) throw new Error('Roleplay report could not be saved')
+
+          const segResult = await persistTranscriptSegments(supabase, {
+            utterances: utterancesRef.current.map(u => ({ speaker: u.speaker, text: u.text, start: u.start, end: u.end })),
+            repSpeaker,
+            sessionType: 'human_partner',
+            sessionId, // whichever branch this runs in
+            repId: user.id,
+            transcriptVersion: 1,
+          })
+          if (!segResult.ok) console.error('transcript segment save failed:', segResult.error)
         } else {
           const { data: inserted, error: insertError } = await supabase.from('roleplay_sessions').insert(payload).select('id').single()
           if (insertError) {
@@ -333,6 +344,17 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
           } else {
             setSessionId(inserted.id)
             persistReport(built, inserted.id)
+
+            const segResult = await persistTranscriptSegments(supabase, {
+              utterances: utterancesRef.current.map(u => ({ speaker: u.speaker, text: u.text, start: u.start, end: u.end })),
+              repSpeaker,
+              sessionType: 'human_partner',
+              sessionId: inserted.id, // whichever branch this runs in
+              repId: user.id,
+              transcriptVersion: 1,
+            })
+            if (!segResult.ok) console.error('transcript segment save failed:', segResult.error)
+
             const { data: profile, error: profileError } = await supabase.from('profiles').select('xp').eq('id', user.id).single()
             if (profileError) {
               console.error('profile xp read failed:', profileError.message)

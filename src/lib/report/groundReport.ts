@@ -1,7 +1,8 @@
 import {
   isCertainty, isCommitmentStatus, isObjectiveStatus, isPerformanceDimension, isSocialStyle, isSignalCategory,
+  VOICE_METRICS,
   type ConversationReport, type TranscriptSegment, type ReportContext, type EvidenceRef,
-  type ReportSessionType,
+  type ReportSessionType, type VoiceMeasurement, type VoiceMetric,
 } from '@/schemas/conversationReport'
 
 const MIN_QUOTE_CHARS = 3
@@ -30,6 +31,48 @@ function groundEvidenceList(raw: unknown, segments: TranscriptSegment[]): Eviden
 
 function str(v: unknown, fallback = ''): string { return typeof v === 'string' ? v : fallback }
 function strOrNull(v: unknown): string | null { return typeof v === 'string' && v.length > 0 ? v : null }
+
+const NOT_MEASURED = 'Not measured for this session.'
+
+/** Deterministic, non-LLM mapping from a flow's `context.deterministicMetrics`
+ * (set by the flow's adapter, e.g. fromRoleplaySession.ts) to the report's
+ * voiceMeasurements. Never invents or estimates a number — a metric is only
+ * `available: true` when the adapter supplied a real number for it. Always
+ * returns all 7 VOICE_METRICS entries, in order, so the UI's available-only
+ * filter can safely drop the rest. */
+export function buildVoiceMeasurements(deterministicMetrics: ReportContext['deterministicMetrics']): VoiceMeasurement[] {
+  function fromRatioOrCount(metric: VoiceMetric, key: string, unit: string, explanation: string): VoiceMeasurement {
+    const v = deterministicMetrics[key]
+    if (typeof v === 'number') {
+      return { metric, value: v, unit, explanation, available: true }
+    }
+    return { metric, value: 0, unit, explanation: NOT_MEASURED, available: false }
+  }
+
+  const measurements: Record<VoiceMetric, VoiceMeasurement> = {
+    speaking_share: fromRatioOrCount(
+      'speaking_share', 'talkRatio', 'ratio',
+      'Share of total talk time you spoke, on a 0 to 1 scale.',
+    ),
+    rapid_turn_switches: fromRatioOrCount(
+      'rapid_turn_switches', 'rapidTurnSwitches', 'count',
+      'Number of quick back-and-forth exchanges — not confirmed interruptions, just fast turn-taking.',
+    ),
+    question_frequency: fromRatioOrCount(
+      'question_frequency', 'questionRatio', 'ratio',
+      'Share of your turns that were questions.',
+    ),
+    open_question_ratio: fromRatioOrCount(
+      'open_question_ratio', 'openQuestionRatio', 'ratio',
+      'Share of your questions that were open rather than yes/no.',
+    ),
+    speaking_rate: { metric: 'speaking_rate', value: 0, unit: 'wpm', explanation: NOT_MEASURED, available: false },
+    pitch_variation: { metric: 'pitch_variation', value: 0, unit: 'semitones', explanation: NOT_MEASURED, available: false },
+    pauses: { metric: 'pauses', value: 0, unit: 'count', explanation: NOT_MEASURED, available: false },
+  }
+
+  return VOICE_METRICS.map(metric => measurements[metric])
+}
 
 export function groundReport(
   raw: unknown, segments: TranscriptSegment[], context: ReportContext,
@@ -181,7 +224,7 @@ export function groundReport(
     scoringConfigVersion: typeof context.deterministicMetrics.scoringConfigVersion === 'string' ? context.deterministicMetrics.scoringConfigVersion : null,
     generatedAt: new Date().toISOString(),
     visitSummary, customerUnderstanding, performance, criticalMoments,
-    voiceMeasurements: [], // filled in by the caller from deterministic data (Task 12) — the model never supplies these
+    voiceMeasurements: buildVoiceMeasurements(context.deterministicMetrics),
     commitments, coachingPriority, strength,
     socialStyle: { customer: customerRead, rep: repRead, adaptation, signalChanges, coachingCard },
     qualityFlags: context.qualityFlags,

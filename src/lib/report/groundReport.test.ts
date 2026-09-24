@@ -1,6 +1,6 @@
 // src/lib/report/groundReport.test.ts
 import { describe, it, expect } from 'vitest'
-import { groundReport } from './groundReport'
+import { groundReport, buildVoiceMeasurements } from './groundReport'
 import type { TranscriptSegment, ReportContext } from '@/schemas/conversationReport'
 
 const segments: TranscriptSegment[] = [
@@ -72,5 +72,41 @@ describe('groundReport', () => {
   })
   it('returns null for a response with no usable top-level shape', () => {
     expect(groundReport({ nonsense: true }, segments, context, base)).toBeNull()
+  })
+})
+
+describe('buildVoiceMeasurements', () => {
+  it('marks talkRatio/rapidTurnSwitches/questionRatio/openQuestionRatio available with their real values, and the other 3 metrics unavailable', () => {
+    const measurements = buildVoiceMeasurements({
+      talkRatio: 0.62, rapidTurnSwitches: 4, questionRatio: 0.3, openQuestionRatio: 0.5,
+    })
+    expect(measurements).toHaveLength(7)
+
+    const byMetric = Object.fromEntries(measurements.map(m => [m.metric, m]))
+    expect(byMetric.speaking_share).toMatchObject({ available: true, value: 0.62, unit: 'ratio' })
+    expect(byMetric.rapid_turn_switches).toMatchObject({ available: true, value: 4, unit: 'count' })
+    expect(byMetric.question_frequency).toMatchObject({ available: true, value: 0.3, unit: 'ratio' })
+    expect(byMetric.open_question_ratio).toMatchObject({ available: true, value: 0.5, unit: 'ratio' })
+
+    expect(byMetric.speaking_rate).toMatchObject({ available: false, value: 0, unit: 'wpm' })
+    expect(byMetric.pitch_variation).toMatchObject({ available: false, value: 0, unit: 'semitones' })
+    expect(byMetric.pauses).toMatchObject({ available: false, value: 0, unit: 'count' })
+  })
+
+  it('returns all 7 entries, all unavailable, when deterministicMetrics is empty (every flow besides human_partner)', () => {
+    const measurements = buildVoiceMeasurements({})
+    expect(measurements).toHaveLength(7)
+    expect(measurements.every(m => m.available === false)).toBe(true)
+    expect(measurements.map(m => m.metric)).toEqual([
+      'speaking_share', 'speaking_rate', 'pitch_variation', 'pauses',
+      'rapid_turn_switches', 'question_frequency', 'open_question_ratio',
+    ])
+  })
+
+  it('treats null deterministic metrics (nullable DB columns) the same as not available', () => {
+    const measurements = buildVoiceMeasurements({
+      talkRatio: null, rapidTurnSwitches: null, questionRatio: null, openQuestionRatio: null,
+    })
+    expect(measurements.every(m => m.available === false)).toBe(true)
   })
 })

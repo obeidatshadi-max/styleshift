@@ -602,7 +602,7 @@ git commit -m "feat: persist human-partner roleplay transcript segments instead 
 import { describe, it, expect } from 'vitest'
 import { createEmptySession } from '@/schemas/session/factory'
 import { adaptAgentSession } from './fromAgentSession'
-import type { SessionRecord } from '@/agents/orchestrator'
+import type { SessionRecord } from '@/agents/orchestrator/types'
 
 function record(): SessionRecord {
   const session = createEmptySession('s1', 'r1')
@@ -610,7 +610,7 @@ function record(): SessionRecord {
     { turnIndex: 0, role: 'doctor', text: 'I have five minutes only.', objectionType: null, clearStepsHit: [], state: { trust: 0.4, skepticism: 0.6, engagement: 0.3, timePressure: 0.8 }, vocalFeedback: null, createdAt: '2026-09-24T09:00:00.000Z' },
     { turnIndex: 1, role: 'rep', text: 'Understood, I will be brief.', objectionType: null, clearStepsHit: [], state: null, vocalFeedback: null, createdAt: '2026-09-24T09:00:05.000Z' },
   ]
-  session.physician.socialStyle = { primary: 'driver', weights: { driver: 0.7, expressive: 0.1, amiable: 0.1, analytical: 0.1 }, dominant: 'driver', source: 'weighted', assertiveness: 'tell', responsiveness: 'controls' }
+  session.socialStyle = { primary: 'driver', weights: { driver: 0.7, expressive: 0.1, amiable: 0.1, analytical: 0.1 }, dominant: 'driver', source: 'weighted', assertiveness: 'tell', responsiveness: 'controls' }
   session.physician.hiddenConcern = 'worried about switching cost'
   return { session, phase: 'ended', trace: [], report: null }
 }
@@ -641,7 +641,7 @@ Expected: FAIL — module not found.
 
 ```ts
 // src/lib/report/adapters/fromAgentSession.ts
-import type { SessionRecord } from '@/agents/orchestrator'
+import type { SessionRecord } from '@/agents/orchestrator/types'
 import type { TranscriptSegment, ReportContext } from '@/schemas/conversationReport'
 import { isSocialStyle } from '@/schemas/conversationReport'
 
@@ -656,7 +656,7 @@ export function adaptAgentSession(record: SessionRecord): { segments: Transcript
     createdAt: t.createdAt,
   }))
 
-  const dominant = session.physician.socialStyle.dominant
+  const dominant = session.socialStyle.dominant
   const context: ReportContext = {
     objective: null, // this flow has no rep-entered visit objective field today
     productContext: null,
@@ -1109,10 +1109,111 @@ export function adaptCustomerVisit(
 Run: `npx vitest run src/app/api/customer-visits src/lib/report/adapters/fromCustomerVisit.test.ts`
 Expected: PASS
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 10: Write `src/hooks/useCustomerVisitRecorder.ts` — the actual capture/diarize/persist glue**
+
+Tasks 1–9 above build the customer-visit backend (consent record, speaker-label patch, adapter) but nothing yet actually records and diarizes a customer-visit conversation. This step closes that gap with a hook parallel to `useRoleplayRecorder.ts` but deliberately simpler: it does NOT capture pitch/silence samples or run `roleplay-core`'s acoustic social-style classifier (`processAcousticData`/`classifySocialStyle`) — a real customer visit's social-style read comes from the text-based `extractSocialSignals` (Task 8) through the LLM report pipeline, not from acoustic analysis, so duplicating `useRoleplayRecorder`'s ~140-line pitch-tracking `autoCorrelate` loop here would be unused code. This keeps the hook to capture → diarize → confirm-speaker → persist, reusing `diarizeAudio` (`src/lib/assemblyai-client.ts`, unchanged) and `persistTranscriptSegments` (Task 3, unchanged) exactly as they exist today.
+
+```ts
+// src/hooks/useCustomerVisitRecorder.ts
+'use client'
+import { useCallback, useRef, useState } from 'react'
+import { createClient } from '@/lib/supabase-browser'
+import { diarizeAudio, DiarizationError, type DiarizedUtterance } from '@/lib/assemblyai-client'
+import { persistTranscriptSegments } from '@/lib/transcript-segments'
+
+export type VisitRecorderPhase = 'idle' | 'recording' | 'processing' | 'pick-speaker' | 'saving' | 'done' | 'error'
+
+export interface RawSpeakerPreview { speaker: string; sample: string }
+
+/** Records, diarizes, and stores the transcript for one consented
+ * customer-visit recording (`visitId` = a `customer_visits.id` already
+ * created via POST /api/customer-visits). Does not compute acoustic
+ * metrics — this session type's social-style read is text-based
+ * (extractSocialSignals, Task 8), not acoustic. */
+export function useCustomerVisitRecorder(visitId: string) {
+  const supabase = createClient()
+  const [phase, setPhase] = useState<VisitRecorderPhase>('idle')
+  const [error, setError] = useState<string | null>(null)
+  const [speakerPreviews, setSpeakerPreviews] = useState<RawSpeakerPreview[]>([])
+  const mediaRecRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+  const utterancesRef = useRef<DiarizedUtterance[]>([])
+  const streamRef = useRef<MediaStream | null>(null)
+
+  const start = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, autoGainControl: false } })
+      streamRef.current = stream
+      const mediaRec = new MediaRecorder(stream)
+      mediaRecRef.current = mediaRec
+      chunksRef.current = []
+      mediaRec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+      mediaRec.start()
+      setPhase('recording')
+      setError(null)
+    } catch {
+      setError('mic')
+      setPhase('error')
+    }
+  }, [])
+
+  const stop = useCallback(async () => {
+    const mediaRec = mediaRecRef.current
+    if (!mediaRec) return
+    setPhase('processing')
+    const blob = await new Promise<Blob>(resolve => {
+      mediaRec.onstop = () => resolve(new Blob(chunksRef.current, { type: mediaRec.mimeType || 'audio/webm' }))
+      mediaRec.stop()
+    })
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    try {
+      const utterances = await diarizeAudio(blob)
+      utterancesRef.current = utterances
+      const bySpeaker = new Map<string, string>()
+      for (const u of utterances) if (!bySpeaker.has(u.speaker)) bySpeaker.set(u.speaker, u.text)
+      setSpeakerPreviews([...bySpeaker.entries()].map(([speaker, sample]) => ({ speaker, sample })))
+      setPhase('pick-speaker')
+    } catch (err) {
+      setError(err instanceof DiarizationError ? err.code : 'diarize')
+      setPhase('error')
+    }
+  }, [])
+
+  const confirmSpeaker = useCallback(async (repSpeaker: string) => {
+    setPhase('saving')
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setError('session'); setPhase('error'); return }
+
+    const otherSpeaker = speakerPreviews.find(p => p.speaker !== repSpeaker)?.speaker ?? null
+    await supabase.from('customer_visits').update({
+      speaker_label_rep: repSpeaker, speaker_label_customer: otherSpeaker, status: 'ready', updated_at: new Date().toISOString(),
+    }).eq('id', visitId)
+
+    const result = await persistTranscriptSegments(supabase, {
+      utterances: utterancesRef.current.map(u => ({ speaker: u.speaker, text: u.text, start: u.start, end: u.end })),
+      repSpeaker, sessionType: 'customer_visit', sessionId: visitId, repId: user.id, transcriptVersion: 1,
+    })
+    if (!result.ok) { setError('speakers'); setPhase('error'); return }
+    setPhase('done')
+  }, [supabase, visitId, speakerPreviews])
+
+  return { phase, error, speakerPreviews, start, stop, confirmSpeaker }
+}
+```
+
+- [ ] **Step 11: Manually verify the hook compiles and the flow type-checks**
+
+Run: `npx tsc --noEmit`
+Expected: no new type errors introduced by this file.
+
+- [ ] **Step 12: Note the deferred scope in the ledger (controller step, not implementer)**
+
+This plan builds the customer-visit backend and recording hook completely, but does **not** add a navigation entry point (a button/screen reachable from `VisitPrep.tsx` or `Colleagues.tsx`, the two existing places `RoleplayRecorder` is invoked) that lets a rep actually reach this hook in the app. Wiring that in requires reading those two screens' current UX flow in more depth than this plan's investigation covered — guessing at it risks a broken or unreachable nav entry. **The implementer for this task must add a ledger note recording this as an explicit deferred-scope item, not silently skip it.** A short follow-up task ("add a 'Record customer visit' entry to VisitPrep.tsx calling `useCustomerVisitRecorder`") is the natural next step once this plan ships.
+
+- [ ] **Step 13: Commit**
 
 ```bash
-git add src/app/api/customer-visits src/lib/report/adapters/fromCustomerVisit.ts src/lib/report/adapters/fromCustomerVisit.test.ts
+git add src/app/api/customer-visits src/lib/report/adapters/fromCustomerVisit.ts src/lib/report/adapters/fromCustomerVisit.test.ts src/hooks/useCustomerVisitRecorder.ts
 git commit -m "feat: add consented real-customer-visit recording mode"
 ```
 

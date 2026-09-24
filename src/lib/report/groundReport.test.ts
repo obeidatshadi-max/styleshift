@@ -109,4 +109,12 @@ describe('buildVoiceMeasurements', () => {
     })
     expect(measurements.every(m => m.available === false)).toBe(true)
   })
+
+  it('treats a real 0 as available — guards typeof v === "number" against a truthy-check regression', () => {
+    const measurements = buildVoiceMeasurements({
+      talkRatio: 0.1, rapidTurnSwitches: 0, questionRatio: 0.2, openQuestionRatio: 0.3,
+    })
+    const byMetric = Object.fromEntries(measurements.map(m => [m.metric, m]))
+    expect(byMetric.rapid_turn_switches).toMatchObject({ available: true, value: 0, unit: 'count' })
+  })
 })

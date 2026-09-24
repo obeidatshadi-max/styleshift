@@ -80,6 +80,27 @@ create policy "own customer visits delete" on public.customer_visits
 -- this is consented real-customer data; nothing in the product yet promises
 -- manager access to it (same reasoning as agent_sessions, migration 032).
 
+-- Cascade delete from customer_visits to transcript_segments: when a rep
+-- deletes a customer_visit record (exercising the delete policy above), any
+-- transcript_segments for that visit must also be deleted. session_id is
+-- deliberately not a foreign key (it's polymorphic across customer_visits,
+-- roleplay_sessions, and agent_sessions), so we enforce this cascade via
+-- trigger. This is essential for consent/retention privacy: deleting a
+-- customer_visit should obliterate its transcript, not orphan it.
+-- Scoped to customer_visit only; human_partner segments tied to
+-- roleplay_sessions keep their existing deletion semantics.
+create function public.delete_customer_visit_segments() returns trigger as $$
+begin
+  delete from public.transcript_segments
+    where session_type = 'customer_visit' and session_id = old.id;
+  return old;
+end;
+$$ language plpgsql security definer;
+
+create trigger customer_visit_segments_cascade
+  after delete on public.customer_visits
+  for each row execute function public.delete_customer_visit_segments();
+
 create table public.conversation_reports (
   id uuid primary key default gen_random_uuid(),
   session_type text not null check (session_type = any (array['human_partner','ai_doctor_voice','ai_doctor_text','customer_visit'])),

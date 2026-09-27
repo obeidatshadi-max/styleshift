@@ -16,7 +16,7 @@ export interface RawSpeakerPreview { speaker: string; sample: string }
 // ── Pitch/silence capture, ported from Verbal Mirror (ssm-app's
 // dev/voice-logic.js live-capture section, already shipped in
 // ssm-app-v4.html) — same autocorrelation pitch detector, unchanged. ──
-function autoCorrelate(bufIn: Float32Array, sampleRate: number): number {
+function autoCorrelate(bufIn: Float32Array, sampleRate: number, scratch: Float64Array): number {
   let buf = bufIn, SIZE = buf.length, rms = 0
   for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i]
   rms = Math.sqrt(rms / SIZE)
@@ -25,7 +25,12 @@ function autoCorrelate(bufIn: Float32Array, sampleRate: number): number {
   const thres = 0.2
   for (let i = 0; i < SIZE / 2; i++) { if (Math.abs(buf[i]) < thres) { r1 = i; break } }
   for (let i = 1; i < SIZE / 2; i++) { if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break } }
-  buf = buf.slice(r1, r2); SIZE = buf.length
+  // subarray() is a view (no copy) — the previous slice() allocated and
+  // copied up to the full fftSize buffer every 100ms for the whole
+  // recording, which on mid-range phones was enough sustained allocation
+  // pressure to freeze the tab partway through, even after capping maxLag
+  // below reduced the correlation work itself.
+  buf = buf.subarray(r1, r2); SIZE = buf.length
   // Only lags covering the accepted pitch range (60-600Hz) matter to the
   // caller — it discards anything outside that band a few lines down at the
   // call site. Correlating every lag up to SIZE (the old code did) burns
@@ -34,8 +39,10 @@ function autoCorrelate(bufIn: Float32Array, sampleRate: number): number {
   // correlation was enough to starve the main thread and freeze the Stop
   // button a couple minutes in — capping the search window is the fix.
   const maxLag = Math.min(SIZE - 1, Math.ceil(sampleRate / 55))
-  const c = new Array(maxLag + 2).fill(0)
-  for (let i = 0; i <= maxLag + 1; i++) for (let j = 0; j < SIZE - i; j++) c[i] += buf[j] * buf[j + i]
+  // Reused scratch buffer (typed, pre-zeroed by the caller) instead of a
+  // fresh boxed Array every tick — same reasoning as subarray() above.
+  const c = scratch
+  for (let i = 0; i <= maxLag + 1; i++) { c[i] = 0; for (let j = 0; j < SIZE - i; j++) c[i] += buf[j] * buf[j + i] }
   let d = 0
   while (d < maxLag && c[d] > c[d + 1]) d++
   let maxval = -1, maxpos = -1
@@ -164,11 +171,17 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     silenceStartRef.current = null
     startTimeRef.current = Date.now()
 
+    // Allocated once per recording and reused every tick below — the old
+    // code allocated a fresh Float32Array/Uint8Array/correlation buffer on
+    // every 100ms tick for the whole recording, which was enough sustained
+    // GC pressure on mid-range phones to freeze the tab partway through.
+    const buf = new Float32Array(analyser.fftSize)
+    const volBuf = new Uint8Array(analyser.frequencyBinCount)
+    const corrScratch = new Float64Array(analyser.fftSize + 2)
+
     pitchIntervalRef.current = setInterval(() => {
-      const buf = new Float32Array(analyser.fftSize)
       analyser.getFloatTimeDomainData(buf)
-      const f0 = autoCorrelate(buf, audioCtx.sampleRate)
-      const volBuf = new Uint8Array(analyser.frequencyBinCount)
+      const f0 = autoCorrelate(buf, audioCtx.sampleRate, corrScratch)
       analyser.getByteFrequencyData(volBuf)
       const vol = volBuf.reduce((a, b) => a + b, 0) / volBuf.length
       const now = Date.now() - startTimeRef.current

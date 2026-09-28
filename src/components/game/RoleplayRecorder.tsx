@@ -102,6 +102,7 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
               : error === 'speakers' ? t('roleplay.errorSpeakers')
               : error === 'timeout' ? t('roleplay.errorTimeout')
               : error === 'too_large' ? t('roleplay.errorTooLarge')
+              : error === 'mic_lost' ? t('roleplay.errorMicLost')
               : t('roleplay.errorDiarize')}
           </p>
           {previewUrl && (

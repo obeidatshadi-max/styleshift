@@ -9,7 +9,7 @@ import { XP_VALUES } from '@/lib/game-data'
 import { persistTranscriptSegments } from '@/lib/transcript-segments'
 
 export type RecorderPhase = 'idle' | 'recording' | 'processing' | 'pick-speaker' | 'done' | 'error'
-export type RecorderError = 'mic' | 'diarize' | 'session' | 'speakers' | 'timeout' | 'too_large'
+export type RecorderError = 'mic' | 'diarize' | 'session' | 'speakers' | 'timeout' | 'too_large' | 'mic_lost'
 
 export interface RawSpeakerPreview { speaker: string; sample: string }
 
@@ -101,6 +101,14 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
   const pitchIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const utterancesRef = useRef<DiarizedUtterance[]>([])
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+  // True from start() until stop() is called or the recorder dies on its own
+  // (iOS Safari silently kills mic capture on screen-lock/backgrounding
+  // without ever throwing — the elapsed-time interval keeps ticking so the
+  // rep sees a live-looking timer over a dead recording). Lets the single
+  // onstop handler below tell "rep pressed Stop" apart from "mic died".
+  const recordingActiveRef = useRef(false)
+  const pendingStopResolveRef = useRef<((blob: Blob) => void) | null>(null)
 
   const persistReport = useCallback((r: RoleplayResult, sid: string | null) => {
     try {
@@ -108,20 +116,41 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     } catch { /* storage unavailable (private mode, quota) — report still shows for this mount */ }
   }, [storageKey])
 
+  const releaseWakeLock = useCallback(() => {
+    wakeLockRef.current?.release().catch(() => {})
+    wakeLockRef.current = null
+  }, [])
+
   const cleanupCapture = useCallback(() => {
     if (pitchIntervalRef.current) { clearInterval(pitchIntervalRef.current); pitchIntervalRef.current = null }
     if (elapsedIntervalRef.current) { clearInterval(elapsedIntervalRef.current); elapsedIntervalRef.current = null }
     if (audioCtxRef.current) { audioCtxRef.current.close().catch(() => {}); audioCtxRef.current = null }
     analyserRef.current = null
     if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null }
-  }, [])
+    releaseWakeLock()
+  }, [releaseWakeLock])
 
   useEffect(() => () => {
+    recordingActiveRef.current = false
     analysisRef.current?.abort()
     if (mediaRecRef.current?.state === 'recording') mediaRecRef.current.stop()
     cleanupCapture()
     if (previewRef.current) URL.revokeObjectURL(previewRef.current)
   }, [cleanupCapture])
+
+  // The Wake Lock API auto-releases whenever the tab is hidden and does NOT
+  // reacquire itself when it becomes visible again — without this, a rep who
+  // glances away and back mid-recording gets exactly one screen-lock's worth
+  // of protection before the same iOS mic-death bug resurfaces.
+  useEffect(() => {
+    const reacquire = () => {
+      if (document.visibilityState !== 'visible' || !recordingActiveRef.current) return
+      if (!('wakeLock' in navigator)) return
+      navigator.wakeLock.request('screen').then(lock => { wakeLockRef.current = lock }).catch(() => {})
+    }
+    document.addEventListener('visibilitychange', reacquire)
+    return () => document.removeEventListener('visibilitychange', reacquire)
+  }, [])
 
   const start = useCallback(async () => {
     setError(null)
@@ -155,6 +184,14 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
       return
     }
     streamRef.current = stream
+
+    // Best-effort: keeps iOS/Android from auto-locking the screen mid-recording,
+    // which is what silently kills getUserMedia capture on iOS Safari (see
+    // recordingActiveRef above). Unsupported browsers just skip this — the
+    // onstop/track-ended handling below still catches the failure either way.
+    if ('wakeLock' in navigator) {
+      navigator.wakeLock.request('screen').then(lock => { wakeLockRef.current = lock }).catch(() => {})
+    }
 
     const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
     const source = audioCtx.createMediaStreamSource(stream)
@@ -216,8 +253,39 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
       return
     }
     mediaRec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+
+    // Single onstop handler for the whole recording lifetime, dispatched by
+    // recordingActiveRef rather than reassigned per-call: a manual stop()
+    // resolves pendingStopResolveRef; anything else (browser auto-stopping
+    // the recorder because a track ended, or iOS silently killing capture)
+    // is the mic-death case and gets its own error state instead of leaving
+    // the rep staring at a timer over dead audio.
+    mediaRec.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: mediaRec.mimeType || 'audio/webm' })
+      if (pendingStopResolveRef.current) {
+        pendingStopResolveRef.current(blob)
+        pendingStopResolveRef.current = null
+        return
+      }
+      if (!recordingActiveRef.current) return
+      recordingActiveRef.current = false
+      cleanupCapture()
+      blobRef.current = blob
+      if (previewRef.current) URL.revokeObjectURL(previewRef.current)
+      previewRef.current = URL.createObjectURL(blob)
+      setPreviewUrl(previewRef.current)
+      setError('mic_lost')
+      setPhase('error')
+    }
+    // Some browsers fire 'ended' on the track without auto-stopping the
+    // recorder itself — force the stop so the handler above always runs.
+    stream.getAudioTracks().forEach(track => {
+      track.onended = () => { if (mediaRecRef.current?.state === 'recording') mediaRecRef.current.stop() }
+    })
+
     mediaRec.start()
     mediaRecRef.current = mediaRec
+    recordingActiveRef.current = true
 
     setPhase('recording')
   }, [supabase, cleanupCapture])
@@ -257,27 +325,27 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
   const stop = useCallback(async () => {
     const mediaRec = mediaRecRef.current
     if (!mediaRec || mediaRec.state !== 'recording') return
+    recordingActiveRef.current = false
     if (silenceStartRef.current !== null && lastSpeechTimeRef.current !== null) {
       silencePeriodsRef.current.push({ start: silenceStartRef.current, end: Date.now() - startTimeRef.current })
     }
     setPhase('processing')
 
-    // mediaRec.onstop MUST be attached and mediaRec.stop() called before
-    // cleanupCapture() touches the underlying MediaStream tracks. Stopping
-    // the tracks first (the old order) can make the browser auto-stop the
-    // recorder and fire its own 'stop' event before our handler is attached
-    // — the promise below then never resolves and the UI hangs forever on
-    // "Separating speakers…" with no network request ever sent. A timeout
-    // is also added so any other stall surfaces an error instead of a
-    // silent freeze.
+    // mediaRec.stop() is called before cleanupCapture() touches the
+    // underlying MediaStream tracks. Stopping the tracks first (the old
+    // order) can make the browser auto-stop the recorder and fire its own
+    // 'stop' event before our handler is attached — the promise below then
+    // never resolves and the UI hangs forever on "Separating speakers…" with
+    // no network request ever sent. A timeout is also added so any other
+    // stall surfaces an error instead of a silent freeze. The handler itself
+    // lives on mediaRec.onstop set once in start() — pendingStopResolveRef
+    // routes this manual stop to it instead of reassigning onstop, so an
+    // unrelated auto-stop (mic death) can never be mistaken for this one.
     let blob: Blob
     try {
       blob = await new Promise<Blob>((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('MediaRecorder stop timed out')), 15000)
-        mediaRec.onstop = () => {
-          clearTimeout(timeout)
-          resolve(new Blob(chunksRef.current, { type: mediaRec.mimeType || 'audio/webm' }))
-        }
+        const timeout = setTimeout(() => { pendingStopResolveRef.current = null; reject(new Error('MediaRecorder stop timed out')) }, 15000)
+        pendingStopResolveRef.current = (b: Blob) => { clearTimeout(timeout); resolve(b) }
         mediaRec.stop()
       })
     } catch (err) {
@@ -392,6 +460,8 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
   }, [])
 
   const reset = useCallback(() => {
+    recordingActiveRef.current = false
+    pendingStopResolveRef.current = null
     analysisRef.current?.abort()
     if (mediaRecRef.current?.state === 'recording') mediaRecRef.current.stop()
     mediaRecRef.current = null

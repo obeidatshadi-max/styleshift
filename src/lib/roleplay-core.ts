@@ -238,7 +238,7 @@ export function computeTermOverlap(turns: Turn[], repSpeaker: string): number {
 /**
  * For each rep turn that immediately follows a partner turn, scores what
  * fraction of the partner's content words the rep's reply echoes back
- * VERBATIM — a mirroring/rapport signal (UI label: "Reflective Echo"), not
+ * VERBATIM — a mirroring/rapport signal (UI label: "Word Mirroring"), not
  * a paraphrase-quality score. A rep who genuinely rewords the partner's
  * point in different vocabulary scores LOW here, same as one who ignores
  * it entirely; this only rewards literal word reuse. Reads partner-turn

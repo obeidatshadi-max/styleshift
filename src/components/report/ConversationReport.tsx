@@ -1,15 +1,67 @@
 'use client'
+import { useState } from 'react'
 import { useT } from '@/lib/i18n'
-import type { ConversationReport as ReportType, EvidenceRef } from '@/schemas/conversationReport'
+import type { ConversationReport as ReportType, EvidenceRef, Certainty, ObjectiveStatus, CommitmentStatus } from '@/schemas/conversationReport'
 import { SocialStyleCard } from './SocialStyleCard'
+
+const card: React.CSSProperties = {
+  background: 'linear-gradient(180deg,var(--panel),#0a1430)', border: '1px solid var(--line)',
+  borderRadius: 18, padding: '18px 20px 20px', boxShadow: '0 16px 50px rgba(0,0,0,.55)',
+}
+const eyebrow = (text: string) => (
+  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.3em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 10 }}>{text}</div>
+)
+const bodyText: React.CSSProperties = { fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink)', margin: 0 }
+const fieldLabel: React.CSSProperties = { fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-dim)' }
+
+function Badge({ text, color }: { text: string; color: string }) {
+  return (
+    <span style={{ display: 'inline-block', fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.03em', border: `1px solid ${color}`, color, borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>
+      {text}
+    </span>
+  )
+}
+
+const CERTAINTY_COLOR: Record<Certainty, string> = { stated: 'var(--green)', inferred: 'var(--cyan)', not_established: 'var(--ink-dim)' }
+const OBJECTIVE_STATUS_COLOR: Record<ObjectiveStatus, string> = {
+  achieved: 'var(--green)', partial: 'var(--amber)', not_achieved: 'var(--red)', insufficient_evidence: 'var(--ink-dim)',
+}
+const COMMITMENT_COLOR: Record<CommitmentStatus, string> = { agreed: 'var(--green)', proposed: 'var(--cyan)', ai_recommended: 'var(--purple)' }
+
+/** Same button+state disclosure MyCoachingInsights.tsx already uses on the
+ * home screen — kept local rather than shared since neither file has a
+ * components-lib layer yet and this is the only other place it's needed. */
+function Accordion({ title, defaultOpen = false, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div style={{ border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
+      <button onClick={() => setOpen(o => !o)}
+        style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: 10, cursor: 'pointer', background: 'transparent', border: 'none', padding: '13px 14px', textAlign: 'start', color: 'var(--cyan)', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase' }}>
+        <span>{title}</span>
+        <span style={{ flex: '0 0 auto' }}>{open ? '−' : '+'}</span>
+      </button>
+      {open && <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 14 }}>{children}</div>}
+    </div>
+  )
+}
 
 function Evidence({ evidence, audioAvailable }: { evidence: EvidenceRef; audioAvailable: boolean }) {
   const t = useT()
   return (
-    <blockquote dir="auto" style={{ margin: '4px 0', paddingInlineStart: 12, borderInlineStart: '2px solid #ccc' }}>
-      "{evidence.quote}" <span style={{ opacity: 0.6 }}>({evidence.speakerRole})</span>
-      {audioAvailable && <button type="button" aria-label={t('report.evidence.play')}>▶</button>}
-    </blockquote>
+    <div dir="auto" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, margin: '6px 0', paddingInlineStart: 12, borderInlineStart: '2px solid var(--line)' }}>
+      <p style={{ flex: 1, fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink-dim)', fontStyle: 'italic', margin: 0 }}>
+        &ldquo;{evidence.quote}&rdquo;{' '}
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.05em', fontStyle: 'normal', opacity: .75 }}>
+          &mdash; {evidence.speakerRole}
+        </span>
+      </p>
+      {audioAvailable && (
+        <button type="button" aria-label={t('report.evidence.play')}
+          style={{ flexShrink: 0, cursor: 'pointer', width: 26, height: 26, borderRadius: '50%', border: '1px solid var(--cyan)', background: 'transparent', color: 'var(--cyan)', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          &#9654;
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -18,104 +70,137 @@ export function ConversationReport({ report, outdated, audioAvailable = false }:
 }) {
   const t = useT()
   return (
-    <div dir="auto" style={{ maxWidth: 560, margin: '0 auto', padding: 16 }}>
+    <div dir="auto" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {outdated && (
-        <div data-testid="report-outdated-banner" role="status" style={{ background: '#fff3cd', padding: 8, marginBottom: 12 }}>
+        <div data-testid="report-outdated-banner" role="status"
+          style={{ border: '1px solid var(--amber)', borderRadius: 12, padding: '11px 14px', background: 'rgba(255,206,77,.08)', color: 'var(--amber)', fontSize: 12.5, lineHeight: 1.5 }}>
           {t('report.outdated')}
         </div>
       )}
 
-      <section>
-        <h2>{t('report.visitSummary.title')}</h2>
-        <p>{report.visitSummary.summary}</p>
-        <p>
-          {t('report.visitSummary.objective')}: {report.visitSummary.objective ?? t('report.visitSummary.noObjective')}
-        </p>
-        <p>{t(`report.objectiveStatus.${report.visitSummary.objectiveStatus}`)} — {report.visitSummary.objectiveStatusReason}</p>
-      </section>
+      <div style={card}>
+        {eyebrow(t('report.visitSummary.title'))}
+        <p style={{ ...bodyText, marginBottom: 10 }}>{report.visitSummary.summary}</p>
+        <div style={{ fontSize: 12.5, color: 'var(--ink-dim)', marginBottom: 8 }}>
+          <span style={fieldLabel}>{t('report.visitSummary.objective')}: </span>
+          {report.visitSummary.objective ?? t('report.visitSummary.noObjective')}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <Badge text={t(`report.objectiveStatus.${report.visitSummary.objectiveStatus}`)} color={OBJECTIVE_STATUS_COLOR[report.visitSummary.objectiveStatus]} />
+          <span style={{ fontSize: 12, color: 'var(--ink-dim)' }}>{report.visitSummary.objectiveStatusReason}</span>
+        </div>
+      </div>
 
-      <details>
-        <summary>{t('report.customerUnderstanding.title')}</summary>
+      {/* The one thing worth acting on, surfaced right after the brief
+          context above — not buried below several collapsed accordions like
+          before. Mirrors RoleplayRecorder's single-insight callout. */}
+      <div style={{ ...card, border: '1px solid var(--amber)', background: 'rgba(255,206,77,.05)' }}>
+        {eyebrow(t('report.coachingPriority.title'))}
+        <p style={{ ...bodyText, marginBottom: 10 }}>{report.coachingPriority.behavior}</p>
+        {report.coachingPriority.evidence.map((e, i) => <Evidence key={i} evidence={e} audioAvailable={audioAvailable} />)}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+          <div><span style={fieldLabel}>{t('report.coachingPriority.betterPhrase')}: </span><span style={bodyText}>{report.coachingPriority.betterPhrase}</span></div>
+          <div><span style={fieldLabel}>{t('report.coachingPriority.practice')}: </span><span style={bodyText}>{report.coachingPriority.practiceExercise}</span></div>
+          <div><span style={fieldLabel}>{t('report.coachingPriority.success')}: </span><span style={bodyText}>{report.coachingPriority.successLooksLike}</span></div>
+        </div>
+      </div>
+
+      <div style={{ ...card, border: '1px solid var(--green)', background: 'rgba(62,224,143,.05)' }}>
+        {eyebrow(t('report.strength.title'))}
+        <p style={bodyText}>{report.strength.behavior}</p>
+        {report.strength.evidence.map((e, i) => <Evidence key={i} evidence={e} audioAvailable={audioAvailable} />)}
+      </div>
+
+      <Accordion title={t('report.customerUnderstanding.title')}>
         {(['needs', 'concerns', 'decisionCriteria', 'openQuestions'] as const).map(key => (
           <div key={key}>
-            <h4>{t(`report.customerUnderstanding.${key}`)}</h4>
+            <div style={{ ...fieldLabel, marginBottom: 6 }}>{t(`report.customerUnderstanding.${key}`)}</div>
             {report.customerUnderstanding[key].length === 0
-              ? <p>{t('report.noEvidence')}</p>
+              ? <p style={{ fontSize: 12.5, color: 'var(--ink-dim)' }}>{t('report.noEvidence')}</p>
               : report.customerUnderstanding[key].map((item, i) => (
-                <div key={i}>
-                  <p>{item.text} <em>({t(`report.certainty.${item.certainty}`)})</em></p>
+                <div key={i} style={{ marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
+                    <p style={{ ...bodyText, fontSize: 13 }}>{item.text}</p>
+                    <Badge text={t(`report.certainty.${item.certainty}`)} color={CERTAINTY_COLOR[item.certainty]} />
+                  </div>
                   {item.evidence.map((e, j) => <Evidence key={j} evidence={e} audioAvailable={audioAvailable} />)}
                 </div>
               ))}
           </div>
         ))}
-      </details>
+      </Accordion>
 
-      <details>
-        <summary>{t('report.performance.title')}</summary>
+      <Accordion title={t('report.performance.title')}>
         {report.performance.map((p, i) => (
-          <div key={i}>
-            <h4>{t(`report.performance.dimension.${p.dimension}`)}</h4>
-            <p>{p.whatHappened}</p>
+          <div key={i} style={{ borderBottom: i < report.performance.length - 1 ? '1px solid var(--line)' : 'none', paddingBottom: i < report.performance.length - 1 ? 12 : 0 }}>
+            <div style={{ ...fieldLabel, color: 'var(--ink)', fontSize: 12.5, marginBottom: 6 }}>{t(`report.performance.dimension.${p.dimension}`)}</div>
+            <p style={{ ...bodyText, fontSize: 13 }}>{p.whatHappened}</p>
             {p.evidence.map((e, j) => <Evidence key={j} evidence={e} audioAvailable={audioAvailable} />)}
-            <p><strong>{t('report.performance.whyItMattered')}:</strong> {p.whyItMattered}</p>
-            {p.improvement && <p><strong>{t('report.performance.improvement')}:</strong> {p.improvement}</p>}
+            <p style={{ fontSize: 12.5, color: 'var(--ink-dim)', lineHeight: 1.5, marginTop: 6 }}>
+              <span style={fieldLabel}>{t('report.performance.whyItMattered')}: </span>{p.whyItMattered}
+            </p>
+            {p.improvement && (
+              <p style={{ fontSize: 12.5, color: 'var(--amber)', lineHeight: 1.5, marginTop: 4 }}>
+                <span style={fieldLabel}>{t('report.performance.improvement')}: </span>{p.improvement}
+              </p>
+            )}
           </div>
         ))}
-      </details>
+      </Accordion>
 
-      <details>
-        <summary>{t('report.criticalMoments.title')}</summary>
+      <Accordion title={t('report.criticalMoments.title')}>
         {report.criticalMoments.map((m, i) => (
-          <div key={i}>
+          <div key={i} style={{ borderBottom: i < report.criticalMoments.length - 1 ? '1px solid var(--line)' : 'none', paddingBottom: i < report.criticalMoments.length - 1 ? 12 : 0 }}>
             <Evidence evidence={m.evidence} audioAvailable={audioAvailable} />
-            <p>{m.observedBehavior}</p>
-            <p><em>{t(`report.certainty.${m.interpretationCertainty}`)}:</em> {m.interpretation}</p>
-            {m.betterResponseExample && <p><strong>{t('report.criticalMoments.better')}:</strong> {m.betterResponseExample}</p>}
+            <p style={{ ...bodyText, fontSize: 13 }}>{m.observedBehavior}</p>
+            <p style={{ fontSize: 12.5, color: 'var(--ink-dim)', lineHeight: 1.5, marginTop: 4, display: 'flex', gap: 6, alignItems: 'baseline', flexWrap: 'wrap' }}>
+              <Badge text={t(`report.certainty.${m.interpretationCertainty}`)} color={CERTAINTY_COLOR[m.interpretationCertainty]} />
+              <span>{m.interpretation}</span>
+            </p>
+            {m.betterResponseExample && (
+              <p style={{ fontSize: 12.5, color: 'var(--amber)', lineHeight: 1.5, marginTop: 4 }}>
+                <span style={fieldLabel}>{t('report.criticalMoments.better')}: </span>{m.betterResponseExample}
+              </p>
+            )}
           </div>
         ))}
-      </details>
+      </Accordion>
 
-      <details>
-        <summary>{t('report.voiceMeasurements.title')}</summary>
+      <Accordion title={t('report.voiceMeasurements.title')}>
         {report.voiceMeasurements.filter(m => m.available).map((m, i) => (
-          <div key={i}>
-            <h4>{t(`report.voiceMeasurements.metric.${m.metric}`)}</h4>
-            <p>{m.value} {m.unit}</p>
-            <p>{m.explanation}</p>
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--ink)' }}>{t(`report.voiceMeasurements.metric.${m.metric}`)}</div>
+              <div style={{ fontSize: 11.5, color: 'var(--ink-dim)', lineHeight: 1.4 }}>{m.explanation}</div>
+            </div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, color: 'var(--cyan)', whiteSpace: 'nowrap' }}>{m.value} {m.unit}</div>
           </div>
         ))}
-      </details>
+      </Accordion>
 
-      <details>
-        <summary>{t('report.commitments.title')}</summary>
-        {(['agreed', 'proposed', 'ai_recommended'] as const).map(status => (
-          <div key={status}>
-            <h4>{t(`report.commitments.status.${status}`)}</h4>
-            {report.commitments.filter(c => c.status === status).map((c, i) => (
-              <div key={i}>
-                <p>{c.action} {c.owner && `— ${c.owner}`} {c.date && `(${c.date})`}</p>
-                {c.evidence.map((e, j) => <Evidence key={j} evidence={e} audioAvailable={audioAvailable} />)}
-              </div>
-            ))}
-          </div>
-        ))}
-      </details>
+      <Accordion title={t('report.commitments.title')}>
+        {(['agreed', 'proposed', 'ai_recommended'] as const).map(status => {
+          const items = report.commitments.filter(c => c.status === status)
+          if (items.length === 0) return null
+          return (
+            <div key={status}>
+              <div style={{ marginBottom: 6 }}><Badge text={t(`report.commitments.status.${status}`)} color={COMMITMENT_COLOR[status]} /></div>
+              {items.map((c, i) => (
+                <div key={i} style={{ marginBottom: 8 }}>
+                  <p style={{ ...bodyText, fontSize: 13 }}>
+                    {c.action}{c.owner && ` — ${c.owner}`}{c.date && ` (${c.date})`}
+                  </p>
+                  {c.evidence.map((e, j) => <Evidence key={j} evidence={e} audioAvailable={audioAvailable} />)}
+                </div>
+              ))}
+            </div>
+          )
+        })}
+      </Accordion>
 
-      <section>
-        <h2>{t('report.coachingPriority.title')}</h2>
-        <p>{report.coachingPriority.behavior}</p>
-        {report.coachingPriority.evidence.map((e, i) => <Evidence key={i} evidence={e} audioAvailable={audioAvailable} />)}
-        <p><strong>{t('report.coachingPriority.betterPhrase')}:</strong> {report.coachingPriority.betterPhrase}</p>
-        <p><strong>{t('report.coachingPriority.practice')}:</strong> {report.coachingPriority.practiceExercise}</p>
-        <p><strong>{t('report.coachingPriority.success')}:</strong> {report.coachingPriority.successLooksLike}</p>
-        <p><strong>{t('report.strength.title')}:</strong> {report.strength.behavior}</p>
-      </section>
-
-      <details>
-        <summary>{t('report.socialStyle.title')}</summary>
+      <Accordion title={t('report.socialStyle.title')}>
         <SocialStyleCard section={report.socialStyle} />
-      </details>
+      </Accordion>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach } from 'vitest'
 import { createElement } from 'react'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { ConversationReport } from './ConversationReport'
 import { LanguageProvider } from '@/lib/i18n'
 import type { ConversationReport as Report } from '@/schemas/conversationReport'
@@ -52,6 +52,9 @@ describe('ConversationReport', () => {
       ],
     })
     renderReport({ report, outdated: false })
+    // Voice measurements render inside a collapsed-by-default accordion —
+    // open it first, same as a rep would tap it in the real UI.
+    fireEvent.click(screen.getByText('Voice measurements'))
     expect(screen.getByText('Visible measurement.')).toBeTruthy()
     expect(screen.queryByText('Hidden measurement.')).toBeNull()
   })

@@ -91,7 +91,12 @@ export function classifySocialStyle(metrics: AcousticMetrics, warmthDensity = 0)
   const dx = Math.abs(assertiveness - 50)
   const dy = Math.abs(responsiveness - 50)
   const dist = Math.sqrt(dx * dx + dy * dy)
-  const confidence = Math.round(Math.max(50, Math.min(95, 50 + (dist / 70.7) * 45)))
+  // dist=0 (dead center on both axes — the read couldn't be more ambiguous)
+  // used to floor at 50%, i.e. "coin-flip confident" minimum on every single
+  // read, however noisy the recording. 25% is this classifier's actual
+  // chance baseline (1-in-4 styles) — a read that's exactly on the fence
+  // between all of them should be reported near there, not at 50%.
+  const confidence = Math.round(Math.max(25, Math.min(95, 25 + (dist / 70.7) * 70)))
 
   return {
     style, confidence, assertiveness, responsiveness,
@@ -232,8 +237,11 @@ export function computeTermOverlap(turns: Turn[], repSpeaker: string): number {
 
 /**
  * For each rep turn that immediately follows a partner turn, scores what
- * fraction of the partner's content words the rep's reply echoes back — a
- * proxy for paraphrasing/rephrasing what was just said. Reads partner-turn
+ * fraction of the partner's content words the rep's reply echoes back
+ * VERBATIM — a mirroring/rapport signal (UI label: "Reflective Echo"), not
+ * a paraphrase-quality score. A rep who genuinely rewords the partner's
+ * point in different vocabulary scores LOW here, same as one who ignores
+ * it entirely; this only rewards literal word reuse. Reads partner-turn
  * TEXT transiently (same in-memory Utterance[] the pipeline already
  * discards after scoring) — only the resulting number is ever persisted.
  * Returns the average across all measured rep-follows-partner pairs, or 0

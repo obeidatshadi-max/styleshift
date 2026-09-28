@@ -810,6 +810,12 @@ const EN: Dict = {
   'roleplay.summarySessionCount': 'Based on {n} sessions',
   'roleplay.trendImproving': '↑ {metric} improving — up {delta} pts recently',
   'roleplay.trendDeclining': '↓ {metric} needs attention — down {delta} pts recently',
+  'roleplay.trendTip.talkRatio': 'Ask a question and let them respond before continuing.',
+  'roleplay.trendTip.questionRatio': 'Ask more questions — it keeps the conversation moving and gives you more to work with.',
+  'roleplay.trendTip.openQuestionRatio': 'Swap a few yes/no questions for "what" or "how" ones to draw out more detail.',
+  'roleplay.trendTip.paraphraseScore': 'Echo back a few of their own words before replying — it shows you’re listening.',
+  'roleplay.trendTip.activeListening': 'Balance your talk time, avoid cutting in, and mirror their wording more.',
+  'roleplay.trendTip.adaptationScore': 'Notice their pace and tone next visit, and shift yours to meet them.',
   'visit.roleplayHistoryTitle': 'AI Doctor Roleplay History',
 
   // Cognitive biases — the bias usually driving each objection category, so
@@ -1621,6 +1627,12 @@ const AR: Dict = {
   'roleplay.summarySessionCount': 'استناداً إلى {n} جلسات',
   'roleplay.trendImproving': '↑ تحسّن في {metric} — ارتفاع {delta} نقطة مؤخراً',
   'roleplay.trendDeclining': '↓ {metric} يحتاج انتباهاً — انخفاض {delta} نقطة مؤخراً',
+  'roleplay.trendTip.talkRatio': 'اطرح سؤالاً ودع شريكك يجيب قبل أن تكمل.',
+  'roleplay.trendTip.questionRatio': 'اطرح أسئلة أكثر — هذا يُبقي المحادثة مستمرة ويمنحك معلومات أكثر للعمل عليها.',
+  'roleplay.trendTip.openQuestionRatio': 'استبدل بعض أسئلة نعم/لا بأسئلة "ماذا" أو "كيف" لاستخراج تفاصيل أكثر.',
+  'roleplay.trendTip.paraphraseScore': 'ردّد بعض كلماته قبل أن تجيب — هذا يُظهر أنك تستمع فعلاً.',
+  'roleplay.trendTip.activeListening': 'وازن وقت حديثك، تجنّب المقاطعة، وردّد كلماته أكثر.',
+  'roleplay.trendTip.adaptationScore': 'لاحظ وتيرته ونبرته في الزيارة القادمة، وعدّل أسلوبك ليتناسب معه.',
   'visit.roleplayHistoryTitle': 'سجل تمثيل الأدوار مع الطبيب الافتراضي',
 
   'bias.title': 'التحيّز المعرفي المحتمل',

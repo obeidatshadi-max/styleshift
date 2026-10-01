@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from 'react'
 import type { SessionReport } from '@/schemas/report'
 import type { Difficulty } from '@/lib/voice-partner-core'
 
-export type SimPhase = 'idle' | 'starting' | 'live' | 'sending' | 'ending' | 'report' | 'error'
+export type SimPhase = 'idle' | 'starting' | 'live' | 'sending' | 'ending' | 'end_error' | 'report' | 'error'
 export type SimErrorKind = 'not_configured' | 'rate_limited' | 'unavailable' | 'no_rep_turns' | 'turn_limit' | 'generic'
 export interface SimMessage { role: 'doctor' | 'rep'; text: string }
 
@@ -17,14 +17,16 @@ function errorKindFor(status: number, code: string | undefined): SimErrorKind {
 }
 
 async function post<T>(url: string, body: unknown): Promise<{ ok: true; data: T } | { ok: false; kind: SimErrorKind }> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 90000)
   try {
-    const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+    const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal })
     const data = await res.json().catch(() => null) as (T & { error?: string }) | null
     if (!res.ok || !data) return { ok: false, kind: errorKindFor(res.status, data?.error) }
     return { ok: true, data }
   } catch {
     return { ok: false, kind: 'generic' } // offline / network
-  }
+  } finally { clearTimeout(timeout) }
 }
 
 /** Client state for the multi-agent text simulation. All workflow logic lives
@@ -40,11 +42,11 @@ export function useTextSimulation(doctorId: string, lang: 'en' | 'ar') {
   const busyRef = useRef(false)
   const hasReportRef = useRef(false)
 
-  const start = useCallback(async (difficulty?: Difficulty) => {
+  const start = useCallback(async (difficulty?: Difficulty, practiceFocus?: string) => {
     if (busyRef.current) return
     busyRef.current = true
     setPhase('starting'); setErrorKind(null); setMessages([]); setReport(null); sessionRef.current = null; hasReportRef.current = false
-    const res = await post<{ sessionId: string; doctorText: string }>('/api/simulation/start', { doctorId, lang, difficulty })
+    const res = await post<{ sessionId: string; doctorText: string }>('/api/simulation/start', { doctorId, lang, difficulty, practiceFocus })
     busyRef.current = false
     if (!res.ok) { setErrorKind(res.kind); setPhase('error'); return }
     sessionRef.current = res.data.sessionId
@@ -76,15 +78,13 @@ export function useTextSimulation(doctorId: string, lang: 'en' | 'ar') {
     if (!sessionRef.current || busyRef.current) return
     busyRef.current = true
     setErrorKind(null); setPhase('ending')
-    // The legacy per-agent report is no longer rendered (the shared
-    // ConversationReport pipeline replaces it — see TextSimulation.tsx), but
-    // this call still has to run: it's what drives the session to
-    // phase: 'reported' and persists the transcript the new pipeline reads.
-    const res = await post<{ report: SessionReport }>('/api/simulation/end', { sessionId: sessionRef.current })
+    // Finish the conversation and compute deterministic scores. Coaching is
+    // generated once by the shared report pipeline.
+    const res = await post<{ report: SessionReport }>('/api/simulation/end', { sessionId: sessionRef.current, reportFormat: 'shared' })
     busyRef.current = false
     // Pressing End again resumes server-side. A failed coaching retry goes back
     // to the report the rep already had, not the (finished) conversation.
-    if (!res.ok) { setErrorKind(res.kind); setPhase(hasReportRef.current ? 'report' : 'live'); return }
+    if (!res.ok) { setErrorKind(res.kind); setPhase(hasReportRef.current ? 'report' : res.kind === 'no_rep_turns' ? 'live' : 'end_error'); return }
     hasReportRef.current = true
     setReport(res.data.report)
     setPhase('report')

@@ -9,14 +9,14 @@ const card: React.CSSProperties = {
   borderRadius: 18, padding: '18px 20px 20px', boxShadow: '0 16px 50px rgba(0,0,0,.55)',
 }
 const eyebrow = (text: string) => (
-  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.3em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 10 }}>{text}</div>
+  <div style={{ fontFamily: 'var(--mono)', fontSize: 'max(11px, var(--voice-min-font, 0px))', letterSpacing: '.3em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 10 }}>{text}</div>
 )
-const bodyText: React.CSSProperties = { fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink)', margin: 0 }
-const fieldLabel: React.CSSProperties = { fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-dim)' }
+const bodyText: React.CSSProperties = { fontSize: 'max(13.5px, var(--voice-min-font, 0px))', lineHeight: 1.6, color: 'var(--ink)', margin: 0 }
+const fieldLabel: React.CSSProperties = { fontFamily: 'var(--mono)', fontSize: 'max(10.5px, var(--voice-min-font, 0px))', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-dim)' }
 
 function Badge({ text, color }: { text: string; color: string }) {
   return (
-    <span style={{ display: 'inline-block', fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.03em', border: `1px solid ${color}`, color, borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>
+    <span style={{ display: 'inline-block', fontFamily: 'var(--mono)', fontSize: 'max(10.5px, var(--voice-min-font, 0px))', letterSpacing: '.03em', border: `1px solid ${color}`, color, borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>
       {text}
     </span>
   )
@@ -35,8 +35,8 @@ function Accordion({ title, defaultOpen = false, children }: { title: string; de
   const [open, setOpen] = useState(defaultOpen)
   return (
     <div style={{ border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
-      <button onClick={() => setOpen(o => !o)}
-        style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: 10, cursor: 'pointer', background: 'transparent', border: 'none', padding: '13px 14px', textAlign: 'start', color: 'var(--cyan)', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase' }}>
+      <button aria-expanded={open} onClick={() => setOpen(o => !o)}
+        style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: 10, cursor: 'pointer', background: 'transparent', border: 'none', padding: '13px 14px', textAlign: 'start', color: 'var(--cyan)', fontFamily: 'var(--mono)', fontSize: 'max(11px, var(--voice-min-font, 0px))', letterSpacing: '.15em', textTransform: 'uppercase' }}>
         <span>{title}</span>
         <span style={{ flex: '0 0 auto' }}>{open ? '−' : '+'}</span>
       </button>
@@ -49,15 +49,15 @@ function Evidence({ evidence, audioAvailable }: { evidence: EvidenceRef; audioAv
   const t = useT()
   return (
     <div dir="auto" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, margin: '6px 0', paddingInlineStart: 12, borderInlineStart: '2px solid var(--line)' }}>
-      <p style={{ flex: 1, fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink-dim)', fontStyle: 'italic', margin: 0 }}>
+      <p style={{ flex: 1, fontSize: 'max(12.5px, var(--voice-min-font, 0px))', lineHeight: 1.55, color: 'var(--ink-dim)', fontStyle: 'italic', margin: 0 }}>
         &ldquo;{evidence.quote}&rdquo;{' '}
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.05em', fontStyle: 'normal', opacity: .75 }}>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 'max(10px, var(--voice-min-font, 0px))', textTransform: 'uppercase', letterSpacing: '.05em', fontStyle: 'normal', opacity: .75 }}>
           &mdash; {evidence.speakerRole}
         </span>
       </p>
       {audioAvailable && (
         <button type="button" aria-label={t('report.evidence.play')}
-          style={{ flexShrink: 0, cursor: 'pointer', width: 26, height: 26, borderRadius: '50%', border: '1px solid var(--cyan)', background: 'transparent', color: 'var(--cyan)', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          style={{ flexShrink: 0, cursor: 'pointer', width: 26, height: 26, borderRadius: '50%', border: '1px solid var(--cyan)', background: 'transparent', color: 'var(--cyan)', fontSize: 'max(11px, var(--voice-min-font, 0px))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           &#9654;
         </button>
       )}
@@ -73,7 +73,7 @@ export function ConversationReport({ report, outdated, audioAvailable = false }:
     <div dir="auto" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {outdated && (
         <div data-testid="report-outdated-banner" role="status"
-          style={{ border: '1px solid var(--amber)', borderRadius: 12, padding: '11px 14px', background: 'rgba(255,206,77,.08)', color: 'var(--amber)', fontSize: 12.5, lineHeight: 1.5 }}>
+          style={{ border: '1px solid var(--amber)', borderRadius: 12, padding: '11px 14px', background: 'rgba(255,206,77,.08)', color: 'var(--amber)', fontSize: 'max(12.5px, var(--voice-min-font, 0px))', lineHeight: 1.5 }}>
           {t('report.outdated')}
         </div>
       )}
@@ -81,13 +81,13 @@ export function ConversationReport({ report, outdated, audioAvailable = false }:
       <div style={card}>
         {eyebrow(t('report.visitSummary.title'))}
         <p style={{ ...bodyText, marginBottom: 10 }}>{report.visitSummary.summary}</p>
-        <div style={{ fontSize: 12.5, color: 'var(--ink-dim)', marginBottom: 8 }}>
+        <div style={{ fontSize: 'max(12.5px, var(--voice-min-font, 0px))', color: 'var(--ink-dim)', marginBottom: 8 }}>
           <span style={fieldLabel}>{t('report.visitSummary.objective')}: </span>
           {report.visitSummary.objective ?? t('report.visitSummary.noObjective')}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <Badge text={t(`report.objectiveStatus.${report.visitSummary.objectiveStatus}`)} color={OBJECTIVE_STATUS_COLOR[report.visitSummary.objectiveStatus]} />
-          <span style={{ fontSize: 12, color: 'var(--ink-dim)' }}>{report.visitSummary.objectiveStatusReason}</span>
+          <span style={{ fontSize: 'max(12px, var(--voice-min-font, 0px))', color: 'var(--ink-dim)' }}>{report.visitSummary.objectiveStatusReason}</span>
         </div>
       </div>
 
@@ -116,11 +116,11 @@ export function ConversationReport({ report, outdated, audioAvailable = false }:
           <div key={key}>
             <div style={{ ...fieldLabel, marginBottom: 6 }}>{t(`report.customerUnderstanding.${key}`)}</div>
             {report.customerUnderstanding[key].length === 0
-              ? <p style={{ fontSize: 12.5, color: 'var(--ink-dim)' }}>{t('report.noEvidence')}</p>
+              ? <p style={{ fontSize: 'max(12.5px, var(--voice-min-font, 0px))', color: 'var(--ink-dim)' }}>{t('report.noEvidence')}</p>
               : report.customerUnderstanding[key].map((item, i) => (
                 <div key={i} style={{ marginBottom: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
-                    <p style={{ ...bodyText, fontSize: 13 }}>{item.text}</p>
+                    <p style={{ ...bodyText, fontSize: 'max(13px, var(--voice-min-font, 0px))' }}>{item.text}</p>
                     <Badge text={t(`report.certainty.${item.certainty}`)} color={CERTAINTY_COLOR[item.certainty]} />
                   </div>
                   {item.evidence.map((e, j) => <Evidence key={j} evidence={e} audioAvailable={audioAvailable} />)}
@@ -133,14 +133,14 @@ export function ConversationReport({ report, outdated, audioAvailable = false }:
       <Accordion title={t('report.performance.title')}>
         {report.performance.map((p, i) => (
           <div key={i} style={{ borderBottom: i < report.performance.length - 1 ? '1px solid var(--line)' : 'none', paddingBottom: i < report.performance.length - 1 ? 12 : 0 }}>
-            <div style={{ ...fieldLabel, color: 'var(--ink)', fontSize: 12.5, marginBottom: 6 }}>{t(`report.performance.dimension.${p.dimension}`)}</div>
-            <p style={{ ...bodyText, fontSize: 13 }}>{p.whatHappened}</p>
+            <div style={{ ...fieldLabel, color: 'var(--ink)', fontSize: 'max(12.5px, var(--voice-min-font, 0px))', marginBottom: 6 }}>{t(`report.performance.dimension.${p.dimension}`)}</div>
+            <p style={{ ...bodyText, fontSize: 'max(13px, var(--voice-min-font, 0px))' }}>{p.whatHappened}</p>
             {p.evidence.map((e, j) => <Evidence key={j} evidence={e} audioAvailable={audioAvailable} />)}
-            <p style={{ fontSize: 12.5, color: 'var(--ink-dim)', lineHeight: 1.5, marginTop: 6 }}>
+            <p style={{ fontSize: 'max(12.5px, var(--voice-min-font, 0px))', color: 'var(--ink-dim)', lineHeight: 1.5, marginTop: 6 }}>
               <span style={fieldLabel}>{t('report.performance.whyItMattered')}: </span>{p.whyItMattered}
             </p>
             {p.improvement && (
-              <p style={{ fontSize: 12.5, color: 'var(--amber)', lineHeight: 1.5, marginTop: 4 }}>
+              <p style={{ fontSize: 'max(12.5px, var(--voice-min-font, 0px))', color: 'var(--amber)', lineHeight: 1.5, marginTop: 4 }}>
                 <span style={fieldLabel}>{t('report.performance.improvement')}: </span>{p.improvement}
               </p>
             )}
@@ -152,13 +152,13 @@ export function ConversationReport({ report, outdated, audioAvailable = false }:
         {report.criticalMoments.map((m, i) => (
           <div key={i} style={{ borderBottom: i < report.criticalMoments.length - 1 ? '1px solid var(--line)' : 'none', paddingBottom: i < report.criticalMoments.length - 1 ? 12 : 0 }}>
             <Evidence evidence={m.evidence} audioAvailable={audioAvailable} />
-            <p style={{ ...bodyText, fontSize: 13 }}>{m.observedBehavior}</p>
-            <p style={{ fontSize: 12.5, color: 'var(--ink-dim)', lineHeight: 1.5, marginTop: 4, display: 'flex', gap: 6, alignItems: 'baseline', flexWrap: 'wrap' }}>
+            <p style={{ ...bodyText, fontSize: 'max(13px, var(--voice-min-font, 0px))' }}>{m.observedBehavior}</p>
+            <p style={{ fontSize: 'max(12.5px, var(--voice-min-font, 0px))', color: 'var(--ink-dim)', lineHeight: 1.5, marginTop: 4, display: 'flex', gap: 6, alignItems: 'baseline', flexWrap: 'wrap' }}>
               <Badge text={t(`report.certainty.${m.interpretationCertainty}`)} color={CERTAINTY_COLOR[m.interpretationCertainty]} />
               <span>{m.interpretation}</span>
             </p>
             {m.betterResponseExample && (
-              <p style={{ fontSize: 12.5, color: 'var(--amber)', lineHeight: 1.5, marginTop: 4 }}>
+              <p style={{ fontSize: 'max(12.5px, var(--voice-min-font, 0px))', color: 'var(--amber)', lineHeight: 1.5, marginTop: 4 }}>
                 <span style={fieldLabel}>{t('report.criticalMoments.better')}: </span>{m.betterResponseExample}
               </p>
             )}
@@ -170,10 +170,10 @@ export function ConversationReport({ report, outdated, audioAvailable = false }:
         {report.voiceMeasurements.filter(m => m.available).map((m, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
             <div>
-              <div style={{ fontSize: 13, color: 'var(--ink)' }}>{t(`report.voiceMeasurements.metric.${m.metric}`)}</div>
-              <div style={{ fontSize: 11.5, color: 'var(--ink-dim)', lineHeight: 1.4 }}>{m.explanation}</div>
+              <div style={{ fontSize: 'max(13px, var(--voice-min-font, 0px))', color: 'var(--ink)' }}>{t(`report.voiceMeasurements.metric.${m.metric}`)}</div>
+              <div style={{ fontSize: 'max(11.5px, var(--voice-min-font, 0px))', color: 'var(--ink-dim)', lineHeight: 1.4 }}>{m.explanation}</div>
             </div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, color: 'var(--cyan)', whiteSpace: 'nowrap' }}>{m.value} {m.unit}</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 'max(14px, var(--voice-min-font, 0px))', color: 'var(--cyan)', whiteSpace: 'nowrap' }}>{m.value} {m.unit}</div>
           </div>
         ))}
       </Accordion>
@@ -187,7 +187,7 @@ export function ConversationReport({ report, outdated, audioAvailable = false }:
               <div style={{ marginBottom: 6 }}><Badge text={t(`report.commitments.status.${status}`)} color={COMMITMENT_COLOR[status]} /></div>
               {items.map((c, i) => (
                 <div key={i} style={{ marginBottom: 8 }}>
-                  <p style={{ ...bodyText, fontSize: 13 }}>
+                  <p style={{ ...bodyText, fontSize: 'max(13px, var(--voice-min-font, 0px))' }}>
                     {c.action}{c.owner && ` — ${c.owner}`}{c.date && ` (${c.date})`}
                   </p>
                   {c.evidence.map((e, j) => <Evidence key={j} evidence={e} audioAvailable={audioAvailable} />)}

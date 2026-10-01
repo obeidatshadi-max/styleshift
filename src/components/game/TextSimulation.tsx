@@ -3,8 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useT, useLang, useGameData } from '@/lib/i18n'
 import type { Doctor } from '@/types/game'
 import { useTextSimulation } from '@/hooks/useTextSimulation'
-import { ConversationReport } from '@/components/report/ConversationReport'
-import type { ConversationReport as ConversationReportType } from '@/schemas/conversationReport'
+import PracticeReport from './PracticeReport'
 
 export const fs = (px: number) => `max(${px}px, var(--voice-min-font, 0px))`
 export const card: React.CSSProperties = { background: 'linear-gradient(180deg,var(--panel),#0a1430)', border: '1px solid var(--line)', borderRadius: 16, padding: 16, boxShadow: '0 12px 40px rgba(0,0,0,.45)' }
@@ -34,12 +33,9 @@ export default function TextSimulation({ doctor, onDone }: Props) {
   const { STYLES } = useGameData()
   const { phase, errorKind, messages, sessionId, start, send, end } = useTextSimulation(doctor.id, lang)
   const [draft, setDraft] = useState('')
+  const [practiceFocus, setPracticeFocus] = useState('')
   const startedRef = useRef(false)
   const logRef = useRef<HTMLDivElement>(null)
-  const [conversationReport, setConversationReport] = useState<ConversationReportType | null>(null)
-  const [reportFailed, setReportFailed] = useState(false)
-  const [reportAttempt, setReportAttempt] = useState(0)
-  const fetchedForRef = useRef<string | null>(null) // `${sessionId}:${reportAttempt}` already fetched
 
   useEffect(() => {
     if (startedRef.current) return // React strict mode double-invokes effects
@@ -53,32 +49,10 @@ export default function TextSimulation({ doctor, onDone }: Props) {
     if (el) el.scrollTop = el.scrollHeight
   }, [messages, phase])
 
-  // Runs the shared conversation-report pipeline once the session reaches
-  // phase: 'reported' server-side. Guarded by sessionId so a re-render (or
-  // Retry) doesn't re-fetch a report already fetched for this session.
-  useEffect(() => {
-    if (phase !== 'report' || !sessionId) return
-    const key = `${sessionId}:${reportAttempt}`
-    if (fetchedForRef.current === key) return
-    fetchedForRef.current = key
-    setReportFailed(false)
-    fetch('/api/reports/generate', {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ sessionType: 'ai_doctor_text', sessionId }),
-    })
-      .then(res => res.json().catch(() => null))
-      .then(data => { if (data?.report) setConversationReport(data.report); else setReportFailed(true) })
-      .catch(() => setReportFailed(true))
-  }, [phase, sessionId, reportAttempt])
-
-  function retryFullSession() {
-    setDraft(''); setConversationReport(null); fetchedForRef.current = null; setReportAttempt(0)
-    void start()
-  }
-
-  function retryReportGeneration() {
-    setConversationReport(null); setReportFailed(false)
-    setReportAttempt(n => n + 1)
+  function retryFullSession(focus = '') {
+    setPracticeFocus(focus)
+    setDraft('')
+    void start(undefined, focus)
   }
 
   async function submit() {
@@ -94,18 +68,11 @@ export default function TextSimulation({ doctor, onDone }: Props) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={card}>
           <div style={sectionLabel}>{t('sim.report.title')}</div>
-          {!conversationReport && !reportFailed && (
-            <div role="status" aria-live="polite" style={{ fontFamily: 'var(--mono)', fontSize: fs(12.5), color: 'var(--ink-dim)' }}>{t('sim.ending')}</div>
-          )}
-          {reportFailed && (
-            <div role="alert" style={bodyText}>
-              {t('sim.error.generic')}
-              <button onClick={retryReportGeneration} style={{ ...ghostBtn, width: '100%', marginTop: 12 }}>{t('sim.retry')}</button>
-            </div>
-          )}
         </div>
-        {conversationReport && <ConversationReport report={conversationReport} outdated={false} />}
-        <button onClick={retryFullSession} style={primaryBtn}>{t('sim.report.tryAgain')}</button>
+        {sessionId && <PracticeReport key={sessionId} sessionId={sessionId} sessionType="ai_doctor_text">
+          {report => <button onClick={() => retryFullSession(report.coachingPriority.practiceExercise.slice(0, 1200))} style={primaryBtn}>{t('practice.focusRetry')}</button>}
+        </PracticeReport>}
+        <button onClick={() => retryFullSession()} style={ghostBtn}>{t('practice.newSession')}</button>
         <button onClick={onDone} style={{ ...ghostBtn, width: '100%' }}>{t('sim.back')}</button>
       </div>,
     )
@@ -117,6 +84,7 @@ export default function TextSimulation({ doctor, onDone }: Props) {
         <div style={{ fontFamily: 'var(--mono)', fontSize: fs(12.5), color: 'var(--ink-dim)' }}>
           {phase === 'ending' ? t('sim.ending') : t('sim.starting')}
         </div>
+        <button onClick={onDone} style={{ ...ghostBtn, marginTop: 16 }}>{t('sim.back')}</button>
       </div>,
     )
   }
@@ -125,7 +93,7 @@ export default function TextSimulation({ doctor, onDone }: Props) {
     return shell(
       <div style={card}>
         <div role="alert" style={{ ...bodyText, marginBottom: 14 }}>{t(`sim.error.${errorKind ?? 'generic'}`)}</div>
-        <button onClick={() => void start()} style={primaryBtn}>{t('sim.retry')}</button>
+        <button onClick={() => void start(undefined, practiceFocus)} style={primaryBtn}>{t('sim.retry')}</button>
         <button onClick={onDone} style={{ ...ghostBtn, width: '100%', marginTop: 10 }}>{t('sim.back')}</button>
       </div>,
     )
@@ -136,6 +104,7 @@ export default function TextSimulation({ doctor, onDone }: Props) {
   const s = style ? STYLES[style] : null
   const c = style ? COLOR[style] : 'var(--ink-dim)'
   const busy = phase === 'sending'
+  const inputDisabled = busy || phase === 'end_error'
   const repTurns = messages.filter(m => m.role === 'rep').length
 
   return shell(
@@ -148,6 +117,7 @@ export default function TextSimulation({ doctor, onDone }: Props) {
         </div>
       </div>
 
+      {practiceFocus && <div style={{ border: '1px solid var(--cyan)', borderRadius: 10, padding: 12, marginBottom: 14 }}><strong>{t('practice.focus')}</strong><p style={bodyText}>{practiceFocus}</p></div>}
       <div ref={logRef} role="log" aria-live="polite" style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14, maxHeight: 340, overflowY: 'auto' }}>
         {messages.map((m, i) => (
           <div key={i} dir="auto" aria-label={`${speaker(m.role)}: ${m.text}`} style={{
@@ -167,13 +137,13 @@ export default function TextSimulation({ doctor, onDone }: Props) {
 
       <label htmlFor="sim-input" style={{ ...smallLabel, display: 'block' }}>{t('sim.inputLabel')}</label>
       <textarea
-        id="sim-input" dir="auto" rows={3} value={draft} disabled={busy} maxLength={2000}
+        id="sim-input" dir="auto" rows={3} value={draft} disabled={inputDisabled} maxLength={2000}
         onChange={e => setDraft(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void submit() } }}
         placeholder={t('sim.inputPlaceholder')}
         style={{ width: '100%', background: 'rgba(0,0,0,.3)', border: '1px solid var(--line)', borderRadius: 10, padding: '11px 13px', color: 'var(--ink)', fontFamily: 'var(--sans)', fontSize: fs(14), outline: 'none', resize: 'vertical', marginBottom: 10 }}
       />
-      <button onClick={() => void submit()} disabled={busy || !draft.trim()} style={{ ...primaryBtn, opacity: busy || !draft.trim() ? 0.6 : 1 }}>{t('sim.send')}</button>
+      <button onClick={() => void submit()} disabled={inputDisabled || !draft.trim()} style={{ ...primaryBtn, opacity: inputDisabled || !draft.trim() ? 0.6 : 1 }}>{t('sim.send')}</button>
       <button onClick={() => void end()} disabled={busy} style={{ ...ghostBtn, width: '100%', marginTop: 10, opacity: busy ? 0.6 : 1 }}>{t('sim.end')}</button>
       <button onClick={onDone} style={{ ...ghostBtn, width: '100%', marginTop: 10, borderColor: 'var(--line)', color: 'var(--ink-dim)' }}>{t('sim.back')}</button>
     </div>,

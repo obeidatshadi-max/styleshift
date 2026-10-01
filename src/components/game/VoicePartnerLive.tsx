@@ -1,6 +1,7 @@
 // src/components/game/VoicePartnerLive.tsx
 'use client'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import PracticeReport from './PracticeReport'
 import { useT, useLang } from '@/lib/i18n'
 import type { Doctor } from '@/types/game'
 import { useVoiceLive } from '@/hooks/useVoiceLive'
@@ -11,9 +12,11 @@ import {
 import { XP_VALUES } from '@/lib/game-data'
 import { createClient } from '@/lib/supabase-browser'
 
+export type LivePracticeOutcome = 'won' | 'escalated' | 'unscored' | 'interrupted'
+
 interface Props {
   doctor: Doctor
-  onDone: (won: boolean, meta: { turns: number; openingCrisis: string }) => void
+  onDone: (outcome: LivePracticeOutcome, meta: { turns: number; openingCrisis: string }) => void
 }
 
 const primaryBtn: React.CSSProperties = { width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 'max(12px, var(--voice-min-font, 0px))', letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', color: '#04121c', background: 'var(--cyan)', borderRadius: 10, padding: '12px 18px', boxShadow: 'var(--glow-cyan)', touchAction: 'manipulation' }
@@ -38,15 +41,23 @@ function transcriptMeta(transcript: LiveTranscriptTurn[]): { turns: number; open
 export default function VoicePartnerLive({ doctor, onDone }: Props) {
   const t = useT()
   const { lang } = useLang()
-  const { state, errorKind, transcript, connect, disconnect } = useVoiceLive(doctor.id, lang)
+  const { state, errorKind, transcript, activity, muted, toggleMute, connect, disconnect } = useVoiceLive(doctor.id, lang)
   const [consentChecked, setConsentChecked] = useState(false)
   const [consented, setConsented] = useState(false)
   const [difficulty, setDifficulty] = useState<LiveDifficulty>(DEFAULT_LIVE_DIFFICULTY)
   const [scoring, setScoring] = useState(false)
-  // Holds the meta for the deferred `onDone` while the unscored notice is on
-  // screen — non-null means "show the notice and wait for the rep to tap
-  // Continue", rather than navigating away before it can ever render.
-  const [unscored, setUnscored] = useState<{ turns: number; openingCrisis: string } | null>(null)
+  const [result, setResult] = useState<{ outcome: LivePracticeOutcome; meta: ReturnType<typeof transcriptMeta>; sessionId?: string; saved?: boolean } | null>(null)
+  const finishing = useRef(false)
+  const [elapsed, setElapsed] = useState(0)
+  const logRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (state !== 'live') return
+    const began = Date.now()
+    setElapsed(0)
+    const timer = setInterval(() => setElapsed(Math.floor((Date.now() - began) / 1000)), 1000)
+    return () => clearInterval(timer)
+  }, [state])
+  useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight }, [transcript])
 
   // Same inline pattern as useVoicePartner.ts's awardXpOnWin (not exported
   // there, and only that one of the 5 turn-based modes awards XP directly —
@@ -63,65 +74,35 @@ export default function VoicePartnerLive({ doctor, onDone }: Props) {
   }
 
   const finishCall = async () => {
-    await disconnect()
+    if (finishing.current) return
+    finishing.current = true
     setScoring(true)
-    const meta = transcriptMeta(transcript)
-    if (meta.turns === 0) { setScoring(false); onDone(false, meta); return }
-    // One id minted here and sent to BOTH routes, so `live-judge`'s
-    // `conversation_turns` backfill and `session-result`'s
-    // `voice_partner_sessions` row share a `session_id`. Without it each
-    // route generated its own and `session-analysis` (Deep Analysis,
-    // Pressure Shift, Behavioral Gravity — all keyed by session_id) found
-    // zero turns and 404'd for every live session.
-    const sessionId = crypto.randomUUID()
-    try {
-      let res: Response
-      try {
-        res = await fetch('/api/voice-partner/live-judge', {
-          method: 'POST', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ doctorId: doctor.id, difficulty, lang, sessionId, transcript }),
-        })
-      } catch {
-        // Network-level failure (dropped connection, DNS, etc.) — fetch()
-        // itself rejected before any response was received. Treat this the
-        // same as a judge call that completed but couldn't be scored,
-        // rather than letting the exception escape uncaught: an uncaught
-        // rejection here would skip onDone entirely and strand the user on
-        // a dead-end screen (state stays 'ended', which no render branch
-        // explicitly handles).
-        setUnscored(meta)
-        return
-      }
-      // A 400/404/429/503 body is an `{ error }` shape, never a judged
-      // result — parsing it as one would silently read every field as
-      // undefined and fall through to the "nothing saved, no notice" path.
-      // Same handling as the explicit `scored: false` case.
-      if (!res.ok) { setUnscored(meta); return }
-      const data = await res.json().catch(() => null) as { objectionType?: string; outcome?: 'won' | 'escalated'; clearSteps?: string[]; turnCount?: number; scored?: boolean } | null
-      if (data?.scored === false) { setUnscored(meta); return }
-      if (data?.objectionType && data.outcome && data.clearSteps && typeof data.turnCount === 'number') {
-        const persisted = persistableDifficulty(difficulty)
-        const saved = await fetch('/api/voice-partner/session-result', {
-          method: 'POST', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            doctorId: doctor.id, sessionId,
-            objectionType: data.objectionType, outcome: data.outcome,
-            clearSteps: data.clearSteps, turnCount: data.turnCount,
-            ...(persisted ? { difficulty: persisted } : {}),
-          }),
-        }).then(r => r.ok).catch(() => false)
-        // XP only for a session that actually persisted — otherwise the
-        // profile's xp and the saved session history diverge permanently.
-        // The call still happened, so the rep is still handed back to the
-        // result screen with the real outcome either way.
-        if (saved && data.outcome === 'won') await awardXpOnWin()
-        onDone(data.outcome === 'won', meta)
-        return
-      }
-      onDone(false, meta)
-    } finally {
-      setScoring(false)
+    const captured = await disconnect()
+    const meta = transcriptMeta(captured)
+    if (meta.turns === 0) {
+      setResult({ outcome: 'unscored', meta }); setScoring(false); return
     }
+    const sessionId = crypto.randomUUID()
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 60000)
+    try {
+      const res = await fetch('/api/voice-partner/live-judge', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, signal: controller.signal,
+        body: JSON.stringify({ doctorId: doctor.id, difficulty, lang, sessionId, transcript: captured }),
+      })
+      if (!res.ok) throw new Error('not_scored')
+      const data = await res.json()
+      if (data.scored === false || !data.objectionType || !['won', 'escalated'].includes(data.outcome) || !Array.isArray(data.clearSteps) || typeof data.turnCount !== 'number') throw new Error('not_scored')
+      const saved = await fetch('/api/voice-partner/session-result', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, signal: controller.signal,
+        body: JSON.stringify({ doctorId: doctor.id, sessionId, objectionType: data.objectionType,
+          outcome: data.outcome, clearSteps: data.clearSteps, turnCount: data.turnCount,
+          difficulty: persistableDifficulty(difficulty) }),
+      }).then(r => r.ok).catch(() => false)
+      setResult({ outcome: data.outcome, meta, sessionId, saved })
+      if (saved && data.outcome === 'won') void awardXpOnWin().catch(() => {})
+    } catch { setResult({ outcome: 'unscored', meta }) }
+    finally { clearTimeout(timeout); setScoring(false) }
   }
 
   if (!consented) {
@@ -148,7 +129,7 @@ export default function VoicePartnerLive({ doctor, onDone }: Props) {
             disabled={!consentChecked} onClick={() => { setConsented(true); void connect(difficulty) }}>
             {t('voiceLive.consentAgree')}
           </button>
-          <button style={{ ...ghostBtn, width: '100%', marginTop: 10 }} onClick={() => onDone(false, { turns: 0, openingCrisis: '' })}>
+          <button style={{ ...ghostBtn, width: '100%', marginTop: 10 }} onClick={() => onDone('unscored', { turns: 0, openingCrisis: '' })}>
             {t('voiceLive.consentCancel')}
           </button>
         </div>
@@ -162,47 +143,42 @@ export default function VoicePartnerLive({ doctor, onDone }: Props) {
         <div style={{ display: 'inline-block', fontFamily: 'var(--mono)', fontSize: 'max(10px, var(--voice-min-font, 0px))', letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--purple)', border: '1px solid var(--purple)', borderRadius: 20, padding: '4px 11px', marginBottom: 14, background: 'rgba(176,108,255,.08)' }}>{t('voiceLive.premium')}</div>
         <div style={{ fontSize: 'max(14.5px, var(--voice-min-font, 0px))', lineHeight: 1.6, color: 'var(--ink)', marginBottom: 10 }}>{t('voiceLive.teaser', { name: doctor.name })}</div>
         <div style={{ fontSize: 'max(13px, var(--voice-min-font, 0px))', lineHeight: 1.6, color: 'var(--ink-dim)', marginBottom: 14 }}>{t('voiceLive.notConfigured')}</div>
-        <button onClick={() => onDone(false, { turns: 0, openingCrisis: '' })} style={ghostBtn}>{t('voiceLive.back')}</button>
+        <button onClick={() => onDone('unscored', { turns: 0, openingCrisis: '' })} style={ghostBtn}>{t('voiceLive.back')}</button>
       </div>
     )
   }
 
-  if (state === 'error') {
-    return (
-      <div className="voice-practice" style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14, textAlign: 'center' }}>
-        <p style={{ color: 'var(--ink-dim)', fontSize: 'max(14px, var(--voice-min-font, 0px))', marginBottom: 16 }}>{errorKind === 'mic' ? t('voiceLive.errorMic') : t('voiceLive.errorNetwork')}</p>
-        {/* Report whatever the call really produced before it errored — a
-            mid-call failure after several real exchanges is still a visit
-            worth logging, and hardcoding turns: 0 threw that away. */}
-        <button onClick={() => onDone(false, transcriptMeta(transcript))} style={ghostBtn}>{t('voiceLive.back')}</button>
-      </div>
-    )
-  }
-
-  // Rendered instead of navigating straight out, so the notice is actually
-  // reachable: every setUnscored used to be followed immediately by onDone,
-  // which unmounted this component before any re-render could show it.
-  if (unscored) {
-    return (
-      <div className="voice-practice" style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14, textAlign: 'center' }}>
-        <p style={{ color: 'var(--ink-dim)', fontSize: 'max(14px, var(--voice-min-font, 0px))', lineHeight: 1.6, marginBottom: 20 }}>{t('voiceLive.unscoredNotice')}</p>
-        <button onClick={() => onDone(false, unscored)} style={{ ...primaryBtn, maxWidth: 280, margin: '0 auto' }}>{t('voiceLive.continue')}</button>
-      </div>
-    )
-  }
-
-  if (scoring) {
-    return <div style={{ textAlign: 'center', padding: 40, color: 'var(--ink-dim)', fontSize: 'max(14px, var(--voice-min-font, 0px))' }}>{t('voiceLive.scoring')}</div>
-  }
-
-  return (
-    <div className="voice-practice" style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14, textAlign: 'center' }}>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 'max(11px, var(--voice-min-font, 0px))', letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 20 }}>
-        {state === 'connecting' ? t('voiceLive.connecting') : t('voiceLive.live')}
-      </div>
-      {state === 'live' && (
-        <button onClick={() => void finishCall()} style={{ ...primaryBtn, maxWidth: 280 }}>{t('voiceLive.endCall')}</button>
-      )}
+  if (result) {
+    return <div className="voice-practice" style={{ maxWidth: 560, margin: '0 auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <h2>{t(`practice.outcome.${result.outcome}`)}</h2>
+      {result.outcome === 'unscored' && <p role="status">{t(result.meta.turns ? 'practice.unscored' : 'practice.noTurns')}</p>}
+      {result.saved === false && <p role="alert">{t('practice.unsaved')}</p>}
+      {result.sessionId && <PracticeReport sessionId={result.sessionId} />}
+      <button style={primaryBtn} onClick={() => onDone(result.outcome, result.meta)}>{t('practice.finish')}</button>
     </div>
-  )
+  }
+  if (scoring) return <div className="voice-practice" style={{ padding: 24 }}>
+    <p role="status">{t('voiceLive.scoring')}</p>
+  </div>
+  if (state === 'error') return <div className="voice-practice" style={{ maxWidth: 560, margin: '0 auto', padding: 14 }}>
+    <p role="alert">{errorKind === 'mic' ? t('voiceLive.errorMic') : t('voiceLive.errorNetwork')}</p>
+    <p>{t('practice.interrupted')}</p>
+    <button onClick={() => onDone('interrupted', transcriptMeta(transcript))} style={ghostBtn}>{t('practice.finish')}</button>
+  </div>
+  const time = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`
+  return <div className="voice-practice" style={{ maxWidth: 560, margin: '0 auto', padding: 14 }}>
+    <h2>{doctor.name}</h2>
+    <p role="status" aria-live="polite">{t(state === 'connecting' ? 'voiceLive.connecting' : muted ? 'practice.muted' : `practice.${activity}`)}</p>
+    {state === 'live' && <>
+      <p>{t('practice.elapsed', { time })}</p>
+      <button style={ghostBtn} onClick={toggleMute} aria-pressed={muted}>{t(muted ? 'practice.unmute' : 'practice.mute')}</button>
+      <h3>{t('practice.transcript')}</h3>
+      <div ref={logRef} role="log" aria-live="polite" style={{ maxHeight: 320, overflowY: 'auto', margin: '14px 0', lineHeight: 1.6 }}>
+        {!transcript.length && <p>{t('practice.transcriptHint')}</p>}
+        {transcript.map((turn, index) => <p key={index} dir="auto"><strong>{t(turn.role === 'rep' ? 'sim.you' : 'sim.doctor')}: </strong>{turn.text}</p>)}
+      </div>
+      <button style={primaryBtn} onClick={() => void finishCall()}>{t('voiceLive.endCall')}</button>
+    </>}
+    {state === 'connecting' && <button style={ghostBtn} onClick={() => { void disconnect(); onDone('unscored', { turns: 0, openingCrisis: '' }) }}>{t('practice.cancel')}</button>}
+  </div>
 }

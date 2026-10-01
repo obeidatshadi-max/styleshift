@@ -15,7 +15,7 @@ export function adaptAgentSession(record: SessionRecord): { segments: Transcript
 
   const dominant = session.socialStyle.dominant
   const context: ReportContext = {
-    objective: null, // this flow has no rep-entered visit objective field today
+    objective: session.learningObjectives?.map(o => o.label).join('; ') || null,
     productContext: null,
     isSimulation: true,
     simulationPersona: {

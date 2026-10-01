@@ -63,8 +63,11 @@ describe('TextSimulation flow', () => {
     // The shared ConversationReport component rendered with the generated report's data.
     await screen.findByText('Short intro visit.')
 
-    await act(async () => { fireEvent.click(screen.getByText('Try Again')) })
+    await act(async () => { fireEvent.click(screen.getByText('Practise this improvement')) })
     await waitFor(() => expect(fetchMock.mock.calls.filter(c => String(c[0]) === '/api/simulation/start')).toHaveLength(2))
+    const starts = fetchMock.mock.calls.filter(c => String(c[0]) === '/api/simulation/start')
+    expect(JSON.parse(String(starts[1][1]?.body)).practiceFocus).toBe('Practice one open question.')
+    await screen.findByText('Your practice focus')
   })
 
   it('shows a retry when report generation fails, and Retry re-fetches it', async () => {
@@ -78,10 +81,10 @@ describe('TextSimulation flow', () => {
     await screen.findByText('Hello.')
     await act(async () => { fireEvent.click(screen.getByText('End Simulation')) })
     await screen.findByText('Simulation Report')
-    await screen.findByText('Something went wrong. Try again.')
+    await screen.findByText('Your coaching report could not be generated. Retry without repeating the conversation.')
 
     reportOk = true
-    await act(async () => { fireEvent.click(screen.getByText('Try again')) })
+    await act(async () => { fireEvent.click(screen.getByText('Retry coaching report')) })
     await screen.findByText('Short intro visit.')
   })
 

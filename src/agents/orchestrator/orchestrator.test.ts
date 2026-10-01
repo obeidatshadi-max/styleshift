@@ -171,7 +171,7 @@ describe('guards', () => {
     const { orchestrator, store } = build()
     await orchestrator.start({ repId: REP, doctorId: 'doc-1' })
     expect(await orchestrator.endSimulation('sess-1', REP)).toMatchObject({ ok: false, error: 'no_rep_turns' })
-    expect((await store.get('sess-1'))!.phase).toBe('ended')
+    expect((await store.get('sess-1'))!.phase).toBe('in_roleplay')
   })
 
   it('endSimulation is idempotent once reported: no further model calls', async () => {
@@ -246,5 +246,30 @@ describe('personaFromDoctor', () => {
     expect(p.product.context).toBe('a new therapy')
     expect(p.physician.initialState!.trust).toBeLessThan(50) // resistant + not "tell" -> seeded lower than realistic
     expect(p.rep.displayName).toBe('Rana')
+  })
+})
+
+
+describe('shared conversation report preparation', () => {
+  it('keeps deterministic scoring and skips the legacy coach, including retries', async () => {
+    const coach = { coach: vi.fn() }
+    const { orchestrator, store } = build(fakeModel(), { coach })
+    await playThrough(orchestrator)
+    const first = await orchestrator.endSimulation('sess-1', REP, { sharedReport: true })
+    expect(first.ok).toBe(true)
+    expect((await store.get('sess-1'))?.session.scores).not.toBeNull()
+    expect(coach.coach).not.toHaveBeenCalled()
+    const retry = await orchestrator.endSimulation('sess-1', REP, { sharedReport: true })
+    expect(retry.ok).toBe(true)
+    expect((await store.get('sess-1'))?.trace.filter(t => t.step === 'analyze')).toHaveLength(1)
+    expect(coach.coach).not.toHaveBeenCalled()
+    expect(await orchestrator.endSimulation('sess-1', 'another-rep', { sharedReport: true })).toMatchObject({ ok: false, error: 'forbidden' })
+  })
+  it('does not close a conversation that has no rep replies', async () => {
+    const { orchestrator, store } = build()
+    await orchestrator.start({ repId: REP, doctorId: 'doc-1' })
+    expect(await orchestrator.endSimulation('sess-1', REP, { sharedReport: true })).toMatchObject({ ok: false, error: 'no_rep_turns' })
+    expect((await store.get('sess-1'))?.phase).toBe('in_roleplay')
+    expect((await orchestrator.sendMessage('sess-1', REP, MSG1)).ok).toBe(true)
   })
 })

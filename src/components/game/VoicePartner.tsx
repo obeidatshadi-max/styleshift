@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import PracticeReport from './PracticeReport'
 import { useT, useLang, useGameData } from '@/lib/i18n'
 import type { Doctor } from '@/types/game'
 import { useVoicePartner } from '@/hooks/useVoicePartner'
@@ -29,6 +30,10 @@ export default function VoicePartner({ doctor, onDone }: Props) {
   const { STYLES } = useGameData()
   const { phase, errorKind, transcript, turnCount, outcome, openingText, objectionType, clearStepsHit, previewUrl, sessionId, startVoicePartner, startRecording, stopRecording, confirmRecording, rerecord, reset } = useVoicePartner(doctor.id, lang)
   const { status: analysisStatus, data: analysis, fetchAnalysis } = useSessionAnalysis()
+  const [reviewBeforeSending, setReviewBeforeSending] = useState(true)
+  useEffect(() => {
+    if (phase === 'review' && previewUrl && !reviewBeforeSending) void confirmRecording()
+  }, [phase, previewUrl, reviewBeforeSending, confirmRecording])
   const [consentChecked, setConsentChecked] = useState(false)
   const [consented, setConsented] = useState(false)
   // Defaults to 'realistic' so a rep who never touches this picker gets
@@ -62,6 +67,11 @@ export default function VoicePartner({ doctor, onDone }: Props) {
               ))}
             </div>
           </div>
+          <label style={{ display: 'flex', gap: 10, marginBottom: 18, lineHeight: 1.6 }}>
+            <input type="checkbox" checked={reviewBeforeSending} onChange={e => setReviewBeforeSending(e.target.checked)} />
+            {t('practice.reviewAudio')}
+          </label>
+          <p style={{ color: 'var(--ink-dim)', fontSize: 13 }}>{t('practice.quickSendHint')}</p>
           <button
             style={{ ...primaryBtn, opacity: consentChecked ? 1 : 0.5, cursor: consentChecked ? 'pointer' : 'not-allowed' }}
             disabled={!consentChecked}
@@ -187,6 +197,8 @@ export default function VoicePartner({ doctor, onDone }: Props) {
         {outcome && outcome !== 'continue' && (
           <>
             <Feedback ok={outcome === 'won'} title={outcome === 'won' ? t('voice.won') : t('voice.escalated')} body={clearSummaryHtml} />
+
+            {sessionId && <PracticeReport sessionId={sessionId} />}
 
             {sessionId && analysisStatus === 'idle' && (
               <button onClick={() => fetchAnalysis(sessionId, lang)} style={{ ...ghostBtn, width: '100%', marginTop: 10 }}>

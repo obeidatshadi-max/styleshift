@@ -134,7 +134,7 @@ export function createOrchestrator(deps: OrchestratorDeps, options: Orchestrator
 
   // ── END SIMULATION -> analyze -> score -> coach -> report ──
   async function endSimulation(
-    sessionId: string, repId: string, opts: { outcome?: EndOutcome } = {},
+    sessionId: string, repId: string, opts: { outcome?: EndOutcome; sharedReport?: boolean } = {},
   ): Promise<Result<{ report: SessionReport; phase: Phase }>> {
     const opened = await open(sessionId, repId)
     if (!opened.ok) return opened
@@ -142,6 +142,8 @@ export function createOrchestrator(deps: OrchestratorDeps, options: Orchestrator
 
     // Already finished: return the stored report without re-running anything.
     if (record.phase === 'reported' && record.report) return { ok: true, report: record.report, phase: record.phase }
+
+    if (repTurnCount(record.session) === 0) return fail('no_rep_turns')
 
     if (record.phase === 'in_roleplay') {
       record.session = { ...record.session, status: opts.outcome ?? 'abandoned', endedAt: now().toISOString() }
@@ -171,6 +173,12 @@ export function createOrchestrator(deps: OrchestratorDeps, options: Orchestrator
       record.phase = 'scored'
       log(record, 'score', true, `config ${scores.configVersion}`)
       if (!(await persist(record))) return fail('store_failed')
+    }
+
+    // The shared report generates evidence-based coaching itself. Keep the
+    // analyst and deterministic scores, without running an unused coach call.
+    if (opts.sharedReport) {
+      return { ok: true, report: assembleReport(record.session, 'unavailable', ['shared_report_requested'], now()), phase: record.phase }
     }
 
     // Coach: observations + scores + persona + objectives -> coaching.

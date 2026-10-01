@@ -17,7 +17,7 @@ afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks() })
 // - class PipecatClient extends RTVIEventEmitter (a TypedEmitter) -> has
 //   .on(event, handler) inherited, plus .connect()/.disconnect().
 // - PipecatClient.connect() resolves to BotReadyData (not void).
-const mockClientInstance = { connect: vi.fn(), disconnect: vi.fn(), on: vi.fn() }
+const mockClientInstance = { connect: vi.fn(), disconnect: vi.fn(), on: vi.fn(), enableMic: vi.fn() }
 vi.mock('@pipecat-ai/client-js', () => ({ PipecatClient: vi.fn(() => mockClientInstance) }))
 vi.mock('@pipecat-ai/daily-transport', () => ({ DailyTransport: vi.fn() }))
 
@@ -99,4 +99,37 @@ describe('useVoiceLive', () => {
       { role: 'doctor', text: 'Hello rep' },
     ])
   })
+})
+
+
+it('cancels a pending connection without opening a late room', async () => {
+  let resolve!: (r: Response) => void
+  vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(r => { resolve = r })))
+  const { result } = renderHook(() => useVoiceLive('d1', 'en'))
+  let pending!: Promise<void>
+  act(() => { pending = result.current.connect('realistic') })
+  await act(async () => { await result.current.disconnect() })
+  await act(async () => { resolve(Response.json({ dailyRoom: 'https://x.daily.co/r', dailyToken: 't' })); await pending })
+  expect(result.current.state).toBe('ended')
+  expect(mockClientInstance.connect).not.toHaveBeenCalled()
+})
+
+it('shows speech activity, supports mute, and releases the microphone on an unexpected disconnect', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ dailyRoom: 'https://x.daily.co/r', dailyToken: 't' })))
+  mockClientInstance.connect.mockResolvedValue(undefined)
+  mockClientInstance.disconnect.mockResolvedValue(undefined)
+  const { result } = renderHook(() => useVoiceLive('d1', 'en'))
+  await act(async () => { await result.current.connect('realistic') })
+  const event = (name: string) => mockClientInstance.on.mock.calls.find(([n]) => n === name)![1]
+  act(() => event('botStartedSpeaking')())
+  expect(result.current.activity).toBe('speaking')
+  act(() => event('botStoppedSpeaking')())
+  expect(result.current.activity).toBe('listening')
+  act(() => result.current.toggleMute())
+  expect(mockClientInstance.enableMic).toHaveBeenCalledWith(false)
+  expect(result.current.muted).toBe(true)
+  act(() => event('disconnected')())
+  expect(result.current.state).toBe('error')
+  expect(result.current.errorKind).toBe('network')
+  expect(mockClientInstance.disconnect).toHaveBeenCalled()
 })

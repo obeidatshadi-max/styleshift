@@ -175,6 +175,14 @@ export default function VisitPrep({ onExit }: Props) {
           </>
         )}
 
+        {style && panel(t('practice.title'), <>            <div style={{ borderTop: '1px solid var(--line)', paddingTop: 16 }}>
+              <p style={{ color: 'var(--ink-dim)', margin: '0 0 14px', lineHeight: 1.6 }}>{t('practice.intro')}</p>
+              <button onClick={() => setView({ mode: 'voiceLive', doctor: d })} style={primaryBtn}>{t('practice.voice')}</button>
+              <p style={{ fontSize: 13, color: 'var(--ink-dim)', lineHeight: 1.6 }}>{t('practice.voiceHint')}</p>
+              <button onClick={() => setView({ mode: 'textSim', doctor: d })} style={{ ...ghostBtn, width: '100%' }}>{t('practice.text')}</button>
+              <p style={{ fontSize: 13, color: 'var(--ink-dim)', lineHeight: 1.6 }}>{t('practice.textHint')}</p>
+            </div></>)}
+
         {style && panel(t('prep.cheatTitle'),
           <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
             <div>
@@ -197,6 +205,11 @@ export default function VisitPrep({ onExit }: Props) {
               <span style={labelStyle}>{t('prep.opener')}</span>
               <div style={{ fontSize:14, lineHeight:1.55, color:'var(--ink)' }}>“{t(`prep.cheat.${style}.opener`)}”</div>
             </div>
+
+            <details>
+              <summary style={{ cursor: 'pointer', padding: '14px 0', color: 'var(--cyan)' }}>{t('practice.skills')}</summary>
+              <p style={{ fontSize: 13, color: 'var(--ink-dim)', lineHeight: 1.6 }}>{t('practice.skillsHint')}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <button onClick={() => setView({ mode: 'warmup', doctor: d })} style={{ ...primaryBtn, marginTop:2 }}>{t('prep.start')}</button>
             <button onClick={() => setView({ mode: 'ai', doctor: d })}
               style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
@@ -226,14 +239,9 @@ export default function VisitPrep({ onExit }: Props) {
               style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               {t('voiceClosing.entryButton')} · {t('voice.premium')}
             </button>
-            <button onClick={() => setView({ mode: 'voiceLive', doctor: d })}
-              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
-              🎙 {t('voiceLive.entryButton')} · {t('voiceLive.premium')}
-            </button>
-            <button onClick={() => setView({ mode: 'textSim', doctor: d })}
-              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
-              {t('sim.entryButton')} · {t('voice.premium')}
-            </button>
+
+              </div>
+            </details>
           </div>
         )}
         {!style && panel(t('prep.cheatTitle'),
@@ -818,12 +826,12 @@ function VoicePartnerLiveScreen({ doctor, onDone }: { doctor: Doctor; onDone: ()
   return (
     <VoicePartnerLive
       doctor={doctor}
-      onDone={(won, meta) => {
+      onDone={(outcome, meta) => {
         if (meta.turns > 0) {
           void addVisit({
             source: 'voice_partner_live',
             objection_raised: meta.openingCrisis || null,
-            note: t('visit.voicePartnerNote', { turns: meta.turns, outcome: won ? t('visit.aiDrillWin') : t('visit.aiDrillEscalate') }),
+            note: t('practice.liveNote', { turns: meta.turns, outcome: t(`practice.outcome.${outcome}`) }),
           })
         }
         onDone()

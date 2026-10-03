@@ -40,6 +40,17 @@ describe('buildReportPrompt', () => {
       '"whatHappened"', '"betterPhrase"', '"mostUsefulAdjustment"', '"dimension": "opening"'])
       expect(prompt).toContain(field)
   })
+  it('splits the shape across two parts that together cover the full report, with a smaller token budget each', () => {
+    const findings = buildReportPrompt(segments, context, [], [], 'findings')
+    const coaching = buildReportPrompt(segments, context, [], [], 'coaching')
+    const all = buildReportPrompt(segments, context, [], [], 'all')
+    expect(findings.prompt).toContain('"visitSummary"')
+    expect(findings.prompt).not.toContain('"coachingPriority": {')
+    expect(coaching.prompt).toContain('"coachingPriority": {')
+    expect(coaching.prompt).not.toContain('"visitSummary": {')
+    expect(findings.maxTokens).toBeLessThan(all.maxTokens)
+    for (const key of ['"visitSummary"', '"commitments"', '"coachingPriority"', '"socialStyle"']) expect(all.prompt).toContain(key)
+  })
   it('system prompt forbids fabricating commitments/dates/scores', () => {
     expect(SYSTEM.toLowerCase()).toMatch(/never invent/)
   })

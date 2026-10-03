@@ -1,6 +1,6 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { useT } from '@/lib/i18n'
+import { useEffect, useRef, useState } from 'react'
+import { useLang, useT } from '@/lib/i18n'
 import { ConversationReport } from '@/components/report/ConversationReport'
 import type { ConversationReport as Report } from '@/schemas/conversationReport'
 
@@ -18,6 +18,10 @@ const TRANSIENT_STATUSES = new Set([502, 503, 504])
 
 export default function PracticeReport({ sessionId, sessionType = 'ai_doctor_voice', children }: Props) {
   const t = useT()
+  const { lang } = useLang()
+  // Read at request time, not a dependency: toggling the language must not regenerate a report.
+  const langRef = useRef(lang)
+  langRef.current = lang
   const [report, setReport] = useState<Report | null>(null)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
@@ -32,7 +36,7 @@ export default function PracticeReport({ sessionId, sessionType = 'ai_doctor_voi
         try {
           const res = await fetch('/api/reports/generate', {
             method: 'POST', headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ sessionType, sessionId }), signal: controller.signal,
+            body: JSON.stringify({ sessionType, sessionId, lang: langRef.current }), signal: controller.signal,
           })
           if (res.ok) {
             const data = await res.json()

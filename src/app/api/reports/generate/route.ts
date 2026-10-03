@@ -5,7 +5,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { createAnthropicComplete } from '@/agents/llm'
 import { isReportSessionType, type TranscriptSegment, type ReportContext } from '@/schemas/conversationReport'
 import { extractSocialSignals } from '@/lib/report/socialSignals'
-import { buildReportPrompt, type ReportPart } from '@/lib/report/buildReportPrompt'
+import { buildReportPrompt, mergeReportParts, REPORT_PARTS, type ReportPart } from '@/lib/report/buildReportPrompt'
 import { groundReport } from '@/lib/report/groundReport'
 import { persistReport } from '@/lib/report/persistReport'
 import { adaptRoleplaySession } from '@/lib/report/adapters/fromRoleplaySession'
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
   if (!(await checkRateLimit('report-generate', user.id, 20, 3600)))
     return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 })
 
-  const body = await request.json().catch(() => null) as { sessionType?: string; sessionId?: string } | null
+  const body = await request.json().catch(() => null) as { sessionType?: string; sessionId?: string; lang?: string } | null
   if (!body || !isReportSessionType(body.sessionType) || typeof body.sessionId !== 'string')
     return NextResponse.json({ error: 'Invalid sessionType or sessionId' }, { status: 400 })
 
@@ -83,11 +83,11 @@ export async function POST(request: Request) {
   const counterpartSignals = extractSocialSignals(segments, 'counterpart')
   const repSignals = extractSocialSignals(segments, 'rep')
   const complete = createAnthropicComplete(apiKey)
-  // Two smaller completions in parallel: a single full-report completion took
+  // Four small completions in parallel: a single full-report completion took
   // 23-27s and hit the host's synchronous function limit (504).
-  const parts: ReportPart[] = ['findings', 'coaching']
+  const parts: readonly ReportPart[] = REPORT_PARTS
   const built = Object.fromEntries(parts.map(part =>
-    [part, buildReportPrompt(segments, context, counterpartSignals, repSignals, part)])) as Record<ReportPart, ReturnType<typeof buildReportPrompt>>
+    [part, buildReportPrompt(segments, context, counterpartSignals, repSignals, part, body.lang === 'ar' ? 'ar' : 'en')])) as Record<ReportPart, ReturnType<typeof buildReportPrompt>>
   const parsedParts: Partial<Record<ReportPart, Record<string, unknown>>> = {}
   let report = null
   const attempts = ['', RETRY_NOTE]
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
       catch { console.error(`${tag} [${part}]: JSON parse failed (${raw.length} chars)`) }
     }))
     if (!parts.every(part => parsedParts[part])) continue
-    report = groundReport({ ...parsedParts.findings, ...parsedParts.coaching }, segments, context, { sessionType: body.sessionType, transcriptVersion })
+    report = groundReport(mergeReportParts(parsedParts), segments, context, { sessionType: body.sessionType, transcriptVersion })
     if (report) break
     console.error(`${tag}: grounding rejected report (missing summary or ungrounded coaching priority)`)
     // Grounding failed on content, not transport — ask for both halves again.

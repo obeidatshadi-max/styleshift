@@ -86,13 +86,19 @@ export async function POST(request: Request) {
 
   const complete = createAnthropicComplete(apiKey)
   let report = null
-  for (const suffix of ['', RETRY_NOTE]) {
+  const attempts = ['', RETRY_NOTE]
+  for (const [attempt, suffix] of attempts.entries()) {
+    // Reasons only — no transcript or model text in logs (rep conversations are private).
+    const tag = `[reports/generate] ${body.sessionType} attempt ${attempt + 1}/${attempts.length}, ${segments.length} segments`
     const raw = await complete({ system, prompt: prompt + suffix, maxTokens })
-    if (!raw) continue
+    if (!raw) { console.error(`${tag}: no LLM response`); continue }
     const start = raw.indexOf('{'), end = raw.lastIndexOf('}')
-    const parsed = start !== -1 && end > start ? (() => { try { return JSON.parse(raw.slice(start, end + 1)) } catch { return null } })() : null
-    report = parsed ? groundReport(parsed, segments, context, { sessionType: body.sessionType, transcriptVersion }) : null
+    if (start === -1 || end <= start) { console.error(`${tag}: no JSON object in response (${raw.length} chars)`); continue }
+    const parsed = (() => { try { return JSON.parse(raw.slice(start, end + 1)) } catch { return null } })()
+    if (!parsed) { console.error(`${tag}: JSON parse failed (${raw.length} chars)`); continue }
+    report = groundReport(parsed, segments, context, { sessionType: body.sessionType, transcriptVersion })
     if (report) break
+    console.error(`${tag}: grounding rejected report (missing summary or ungrounded coaching priority)`)
   }
   // Never replace a failed analysis with a plausible demo result — a real
   // failure surfaces as an error the rep can retry, not a silently invented report.

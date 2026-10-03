@@ -15,6 +15,7 @@ export const bodyText: React.CSSProperties = { fontSize: fs(13.5), lineHeight: 1
 
 interface Props {
   doctor: Doctor
+  initialPracticeFocus?: string
   onDone: () => void
 }
 
@@ -27,21 +28,21 @@ const shell = (children: React.ReactNode) => (
 /** Text role-play against the AI Doctor, then the multi-agent report. The
  * conversation and analysis are driven server-side by the orchestrator; this
  * component only collects input and shows results. */
-export default function TextSimulation({ doctor, onDone }: Props) {
+export default function TextSimulation({ doctor, onDone, initialPracticeFocus = '' }: Props) {
   const t = useT()
   const { lang } = useLang()
   const { STYLES } = useGameData()
   const { phase, errorKind, messages, sessionId, start, send, end } = useTextSimulation(doctor.id, lang)
   const [draft, setDraft] = useState('')
-  const [practiceFocus, setPracticeFocus] = useState('')
+  const [practiceFocus, setPracticeFocus] = useState(initialPracticeFocus)
   const startedRef = useRef(false)
   const logRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (startedRef.current) return // React strict mode double-invokes effects
     startedRef.current = true
-    void start()
-  }, [start])
+    void start(undefined, initialPracticeFocus)
+  }, [start, initialPracticeFocus])
 
   useEffect(() => {
     // scrollTop, not scrollTo(): works on the older phones this app targets.

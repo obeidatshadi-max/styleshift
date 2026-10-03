@@ -10,36 +10,61 @@ const oneOf = (values: readonly string[]) => values.map(v => `"${v}"`).join(' | 
  * for coachingPriority.behavior) and the whole report is discarded as
  * ungrounded. Enum lists come from the schema constants so they can't drift. */
 const EV = '{ "segmentIndex": <number>, "speakerRole": "rep"|"counterpart" }'
-const SHAPE_FINDINGS = `{
-  "visitSummary": { "summary": string, "objectiveStatus": ${oneOf(OBJECTIVE_STATUSES)}, "objectiveStatusReason": string, "evidence": [${EV}] },
-  "customerUnderstanding": {
+const SHAPE_FIELDS = {
+  visitSummary: `  "visitSummary": { "summary": string, "objectiveStatus": ${oneOf(OBJECTIVE_STATUSES)}, "objectiveStatusReason": string, "evidence": [${EV}] }`,
+  customerUnderstanding: `  "customerUnderstanding": {
     "needs": [{ "text": string, "certainty": ${oneOf(CERTAINTIES)}, "evidence": [${EV}] }],
     "concerns": [same item shape], "decisionCriteria": [same item shape], "openQuestions": [same item shape]
-  },
-  "performance": [{ "dimension": ${oneOf(PERFORMANCE_DIMENSIONS)}, "whatHappened": string, "whyItMattered": string, "improvement": string|null, "evidence": [${EV}] }],
-  "criticalMoments": [{ "observedBehavior": string, "interpretation": string, "interpretationCertainty": ${oneOf(CERTAINTIES)}, "betterResponseExample": string|null, "evidence": ${EV} }],
-  "commitments": [{ "action": string, "status": ${oneOf(COMMITMENT_STATUSES)}, "owner": string|null, "date": string|null, "evidence": [${EV}] }]
-}`
-const SHAPE_COACHING = `{
-  "coachingPriority": { "behavior": string, "betterPhrase": string, "practiceExercise": string, "successLooksLike": string, "evidence": [${EV}] },
-  "strength": { "behavior": string, "evidence": [${EV}] },
-  "socialStyle": {
+  }`,
+  performance: `  "performance": [{ "dimension": ${oneOf(PERFORMANCE_DIMENSIONS)}, "whatHappened": string, "whyItMattered": string, "improvement": string|null, "evidence": [${EV}] }]`,
+  criticalMoments: `  "criticalMoments": [{ "observedBehavior": string, "interpretation": string, "interpretationCertainty": ${oneOf(CERTAINTIES)}, "betterResponseExample": string|null, "evidence": ${EV} }]`,
+  commitments: `  "commitments": [{ "action": string, "status": ${oneOf(COMMITMENT_STATUSES)}, "owner": string|null, "date": string|null, "evidence": [${EV}] }]`,
+  coachingPriority: `  "coachingPriority": { "behavior": string, "betterPhrase": string, "practiceExercise": string, "successLooksLike": string, "evidence": [${EV}] }`,
+  strength: `  "strength": { "behavior": string, "evidence": [${EV}] }`,
+  socialStyle: `  "socialStyle": {
     "customer": { "possibleStyle": ${oneOf(SOCIAL_STYLES)}|null, "strongestSignals": [{ "category": ${oneOf(SIGNAL_CATEGORIES)}, "evidence": ${EV} }], "mixedEvidenceNote": string|null, "alternativeExplanation": string|null },
     "rep": { same shape as "customer" },
     "adaptation": [{ "customerSignal": ${EV}, "repResponse": ${EV}, "assessment": "well_adapted"|"mismatched"|"insufficient_evidence", "betterResponseExample": string|null, "suggestedAdjustment": string|null }],
     "signalChanges": [{ "description": string, "evidence": [${EV}] }],
     "coachingCard": { "observedSignals": string, "possiblePreference": string, "evidenceAndAlternative": string, "repResponse": string, "mostUsefulAdjustment": string, "suggestedWordingNextVisit": string }|null
-  }
-}`
+  }`,
+} as const
 
-/** The report is generated as two smaller model calls run in parallel: one long
- * completion exceeded the host's synchronous function time limit (504). The
- * halves are merged before grounding, so groundReport() still sees one object. */
-export type ReportPart = 'all' | 'findings' | 'coaching'
-const SHAPES: Record<ReportPart, string> = {
-  findings: SHAPE_FINDINGS,
-  coaching: SHAPE_COACHING,
-  all: `${SHAPE_FINDINGS.slice(0, -2)},\n${SHAPE_COACHING.slice(2)}`,
+/** The report is generated as several small model calls run in parallel. One long
+ * completion exceeded the host's synchronous function time limit (504), and in
+ * Arabic (far more tokens per word) even half a report was cut off at the token
+ * cap. The parts are merged before grounding, so groundReport() still sees one object. */
+export const REPORT_PARTS = ['summary', 'moments', 'coaching', 'style'] as const
+export type ReportPart = typeof REPORT_PARTS[number] | 'all'
+export type ReportLang = 'en' | 'ar'
+
+const PART_KEYS: Record<ReportPart, (keyof typeof SHAPE_FIELDS)[]> = {
+  summary: ['visitSummary', 'customerUnderstanding', 'commitments'],
+  moments: ['performance', 'criticalMoments'],
+  coaching: ['coachingPriority', 'strength'],
+  style: ['socialStyle'],
+  all: ['visitSummary', 'customerUnderstanding', 'performance', 'criticalMoments', 'commitments', 'coachingPriority', 'strength', 'socialStyle'],
+}
+/** Merge the parts' parsed JSON, taking from each only the keys that part was asked for. A part
+ * can echo another part's key (the objective line mentions visitSummary, so the coaching part
+ * added a stray `"visitSummary": "..."` string) and must never overwrite the real one. */
+export function mergeReportParts(parsed: Partial<Record<ReportPart, Record<string, unknown>>>): Record<string, unknown> {
+  const merged: Record<string, unknown> = {}
+  for (const part of REPORT_PARTS) {
+    const source = parsed[part]
+    if (!source) continue
+    for (const key of PART_KEYS[part]) if (key in source) merged[key] = source[key]
+  }
+  return merged
+}
+
+const SHAPES = Object.fromEntries((Object.keys(PART_KEYS) as ReportPart[]).map(part =>
+  [part, '{\n' + PART_KEYS[part].map(key => SHAPE_FIELDS[key]).join(',\n') + '\n}'])) as Record<ReportPart, string>
+
+const LANGUAGE_RULE: Record<ReportLang, string> = {
+  en: 'Write every free-text field in English.',
+  ar: 'Write every free-text field in Arabic (clear Modern Standard Arabic, natural for a pharmaceutical sales rep in Iraq). ' +
+    'Keep drug and product names, numbers and units as given. JSON keys and enumerated values (such as "partial" or "inferred") stay in English exactly as listed below.',
 }
 
 export const SYSTEM = 'You are an objective sales-conversation analyst, not a clinician. ' +
@@ -61,13 +86,15 @@ function formatSignals(label: string, signals: SocialStyleSignal[]): string {
 
 const REQUIRED_NOTE: Record<ReportPart, string> = {
   all: 'coachingPriority and visitSummary.summary are required and coachingPriority needs at least one evidence reference.',
-  findings: 'visitSummary.summary is required.',
+  summary: 'visitSummary.summary is required.',
+  moments: '',
   coaching: 'coachingPriority is required and needs at least one evidence reference.',
+  style: '',
 }
 
 export function buildReportPrompt(
   segments: TranscriptSegment[], context: ReportContext,
-  counterpartSignals: SocialStyleSignal[], repSignals: SocialStyleSignal[] = [], part: ReportPart = 'all',
+  counterpartSignals: SocialStyleSignal[], repSignals: SocialStyleSignal[] = [], part: ReportPart = 'all', lang: ReportLang = 'en',
 ): { system: string; prompt: string; maxTokens: number } {
   const objectiveLine = context.objective
     ? `Stated visit objective: ${context.objective}`
@@ -111,7 +138,9 @@ freely; do not force a style onto ambiguous or contradictory signals.
 In every text field, never write segment numbers or bracketed references such as [3] — the app shows the
 evidence itself; refer to moments in words ("when the doctor asked about interactions").
 
+${LANGUAGE_RULE[lang]}
+
 Never claim one behavior caused a reaction merely because it came first in the transcript.`
 
-  return { system: SYSTEM, prompt, maxTokens: part === 'all' ? 4000 : 2500 }
+  return { system: SYSTEM, prompt, maxTokens: part === 'all' ? 4000 : 2200 }
 }

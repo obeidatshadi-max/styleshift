@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildReportPrompt, SYSTEM } from './buildReportPrompt'
+import { buildReportPrompt, mergeReportParts, REPORT_PARTS, SYSTEM } from './buildReportPrompt'
 import type { TranscriptSegment, ReportContext } from '@/schemas/conversationReport'
 
 const segments: TranscriptSegment[] = [
@@ -40,16 +40,41 @@ describe('buildReportPrompt', () => {
       '"whatHappened"', '"betterPhrase"', '"mostUsefulAdjustment"', '"dimension": "opening"'])
       expect(prompt).toContain(field)
   })
-  it('splits the shape across two parts that together cover the full report, with a smaller token budget each', () => {
-    const findings = buildReportPrompt(segments, context, [], [], 'findings')
-    const coaching = buildReportPrompt(segments, context, [], [], 'coaching')
+  it('splits the shape across parts that each hold only their own keys and together cover the full report', () => {
+    const topKeys = ['visitSummary', 'customerUnderstanding', 'performance', 'criticalMoments', 'commitments', 'coachingPriority', 'strength', 'socialStyle']
     const all = buildReportPrompt(segments, context, [], [], 'all')
-    expect(findings.prompt).toContain('"visitSummary"')
-    expect(findings.prompt).not.toContain('"coachingPriority": {')
-    expect(coaching.prompt).toContain('"coachingPriority": {')
-    expect(coaching.prompt).not.toContain('"visitSummary": {')
-    expect(findings.maxTokens).toBeLessThan(all.maxTokens)
-    for (const key of ['"visitSummary"', '"commitments"', '"coachingPriority"', '"socialStyle"']) expect(all.prompt).toContain(key)
+    const covered = new Set<string>()
+    for (const part of REPORT_PARTS) {
+      const built = buildReportPrompt(segments, context, [], [], part)
+      const own = topKeys.filter(key => built.prompt.includes(`
+  "${key}":`))
+      expect(own.length).toBeGreaterThan(0)
+      own.forEach(key => { expect(covered.has(key)).toBe(false); covered.add(key) })
+      expect(built.maxTokens).toBeLessThan(all.maxTokens)
+    }
+    expect([...covered].sort()).toEqual([...topKeys].sort())
+    expect(topKeys.every(key => all.prompt.includes(`
+  "${key}":`))).toBe(true)
+  })
+  it('merges only the keys each part owns, so a stray key cannot overwrite another part', () => {
+    const merged = mergeReportParts({
+      summary: { visitSummary: { summary: 'real' }, commitments: [] },
+      moments: { performance: [], criticalMoments: [] },
+      coaching: { coachingPriority: { behavior: 'b' }, strength: { behavior: 's' }, visitSummary: 'No objective was supplied.' },
+      style: { socialStyle: {}, extra: 1 },
+    })
+    expect(merged.visitSummary).toEqual({ summary: 'real' })
+    expect(Object.keys(merged).sort()).toEqual(['commitments', 'coachingPriority', 'criticalMoments', 'performance', 'socialStyle', 'strength', 'visitSummary'].sort())
+    expect(mergeReportParts({ coaching: { coachingPriority: {} } })).toEqual({ coachingPriority: {} })
+  })
+  it('asks for free-text fields in the selected language but keeps keys and enum values in English', () => {
+    const ar = buildReportPrompt(segments, context, [], [], 'all', 'ar').prompt
+    const en = buildReportPrompt(segments, context, [], [], 'all', 'en').prompt
+    expect(ar).toContain('Write every free-text field in Arabic')
+    expect(ar).toMatch(/enumerated values .* stay in English/)
+    expect(en).toContain('Write every free-text field in English.')
+    expect(en).not.toContain('in Arabic')
+    expect(buildReportPrompt(segments, context, []).prompt).toContain('in English')
   })
   it('system prompt forbids fabricating commitments/dates/scores', () => {
     expect(SYSTEM.toLowerCase()).toMatch(/never invent/)

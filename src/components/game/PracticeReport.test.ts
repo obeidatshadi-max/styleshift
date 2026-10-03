@@ -23,7 +23,7 @@ describe('practice coaching report', () => {
     await screen.findByText('Recovered coaching')
     expect(fetchMock).toHaveBeenCalledTimes(3)
     for (const call of fetchMock.mock.calls) {
-      expect(JSON.parse(String(call[1]?.body))).toEqual({ sessionId: 'text-session', sessionType: 'ai_doctor_text' })
+      expect(JSON.parse(String(call[1]?.body))).toEqual({ sessionId: 'text-session', sessionType: 'ai_doctor_text', lang: 'en' })
     }
   })
 
@@ -49,6 +49,17 @@ describe('practice coaching report', () => {
     render(view('down-session'))
     await screen.findByRole('alert')
     expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('asks for the report in the selected language', async () => {
+    localStorage.setItem('styleshift_lang', 'ar')
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ report: { label: 'تقرير' } }))
+    // The provider reads the saved language after its first mount; a report only ever appears later.
+    const rendered = render(createElement(LanguageProvider, null, null))
+    await act(async () => {})
+    rendered.rerender(view('ar-session', 'ai_doctor_text'))
+    await screen.findByText('تقرير')
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body)).lang).toBe('ar')
   })
 
   it('ignores an old session response arriving after the next session report', async () => {

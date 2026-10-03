@@ -5,6 +5,7 @@ import {
   pickObjectionType, computeObjectionWeights, isObjectionType, OBJECTION_TYPES,
   isSpecialty, SPECIALTY_CONTEXT,
   seedPhysicianState, applyStateDelta, isPhysicianState, isDifficulty, DIFFICULTY_LEVELS,
+  normalizeIraqiDialect, IRAQI_DIALECT_LINE,
   type VoicePartnerTurn, type ObjectionType, type PhysicianState,
 } from './voice-partner-core'
 import type { Doctor } from '@/types/game'
@@ -491,5 +492,32 @@ describe('parseJudgeResponse', () => {
     expect(parseJudgeResponse('{"personaState":"resistant","doctorReply":"x","stateDelta":{"trustDelta":999,"skepticismDelta":-999,"engagementDelta":"nope"}}')).toEqual({
       personaState: 'resistant', doctorReply: 'x', clearSteps: [], stateDelta: { trustDelta: 10, skepticismDelta: -10, engagementDelta: 0 },
     })
+  })
+})
+
+describe('Iraqi dialect', () => {
+  it('rewrites the Gulf, Levantine and Egyptian forms the model leaks', () => {
+    expect(normalizeIraqiDialect('ما أبي كلام عام')).toBe('ما أريد كلام عام')
+    expect(normalizeIraqiDialect('ما بدي أسمع عن الدراسات')).toBe('ما أريد أسمع عن الدراسات')
+    expect(normalizeIraqiDialect('أبي أتأكد إنه آمن')).toBe('أريد أتأكد إنه آمن')
+    expect(normalizeIraqiDialect('أبغى أتأكد من الأمان')).toBe('أريد أتأكد من الأمان')
+    expect(normalizeIraqiDialect('نبغي نتأكد، ما نبغي مضاعفات')).toBe('نريد نتأكد، ما نريد مضاعفات')
+    expect(normalizeIraqiDialect('خمس دقائق عندي الحين')).toBe('خمس دقائق عندي هسه')
+    expect(normalizeIraqiDialect('هلأ ما عندي وقت كتير')).toBe('هسه ما عندي وقت كلش')
+    expect(normalizeIraqiDialect('أيوه تمام')).toBe('إي تمام')
+  })
+  it('leaves Iraqi text and the word for "my father" alone', () => {
+    for (const text of ['شنو الفرق؟ كلش مشغول، أكو مريض ينتظرني هسه', 'أريد شي أحسن مو أي شي', 'أبي يعاني من ضغط الدم', 'ما أريد كلام عام']) {
+      expect(normalizeIraqiDialect(text)).toBe(text)
+    }
+  })
+  it('does not rewrite inside longer words', () => {
+    expect(normalizeIraqiDialect('الأبيض كتيرات')).toBe('الأبيض كتيرات')
+  })
+  it('asks for Iraqi, names the dialects to avoid and gives register examples', () => {
+    expect(IRAQI_DIALECT_LINE).toMatch(/Iraqi/)
+    expect(IRAQI_DIALECT_LINE).toMatch(/not Modern Standard Arabic, and not Gulf, Levantine, Egyptian or Maghrebi/)
+    expect(IRAQI_DIALECT_LINE).toContain('شنو')
+    expect(IRAQI_DIALECT_LINE).toContain('Match this register')
   })
 })

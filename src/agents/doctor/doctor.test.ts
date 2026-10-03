@@ -87,3 +87,18 @@ describe('doctor agent', () => {
     expect(complete).not.toHaveBeenCalled()
   })
 })
+
+describe('doctor reply dialect', () => {
+  const rep = 'مرحبا دكتور'
+  const run = async (lang: 'ar' | 'en', text: string) => {
+    const s = createEmptySession('s', 'r'); s.lang = lang
+    const { respond } = createDoctorAgent(vi.fn(async () => text))
+    return (await respond(s, { repText: rep }))?.reply
+  }
+  it('rewrites Gulf and Levantine forms in an Arabic reply', async () => {
+    expect(await run('ar', 'ما أبي كلام عام، عندي وقت كتير ما أبي أضيعه الحين')).toBe('ما أريد كلام عام، عندي وقت كلش ما أريد أضيعه هسه')
+  })
+  it('leaves non-Arabic sessions untouched', async () => {
+    expect(await run('en', 'I have very little time now')).toBe('I have very little time now')
+  })
+})

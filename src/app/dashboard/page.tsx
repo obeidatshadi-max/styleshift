@@ -15,6 +15,7 @@ import CoachingQueueAndAssign from '@/components/dashboard/CoachingQueueAndAssig
 import { getCoachingQueue } from '@/lib/coaching-queue'
 import ScenarioEditorPanel from '@/components/dashboard/ScenarioEditorPanel'
 import BehavioralTrendsPanel from '@/components/dashboard/BehavioralTrendsPanel'
+import CompanyDoctorsPanel from '@/components/dashboard/CompanyDoctorsPanel'
 import { getBehavioralTrendsForReps } from '@/lib/behavioral-trends-dashboard'
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
@@ -96,6 +97,7 @@ export default async function DashboardPage() {
           reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))}
         />
         <Panel title="Company Scenarios"><ScenarioEditorPanel /></Panel>
+        <Panel title="AI Doctor Profiles"><CompanyDoctorsPanel reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} /></Panel>
         <Panel title="Team Leaderboard"><Leaderboard reps={stats?.reps ?? []} /></Panel>
         <Panel title="Skill Gap Heatmap"><SkillHeatmap levelAccuracy={stats?.levelAccuracy ?? []} /></Panel>
         <Panel title="Voice Practice">

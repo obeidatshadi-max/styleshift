@@ -1,6 +1,6 @@
 // src/lib/report/groundReport.test.ts
 import { describe, it, expect } from 'vitest'
-import { groundReport, buildVoiceMeasurements } from './groundReport'
+import { groundReport, buildVoiceMeasurements, stripSegmentRefs } from './groundReport'
 import type { TranscriptSegment, ReportContext } from '@/schemas/conversationReport'
 
 const segments: TranscriptSegment[] = [
@@ -27,7 +27,25 @@ function minimalRaw(overrides: Record<string, unknown> = {}) {
   }
 }
 
+describe('stripSegmentRefs', () => {
+  it('removes bracketed transcript indices the model echoed into prose', () => {
+    expect(stripSegmentRefs('Rep asked open questions ([1], [3]) but did not summarize.')).toBe('Rep asked open questions but did not summarize.')
+    expect(stripSegmentRefs('Strong opening [0] and a clear close [4].')).toBe('Strong opening and a clear close.')
+    expect(stripSegmentRefs('Used open questions [1, 3] early.')).toBe('Used open questions early.')
+  })
+  it('leaves ordinary text and non-index brackets alone', () => {
+    expect(stripSegmentRefs('Asked about the [drug] interaction.')).toBe('Asked about the [drug] interaction.')
+    expect(stripSegmentRefs('Asked two questions.')).toBe('Asked two questions.')
+  })
+})
+
 describe('groundReport', () => {
+  it('strips transcript indices from free-text report fields', () => {
+    const raw = minimalRaw({ coachingPriority: { behavior: 'Ask open questions ([1], [3]) before pitching', evidence: [{ segmentIndex: 1, speakerRole: 'rep' }], betterPhrase: 'What matters most?', practiceExercise: 'One open question [1].', successLooksLike: 'A need is named.' } })
+    const report = groundReport(raw, segments, context, base)!
+    expect(report.coachingPriority.behavior).toBe('Ask open questions before pitching')
+    expect(report.coachingPriority.practiceExercise).toBe('One open question.')
+  })
   it('resolves a real quote and drops a reference to a non-existent segmentIndex', () => {
     const raw = minimalRaw({
       criticalMoments: [

@@ -114,7 +114,7 @@ export default function TextSimulation({ doctor, onDone, initialPracticeFocus = 
         {s && <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, border: `2px solid ${c}`, boxShadow: `0 0 14px ${c}`, color: c }}>{s.icon}</div>}
         <div>
           <div style={{ fontSize: 16, fontWeight: 700 }}>{doctor.name}</div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: fs(11), letterSpacing: '.1em', color: 'var(--ink-dim)' }}>{t('sim.repTurns', { n: repTurns })}</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: fs(11), letterSpacing: '.1em', color: 'var(--ink-dim)' }}>{repTurns === 1 ? t('sim.repTurnsOne') : t('sim.repTurns', { n: repTurns })}</div>
         </div>
       </div>
 

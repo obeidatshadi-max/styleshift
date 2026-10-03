@@ -108,6 +108,9 @@ For socialStyle, ground every "possibleStyle" claim in one or more of the listed
 their segmentIndex — do not assign a style with no matching signal. Use null / "insufficient evidence"
 freely; do not force a style onto ambiguous or contradictory signals.
 
+In every text field, never write segment numbers or bracketed references such as [3] — the app shows the
+evidence itself; refer to moments in words ("when the doctor asked about interactions").
+
 Never claim one behavior caused a reaction merely because it came first in the transcript.`
 
   return { system: SYSTEM, prompt, maxTokens: part === 'all' ? 4000 : 2500 }

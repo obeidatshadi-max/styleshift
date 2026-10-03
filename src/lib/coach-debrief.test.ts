@@ -24,8 +24,15 @@ describe('debrief evidence and contracts', () => {
   })
   it('rejects incomplete reports and removes unrecognized model fields', () => {
     expect(parseDebriefResult(JSON.stringify({ questions: [], report: { summary: 'hello' } }))).toBeNull()
-    expect(parseDebriefResult(JSON.stringify({ questions: ['follow up'], report }))).toBeNull()
+    expect(parseDebriefResult(JSON.stringify({ questions: [], report: { ...report, nextAction: ' ' } }))).toBeNull()
     expect(parseDebriefResult(JSON.stringify({ questions: [], report: { ...report, score: 90 } }))?.report).toEqual(report)
+  })
+  it('keeps a valid report when the model adds stray clarifying questions', () => {
+    for (const questions of [['follow up'], ['q1', 'q2', 'q3'], undefined]) {
+      const result = parseDebriefResult(JSON.stringify({ questions, report }))
+      expect(result?.report).toEqual(report)
+      expect(result?.questions).toEqual([])
+    }
   })
   it('grounds coaching in recalled evidence, doctor context and the stated measure', () => {
     const prompt = debriefPrompt({ ...input, lang: 'ar' }, 'Dr. Example')

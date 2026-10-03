@@ -957,7 +957,7 @@ const AR: Dict = {
   'nav.tabTrain': 'اللعبة/التدريب',
   'nav.tabRehearse': 'الطبيب الافتراضي',
   'nav.tabPerform': 'تمثيل الأدوار المباشر',
-  'nav.tabCoach': '?????? ?????',
+  'nav.tabCoach': 'المدرب الذكي',
   'nav.back': '← رجوع',
   'nav.home': '🏠 الرئيسية',
   'group.title': 'مجموعتي',

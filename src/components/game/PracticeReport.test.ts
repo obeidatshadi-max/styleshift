@@ -16,14 +16,39 @@ describe('practice coaching report', () => {
   it('retries a failed report for the same text session', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response('', { status: 502 }))
+      .mockResolvedValueOnce(new Response('', { status: 502 }))
       .mockResolvedValueOnce(Response.json({ report: { label: 'Recovered coaching' } }))
     render(view('text-session', 'ai_doctor_text'))
     fireEvent.click(await screen.findByRole('button', { name: 'Retry coaching report' }))
     await screen.findByText('Recovered coaching')
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
     for (const call of fetchMock.mock.calls) {
       expect(JSON.parse(String(call[1]?.body))).toEqual({ sessionId: 'text-session', sessionType: 'ai_doctor_text' })
     }
+  })
+
+  it('recovers on its own from one gateway timeout without showing an error', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response('', { status: 504 }))
+      .mockResolvedValueOnce(Response.json({ report: { label: 'Second try coaching' } }))
+    render(view('slow-session', 'ai_doctor_text'))
+    await screen.findByText('Second try coaching')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('does not auto-retry a client error such as rate limiting', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 429 }))
+    render(view('limited-session'))
+    await screen.findByRole('alert')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows the error after two transient failures', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 504 }))
+    render(view('down-session'))
+    await screen.findByRole('alert')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it('ignores an old session response arriving after the next session report', async () => {

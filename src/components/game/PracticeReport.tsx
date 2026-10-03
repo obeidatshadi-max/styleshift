@@ -10,6 +10,12 @@ interface Props {
   children?: (report: Report) => React.ReactNode
 }
 
+/** A slow generation can hit the host's gateway timeout (504) and succeed on
+ * the next try, so transient failures are retried once before the rep sees an
+ * error. Only gateway-style statuses retry; 4xx means the request itself is wrong. */
+const AUTO_ATTEMPTS = 2
+const TRANSIENT_STATUSES = new Set([502, 503, 504])
+
 export default function PracticeReport({ sessionId, sessionType = 'ai_doctor_voice', children }: Props) {
   const t = useT()
   const [report, setReport] = useState<Report | null>(null)
@@ -19,16 +25,28 @@ export default function PracticeReport({ sessionId, sessionType = 'ai_doctor_voi
     let active = true
     setReport(null); setFailed(false)
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 90000)
-    fetch('/api/reports/generate', {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ sessionType, sessionId }), signal: controller.signal,
-    }).then(async res => {
-      if (!res.ok) throw new Error('report_failed')
-      const data = await res.json()
-      if (!data.report) throw new Error('report_missing')
-      if (active) setReport(data.report)
-    }).catch(() => { if (active) setFailed(true) }).finally(() => clearTimeout(timeout))
+    // Covers every automatic attempt: one generation can take 30-60s on a slow run.
+    const timeout = setTimeout(() => controller.abort(), AUTO_ATTEMPTS * 75000)
+    ;(async () => {
+      for (let i = 0; i < AUTO_ATTEMPTS; i++) {
+        try {
+          const res = await fetch('/api/reports/generate', {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ sessionType, sessionId }), signal: controller.signal,
+          })
+          if (res.ok) {
+            const data = await res.json()
+            if (data.report) { if (active) setReport(data.report); return }
+            break
+          }
+          if (!TRANSIENT_STATUSES.has(res.status)) break // 4xx: retrying the same request cannot help
+        } catch {
+          if (controller.signal.aborted) break // left the screen, or the overall timeout fired
+          // otherwise a dropped connection: fall through and try again
+        }
+      }
+      if (active) setFailed(true)
+    })().finally(() => clearTimeout(timeout))
     return () => { active = false; clearTimeout(timeout); controller.abort() }
   }, [sessionId, sessionType, attempt])
   if (report) return <><ConversationReport report={report} outdated={false} />{children?.(report)}</>

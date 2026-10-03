@@ -16,9 +16,10 @@ const MAX_RECORDING_MS = 3 * 60 * 1000
  * still owns its own larger phase state machine (recording/review are just
  * two of its phases) and decides what to do with a confirmed take.
  */
-export function useAudioRecorder(mode: VoiceMode, lang: 'en' | 'ar', onAutoStop?: () => void) {
+export function useAudioRecorder(mode: VoiceMode | null, lang: 'en' | 'ar', onAutoStop?: () => void) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
+  const generationRef = useRef(0)
   const streamRef = useRef<MediaStream | null>(null)
   const mediaRecRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -40,11 +41,13 @@ export function useAudioRecorder(mode: VoiceMode, lang: 'en' | 'ar', onAutoStop?
   const stop = useCallback(async () => {
     clearAutoStopTimer()
     const rec = mediaRecRef.current
-    if (!rec) return
+    if (!rec || rec.state === 'inactive') return
+    const generation = generationRef.current
     const blob: Blob = await new Promise(resolve => {
       rec.onstop = () => resolve(new Blob(chunksRef.current, { type: rec.mimeType || 'audio/webm' }))
       rec.stop()
     })
+    if (generation !== generationRef.current) return
     durationRef.current = Math.round((Date.now() - recordingStartRef.current) / 1000)
     streamRef.current?.getTracks().forEach(t => t.stop())
     streamRef.current = null
@@ -54,8 +57,10 @@ export function useAudioRecorder(mode: VoiceMode, lang: 'en' | 'ar', onAutoStop?
 
   /** Requests the mic and starts capture. Returns false on permission denial. */
   const start = useCallback(async (): Promise<boolean> => {
+    const generation = generationRef.current
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      if (generation !== generationRef.current) { stream.getTracks().forEach(t => t.stop()); return false }
       streamRef.current = stream
       chunksRef.current = []
       const rec = new MediaRecorder(stream)
@@ -64,10 +69,12 @@ export function useAudioRecorder(mode: VoiceMode, lang: 'en' | 'ar', onAutoStop?
       rec.start()
       recordingStartRef.current = Date.now()
       autoStopTimerRef.current = setTimeout(() => { void stop().then(() => onAutoStop?.()) }, MAX_RECORDING_MS)
-      logVoiceEvent(mode, lang, 'recording_start')
+      if (mode) logVoiceEvent(mode, lang, 'recording_start')
       return true
     } catch {
-      logVoiceEvent(mode, lang, 'mic_denied')
+      streamRef.current?.getTracks().forEach(t => t.stop())
+      streamRef.current = null
+      if (mode) logVoiceEvent(mode, lang, 'mic_denied')
       return false
     }
   }, [mode, lang, stop, onAutoStop])
@@ -86,6 +93,7 @@ export function useAudioRecorder(mode: VoiceMode, lang: 'en' | 'ar', onAutoStop?
 
   /** Force-stops any live recorder/stream and clears the preview — for reset(). */
   const abort = useCallback(() => {
+    generationRef.current += 1
     clearAutoStopTimer()
     // Stop the recorder before its source tracks — some browsers only fire
     // onstop reliably when told directly, rather than inferring it from the

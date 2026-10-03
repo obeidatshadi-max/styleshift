@@ -7,6 +7,7 @@ import { L2_OBJECTION } from '@/lib/scenario-meta'
 import { shuffle } from '@/lib/scenario-engine'
 import { XP_VALUES } from '@/lib/game-data'
 import GameHome from './GameHome'
+import AICoach from './AICoach'
 import LevelOne from './LevelOne'
 import LevelTwo from './LevelTwo'
 import LevelThree from './LevelThree'
@@ -257,6 +258,8 @@ export default function GameShell() {
   if (screen === 'how') {
     return withNav(<HowItWorks onDone={finishIntro} />)
   }
+
+  if (section === 'coach') return withNav(<AICoach />)
 
   if (screen === 'prep') {
     // A doctor roleplay in there may have shared against the active

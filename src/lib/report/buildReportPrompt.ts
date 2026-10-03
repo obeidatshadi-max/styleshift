@@ -1,4 +1,34 @@
-import type { TranscriptSegment, ReportContext, SocialStyleSignal } from '@/schemas/conversationReport'
+import {
+  CERTAINTIES, COMMITMENT_STATUSES, OBJECTIVE_STATUSES, PERFORMANCE_DIMENSIONS, SIGNAL_CATEGORIES, SOCIAL_STYLES,
+  type TranscriptSegment, type ReportContext, type SocialStyleSignal,
+} from '@/schemas/conversationReport'
+
+const oneOf = (values: readonly string[]) => values.map(v => `"${v}"`).join(' | ')
+
+/** The exact JSON shape groundReport() reads. The model is never shown this
+ * implicitly — without it, it invents its own field names (e.g. "priority"
+ * for coachingPriority.behavior) and the whole report is discarded as
+ * ungrounded. Enum lists come from the schema constants so they can't drift. */
+const EV = '{ "segmentIndex": <number>, "speakerRole": "rep"|"counterpart" }'
+const OUTPUT_SHAPE = `{
+  "visitSummary": { "summary": string, "objectiveStatus": ${oneOf(OBJECTIVE_STATUSES)}, "objectiveStatusReason": string, "evidence": [${EV}] },
+  "customerUnderstanding": {
+    "needs": [{ "text": string, "certainty": ${oneOf(CERTAINTIES)}, "evidence": [${EV}] }],
+    "concerns": [same item shape], "decisionCriteria": [same item shape], "openQuestions": [same item shape]
+  },
+  "performance": [{ "dimension": ${oneOf(PERFORMANCE_DIMENSIONS)}, "whatHappened": string, "whyItMattered": string, "improvement": string|null, "evidence": [${EV}] }],
+  "criticalMoments": [{ "observedBehavior": string, "interpretation": string, "interpretationCertainty": ${oneOf(CERTAINTIES)}, "betterResponseExample": string|null, "evidence": ${EV} }],
+  "commitments": [{ "action": string, "status": ${oneOf(COMMITMENT_STATUSES)}, "owner": string|null, "date": string|null, "evidence": [${EV}] }],
+  "coachingPriority": { "behavior": string, "betterPhrase": string, "practiceExercise": string, "successLooksLike": string, "evidence": [${EV}] },
+  "strength": { "behavior": string, "evidence": [${EV}] },
+  "socialStyle": {
+    "customer": { "possibleStyle": ${oneOf(SOCIAL_STYLES)}|null, "strongestSignals": [{ "category": ${oneOf(SIGNAL_CATEGORIES)}, "evidence": ${EV} }], "mixedEvidenceNote": string|null, "alternativeExplanation": string|null },
+    "rep": { same shape as "customer" },
+    "adaptation": [{ "customerSignal": ${EV}, "repResponse": ${EV}, "assessment": "well_adapted"|"mismatched"|"insufficient_evidence", "betterResponseExample": string|null, "suggestedAdjustment": string|null }],
+    "signalChanges": [{ "description": string, "evidence": [${EV}] }],
+    "coachingCard": { "observedSignals": string, "possiblePreference": string, "evidenceAndAlternative": string, "repResponse": string, "mostUsefulAdjustment": string, "suggestedWordingNextVisit": string }|null
+  }
+}`
 
 export const SYSTEM = 'You are an objective sales-conversation analyst, not a clinician. ' +
   'You write evidence-based reports for a medical sales rep about their own conversation. ' +
@@ -44,8 +74,14 @@ ${JSON.stringify(context.deterministicMetrics)}
 ${formatSignals('Counterpart social-style signals (deterministically detected)', counterpartSignals)}
 ${formatSignals('Rep social-style signals (deterministically detected)', repSignals)}
 
-Return a single JSON object with these top-level keys: visitSummary, customerUnderstanding, performance,
-criticalMoments (max 5), commitments, coachingPriority, strength, socialStyle.
+Return a single JSON object in EXACTLY this shape. Use these exact field names — a report with
+renamed or missing fields is discarded. coachingPriority and visitSummary.summary are required and
+coachingPriority needs at least one evidence reference. criticalMoments: max 5. Use [] or null when
+there is nothing supported by the transcript.
+Keep it compact: every string at most 2 short sentences; at most 3 items in each list; at most 2 evidence
+references per item; at most 3 performance items; at most 3 strongestSignals per style read. Fewer,
+well-supported items beat many weak ones.
+${OUTPUT_SHAPE}
 
 For every piece of evidence, cite ONLY { "segmentIndex": <number>, "speakerRole": "rep"|"counterpart" } —
 do NOT include the quoted text yourself; the exact words will be looked up separately from the real

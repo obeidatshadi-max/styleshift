@@ -33,6 +33,13 @@ describe('buildReportPrompt', () => {
     const { prompt } = buildReportPrompt(segments, noObjective, [])
     expect(prompt).toMatch(/no objective was (supplied|given|stated)/i)
   })
+  it('spells out the exact JSON field names groundReport reads, so the model cannot rename them', () => {
+    const { prompt } = buildReportPrompt(segments, context, [])
+    // A missing coachingPriority.behavior discards the whole report (the production 502s).
+    for (const field of ['"coachingPriority": { "behavior"', '"strength": { "behavior"', '"visitSummary": { "summary"',
+      '"whatHappened"', '"betterPhrase"', '"mostUsefulAdjustment"', '"dimension": "opening"'])
+      expect(prompt).toContain(field)
+  })
   it('system prompt forbids fabricating commitments/dates/scores', () => {
     expect(SYSTEM.toLowerCase()).toMatch(/never invent/)
   })

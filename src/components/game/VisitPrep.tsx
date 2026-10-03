@@ -4,6 +4,7 @@ import { useT, useLang, useGameData } from '@/lib/i18n'
 import { useDoctors } from '@/hooks/useDoctors'
 import { useDoctorVisits } from '@/hooks/useDoctorVisits'
 import { useDoctorRoleplaySessions } from '@/hooks/useDoctorRoleplaySessions'
+import { useDoctorTextSimulations } from '@/hooks/useDoctorTextSimulations'
 import RoleplayHistorySummaryCard from './RoleplayHistorySummaryCard'
 import { deriveStyle, OBJECTION_CATEGORIES } from '@/lib/social-style'
 import type { Assertiveness, Responsiveness } from '@/lib/social-style'
@@ -883,23 +884,37 @@ function DoctorRoleplayHistory({ doctorId }: { doctorId: string }) {
   const t = useT()
   const { lang } = useLang()
   const { sessions, loading } = useDoctorRoleplaySessions(doctorId)
+  const { sims, loading: simsLoading } = useDoctorTextSimulations(doctorId)
 
-  if (loading) return <div style={{ color:'var(--ink-dim)', fontSize:13 }}>…</div>
-  if (sessions.length === 0) return <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.5 }}>{t('perform.historyEmpty')}</div>
+  if (loading || simsLoading) return <div style={{ color:'var(--ink-dim)', fontSize:13 }}>…</div>
+  if (sessions.length === 0 && sims.length === 0) return <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.5 }}>{t('perform.historyEmpty')}</div>
+
+  const date = (iso: string) => new Date(iso).toLocaleDateString(lang === 'ar' ? 'ar' : 'en')
+  const card: React.CSSProperties = { border:'1px solid var(--line)', borderRadius:10, padding:'10px 12px', background:'rgba(0,0,0,.18)' }
+  const dateStyle: React.CSSProperties = { fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-dim)', marginBottom:6 }
+  // Live roleplay and text simulations share one list, newest first.
+  const entries = [
+    ...sims.map(sim => ({ kind: 'text' as const, created_at: sim.created_at, sim })),
+    ...sessions.map(session => ({ kind: 'roleplay' as const, created_at: session.created_at, session })),
+  ].sort((a, b) => b.created_at.localeCompare(a.created_at))
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-      <RoleplayHistorySummaryCard sessions={sessions} />
-      {sessions.map(s => (
-        <div key={s.id} style={{ border:'1px solid var(--line)', borderRadius:10, padding:'10px 12px', background:'rgba(0,0,0,.18)' }}>
-          <div style={{ fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-dim)', marginBottom:6 }}>
-            {new Date(s.created_at).toLocaleDateString(lang === 'ar' ? 'ar' : 'en')}
-          </div>
-          <div style={historyRow}><span style={historyLabel}>{t('roleplay.talkRatio')}:</span> {Math.round(s.talk_ratio * 100)}%</div>
-          <div style={historyRow}><span style={historyLabel}>{t('roleplay.questionRatio')}:</span> {Math.round(s.question_ratio * 100)}%</div>
-          {s.open_question_ratio != null && <div style={historyRow}><span style={historyLabel}>{t('roleplay.openQuestionRatio')}:</span> {Math.round(s.open_question_ratio * 100)}%</div>}
-          {s.paraphrase_score != null && <div style={historyRow}><span style={historyLabel}>{t('roleplay.paraphraseScore')}:</span> {Math.round(s.paraphrase_score * 100)}%</div>}
-          {s.active_listening_score != null && <div style={{ ...historyRow, marginBottom:0 }}><span style={historyLabel}>{t('roleplay.activeListeningTitle')}:</span> {s.active_listening_score}</div>}
+      {sessions.length > 0 && <RoleplayHistorySummaryCard sessions={sessions} />}
+      {entries.map(entry => entry.kind === 'text' ? (
+        <div key={entry.sim.id} style={card}>
+          <div style={dateStyle}>{date(entry.created_at)} · {t('visit.textSimLabel')}</div>
+          {entry.sim.overall != null && <div style={historyRow}><span style={historyLabel}>{t('sim.report.overall')}:</span> {entry.sim.overall}</div>}
+          <div style={{ ...historyRow, marginBottom:0 }}>{entry.sim.repTurns === 1 ? t('sim.repTurnsOne') : t('sim.repTurns', { n: entry.sim.repTurns })}</div>
+        </div>
+      ) : (
+        <div key={entry.session.id} style={card}>
+          <div style={dateStyle}>{date(entry.created_at)}</div>
+          <div style={historyRow}><span style={historyLabel}>{t('roleplay.talkRatio')}:</span> {Math.round(entry.session.talk_ratio * 100)}%</div>
+          <div style={historyRow}><span style={historyLabel}>{t('roleplay.questionRatio')}:</span> {Math.round(entry.session.question_ratio * 100)}%</div>
+          {entry.session.open_question_ratio != null && <div style={historyRow}><span style={historyLabel}>{t('roleplay.openQuestionRatio')}:</span> {Math.round(entry.session.open_question_ratio * 100)}%</div>}
+          {entry.session.paraphrase_score != null && <div style={historyRow}><span style={historyLabel}>{t('roleplay.paraphraseScore')}:</span> {Math.round(entry.session.paraphrase_score * 100)}%</div>}
+          {entry.session.active_listening_score != null && <div style={{ ...historyRow, marginBottom:0 }}><span style={historyLabel}>{t('roleplay.activeListeningTitle')}:</span> {entry.session.active_listening_score}</div>}
         </div>
       ))}
     </div>

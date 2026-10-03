@@ -856,6 +856,7 @@ const EN: Dict = {
   'roleplay.trendTip.activeListening': 'Balance your talk time, avoid cutting in, and mirror their wording more.',
   'roleplay.trendTip.adaptationScore': 'Notice their pace and tone next visit, and shift yours to meet them.',
   'visit.roleplayHistoryTitle': 'AI Doctor Roleplay History',
+  'visit.textSimLabel': 'Text simulation',
 
   // Cognitive biases — the bias usually driving each objection category, so
   // a rep can address the real mechanism instead of just the surface words.
@@ -1712,6 +1713,7 @@ const AR: Dict = {
   'roleplay.trendTip.activeListening': 'وازن وقت حديثك، تجنّب المقاطعة، وردّد كلماته أكثر.',
   'roleplay.trendTip.adaptationScore': 'لاحظ وتيرته ونبرته في الزيارة القادمة، وعدّل أسلوبك ليتناسب معه.',
   'visit.roleplayHistoryTitle': 'سجل تمثيل الأدوار مع الطبيب الافتراضي',
+  'visit.textSimLabel': 'محاكاة نصية',
 
   'bias.title': 'التحيّز المعرفي المحتمل',
   'bias.cueLabel': 'كيف تكتشفه',

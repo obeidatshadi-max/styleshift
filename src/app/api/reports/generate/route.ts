@@ -5,7 +5,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { createAnthropicComplete } from '@/agents/llm'
 import { isReportSessionType, type TranscriptSegment, type ReportContext } from '@/schemas/conversationReport'
 import { extractSocialSignals } from '@/lib/report/socialSignals'
-import { buildReportPrompt } from '@/lib/report/buildReportPrompt'
+import { buildReportPrompt, type ReportPart } from '@/lib/report/buildReportPrompt'
 import { groundReport } from '@/lib/report/groundReport'
 import { persistReport } from '@/lib/report/persistReport'
 import { adaptRoleplaySession } from '@/lib/report/adapters/fromRoleplaySession'
@@ -82,23 +82,34 @@ export async function POST(request: Request) {
 
   const counterpartSignals = extractSocialSignals(segments, 'counterpart')
   const repSignals = extractSocialSignals(segments, 'rep')
-  const { system, prompt, maxTokens } = buildReportPrompt(segments, context, counterpartSignals, repSignals)
-
   const complete = createAnthropicComplete(apiKey)
+  // Two smaller completions in parallel: a single full-report completion took
+  // 23-27s and hit the host's synchronous function limit (504).
+  const parts: ReportPart[] = ['findings', 'coaching']
+  const built = Object.fromEntries(parts.map(part =>
+    [part, buildReportPrompt(segments, context, counterpartSignals, repSignals, part)])) as Record<ReportPart, ReturnType<typeof buildReportPrompt>>
+  const parsedParts: Partial<Record<ReportPart, Record<string, unknown>>> = {}
   let report = null
   const attempts = ['', RETRY_NOTE]
   for (const [attempt, suffix] of attempts.entries()) {
     // Reasons only — no transcript or model text in logs (rep conversations are private).
     const tag = `[reports/generate] ${body.sessionType} attempt ${attempt + 1}/${attempts.length}, ${segments.length} segments`
-    const raw = await complete({ system, prompt: prompt + suffix, maxTokens })
-    if (!raw) { console.error(`${tag}: no LLM response`); continue }
-    const start = raw.indexOf('{'), end = raw.lastIndexOf('}')
-    if (start === -1 || end <= start) { console.error(`${tag}: no JSON object in response (${raw.length} chars)`); continue }
-    const parsed = (() => { try { return JSON.parse(raw.slice(start, end + 1)) } catch { return null } })()
-    if (!parsed) { console.error(`${tag}: JSON parse failed (${raw.length} chars)`); continue }
-    report = groundReport(parsed, segments, context, { sessionType: body.sessionType, transcriptVersion })
+    // Only the halves that haven't produced valid JSON yet are (re)requested.
+    await Promise.all(parts.filter(part => !parsedParts[part]).map(async part => {
+      const { system, prompt, maxTokens } = built[part]
+      const raw = await complete({ system, prompt: prompt + suffix, maxTokens })
+      if (!raw) { console.error(`${tag} [${part}]: no LLM response`); return }
+      const start = raw.indexOf('{'), end = raw.lastIndexOf('}')
+      if (start === -1 || end <= start) { console.error(`${tag} [${part}]: no JSON object in response (${raw.length} chars)`); return }
+      try { parsedParts[part] = JSON.parse(raw.slice(start, end + 1)) }
+      catch { console.error(`${tag} [${part}]: JSON parse failed (${raw.length} chars)`) }
+    }))
+    if (!parts.every(part => parsedParts[part])) continue
+    report = groundReport({ ...parsedParts.findings, ...parsedParts.coaching }, segments, context, { sessionType: body.sessionType, transcriptVersion })
     if (report) break
     console.error(`${tag}: grounding rejected report (missing summary or ungrounded coaching priority)`)
+    // Grounding failed on content, not transport — ask for both halves again.
+    for (const part of parts) delete parsedParts[part]
   }
   // Never replace a failed analysis with a plausible demo result — a real
   // failure surfaces as an error the rep can retry, not a silently invented report.

@@ -29,8 +29,19 @@ function groundEvidenceList(raw: unknown, segments: TranscriptSegment[]): Eviden
   return raw.map(e => groundEvidence(e, segments)).filter((e): e is EvidenceRef => e !== null)
 }
 
-function str(v: unknown, fallback = ''): string { return typeof v === 'string' ? v : fallback }
-function strOrNull(v: unknown): string | null { return typeof v === 'string' && v.length > 0 ? v : null }
+/** The transcript is shown to the model as "[3] rep: ..." lines, so it tends to
+ * echo those internal indices into prose ("open questions ([1], [3])"). They
+ * mean nothing to a rep — evidence is rendered separately from the real
+ * segments — so strip bracketed segment refs from every free-text field. */
+const REF = String.raw`\[\d+(?:\s*[,;&]\s*\d+)*\]`
+const SEGMENT_REFS = new RegExp(String.raw`\s*\(\s*${REF}(?:\s*[,;&]\s*${REF})*\s*\)|\s*${REF}(?:\s*[,;&]\s*${REF})*`, 'g')
+export function stripSegmentRefs(text: string): string { return text.replace(SEGMENT_REFS, '').trim() }
+
+function str(v: unknown, fallback = ''): string { return typeof v === 'string' ? stripSegmentRefs(v) : fallback }
+function strOrNull(v: unknown): string | null {
+  const text = typeof v === 'string' ? stripSegmentRefs(v) : ''
+  return text.length > 0 ? text : null
+}
 
 const NOT_MEASURED = 'Not measured for this session.'
 

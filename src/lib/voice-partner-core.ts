@@ -253,7 +253,28 @@ export function stateInstructionBlock(state: PhysicianState): string {
 // turn-based persona previously just said "Write ALL text in Arabic" (bare
 // langName), which OpenAI TTS then rendered as generic MSA. Real Iraqi
 // vocabulary examples, same as scenario.py, keep both surfaces consistent.
-export const IRAQI_DIALECT_LINE = 'Write ALL text in natural spoken Iraqi Arabic — not Modern Standard Arabic, and not Egyptian or Levantine dialect. Use real Iraqi vocabulary and phrasing (e.g. شنو، هسه، أكو، ماكو) where it fits naturally.'
+export const IRAQI_DIALECT_LINE = 'Write ALL text in natural spoken Iraqi Arabic (central/Baghdadi) — not Modern Standard Arabic, and not Gulf, Levantine, Egyptian or Maghrebi dialect. Prefer Iraqi forms: شنو (what), شلون (how), ليش (why), وين (where), هسه (now), أكو / ماكو (there is / there is not), كلش or هواية (very / a lot), أريد (I want), تعتقد or تحسب (you think). Never use Gulf أبي / أبغى / نبغي / وايد, Levantine بدي / هلق / كتير / شو, Egyptian عايز / دلوقتي / أيوه / حاجة / إزاي / تفتكر, or Maghrebi ديال. Match this register: "شنو الفرق بينه وبين الدواء اللي أستخدمه هسه؟ كلش مشغول، اختصر." / "أكو عندي مرضى هواية ما يستجيبون زين، أريد شي أحسن مو أي شي." / "ماكو وقت اليوم، ارجع لي الخميس بعد العيادة."'
+
+/** The model keeps drifting to Gulf / Levantine / Egyptian forms even when told to write Iraqi
+ * (measured: "ما أبي" and "الحين" in about one doctor reply in six). Prompting alone did not
+ * remove them, so the most common tells are rewritten to their Iraqi equivalents. Whole words
+ * only, and only forms that cannot be another word: bare "أبي" is also "my father", so it is
+ * only rewritten before a first-person verb ("أبي أتأكد"). */
+const AR = 'ء-ي'
+const word = (pattern: string) => new RegExp(`(?<![${AR}])(?:${pattern})(?![${AR}])`, 'g')
+const IRAQI_REWRITES: [RegExp, string][] = [
+  [word('ما (?:أبي|أبغى|أبغي|أبغا|بدي)'), 'ما أريد'],
+  [word('ما (?:نبغي|نبغى|بدنا)'), 'ما نريد'],
+  [new RegExp(`(?<![${AR}])أبي (?=[أن][${AR}]+)`, 'g'), 'أريد '],
+  [word('أبغى|أبغي|أبغا|بدي|عايز|عاوز'), 'أريد'],
+  [word('نبغي|نبغى|بدنا'), 'نريد'],
+  [word('الحين|هلأ|هلق|دلوقتي|دلوقت'), 'هسه'],
+  [word('كتير|وايد'), 'كلش'],
+  [word('أيوه|إيوه'), 'إي'],
+]
+export function normalizeIraqiDialect(text: string): string {
+  return IRAQI_REWRITES.reduce((out, [pattern, replacement]) => out.replace(pattern, replacement), text)
+}
 
 export function personaLines(d: Doctor, style: StyleKey, lang: 'en' | 'ar'): string {
   const specialtyLabel = d.specialty ? (isSpecialty(d.specialty) ? SPECIALTIES[d.specialty].name : d.specialty) : ''

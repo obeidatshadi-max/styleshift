@@ -1,7 +1,7 @@
 import type { Agent } from '@/agents/types'
 import { createAnthropicComplete, type CompleteFn } from '@/agents/llm'
 import type { SessionPatch, StyleShiftSession, TranscriptTurn } from '@/schemas/session'
-import type { PhysicianState } from '@/lib/voice-partner-core'
+import { normalizeIraqiDialect, type PhysicianState } from '@/lib/voice-partner-core'
 import { analyzeRepTurn, nextPhysicianState } from './behavior'
 import { buildDoctorOpeningPrompt, buildDoctorReplyPrompt, DOCTOR_SYSTEM } from './prompt'
 
@@ -59,7 +59,8 @@ export function createDoctorAgent(complete: CompleteFn) {
     }
 
     const raw = await complete({ system: DOCTOR_SYSTEM, prompt, maxTokens: 300 })
-    const reply = raw ? cleanDoctorReply(raw) : ''
+    const cleaned = raw ? cleanDoctorReply(raw) : ''
+    const reply = session.lang === 'ar' ? normalizeIraqiDialect(cleaned) : cleaned
     if (!reply) return null
 
     newTurns.push({

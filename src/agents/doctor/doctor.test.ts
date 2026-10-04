@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createEmptySession } from '@/schemas/session/factory'
 import { analyzeRepTurn, repTurnToDelta } from './behavior'
-import { buildDoctorReplyPrompt, DOCTOR_SYSTEM } from './prompt'
+import { buildDoctorOpeningPrompt, buildDoctorReplyPrompt, DOCTOR_SYSTEM } from './prompt'
 import { cleanDoctorReply, createDoctorAgent } from './index'
 
 const long = Array.from({ length: 90 }, () => 'word').join(' ')
@@ -100,5 +100,34 @@ describe('doctor reply dialect', () => {
   })
   it('leaves non-Arabic sessions untouched', async () => {
     expect(await run('en', 'I have very little time now')).toBe('I have very little time now')
+  })
+})
+
+describe('practice focus precedence', () => {
+  const state = { trust: 50, skepticism: 50, engagement: 50, timePressure: 30 }
+  const focus = "Practice naming the constraint when the doctor says 'I'm busy'."
+  const session = (withFocus: boolean) => {
+    const s = createEmptySession('s', 'r')
+    s.objections = { ...s.objections, activeType: 'doubt' } as typeof s.objections
+    if (withFocus) s.learningObjectives = [{ id: 'practice-focus', label: focus, focusStep: null, targetObjection: null, source: 'rep' }]
+    return s
+  }
+  it('opens with the practice situation, not the random objection theme, when a focus is set', () => {
+    const prompt = buildDoctorOpeningPrompt(session(true), state)
+    expect(prompt).toContain(focus)
+    expect(prompt).toContain('takes priority over any objection theme')
+    expect(prompt).toContain('practice situation is clear from your first words')
+    expect(prompt).not.toContain('with a short objection or realistic question about "your product"')
+  })
+  it('still opens with the objection theme when there is no practice focus', () => {
+    const prompt = buildDoctorOpeningPrompt(session(false), state)
+    expect(prompt).toContain('with a short objection or realistic question about "your product"')
+    expect(prompt).not.toContain('takes priority over any objection theme')
+  })
+  it('keeps the practice situation alive in later replies without dropping the objection', () => {
+    const withFocus = buildDoctorReplyPrompt(session(true), 'Hello', analyzeRepTurn('Hello'), state)
+    expect(withFocus).toContain('this objection theme is secondary')
+    const without = buildDoctorReplyPrompt(session(false), 'Hello', analyzeRepTurn('Hello'), state)
+    expect(without).not.toContain('this objection theme is secondary')
   })
 })

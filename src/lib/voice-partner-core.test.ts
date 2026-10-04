@@ -505,6 +505,9 @@ describe('Iraqi dialect', () => {
     expect(normalizeIraqiDialect('خمس دقائق عندي الحين')).toBe('خمس دقائق عندي هسه')
     expect(normalizeIraqiDialect('هلأ ما عندي وقت كتير')).toBe('هسه ما عندي وقت كلش')
     expect(normalizeIraqiDialect('أيوه تمام')).toBe('إي تمام')
+    expect(normalizeIraqiDialect('شنو اللي بدّك تحكي بسرعة؟')).toBe('شنو اللي تريد تحكي بسرعة؟')
+    expect(normalizeIraqiDialect('شنو اللي بدك تحكي؟ ما بدّك تسمع؟')).toBe('شنو اللي تريد تحكي؟ ما تريد تسمع؟')
+    expect(normalizeIraqiDialect('بدّي أتأكد، بدّنا نتأكد')).toBe('أريد أتأكد، نريد نتأكد')
   })
   it('leaves Iraqi text and the word for "my father" alone', () => {
     for (const text of ['شنو الفرق؟ كلش مشغول، أكو مريض ينتظرني هسه', 'أريد شي أحسن مو أي شي', 'أبي يعاني من ضغط الدم', 'ما أريد كلام عام']) {

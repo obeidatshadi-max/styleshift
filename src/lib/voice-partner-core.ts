@@ -253,7 +253,7 @@ export function stateInstructionBlock(state: PhysicianState): string {
 // turn-based persona previously just said "Write ALL text in Arabic" (bare
 // langName), which OpenAI TTS then rendered as generic MSA. Real Iraqi
 // vocabulary examples, same as scenario.py, keep both surfaces consistent.
-export const IRAQI_DIALECT_LINE = 'Write ALL text in natural spoken Iraqi Arabic (central/Baghdadi) — not Modern Standard Arabic, and not Gulf, Levantine, Egyptian or Maghrebi dialect. Prefer Iraqi forms: شنو (what), شلون (how), ليش (why), وين (where), هسه (now), أكو / ماكو (there is / there is not), كلش or هواية (very / a lot), أريد (I want), تعتقد or تحسب (you think). Never use Gulf أبي / أبغى / نبغي / وايد, Levantine بدي / هلق / كتير / شو, Egyptian عايز / دلوقتي / أيوه / حاجة / إزاي / تفتكر, or Maghrebi ديال. Match this register: "شنو الفرق بينه وبين الدواء اللي أستخدمه هسه؟ كلش مشغول، اختصر." / "أكو عندي مرضى هواية ما يستجيبون زين، أريد شي أحسن مو أي شي." / "ماكو وقت اليوم، ارجع لي الخميس بعد العيادة."'
+export const IRAQI_DIALECT_LINE = 'Write ALL text in natural spoken Iraqi Arabic (central/Baghdadi) — not Modern Standard Arabic, and not Gulf, Levantine, Egyptian or Maghrebi dialect. Prefer Iraqi forms: شنو (what), شلون (how), ليش (why), وين (where), هسه (now), أكو / ماكو (there is / there is not), كلش or هواية (very / a lot), أريد (I want), تعتقد or تحسب (you think). Never use Gulf أبي / أبغى / نبغي / وايد, Levantine بدي / بدّك / هلق / كتير / شو or the Levantine بـ verb prefix (say يسبب، يروحون، ياخذ — not بيسبب، بيروحون، بياخذ), Egyptian عايز / دلوقتي / أيوه / حاجة / إزاي / تفتكر, or Maghrebi ديال. Match this register: "شنو الفرق بينه وبين الدواء اللي أستخدمه هسه؟ كلش مشغول، اختصر." / "أكو عندي مرضى هواية ما يستجيبون زين، أريد شي أحسن مو أي شي." / "ماكو وقت اليوم، ارجع لي الخميس بعد العيادة."'
 
 /** The model keeps drifting to Gulf / Levantine / Egyptian forms even when told to write Iraqi
  * (measured: "ما أبي" and "الحين" in about one doctor reply in six). Prompting alone did not
@@ -263,11 +263,13 @@ export const IRAQI_DIALECT_LINE = 'Write ALL text in natural spoken Iraqi Arabic
 const AR = 'ء-ي'
 const word = (pattern: string) => new RegExp(`(?<![${AR}])(?:${pattern})(?![${AR}])`, 'g')
 const IRAQI_REWRITES: [RegExp, string][] = [
-  [word('ما (?:أبي|أبغى|أبغي|أبغا|بدي)'), 'ما أريد'],
-  [word('ما (?:نبغي|نبغى|بدنا)'), 'ما نريد'],
+  [word('ما (?:أبي|أبغى|أبغي|أبغا|بدّ?ي)'), 'ما أريد'],
+  [word('ما (?:نبغي|نبغى|بدّ?نا)'), 'ما نريد'],
+  [word('ما بدّ?ك'), 'ما تريد'],
   [new RegExp(`(?<![${AR}])أبي (?=[أن][${AR}]+)`, 'g'), 'أريد '],
-  [word('أبغى|أبغي|أبغا|بدي|عايز|عاوز'), 'أريد'],
-  [word('نبغي|نبغى|بدنا'), 'نريد'],
+  [word('أبغى|أبغي|أبغا|بدّ?ي|عايز|عاوز'), 'أريد'],
+  [word('بدّ?ك'), 'تريد'],
+  [word('نبغي|نبغى|بدّ?نا'), 'نريد'],
   [word('الحين|هلأ|هلق|دلوقتي|دلوقت'), 'هسه'],
   [word('كتير|وايد'), 'كلش'],
   [word('أيوه|إيوه'), 'إي'],

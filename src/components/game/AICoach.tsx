@@ -146,7 +146,7 @@ export default function AICoach() {
         <input value={objective} maxLength={500} disabled={locked || !!result} onChange={e => setObjective(e.target.value)} style={inputStyle} />
       </label>
       <label style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{copy('How would you measure success?', 'كيف ستقيس النجاح؟')}
-        <input value={successMeasure} maxLength={500} disabled={locked || !!result} onChange={e => setSuccessMeasure(e.target.value)} style={inputStyle} placeholder={copy('Use an observable result, such as agreeing a specific next step.', 'استخدم نتيجة يمكن ملاحظتها، مثل الاتفاق على خطوة تالية محددة.')} />
+        <input value={successMeasure} maxLength={500} disabled={locked || !!result} onChange={e => setSuccessMeasure(e.target.value)} style={inputStyle} placeholder={copy('e.g. a specific next step is agreed', 'مثل: الاتفاق على خطوة تالية محددة')} />
       </label>
       <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--ink-dim)' }}>{copy('Record your own recollection after the call, up to 3 minutes. Audio is sent for transcription; review the text before coaching. Saved debriefs are private to your account.', 'سجّل ما تتذكره بعد المكالمة لمدة تصل إلى ٣ دقائق. يُرسل الصوت للتفريغ؛ راجع النص قبل التدريب. المراجعات المحفوظة خاصة بحسابك.')}</p>
       {!result && <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>

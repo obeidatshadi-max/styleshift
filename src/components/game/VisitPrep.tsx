@@ -6,6 +6,7 @@ import { useDoctorVisits } from '@/hooks/useDoctorVisits'
 import { useDoctorRoleplaySessions } from '@/hooks/useDoctorRoleplaySessions'
 import { useDoctorTextSimulations } from '@/hooks/useDoctorTextSimulations'
 import { useDoctorCoachDebriefs } from '@/hooks/useDoctorCoachDebriefs'
+import { quoted } from '@/lib/quote'
 import PastSimulation from './PastSimulation'
 import RoleplayHistorySummaryCard from './RoleplayHistorySummaryCard'
 import { deriveStyle, OBJECTION_CATEGORIES } from '@/lib/social-style'
@@ -83,6 +84,7 @@ const ghostBtn: React.CSSProperties = { cursor:'pointer', fontFamily:'var(--mono
 
 export default function VisitPrep({ onExit }: Props) {
   const t = useT()
+  const { lang } = useLang()
   const { STYLES, SPECIALTIES, L1, L2, L3 } = useGameData()
   const { doctors, loading, saveDoctor, removeDoctor } = useDoctors()
   const [view, setView] = useState<View>({ mode: 'list' })
@@ -173,7 +175,7 @@ export default function VisitPrep({ onExit }: Props) {
                 {s && <div style={{ fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.05em', color:c, marginTop:2 }}>{s.name} · {s.drive}</div>}
               </div>
             </div>
-            {d.key_phrases && <div style={{ fontSize:13, color:'var(--ink-dim)', borderInlineStart:`2px solid ${c}`, paddingInlineStart:10, marginBottom:6, lineHeight:1.5 }}>“{d.key_phrases}”</div>}
+            {d.key_phrases && <div style={{ fontSize:13, color:'var(--ink-dim)', borderInlineStart:`2px solid ${c}`, paddingInlineStart:10, marginBottom:6, lineHeight:1.5 }}>{quoted(d.key_phrases, lang)}</div>}
             <button onClick={() => setView({ mode: 'form', doctor: d })} style={{ ...ghostBtn, fontSize:11, padding:'6px 12px' }}>{t('prep.edit')}</button>
           </>
         )}
@@ -206,7 +208,7 @@ export default function VisitPrep({ onExit }: Props) {
             </div>
             <div style={{ border:`1px solid ${c}`, borderRadius:10, padding:'11px 13px', background:'rgba(0,0,0,.2)' }}>
               <span style={labelStyle}>{t('prep.opener')}</span>
-              <div style={{ fontSize:14, lineHeight:1.55, color:'var(--ink)' }}>“{t(`prep.cheat.${style}.opener`)}”</div>
+              <div style={{ fontSize:14, lineHeight:1.55, color:'var(--ink)' }}>{quoted(t(`prep.cheat.${style}.opener`), lang)}</div>
             </div>
 
             <details>

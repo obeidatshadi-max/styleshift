@@ -65,3 +65,12 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 /* Arabic voice practice needs more room for joined glyphs. */
 .voice-practice:lang(ar) { --voice-min-font: 16px; --sans: Tahoma, "Segoe UI", Arial, sans-serif; --mono: var(--sans); --ink-dim: #b5c5e8; }
 .voice-practice:lang(ar), .voice-practice:lang(ar) * { letter-spacing: normal !important; line-height: 1.85 !important; }
+
+/* Arabic needs two corrections in the tracked mono-caps labels used across the app.
+ * 1. The monospace stack (SF Mono, Menlo, Consolas) has no Arabic glyphs, so Arabic fell back
+ *    to fixed-width cells and read as gapped, wide text: tab labels wrapped to three lines on a
+ *    phone. Use the sans stack, which has Tahoma and Segoe UI.
+ * 2. Letter-spacing pulls Arabic's joined letters apart. Arabic never gets tracking; the Latin
+ *    logo heading keeps its own. */
+:root:lang(ar) { --mono: var(--sans); }
+:lang(ar) *:not(h1) { letter-spacing: normal !important; }

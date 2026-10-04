@@ -857,6 +857,9 @@ const EN: Dict = {
   'roleplay.trendTip.adaptationScore': 'Notice their pace and tone next visit, and shift yours to meet them.',
   'visit.roleplayHistoryTitle': 'AI Doctor Roleplay History',
   'visit.textSimLabel': 'Text simulation',
+  'visit.viewReport': 'View report',
+  'visit.backToHistory': '← Back to history',
+  'visit.reportNotSaved': 'No saved report for this simulation, so one is being prepared now.',
 
   // Cognitive biases — the bias usually driving each objection category, so
   // a rep can address the real mechanism instead of just the surface words.
@@ -1714,6 +1717,9 @@ const AR: Dict = {
   'roleplay.trendTip.adaptationScore': 'لاحظ وتيرته ونبرته في الزيارة القادمة، وعدّل أسلوبك ليتناسب معه.',
   'visit.roleplayHistoryTitle': 'سجل تمثيل الأدوار مع الطبيب الافتراضي',
   'visit.textSimLabel': 'محاكاة نصية',
+  'visit.viewReport': 'عرض التقرير',
+  'visit.backToHistory': '← العودة إلى السجل',
+  'visit.reportNotSaved': 'لا يوجد تقرير محفوظ لهذه المحاكاة، لذلك يجري إعداده الآن.',
 
   'bias.title': 'التحيّز المعرفي المحتمل',
   'bias.cueLabel': 'كيف تكتشفه',

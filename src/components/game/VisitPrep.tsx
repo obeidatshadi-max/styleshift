@@ -5,6 +5,7 @@ import { useDoctors } from '@/hooks/useDoctors'
 import { useDoctorVisits } from '@/hooks/useDoctorVisits'
 import { useDoctorRoleplaySessions } from '@/hooks/useDoctorRoleplaySessions'
 import { useDoctorTextSimulations } from '@/hooks/useDoctorTextSimulations'
+import { useDoctorCoachDebriefs } from '@/hooks/useDoctorCoachDebriefs'
 import PastSimulation from './PastSimulation'
 import RoleplayHistorySummaryCard from './RoleplayHistorySummaryCard'
 import { deriveStyle, OBJECTION_CATEGORIES } from '@/lib/social-style'
@@ -854,29 +855,55 @@ function DoctorHistory({ doctorId }: { doctorId: string }) {
   const t = useT()
   const { lang } = useLang()
   const { visits, loading } = useDoctorVisits(doctorId)
+  const { debriefs, loading: debriefsLoading } = useDoctorCoachDebriefs(doctorId)
 
-  if (loading) return <div style={{ color:'var(--ink-dim)', fontSize:13 }}>…</div>
-  if (visits.length === 0) return <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.5 }}>{t('visit.empty')}</div>
+  if (loading || debriefsLoading) return <div style={{ color:'var(--ink-dim)', fontSize:13 }}>…</div>
+  if (visits.length === 0 && debriefs.length === 0) return <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.5 }}>{t('visit.empty')}</div>
+
+  const card: React.CSSProperties = { border:'1px solid var(--line)', borderRadius:10, padding:'10px 12px', background:'rgba(0,0,0,.18)' }
+  const kindStyle: React.CSSProperties = { fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.1em', textTransform:'uppercase', color:'var(--cyan)' }
+  const dateStyle: React.CSSProperties = { fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-dim)' }
+  // Real visits, practice sessions and Coach debriefs share one timeline, newest first.
+  const entries = [
+    ...visits.map(visit => ({ kind: 'visit' as const, created_at: visit.created_at, visit })),
+    ...debriefs.map(debrief => ({ kind: 'debrief' as const, created_at: debrief.created_at, debrief })),
+  ].sort((a, b) => b.created_at.localeCompare(a.created_at))
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-      {visits.map(v => (
-        <div key={v.id} style={{ border:'1px solid var(--line)', borderRadius:10, padding:'10px 12px', background:'rgba(0,0,0,.18)' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
-            <span style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.1em', textTransform:'uppercase', color:'var(--cyan)' }}>{t(SOURCE_LABEL_KEY[v.source])}</span>
-            <span style={{ display:'flex', alignItems:'center', gap:8 }}>
-              {v.id.startsWith('offline-') && (
-                <span style={{ fontFamily:'var(--mono)', fontSize:9, letterSpacing:'.08em', textTransform:'uppercase', color:'var(--amber)', border:'1px solid var(--amber)', borderRadius:8, padding:'1px 6px' }}>{t('visit.pendingSync')}</span>
-              )}
-              <span style={{ fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-dim)' }}>{new Date(v.created_at).toLocaleDateString(lang === 'ar' ? 'ar' : 'en')}</span>
-            </span>
+      {entries.map(entry => {
+        if (entry.kind === 'debrief') {
+          const d = entry.debrief
+          return (
+            <div key={d.id} style={card}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                <span style={kindStyle}>{t('visit.coachDebriefLabel')}</span>
+                <span style={dateStyle}>{new Date(d.created_at).toLocaleString(lang === 'ar' ? 'ar' : 'en', { dateStyle:'short', timeStyle:'short' })}</span>
+              </div>
+              {d.objective && <div style={historyRow}><span style={historyLabel}>{t('visit.coachObjective')}:</span> {d.objective}</div>}
+              {d.nextAction && <div style={{ ...historyRow, marginBottom:0 }}><span style={historyLabel}>{t('visit.coachNextAction')}:</span> {d.nextAction}</div>}
+            </div>
+          )
+        }
+        const v = entry.visit
+        return (
+          <div key={v.id} style={card}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+              <span style={kindStyle}>{t(SOURCE_LABEL_KEY[v.source])}</span>
+              <span style={{ display:'flex', alignItems:'center', gap:8 }}>
+                {v.id.startsWith('offline-') && (
+                  <span style={{ fontFamily:'var(--mono)', fontSize:9, letterSpacing:'.08em', textTransform:'uppercase', color:'var(--amber)', border:'1px solid var(--amber)', borderRadius:8, padding:'1px 6px' }}>{t('visit.pendingSync')}</span>
+                )}
+                <span style={dateStyle}>{new Date(v.created_at).toLocaleDateString(lang === 'ar' ? 'ar' : 'en')}</span>
+              </span>
+            </div>
+            {v.objection_raised && <div style={historyRow}><span style={historyLabel}>{t('visit.objectionRaised')}:</span> {v.objection_raised}</div>}
+            {v.promise_made && <div style={historyRow}><span style={historyLabel}>{t('visit.promiseMade')}:</span> {v.promise_made}</div>}
+            {v.what_worked && <div style={historyRow}><span style={historyLabel}>{t('visit.whatWorked')}:</span> {v.what_worked}</div>}
+            {v.note && <div style={{ ...historyRow, color:'var(--ink-dim)', marginBottom:0 }}>{v.note}</div>}
           </div>
-          {v.objection_raised && <div style={historyRow}><span style={historyLabel}>{t('visit.objectionRaised')}:</span> {v.objection_raised}</div>}
-          {v.promise_made && <div style={historyRow}><span style={historyLabel}>{t('visit.promiseMade')}:</span> {v.promise_made}</div>}
-          {v.what_worked && <div style={historyRow}><span style={historyLabel}>{t('visit.whatWorked')}:</span> {v.what_worked}</div>}
-          {v.note && <div style={{ ...historyRow, color:'var(--ink-dim)', marginBottom:0 }}>{v.note}</div>}
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

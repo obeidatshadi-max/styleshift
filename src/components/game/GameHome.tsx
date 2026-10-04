@@ -45,10 +45,13 @@ interface Props {
   onShowPerform: () => void
   onShowFieldCards: () => void
   onStartLevel: (n: number) => void
+  /** True once the profile has loaded and the style quiz has not been taken. */
+  spsPending: boolean
+  onTakeSps: () => void
   tab: Section
 }
 
-export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, onAssignmentShared, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onShowPerform, onShowFieldCards, onStartLevel, tab }: Props) {
+export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, onAssignmentShared, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onShowPerform, onShowFieldCards, onStartLevel, spsPending, onTakeSps, tab }: Props) {
   const [moreOpen, setMoreOpen] = useState(false)
 
   const unlocked = [1, ...earnedLevels.map(n => n + 1)].filter(n => n <= 4)
@@ -95,6 +98,13 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
       <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
 
         {tab === 'train' && <>
+
+        {spsPending && panel(t('sps.title'),
+          <>
+            <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.55, marginBottom:12 }}>{t('sps.intro')}</div>
+            <button onClick={onTakeSps} style={{ cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent', borderRadius:10, padding:'10px 16px', touchAction:'manipulation' }}>{t('sps.start')}</button>
+          </>
+        )}
 
         <NextActionCard
           assignment={assignment} onStartAssignment={onStartAssignment} onAssignmentShared={onAssignmentShared}

@@ -509,6 +509,18 @@ describe('Iraqi dialect', () => {
     expect(normalizeIraqiDialect('شنو اللي بدك تحكي؟ ما بدّك تسمع؟')).toBe('شنو اللي تريد تحكي؟ ما تريد تسمع؟')
     expect(normalizeIraqiDialect('بدّي أتأكد، بدّنا نتأكد')).toBe('أريد أتأكد، نريد نتأكد')
   })
+  it('drops the Levantine ب verb prefix on common doctor verbs', () => {
+    expect(normalizeIraqiDialect('شنو الفرق اللي بيخليه أحسن؟')).toBe('شنو الفرق اللي يخليه أحسن؟')
+    expect(normalizeIraqiDialect('الدواء بيساعدهم وبتصير الحالة أحسن')).toBe('الدواء يساعدهم وتصير الحالة أحسن')
+    expect(normalizeIraqiDialect('ما بيسبب مشاكل، بيروحون للطوارئ، بنتأكد')).toBe('ما يسبب مشاكل، يروحون للطوارئ، نتأكد')
+    expect(normalizeIraqiDialect('بيتحسن المريض وبيقدر يشتغل')).toBe('يتحسن المريض ويقدر يشتغل')
+    expect(normalizeIraqiDialect('وما بيجيب مشاكل ولا بيغير الحالة')).toBe('وما يجيب مشاكل ولا يغير الحالة')
+  })
+  it('does not touch nouns and phrases that merely start with ب', () => {
+    for (const text of ['عندي بيانات عن الأمان', 'بيت المريض بعيد', 'بنسبة كبيرة', 'بتحسن الحالة', 'بتأثير الدواء', 'بتغيير الجرعة', 'بيننا وقت قصير', 'يخليه ويساعدهم']) {
+      expect(normalizeIraqiDialect(text)).toBe(text)
+    }
+  })
   it('leaves Iraqi text and the word for "my father" alone', () => {
     for (const text of ['شنو الفرق؟ كلش مشغول، أكو مريض ينتظرني هسه', 'أريد شي أحسن مو أي شي', 'أبي يعاني من ضغط الدم', 'ما أريد كلام عام']) {
       expect(normalizeIraqiDialect(text)).toBe(text)

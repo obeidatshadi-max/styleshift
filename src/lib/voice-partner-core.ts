@@ -262,6 +262,8 @@ export const IRAQI_DIALECT_LINE = 'Write ALL text in natural spoken Iraqi Arabic
  * only rewritten before a first-person verb ("أبي أتأكد"). */
 const AR = 'ء-ي'
 const word = (pattern: string) => new RegExp(`(?<![${AR}])(?:${pattern})(?![${AR}])`, 'g')
+const LEVANTINE_VERB_STEMS = ['خلي', 'ساعد', 'سبب', 'روح', 'صير', 'شتغل', 'حتاج', 'قدر', 'عطي', 'تحسن', 'زيد', 'قلل', 'عمل', 'شوف', 'عرف', 'فيد', 'ضر', 'تأكد', 'ركز', 'ناسب', 'تأثر', 'فرق', 'سيطر', 'جيب', 'غير', 'نفع'].join('|')
+
 const IRAQI_REWRITES: [RegExp, string][] = [
   [word('ما (?:أبي|أبغى|أبغي|أبغا|بدّ?ي)'), 'ما أريد'],
   [word('ما (?:نبغي|نبغى|بدّ?نا)'), 'ما نريد'],
@@ -273,6 +275,10 @@ const IRAQI_REWRITES: [RegExp, string][] = [
   [word('الحين|هلأ|هلق|دلوقتي|دلوقت'), 'هسه'],
   [word('كتير|وايد'), 'كلش'],
   [word('أيوه|إيوه'), 'إي'],
+  // Levantine "ب" present-tense prefix (بيخليه، بتصير → يخليه، تصير). Only for stems a doctor
+  // actually says: a blanket rule would break nouns that start the same way (بيانات، بيت، بنك).
+  // The ب may follow a one-letter conjunction that is written attached (وبتصير، فبيساعد).
+  [new RegExp(`(?:(?<![${AR}])|(?<=(?<![${AR}])[وف]))ب(?=[يتن](?:${LEVANTINE_VERB_STEMS}))`, 'g'), ''],
 ]
 export function normalizeIraqiDialect(text: string): string {
   return IRAQI_REWRITES.reduce((out, [pattern, replacement]) => out.replace(pattern, replacement), text)

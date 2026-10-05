@@ -123,11 +123,13 @@ export interface DoctorVisit {
   note: string | null
   /** Set when the rep ticks off the promise in promise_made. */
   promise_done_at?: string | null
+  is_contact?: boolean
+  contact_at?: string | null
   created_at: string
 }
 
 export type DoctorVisitInput = Pick<DoctorVisit, 'source'> &
-  Partial<Pick<DoctorVisit, 'objection_raised' | 'promise_made' | 'what_worked' | 'note'>>
+  Partial<Pick<DoctorVisit, 'objection_raised' | 'promise_made' | 'what_worked' | 'note' | 'contact_at'>>
 
 // A single persisted turn in an AI-Doctor voice-partner session — the
 // evidence store Phase 2 (docs/ai-doctor-phase-1-plan.md's "Deferred" list)

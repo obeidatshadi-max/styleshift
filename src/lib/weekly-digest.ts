@@ -54,8 +54,8 @@ export function buildWeeklyDigest(input: {
   const delta = practiceThisWeek - practiceLastWeek
   const lines = [
     `StyleShift weekly summary - ${input.companyName}`,
-    `Practice: ${practiceThisWeek} sessions this week (${delta === 0 ? 'same as' : `${delta > 0 ? '+' : ''}${delta} vs`} last week)`,
-    `Active reps: ${active.size} of ${reps.length}`,
+    `Game practice: ${practiceThisWeek} sessions this week (${delta === 0 ? 'same as' : `${delta > 0 ? '+' : ''}${delta} vs`} last week)`,
+    `Active reps (game or voice): ${active.size} of ${reps.length}`,
     ...(quietReps.length ? [`Not practised this week: ${quietReps.join(', ')}`] : []),
     ...(topFocus ? [`Most common coaching focus: ${topFocus.label} (${topFocus.count} reps)`] : []),
   ]

@@ -5,6 +5,7 @@ import { useDoctors } from '@/hooks/useDoctors'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { DEBRIEF_FOCUSES, parseDebriefResult, type ActionStatus, type DebriefFocus, type DebriefInput, type DebriefResult } from '@/lib/coach-debrief'
 import { addPromise } from '@/lib/promises'
+import { readCoachDrafts, writeCoachDrafts, type CoachDraft } from '@/lib/coach-drafts'
 import TextSimulation, { card, primaryBtn, ghostBtn } from './TextSimulation'
 import type { Doctor } from '@/types/game'
 
@@ -47,6 +48,32 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
   const [focus, setFocus] = useState<DebriefFocus | null>(null)
   const [addedPromises, setAddedPromises] = useState<string[]>([])
   const [promiseError, setPromiseError] = useState(false)
+  const [visitDate, setVisitDate] = useState('')
+  const [practiceDoctorId, setPracticeDoctorId] = useState('')
+  const [recoveryToken, setRecoveryToken] = useState<string | null>(null)
+  const [draftOwner, setDraftOwner] = useState<string | null>(null)
+  const [draftWarning, setDraftWarning] = useState(false)
+  const [latestForDoctor, setLatestForDoctor] = useState<{ doctorId: string; action?: string } | null>(null)
+  const drafts = useRef<Record<string, CoachDraft>>({})
+  const hydratedOwner = useRef<string | null>(null)
+  const requestKey = useRef<{ id: string; fingerprint: string } | null>(null)
+  const transcribing = useRef(false)
+  const snapshot = useRef<CoachDraft | null>(null)
+  snapshot.current = { doctorId, account, objective, successMeasure, visitDate, reflections, focus, actionStatus, result, saved, activeId, recoveryToken, request: requestKey.current }
+
+  function restore(draft: CoachDraft) {
+    setDoctorId(draft.doctorId); setAccount(draft.account); setObjective(draft.objective); setSuccessMeasure(draft.successMeasure)
+    setVisitDate(draft.visitDate || ''); setReflections(draft.reflections); setFocus(draft.focus); setActionStatus(draft.actionStatus)
+    setResult(draft.result); setSaved(draft.saved); setActiveId(draft.activeId); setRecoveryToken(draft.recoveryToken)
+    requestKey.current = draft.request; setPracticeDoctorId('')
+  }
+  useEffect(() => {
+    if (!draftOwner || !snapshot.current) return
+    if (saved) delete drafts.current[doctorId]
+    else drafts.current[doctorId] = snapshot.current
+    setDraftWarning(!writeCoachDrafts(draftOwner, { selected: doctorId, drafts: drafts.current }))
+  }, [draftOwner, doctorId, account, objective, successMeasure, visitDate, reflections, focus, actionStatus, result, saved, activeId, recoveryToken])
+
   const mounted = useRef(true)
   const requestRef = useRef<AbortController | null>(null)
   const targetRef = useRef<MicTarget | null>(null)
@@ -55,16 +82,33 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
   const recorder = useAudioRecorder(null, lang, () => { setRecording(false); if (targetRef.current && targetRef.current !== 'account') void transcribe() })
   const locked = busy || recording || micStarting
   // History is newest-first, so the first match is the latest debrief for this doctor.
-  const previousAction = doctorId ? entries.find(e => e.doctor_id === doctorId && e.result?.report?.nextAction)?.result.report?.nextAction : undefined
+  const previousAction = latestForDoctor?.doctorId === doctorId ? latestForDoctor.action : doctorId ? entries.find(e => e.doctor_id === doctorId && e.result?.report?.nextAction)?.result.report?.nextAction : undefined
+  useEffect(() => {
+    if (!doctorId) return
+    const controller = new AbortController()
+    void fetch(`/api/coach-debrief?doctorId=${encodeURIComponent(doctorId)}`, { signal: controller.signal })
+      .then(async res => { if (!res.ok) throw new Error(); return res.json() })
+      .then(data => { if (!controller.signal.aborted) setLatestForDoctor({ doctorId, action: data.entries?.[0]?.result?.report?.nextAction }) })
+      .catch(() => { /* keep the recent-history fallback when unavailable */ })
+    return () => controller.abort()
+  }, [doctorId, activeId])
 
   async function loadHistory() {
     setHistoryLoading(true)
     try {
       const res = await fetch('/api/coach-debrief')
-      if (!res.ok) throw new Error()
       const data = await res.json()
+      if (mounted.current && data.ownerId && hydratedOwner.current !== data.ownerId) {
+        hydratedOwner.current = data.ownerId
+        const cached = readCoachDrafts(data.ownerId)
+        drafts.current = cached?.drafts ?? {}
+        const selected = initialDoctorId || snapshot.current?.doctorId || cached?.selected || ''
+        if (cached?.drafts[selected] && !snapshot.current?.account) restore(cached.drafts[selected])
+        setDraftOwner(data.ownerId)
+      }
+      if (!res.ok) throw new Error()
       if (mounted.current) { setEntries(data.entries); setHistoryError(false) }
-    } catch { if (mounted.current) setHistoryError(true) }
+    } catch { if (mounted.current) { setHistoryError(true); if (!hydratedOwner.current) setDraftWarning(true) } }
     finally { if (mounted.current) setHistoryLoading(false) }
   }
   useEffect(() => {
@@ -75,11 +119,15 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // The plan set in Visit Prep fills the objective and measure, unless the rep has already typed their own.
+  // Keep drafts attached to their doctor, including automatically filled plans.
   function chooseDoctor(id: string) {
-    setDoctorId(id); setActionStatus(null)
+    if (snapshot.current && !saved) drafts.current[doctorId] = snapshot.current
+    recorder.discard(); targetRef.current = null; setMicTarget(null); setError(''); setPracticeDoctorId('')
+    const cached = drafts.current[id]
+    if (cached) { restore(cached); return }
     const plan = doctors.find(d => d.id === id)
-    if (plan?.plan_objective && !objective.trim() && !successMeasure.trim()) { setObjective(plan.plan_objective); setSuccessMeasure(plan.plan_success_measure ?? '') }
+    restore({ doctorId: id, account: '', objective: plan?.plan_objective ?? '', successMeasure: plan?.plan_success_measure ?? '',
+      visitDate: '', reflections: emptyReflections, focus: null, actionStatus: null, result: null, saved: null, activeId: null, recoveryToken: null, request: null })
   }
   // Arriving from a Home nudge selects that doctor once their profile list has loaded.
   const appliedInitial = useRef(false)
@@ -95,7 +143,7 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
     if (await addPromise(doctorId, text)) setAddedPromises(prev => [...prev, `${doctorId}:${text}`])
     else setPromiseError(true)
   }
-  function revise() { setResult(null); setSaved(null); setActiveId(null); setError(''); setActionStatus(null); setFocus(null) }
+  function revise() { setResult(null); setSaved(null); setActiveId(null); setRecoveryToken(null); requestKey.current = null; setError(''); setActionStatus(null); setFocus(null) }
   async function startRecording(target: MicTarget = 'account') {
     setError(''); setMicStarting(true); targetRef.current = target; setMicTarget(target)
     const ok = await recorder.start()
@@ -113,8 +161,10 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
   }
   async function transcribe() {
     const target = targetRef.current ?? 'account'
-    const take = recorder.take()
+    if (transcribing.current) return
+    const take = recorder.take(true)
     if (!take) return
+    transcribing.current = true
     setBusy(true); setError('')
     const controller = new AbortController(); requestRef.current = controller
     const form = new FormData(); form.append('audio', take.blob); form.append('lang', lang)
@@ -123,28 +173,38 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
       if (!res.ok) throw new Error()
       const data = await res.json()
       if (typeof data.text !== 'string' || !data.text.trim()) throw new Error()
+      if (!mounted.current) return
       const append = (prev: string, max: number) => `${prev}${prev ? '\n' : ''}${data.text}`.slice(0, max)
       if (target === 'account') setAccount(prev => append(prev, ACCOUNT_MAX))
       else setReflections(prev => ({ ...prev, [target]: append(prev[target], REFLECTION_MAX) }))
-    } catch { if (!controller.signal.aborted) setError(copy('Transcription unavailable. Please type your account or record again.', 'تعذّر تفريغ الصوت. اكتب ملخصك أو سجّل مجدداً.')) }
-    finally { if (mounted.current) { setBusy(false); setMicTarget(null) } targetRef.current = null }
+      recorder.discard(); targetRef.current = null; setMicTarget(null)
+    } catch { if (!controller.signal.aborted) setError(copy('Transcription unavailable. Your recording is still here; retry or discard it.', 'تعذّر تفريغ الصوت. تسجيلك محفوظ هنا؛ أعد المحاولة أو ألغِه.')) }
+    finally { transcribing.current = false; if (mounted.current) setBusy(false) }
   }
-  async function coach() {
+  async function coach(saveOnly = false) {
     setBusy(true); setError('')
+    const input = { doctorId, account, objective, successMeasure, lang, reflections, ...(visitDate ? { visitDate } : {}), ...(focus ? { focus } : {}), ...(previousAction && actionStatus ? { previousAction: { text: previousAction, status: actionStatus } } : {}) }
+    const fingerprint = JSON.stringify(input)
+    if (!requestKey.current || requestKey.current.fingerprint !== fingerprint) requestKey.current = { id: crypto.randomUUID(), fingerprint }
+    // Persist the operation ID before the request, including the lost-response case.
+    if (draftOwner && snapshot.current) {
+      drafts.current[doctorId] = { ...snapshot.current, request: requestKey.current }
+      setDraftWarning(!writeCoachDrafts(draftOwner, { selected: doctorId, drafts: drafts.current }))
+    }
     const controller = new AbortController(); requestRef.current = controller
     try {
       const res = await fetch('/api/coach-debrief', {
-        method: 'POST', headers: { 'content-type': 'application/json' }, signal: controller.signal,
-        body: JSON.stringify({ doctorId, account, objective, successMeasure, lang, reflections, ...(focus ? { focus } : {}), ...(previousAction && actionStatus ? { previousAction: { text: previousAction, status: actionStatus } } : {}) }),
+        method: saveOnly ? 'PUT' : 'POST', headers: { 'content-type': 'application/json' }, signal: controller.signal,
+        body: JSON.stringify(saveOnly ? { recoveryToken } : { ...input, requestId: requestKey.current.id }),
       })
       if (!res.ok) throw new Error(String(res.status))
       const data = await res.json()
       const parsed = parseDebriefResult(JSON.stringify(data.result))
       if (!parsed) throw new Error()
-      setResult(parsed); setActiveId(data.id ?? null); setSaved(data.saved === true)
+      setResult(parsed); setActiveId(data.id ?? null); setSaved(data.saved === true); setRecoveryToken(data.recoveryToken ?? null)
       // The plan has been debriefed, so clear it; a plan the rep edited away from stays put.
       const planned = doctors.find(d => d.id === doctorId)
-      if (data.saved === true && planned?.plan_objective && planned.plan_objective === objective.trim()) void savePlan(planned.id, null)
+      if (data.saved === true && planned?.plan_objective && planned.plan_objective === objective.trim() && (planned.plan_success_measure ?? '') === successMeasure.trim()) void savePlan(planned.id, null)
       void loadHistory()
     } catch (e) {
       if (!controller.signal.aborted) setError(e instanceof Error && e.message === '429'
@@ -191,10 +251,11 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
     </section>}
     <section style={card} aria-label={copy('Call debrief', 'مراجعة المكالمة')}>
       <label style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{copy('Which doctor was the call with?', 'مع أي طبيب كانت المكالمة؟')}
-        <select aria-label={copy('Choose a doctor', 'اختر طبيباً')} value={doctorId} disabled={locked || !!result} onChange={e => chooseDoctor(e.target.value)} style={inputStyle}>
+        <select aria-label={copy('Choose a doctor', 'اختر طبيباً')} value={doctorId} disabled={locked || !!result || !!recorder.previewUrl} onChange={e => chooseDoctor(e.target.value)} style={inputStyle}>
           <option value="">{copy('Select a doctor', 'اختر طبيباً')}</option>{doctors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
       </label>
+      <label style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{copy('Visit date (optional)', 'تاريخ الزيارة (اختياري)')}<input type="date" value={visitDate} disabled={locked || !!result} onChange={e => setVisitDate(e.target.value)} style={inputStyle} /></label>
       {!result && previousAction && <div role="group" aria-label={copy('Last planned action', 'الإجراء المخطط له سابقاً')} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 12, marginBottom: 18, display: 'grid', gap: 10 }}>
         <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-dim)' }}>{copy('Last time you planned:', 'خطتك في المرة السابقة:')}</p>
         <p style={{ margin: 0, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{previousAction}</p>
@@ -219,7 +280,7 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
       <label style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{copy('How would you measure success? (optional)', 'كيف ستقيس النجاح؟ (اختياري)')}
         <input value={successMeasure} maxLength={500} disabled={locked || !!result} onChange={e => setSuccessMeasure(e.target.value)} style={inputStyle} placeholder={copy('e.g. a specific next step is agreed', 'مثل: الاتفاق على خطوة تالية محددة')} />
       </label>
-      <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--ink-dim)' }}>{copy('Record your own recollection after the call, up to 3 minutes. Audio is sent for transcription; review the text before coaching. Saved debriefs are private to your account.', 'سجّل ما تتذكره بعد المكالمة لمدة تصل إلى ٣ دقائق. يُرسل الصوت للتفريغ؛ راجع النص قبل التدريب. المراجعات المحفوظة خاصة بحسابك.')}</p>
+      <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--ink-dim)' }}>{copy('Record your own recollection after the call, up to 3 minutes. Audio is sent for transcription; review the text before coaching. Unsaved drafts stay in this browser tab on this device. Saved debriefs are private to your account.', 'سجّل ما تتذكره بعد المكالمة لمدة تصل إلى ٣ دقائق. يُرسل الصوت للتفريغ؛ راجع النص قبل التدريب. تبقى المسودات غير المحفوظة في علامة التبويب على هذا الجهاز. المراجعات المحفوظة خاصة بحسابك.')}</p>
       {!result && <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
         <button style={ghostBtn} disabled={busy || micStarting || !!recorder.previewUrl || (recording && micTarget !== 'account')} onClick={recording ? () => void stopRecording() : () => void startRecording('account')}>
           {recording && micTarget === 'account' ? copy('Stop recording', 'إيقاف التسجيل') : micStarting && micTarget === 'account' ? copy('Opening microphone…', 'جارٍ فتح الميكروفون…') : copy('Record my recollection', 'سجّل ما تتذكره')}
@@ -227,8 +288,8 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
         {recording && micTarget === 'account' && <span role="status">{copy('Recording…', 'جارٍ التسجيل…')}</span>}
         {recorder.previewUrl && <>
           <audio controls src={recorder.previewUrl} aria-label={copy('Review call recollection', 'استمع إلى ملخص المكالمة')} style={{ width: '100%' }} />
-          <button disabled={busy} style={ghostBtn} onClick={() => { targetRef.current = 'account'; void transcribe() }}>{copy('Transcribe recording', 'فرّغ التسجيل')}</button>
-          <button disabled={busy} style={ghostBtn} onClick={recorder.discard}>{copy('Discard recording', 'إلغاء التسجيل')}</button>
+          <button disabled={busy} style={ghostBtn} onClick={() => void transcribe()}>{copy('Transcribe recording', 'فرّغ التسجيل')}</button>
+          <button disabled={busy} style={ghostBtn} onClick={() => { recorder.discard(); targetRef.current = null; setMicTarget(null) }}>{copy('Discard recording', 'إلغاء التسجيل')}</button>
         </>}
       </div>}
       <label style={{ display: 'grid', gap: 8 }}>{copy('What happened? Review or edit before coaching.', 'ماذا حدث؟ راجع النص أو عدّله قبل التدريب.')}
@@ -250,9 +311,10 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
           </div>
         </div>
       })}
-      {!result && <button style={{ ...primaryBtn, marginTop: 16 }} disabled={locked || !doctorId || account.trim().length < 20} onClick={() => void coach()}>{copy('Get coaching', 'احصل على التدريب')}</button>}
+      {!result && <button style={{ ...primaryBtn, marginTop: 16 }} disabled={locked || !!recorder.previewUrl || !doctorId || account.trim().length < 20} onClick={() => void coach()}>{copy('Get coaching', 'احصل على التدريب')}</button>}
       {result && <button disabled={locked} style={{ ...ghostBtn, marginTop: 12 }} onClick={revise}>{copy('Edit my debrief', 'تعديل مراجعتي')}</button>}
     </section>
+    {draftWarning && <p role="alert">{copy('This browser could not keep a recovery draft. Keep a copy before leaving.', 'تعذّر حفظ مسودة للاستعادة في هذا المتصفح. احتفظ بنسخة قبل المغادرة.')}</p>}
     {busy && <p role="status">{copy('Working on your debrief…', 'جارٍ إعداد مراجعتك…')}</p>}
     {error && <p role="alert">{error}</p>}
     {result?.report && <section style={{ display: 'grid', gap: 12 }} aria-label={copy('Your coaching', 'تدريبك')}>
@@ -271,18 +333,19 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
         {promiseError && <p role="alert">{copy('Could not add the promise. Please try again.', 'تعذّرت إضافة الوعد. حاول مجدداً.')}</p>}
       </article>}
       <p role="status">{saved ? copy('Saved privately to your account.', 'حُفظت بشكل خاص في حسابك.') : copy('Coaching is ready, but could not be saved. Keep a copy before leaving.', 'التدريب جاهز لكن تعذّر حفظه. احتفظ بنسخة قبل المغادرة.')}</p>
+      {!saved && recoveryToken && <button disabled={locked} style={primaryBtn} onClick={() => void coach(true)}>{copy('Retry saving', 'إعادة محاولة الحفظ')}</button>}
       <div style={card}>
         <h2 style={{ fontSize: 18 }}>{copy('Practice this with AI Doctor', 'تدرّب على ذلك مع الطبيب الذكي')}</h2>
         <p style={{ lineHeight: 1.6 }}>{result.report.practiceFocus}</p>
-        <label style={{ display: 'grid', gap: 8 }}>{copy('Practice with this doctor', 'تدرّب مع هذا الطبيب')}<select style={inputStyle} value={doctorId} onChange={e => setDoctorId(e.target.value)}><option value="">{copy('Select a doctor', 'اختر طبيباً')}</option>{doctors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</select></label>
-        <button style={{ ...primaryBtn, marginTop: 12 }} disabled={!doctorId || locked} onClick={() => setPractice(doctors.find(d => d.id === doctorId) ?? null)}>{copy('Practice this moment', 'تدرّب على هذا الموقف')}</button>
+        <label style={{ display: 'grid', gap: 8 }}>{copy('Practice with this doctor', 'تدرّب مع هذا الطبيب')}<select style={inputStyle} value={practiceDoctorId || doctorId} onChange={e => setPracticeDoctorId(e.target.value)}><option value="">{copy('Select a doctor', 'اختر طبيباً')}</option>{doctors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</select></label>
+        <button style={{ ...primaryBtn, marginTop: 12 }} disabled={!doctorId || locked} onClick={() => setPractice(doctors.find(d => d.id === (practiceDoctorId || doctorId)) ?? null)}>{copy('Practice this moment', 'تدرّب على هذا الموقف')}</button>
       </div>
-      <button disabled={locked} style={ghostBtn} onClick={() => { revise(); setDoctorId(''); setAccount(''); setObjective(''); setSuccessMeasure(''); setReflections(emptyReflections) }}>{copy('Debrief another call', 'راجع مكالمة أخرى')}</button>
+      <button disabled={locked} style={ghostBtn} onClick={() => { delete drafts.current[doctorId]; revise(); setDoctorId(''); setAccount(''); setObjective(''); setSuccessMeasure(''); setVisitDate(''); setReflections(emptyReflections) }}>{copy('Debrief another call', 'راجع مكالمة أخرى')}</button>
     </section>}
     <section style={card}>
       <h2 style={{ fontSize: 19 }}>{copy('Recent debriefs', 'المراجعات الأخيرة')}</h2>
       {historyLoading ? <p role="status">{copy('Loading history…', 'تحميل السجل…')}</p> : historyError ? <p>{copy('History is unavailable.', 'السجل غير متاح.')} <button style={ghostBtn} onClick={() => void loadHistory()}>{copy('Retry', 'إعادة المحاولة')}</button></p> : !entries.length ? <p style={{ color: 'var(--ink-dim)' }}>{copy('Your completed coaching will appear here.', 'ستظهر مراجعاتك المكتملة هنا.')}</p> : entries.map(entry => <div key={entry.id} style={{ borderTop: '1px solid var(--line)', padding: '14px 0', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-        <button disabled={locked || !!recorder.previewUrl} style={{ ...ghostBtn, flex: 1, textAlign: 'start', letterSpacing: 0, textTransform: 'none' }} onClick={() => { setAccount(entry.input.account); setObjective(entry.input.objective); setSuccessMeasure(entry.input.successMeasure ?? ''); setReflections(entry.input.reflections ?? emptyReflections); setDoctorId(entry.doctor_id ?? entry.input.doctorId); setFocus(entry.input.focus ?? null); setResult(entry.result); setSaved(true); setActiveId(entry.id); setError('') }}>
+        <button disabled={locked || !!recorder.previewUrl || (!!account && !saved)} style={{ ...ghostBtn, flex: 1, textAlign: 'start', letterSpacing: 0, textTransform: 'none' }} onClick={() => { setAccount(entry.input.account); setObjective(entry.input.objective); setSuccessMeasure(entry.input.successMeasure ?? ''); setReflections(entry.input.reflections ?? emptyReflections); setDoctorId(entry.doctor_id ?? entry.input.doctorId); setVisitDate(entry.input.visitDate ?? ''); setRecoveryToken(null); setPracticeDoctorId(''); setFocus(entry.input.focus ?? null); setResult(entry.result); setSaved(true); setActiveId(entry.id); setError('') }}>
           <span style={{ display: 'block', marginBottom: 6 }}>{new Date(entry.created_at).toLocaleDateString(ar ? 'ar' : 'en')} · {entry.doctor_name ?? ''}</span>{entry.input.objective || entry.input.account.slice(0, 85)}
         </button>
         <button disabled={locked} style={ghostBtn} onClick={() => void remove(entry.id)} aria-label={copy('Delete debrief', 'حذف المراجعة')}>{copy('Delete', 'حذف')}</button>

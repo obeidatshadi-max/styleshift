@@ -15,7 +15,7 @@ describe('buildWeeklyDigest', () => {
     ] })
     expect(d).toMatchObject({ practiceThisWeek: 3, practiceLastWeek: 1, activeReps: 2, totalReps: 3, quietReps: ['Unnamed rep'] })
     expect(d.summary).toContain('3 sessions this week (+2 vs last week)')
-    expect(d.summary).toContain('Active reps: 2 of 3')
+    expect(d.summary).toContain('Active reps (game or voice): 2 of 3')
     expect(d.summary).toContain('Not practised this week: Unnamed rep')
   })
   it('counts a rep with recent voice practice as active even with no game sessions', () => {

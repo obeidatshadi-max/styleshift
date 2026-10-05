@@ -14,6 +14,7 @@ const FOCUS_DESCRIPTION: Record<DebriefFocus, string> = {
 }
 
 export interface DebriefInput {
+  visitDate?: string
   doctorId: string
   account: string
   objective: string
@@ -51,6 +52,9 @@ const isUuid = (value: unknown): value is string =>
 export function parseDebriefInput(value: unknown): DebriefInput | null {
   if (!value || typeof value !== 'object') return null
   const v = value as Record<string, unknown>
+  if (v.visitDate !== undefined && (typeof v.visitDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v.visitDate) ||
+    !Number.isFinite(Date.parse(v.visitDate)) || new Date(v.visitDate).toISOString().slice(0, 10) !== v.visitDate ||
+    Date.parse(v.visitDate) > Date.now() + 86400_000)) return null
   const reflections = v.reflections
   if (!isUuid(v.doctorId) || typeof v.account !== 'string' || v.account.trim().length < 20 || v.account.length > 12000 ||
     typeof v.objective !== 'string' || v.objective.length > 500 ||
@@ -73,6 +77,7 @@ export function parseDebriefInput(value: unknown): DebriefInput | null {
     focus = v.focus as DebriefFocus
   }
   return {
+    ...(v.visitDate ? { visitDate: v.visitDate as string } : {}),
     ...(previousAction ? { previousAction } : {}),
     ...(focus ? { focus } : {}),
     doctorId: v.doctorId,

@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 vi.mock('@/lib/i18n', () => ({ useLang: () => ({ lang: 'en' }) }))
 const doctorsState = vi.hoisted(() => ({ doctors: [{ id: '00000000-0000-4000-8000-000000000001', name: 'Dr. Practice' }] as Record<string, unknown>[], savePlan: vi.fn() }))
 vi.mock('@/hooks/useDoctors', () => ({ useDoctors: () => doctorsState }))
-const recorder = vi.hoisted(() => ({ previewUrl: null, start: vi.fn(), stop: vi.fn(), discard: vi.fn(), take: vi.fn(), abort: vi.fn() }))
+const recorder = vi.hoisted(() => ({ previewUrl: null as string | null, start: vi.fn(), stop: vi.fn(), discard: vi.fn(), take: vi.fn(), abort: vi.fn() }))
 vi.mock('@/lib/promises', () => ({ addPromise: vi.fn(async () => true) }))
 vi.mock('@/hooks/useAudioRecorder', () => ({ useAudioRecorder: () => recorder }))
 vi.mock('./TextSimulation', () => ({
@@ -28,6 +28,7 @@ const answers = {
 function fillForm() { for (const [label, value] of Object.entries(answers)) fireEvent.change(screen.getByLabelText(label), { target: { value } }) }
 
 beforeEach(() => {
+  sessionStorage.clear(); recorder.previewUrl = null;
   vi.clearAllMocks(); vi.stubGlobal('React', React); vi.stubGlobal('fetch', fetchMock)
   fetchMock.mockImplementation(async (_url, init) => init?.method === 'POST'
     ? Response.json({ result: { questions: [], report }, saved: true, id: 'saved' })
@@ -158,5 +159,85 @@ describe('AI Coach doctor-linked reflection flow', () => {
     render(React.createElement(AICoach)); fillForm(); fireEvent.click(screen.getByText('Get coaching'))
     await screen.findByText('Clarify first.')
     await waitFor(() => expect(screen.getByText(/could not be saved/)).toBeTruthy())
+  })
+})
+
+
+describe('field reliability regressions', () => {
+  const a = '00000000-0000-4000-8000-000000000001'
+  const b = '00000000-0000-4000-8000-000000000002'
+  const doctorSelect = () => screen.getByLabelText('Which doctor was the call with?')
+  const accountBox = () => screen.getByLabelText('What happened? Review or edit before coaching.') as HTMLTextAreaElement
+  it('keeps the plan, narrative and reflections with their doctor when switching A → B → A', async () => {
+    doctorsState.doctors = [{ id: a, name: 'A', plan_objective: 'Plan A' }, { id: b, name: 'B', plan_objective: 'Plan B' }]
+    try {
+      render(React.createElement(AICoach))
+      fireEvent.change(doctorSelect(), { target: { value: a } })
+      fireEvent.change(accountBox(), { target: { value: 'A-specific narrative' } })
+      fireEvent.change(doctorSelect(), { target: { value: b } })
+      expect(accountBox().value).toBe('')
+      expect((screen.getByLabelText('What was your call objective? (optional)') as HTMLInputElement).value).toBe('Plan B')
+      fireEvent.change(doctorSelect(), { target: { value: a } })
+      expect(accountBox().value).toBe('A-specific narrative')
+      expect((screen.getByLabelText('What was your call objective? (optional)') as HTMLInputElement).value).toBe('Plan A')
+    } finally { doctorsState.doctors = [{ id: a, name: 'Dr. Practice' }] }
+  })
+  it('retains failed reflection audio and retries into the same reflection field', async () => {
+    recorder.start.mockResolvedValue(true); recorder.stop.mockImplementation(async () => { recorder.previewUrl = 'blob:test' })
+    const blob = new Blob(['same audio']); recorder.take.mockReturnValue({ blob, durationSec: 5 })
+    let attempts = 0
+    fetchMock.mockImplementation(async url => url === '/api/transcribe'
+      ? (++attempts === 1 ? Response.json({}, { status: 502 }) : Response.json({ text: 'Asked an open question.' }))
+      : Response.json({ entries: [] }))
+    render(React.createElement(AICoach))
+    fireEvent.click(screen.getByTestId('mic-wentWell')); await screen.findByText(/Stop and transcribe/)
+    const discards = recorder.discard.mock.calls.length
+    fireEvent.click(screen.getByTestId('mic-wentWell')); await screen.findByText(/Your recording is still here/)
+    expect(recorder.discard.mock.calls.length).toBe(discards)
+    fireEvent.click(screen.getByText('Transcribe recording'))
+    await waitFor(() => expect((screen.getByLabelText('1. What good things did you do? (optional)') as HTMLTextAreaElement).value).toBe('Asked an open question.'))
+    expect(accountBox().value).toBe(''); expect(recorder.take).toHaveBeenCalledWith(true)
+  })
+  it('restores an unsaved generated report after remount and retries only saving', async () => {
+    fetchMock.mockImplementation(async (_url, init) => init?.method === 'POST'
+      ? Response.json({ result: { questions: [], report }, saved: false, recoveryToken: 'signed-report', id: a })
+      : init?.method === 'PUT' ? Response.json({ result: { questions: [], report }, saved: true, id: a })
+      : Response.json({ ownerId: 'rep-a', entries: [] }))
+    const view = render(React.createElement(AICoach))
+    await screen.findByText('Your completed coaching will appear here.')
+    fillForm(); fireEvent.click(screen.getByText('Get coaching')); await screen.findByText('Retry saving')
+    await waitFor(() => expect(sessionStorage.getItem('styleshift-coach-drafts:rep-a')).toContain('signed-report'))
+    view.unmount()
+    render(React.createElement(AICoach)); await screen.findByText('Retry saving')
+    expect(accountBox().value).toBe(answers['What happened? Review or edit before coaching.'])
+    fireEvent.click(screen.getByText('Retry saving')); await screen.findByText('Saved privately to your account.')
+    expect(fetchMock.mock.calls.filter(c => c[1]?.method === 'POST')).toHaveLength(1)
+    expect(JSON.parse(fetchMock.mock.calls.find(c => c[1]?.method === 'PUT')![1].body)).toEqual({ recoveryToken: 'signed-report' })
+  })
+  it('does not restore another account’s draft', async () => {
+    fetchMock.mockImplementation(async () => Response.json({ ownerId: 'rep-a', entries: [] }))
+    const view = render(React.createElement(AICoach)); await screen.findByText('Your completed coaching will appear here.')
+    fillForm(); await waitFor(() => expect(sessionStorage.getItem('styleshift-coach-drafts:rep-a')).toContain('price was high'))
+    view.unmount(); fetchMock.mockImplementation(async () => Response.json({ ownerId: 'rep-b', entries: [] }))
+    render(React.createElement(AICoach)); await screen.findByText('Your completed coaching will appear here.')
+    expect(accountBox().value).toBe('')
+  })
+  it('keeps promise ownership when a different practice doctor is selected', async () => {
+    doctorsState.doctors = [{ id: a, name: 'A' }, { id: b, name: 'B' }]
+    fetchMock.mockImplementation(async (_url, init) => init?.method === 'POST'
+      ? Response.json({ result: { questions: [], report, promises: ['Send the study'] }, saved: true, id: a }) : Response.json({ entries: [] }))
+    try {
+      render(React.createElement(AICoach)); fillForm(); fireEvent.click(screen.getByText('Get coaching')); await screen.findByText('Send the study')
+      fireEvent.change(screen.getByLabelText('Practice with this doctor'), { target: { value: b } })
+      fireEvent.click(screen.getByText('Add to my promises')); await screen.findByText('Added')
+      expect(addPromise).toHaveBeenCalledWith(a, 'Send the study')
+      expect((doctorSelect() as HTMLSelectElement).value).toBe(a)
+    } finally { doctorsState.doctors = [{ id: a, name: 'Dr. Practice' }] }
+  })
+  it('loads previous actions independently of the recent 30 debriefs', async () => {
+    fetchMock.mockImplementation(async url => String(url).includes('?doctorId=')
+      ? Response.json({ entries: [{ result: { report: { nextAction: 'Older doctor-specific action' } } }] }) : Response.json({ entries: [] }))
+    render(React.createElement(AICoach)); fireEvent.change(doctorSelect(), { target: { value: a } })
+    await screen.findByText('Older doctor-specific action')
   })
 })

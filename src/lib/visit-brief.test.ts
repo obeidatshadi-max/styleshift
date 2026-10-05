@@ -32,7 +32,7 @@ describe('buildVisitBrief', () => {
     expect(brief).toMatchObject({
       goal: 'Agree a trial', measure: 'Date agreed', hiddenConcern: 'Worried about cost',
       lastNextAction: 'Ask one question.', lastObjection: 'Side effects', whatWorked: 'Patient story',
-      lastContactDaysAgo: 2, hasContent: true,
+      lastContactDaysAgo: 3, hasContent: true,
     })
     expect(brief.promises).toEqual([{ id: 'a', text: 'Bring the study', daysAgo: 6 }])
   })
@@ -40,4 +40,17 @@ describe('buildVisitBrief', () => {
     const brief = buildVisitBrief({}, [visit({ source: 'voice_partner_live', created_at: ago(1), objection_raised: 'Price' })], [], now)
     expect(brief).toMatchObject({ lastContactDaysAgo: null, lastObjection: null, hasContent: false })
   })
+})
+
+
+it('does not count approving a promise or an undated late debrief as contact', () => {
+  const brief = buildVisitBrief({}, [visit({ created_at: ago(8) }), visit({ created_at: ago(0), is_contact: false, promise_made: 'Send study' })], [{ created_at: ago(0), nextAction: 'Ask' }], now)
+  expect(brief.lastContactDaysAgo).toBe(8)
+  expect(brief.promises).toHaveLength(1)
+})
+it('uses the reported visit date rather than the date a debrief was written', () => {
+  expect(buildVisitBrief({}, [], [{ created_at: ago(0), visitDate: ago(4), nextAction: 'Ask' }], now).lastContactDaysAgo).toBe(4)
+})
+it('uses the actual visit date for a late manual entry', () => {
+  expect(buildVisitBrief({}, [visit({ created_at: ago(0), contact_at: ago(6) })], [], now).lastContactDaysAgo).toBe(6)
 })

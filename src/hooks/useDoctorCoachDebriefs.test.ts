@@ -22,14 +22,14 @@ afterEach(() => { db.user = { id: 'rep-1' }; db.rows = []; db.calls = [] })
 describe('useDoctorCoachDebriefs', () => {
   it('lists this doctor\'s debriefs for this rep, newest first', async () => {
     db.rows = [
-      { id: 'b', created_at: '2026-10-04T10:00:00Z', objective: 'Agree a follow-up', nextAction: 'Ask for a time' },
+      { id: 'b', created_at: '2026-10-04T10:00:00Z', objective: 'Agree a follow-up', nextAction: 'Ask for a time', visitDate: null },
       { id: 'a', created_at: '2026-10-03T10:00:00Z', objective: null, nextAction: null },
     ]
     const { result } = renderHook(() => useDoctorCoachDebriefs('doc-1'))
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.debriefs).toEqual([
-      { id: 'b', created_at: '2026-10-04T10:00:00Z', objective: 'Agree a follow-up', nextAction: 'Ask for a time' },
-      { id: 'a', created_at: '2026-10-03T10:00:00Z', objective: '', nextAction: '' },
+      { id: 'b', created_at: '2026-10-04T10:00:00Z', objective: 'Agree a follow-up', nextAction: 'Ask for a time', visitDate: null },
+      { id: 'a', created_at: '2026-10-03T10:00:00Z', objective: '', nextAction: '', visitDate: null },
     ])
     expect(db.calls).toContainEqual(['from', 'coach_debriefs'])
     expect(db.calls).toContainEqual(['eq', 'input->>doctorId', 'doc-1'])

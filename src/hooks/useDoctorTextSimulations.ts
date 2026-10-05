@@ -22,7 +22,7 @@ interface Row {
  * document, and skips simulations that were never ended. RLS limits rows to the
  * signed-in rep, and the explicit rep filter mirrors the roleplay history hook. */
 export function useDoctorTextSimulations(doctorId: string) {
-  const supabase = createClient()
+  const [supabase] = useState(createClient)
   const [sims, setSims] = useState<TextSimulationSummary[]>([])
   const [loading, setLoading] = useState(true)
 

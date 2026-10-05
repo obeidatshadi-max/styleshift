@@ -1,4 +1,5 @@
 'use client'
+import { clearCoachDrafts } from '@/lib/coach-drafts'
 import { useState } from 'react'
 import RankBar from './RankBar'
 import GroupPanel from './GroupPanel'
@@ -72,6 +73,7 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
     [...RANKS].reverse().find(r => points >= r.minXp)?.name ?? RANKS[0].name
 
   async function signOut() {
+    clearCoachDrafts()
     await createClient().auth.signOut()
     router.push('/login')
     router.refresh()

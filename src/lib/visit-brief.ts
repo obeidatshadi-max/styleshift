@@ -13,8 +13,11 @@ export interface BriefVisit {
   promise_made: string | null
   what_worked: string | null
   promise_done_at?: string | null
+  is_contact?: boolean
+  contact_at?: string | null
+  note?: string | null
 }
-export interface BriefDebrief { created_at: string; nextAction: string }
+export interface BriefDebrief { created_at: string; nextAction: string; visitDate?: string | null }
 
 export interface OpenPromise { id: string; text: string; daysAgo: number }
 
@@ -43,10 +46,11 @@ export function openPromises(visits: BriefVisit[], nowMs: number): OpenPromise[]
 }
 
 export function buildVisitBrief(doctor: BriefDoctor, visits: BriefVisit[], debriefs: BriefDebrief[], nowMs: number): VisitBrief {
-  // Practice sessions are rehearsals: only a manually logged visit or a coach debrief counts as contact.
-  const real = visits.filter(v => v.source === 'manual').sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
+  // Creating a task or writing a late debrief is not a fresh customer contact.
+  const real = visits.filter(v => v.source === 'manual' && v.is_contact !== false && v.note !== 'From a coach debrief')
+    .sort((a, b) => Date.parse(b.contact_at ?? b.created_at) - Date.parse(a.contact_at ?? a.created_at))
   const latestDebrief = [...debriefs].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0]
-  const contactDates = [real[0]?.created_at, latestDebrief?.created_at].filter((d): d is string => !!d)
+  const contactDates = [real[0]?.contact_at ?? real[0]?.created_at, ...debriefs.map(d => d.visitDate)].filter((d): d is string => !!d && Number.isFinite(Date.parse(d)))
   const newestContact = contactDates.sort((a, b) => Date.parse(b) - Date.parse(a))[0]
   const brief = {
     goal: clean(doctor.plan_objective),

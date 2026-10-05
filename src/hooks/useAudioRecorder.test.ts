@@ -50,3 +50,15 @@ describe('audio recorder lifecycle', () => {
     expect(result.current.previewUrl).toBeNull()
   })
 })
+
+
+it('can retain one take across failed uploads, preserving the actual MIME type', async () => {
+  const { result } = renderHook(() => useAudioRecorder(null, 'en'))
+  await act(async () => { await result.current.start(); await result.current.stop() })
+  const first = result.current.take(true)
+  expect(result.current.take(true)?.blob).toBe(first?.blob)
+  expect(result.current.previewUrl).toBe('blob:preview')
+  expect(first?.blob.type).toBe('audio/webm')
+  act(() => result.current.discard())
+  expect(result.current.take(true)).toBeNull()
+})

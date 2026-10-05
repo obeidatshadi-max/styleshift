@@ -83,11 +83,11 @@ export function useAudioRecorder(mode: VoiceMode | null, lang: 'en' | 'ar', onAu
   const discard = useCallback(() => { clearPreview() }, [clearPreview])
 
   /** Hands off the confirmed take and clears the preview — call right before uploading. */
-  const take = useCallback((): { blob: Blob; durationSec: number } | null => {
+  const take = useCallback((retain = false): { blob: Blob; durationSec: number } | null => {
     const blob = blobRef.current
     if (!blob) return null
     const durationSec = durationRef.current
-    clearPreview()
+    if (!retain) clearPreview()
     return { blob, durationSec }
   }, [clearPreview])
 

@@ -18,14 +18,14 @@ export default function WeeklyDigestPanel({ digest }: { digest: WeeklyDigest }) 
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12 }}>
         <div style={stat}>
-          <div style={statLabel}>Practice sessions</div>
+          <div style={statLabel}>Game practice sessions</div>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 26, fontWeight: 700, margin: '6px 0 2px', color: 'var(--cyan)' }}>{digest.practiceThisWeek}</div>
           <div style={{ fontSize: 12, color: delta < 0 ? 'var(--red)' : 'var(--ink-dim)' }}>{delta === 0 ? 'same as last week' : `${delta > 0 ? '+' : ''}${delta} vs last week`}</div>
         </div>
         <div style={stat}>
           <div style={statLabel}>Active reps</div>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 26, fontWeight: 700, margin: '6px 0 2px', color: digest.activeReps === digest.totalReps && digest.totalReps > 0 ? 'var(--green)' : 'var(--amber)' }}>{digest.activeReps}/{digest.totalReps}</div>
-          <div style={{ fontSize: 12, color: 'var(--ink-dim)' }}>practised in the last 7 days</div>
+          <div style={{ fontSize: 12, color: 'var(--ink-dim)' }}>game or voice practice in the last 7 days</div>
         </div>
       </div>
       {digest.quietReps.length > 0 && <div style={{ fontSize: 13, lineHeight: 1.6 }}><strong>Not practised this week:</strong> <span style={{ color: 'var(--ink-dim)' }}>{digest.quietReps.join(', ')}</span></div>}
@@ -36,7 +36,7 @@ export default function WeeklyDigestPanel({ digest }: { digest: WeeklyDigest }) 
         {copied === 'failed' && <span role="alert" style={{ fontSize: 12.5, color: 'var(--red)' }}>Could not copy. Select the text yourself.</span>}
       </div>
       {copied === 'failed' && <pre style={{ margin: 0, fontSize: 12, whiteSpace: 'pre-wrap', color: 'var(--ink-dim)' }}>{digest.summary}</pre>}
-      <div style={{ fontSize: 11.5, color: 'var(--ink-dim)', lineHeight: 1.5 }}>Counts game practice sessions and voice practice. Text simulations and coach debriefs are private to each rep and are not included.</div>
+      <div style={{ fontSize: 11.5, color: 'var(--ink-dim)', lineHeight: 1.5 }}>Session totals count game practice only. Active reps includes game or voice practice. Text simulations and coach debriefs are private to each rep and are not included.</div>
     </div>
   )
 }

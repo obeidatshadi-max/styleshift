@@ -984,6 +984,7 @@ function LogVisitForm({ doctor, onDone, onCancel }: { doctor: Doctor; onDone: ()
   const [promise, setPromise] = useState('')
   const [worked, setWorked] = useState('')
   const [note, setNote] = useState('')
+  const [visitDate, setVisitDate] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(false)
 
@@ -992,6 +993,7 @@ function LogVisitForm({ doctor, onDone, onCancel }: { doctor: Doctor; onDone: ()
     setSaveError(false)
     const saved = await addVisit({
       source: 'manual',
+      contact_at: new Date(`${visitDate}T12:00:00`).toISOString(),
       objection_raised: objection.trim() || null,
       promise_made: promise.trim() || null,
       what_worked: worked.trim() || null,
@@ -1018,6 +1020,7 @@ function LogVisitForm({ doctor, onDone, onCancel }: { doctor: Doctor; onDone: ()
     <div style={{ position:'relative', zIndex:1, maxWidth:560, margin:'0 auto', padding:14 }}>
       {panel(t('visit.logVisit'),
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+          <label style={{ display:'grid', gap:6 }}><span style={labelStyle}>{t('visit.actualDate')}</span><input type="date" required value={visitDate} onChange={e => setVisitDate(e.target.value)} style={inputStyle} /></label>
           {field(t('visit.objectionRaised'), objection, setObjection)}
           {field(t('visit.promiseMade'), promise, setPromise)}
           {field(t('visit.whatWorked'), worked, setWorked)}

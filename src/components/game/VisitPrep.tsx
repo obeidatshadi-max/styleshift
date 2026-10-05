@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import PlanPanel from './PlanPanel'
 import { useT, useLang, useGameData } from '@/lib/i18n'
 import { useDoctors } from '@/hooks/useDoctors'
 import { useDoctorVisits } from '@/hooks/useDoctorVisits'
@@ -86,7 +87,7 @@ export default function VisitPrep({ onExit }: Props) {
   const t = useT()
   const { lang } = useLang()
   const { STYLES, SPECIALTIES, L1, L2, L3 } = useGameData()
-  const { doctors, loading, saveDoctor, removeDoctor } = useDoctors()
+  const { doctors, loading, saveDoctor, savePlan, removeDoctor } = useDoctors()
   const [view, setView] = useState<View>({ mode: 'list' })
 
   const wrap = (children: React.ReactNode) => (
@@ -178,6 +179,14 @@ export default function VisitPrep({ onExit }: Props) {
             {d.key_phrases && <div style={{ fontSize:13, color:'var(--ink-dim)', borderInlineStart:`2px solid ${c}`, paddingInlineStart:10, marginBottom:6, lineHeight:1.5 }}>{quoted(d.key_phrases, lang)}</div>}
             <button onClick={() => setView({ mode: 'form', doctor: d })} style={{ ...ghostBtn, fontSize:11, padding:'6px 12px' }}>{t('prep.edit')}</button>
           </>
+        )}
+
+        {panel(t('plan.title'),
+          <PlanPanel key={d.id} doctor={d} onSave={async plan => {
+            const updated = await savePlan(d.id, plan)
+            if (updated) setView({ mode: 'detail', doctor: updated })
+            return !!updated
+          }} />
         )}
 
         {style && panel(t('practice.title'), <>            <div style={{ borderTop: '1px solid var(--line)', paddingTop: 16 }}>

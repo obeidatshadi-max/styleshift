@@ -3,7 +3,8 @@ import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 vi.mock('@/lib/i18n', () => ({ useLang: () => ({ lang: 'en' }) }))
-vi.mock('@/hooks/useDoctors', () => ({ useDoctors: () => ({ doctors: [{ id: '00000000-0000-4000-8000-000000000001', name: 'Dr. Practice' }] }) }))
+const doctorsState = vi.hoisted(() => ({ doctors: [{ id: '00000000-0000-4000-8000-000000000001', name: 'Dr. Practice' }] as Record<string, unknown>[], savePlan: vi.fn() }))
+vi.mock('@/hooks/useDoctors', () => ({ useDoctors: () => doctorsState }))
 const recorder = vi.hoisted(() => ({ previewUrl: null, start: vi.fn(), stop: vi.fn(), discard: vi.fn(), take: vi.fn(), abort: vi.fn() }))
 vi.mock('@/hooks/useAudioRecorder', () => ({ useAudioRecorder: () => recorder }))
 vi.mock('./TextSimulation', () => ({
@@ -95,6 +96,31 @@ describe('AI Coach doctor-linked reflection flow', () => {
     await screen.findByText('Clarify first.')
     const payload = JSON.parse(fetchMock.mock.calls.find(c => c[1]?.method === 'POST')![1].body)
     expect(payload).toMatchObject({ objective: '', successMeasure: '', reflections: { wentWell: '', changeNextTime: '', objectiveReview: '' } })
+  })
+  it('pre-fills the objective and measure from the Visit Prep plan, and clears the plan once debriefed', async () => {
+    const id = '00000000-0000-4000-8000-000000000001'
+    doctorsState.doctors = [{ id, name: 'Dr. Practice', plan_objective: 'Agree a trial on 2 patients', plan_success_measure: 'Patient type and date agreed' }]
+    try {
+      render(React.createElement(AICoach))
+      fireEvent.change(screen.getByLabelText('Which doctor was the call with?'), { target: { value: id } })
+      expect((screen.getByLabelText('What was your call objective? (optional)') as HTMLInputElement).value).toBe('Agree a trial on 2 patients')
+      expect((screen.getByLabelText('How would you measure success? (optional)') as HTMLInputElement).value).toBe('Patient type and date agreed')
+      fireEvent.change(screen.getByLabelText('What happened? Review or edit before coaching.'), { target: { value: answers['What happened? Review or edit before coaching.'] } })
+      fireEvent.click(screen.getByText('Get coaching'))
+      await screen.findByText('Clarify first.')
+      expect(doctorsState.savePlan).toHaveBeenCalledWith(id, null)
+    } finally { doctorsState.doctors = [{ id: '00000000-0000-4000-8000-000000000001', name: 'Dr. Practice' }] }
+  })
+  it('keeps the plan when the rep wrote a different objective', async () => {
+    const id = '00000000-0000-4000-8000-000000000001'
+    doctorsState.doctors = [{ id, name: 'Dr. Practice', plan_objective: 'Agree a trial on 2 patients' }]
+    try {
+      render(React.createElement(AICoach))
+      fillForm()
+      fireEvent.click(screen.getByText('Get coaching'))
+      await screen.findByText('Clarify first.')
+      expect(doctorsState.savePlan).not.toHaveBeenCalled()
+    } finally { doctorsState.doctors = [{ id, name: 'Dr. Practice' }] }
   })
   it('shows persistence failure without hiding useful coaching', async () => {
     fetchMock.mockImplementation(async (_url, init) => init?.method === 'POST' ? Response.json({ result: { questions: [], report }, saved: false }) : Response.json({ entries: [] }))

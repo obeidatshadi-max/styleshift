@@ -102,6 +102,9 @@ export interface Doctor {
   product_context?: string | null
   meeting_stage?: string | null
   available_time_min?: number | null
+  // Next-visit plan set in Visit Prep, consumed by the AI Coach debrief.
+  plan_objective?: string | null
+  plan_success_measure?: string | null
 }
 
 // Fields a rep can set when creating/editing a doctor profile.

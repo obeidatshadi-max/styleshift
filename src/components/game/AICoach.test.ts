@@ -15,12 +15,12 @@ const report = { summary: 'Based on your account, price was raised.', strength: 
 const fetchMock = vi.fn()
 const answers = {
   'Which doctor was the call with?': '00000000-0000-4000-8000-000000000001',
-  'What was your call objective?': 'Agree a follow-up visit',
-  'How would you measure success?': 'A date is agreed',
+  'What was your call objective? (optional)': 'Agree a follow-up visit',
+  'How would you measure success? (optional)': 'A date is agreed',
   'What happened? Review or edit before coaching.': 'The doctor said the price was high. I repeated the benefits.',
-  '1. What good things did you do?': 'I listened before responding.',
-  '2. What would you change or what did you miss?': 'I would ask what the comparison was.',
-  '3. Did you achieve your call objective? What evidence shows it?': 'No. We did not agree on a date.',
+  '1. What good things did you do? (optional)': 'I listened before responding.',
+  '2. What would you change or what did you miss? (optional)': 'I would ask what the comparison was.',
+  '3. Did you achieve your call objective? What evidence shows it? (optional)': 'No. We did not agree on a date.',
 }
 function fillForm() { for (const [label, value] of Object.entries(answers)) fireEvent.change(screen.getByLabelText(label), { target: { value } }) }
 
@@ -41,8 +41,8 @@ describe('AI Coach doctor-linked reflection flow', () => {
     const payload = JSON.parse(fetchMock.mock.calls.find(c => c[1]?.method === 'POST')![1].body)
     expect(payload).toMatchObject({
       doctorId: answers['Which doctor was the call with?'],
-      objective: answers['What was your call objective?'], successMeasure: answers['How would you measure success?'],
-      reflections: { wentWell: answers['1. What good things did you do?'], changeNextTime: answers['2. What would you change or what did you miss?'], objectiveReview: answers['3. Did you achieve your call objective? What evidence shows it?'] },
+      objective: answers['What was your call objective? (optional)'], successMeasure: answers['How would you measure success? (optional)'],
+      reflections: { wentWell: answers['1. What good things did you do? (optional)'], changeNextTime: answers['2. What would you change or what did you miss? (optional)'], objectiveReview: answers['3. Did you achieve your call objective? What evidence shows it? (optional)'] },
     })
     expect(screen.getByText('Objective and evidence')).toBeTruthy()
     fireEvent.click(screen.getByText('Practice this moment'))
@@ -61,14 +61,14 @@ describe('AI Coach doctor-linked reflection flow', () => {
     recorder.take.mockReturnValue({ blob: new Blob(['x']), durationSec: 5 })
     fetchMock.mockImplementation(async (url, init) => url === '/api/transcribe' ? Response.json({ text: 'I asked open questions.' }) : init?.method === 'POST' ? Response.json({}) : Response.json({ entries: [] }))
     render(React.createElement(AICoach))
-    const label = '1. What good things did you do?'
+    const label = '1. What good things did you do? (optional)'
     fireEvent.change(screen.getByLabelText(label), { target: { value: 'Opened well.' } })
     fireEvent.click(screen.getByTestId('mic-wentWell'))
     await screen.findByText(/Stop and transcribe/)
     expect((screen.getByTestId('mic-changeNextTime') as HTMLButtonElement).disabled).toBe(true)
     fireEvent.click(screen.getByTestId('mic-wentWell'))
     await waitFor(() => expect((screen.getByLabelText(label) as HTMLTextAreaElement).value).toBe('Opened well.\nI asked open questions.'))
-    expect((screen.getByLabelText('2. What would you change or what did you miss?') as HTMLTextAreaElement).value).toBe('')
+    expect((screen.getByLabelText('2. What would you change or what did you miss? (optional)') as HTMLTextAreaElement).value).toBe('')
   })
   it('asks about the last planned action for this doctor and sends the answer', async () => {
     const docId = '00000000-0000-4000-8000-000000000001'
@@ -83,6 +83,18 @@ describe('AI Coach doctor-linked reflection flow', () => {
     await screen.findByText('Clarify first.')
     const payload = JSON.parse(fetchMock.mock.calls.find(c => c[1]?.method === 'POST')![1].body)
     expect(payload.previousAction).toEqual({ text: 'Ask what they compare us with.', status: 'partly' })
+  })
+  it('coaches from just a doctor and an account when everything else is left empty', async () => {
+    render(React.createElement(AICoach))
+    const button = screen.getByText('Get coaching') as HTMLButtonElement
+    expect(button.disabled).toBe(true)
+    fireEvent.change(screen.getByLabelText('Which doctor was the call with?'), { target: { value: answers['Which doctor was the call with?'] } })
+    fireEvent.change(screen.getByLabelText('What happened? Review or edit before coaching.'), { target: { value: answers['What happened? Review or edit before coaching.'] } })
+    expect(button.disabled).toBe(false)
+    fireEvent.click(button)
+    await screen.findByText('Clarify first.')
+    const payload = JSON.parse(fetchMock.mock.calls.find(c => c[1]?.method === 'POST')![1].body)
+    expect(payload).toMatchObject({ objective: '', successMeasure: '', reflections: { wentWell: '', changeNextTime: '', objectiveReview: '' } })
   })
   it('shows persistence failure without hiding useful coaching', async () => {
     fetchMock.mockImplementation(async (_url, init) => init?.method === 'POST' ? Response.json({ result: { questions: [], report }, saved: false }) : Response.json({ entries: [] }))

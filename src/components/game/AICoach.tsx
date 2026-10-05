@@ -133,9 +133,9 @@ export default function AICoach() {
   if (practice && result?.report) return <TextSimulation doctor={practice} initialPracticeFocus={result.report.practiceFocus} onDone={() => setPractice(null)} />
 
   const reflectionsFields = [
-    ['wentWell', copy('1. What good things did you do?', '١. ما الأشياء الجيدة التي قمت بها؟'), copy('What did you do that helped the conversation?', 'ما الذي قمت به وساعد في الحوار؟')],
-    ['changeNextTime', copy('2. What would you change or what did you miss?', '٢. ما الذي ستغيّره أو ما الذي فاتك؟'), copy('What could you improve in the next call?', 'ما الذي يمكنك تحسينه في المكالمة القادمة؟')],
-    ['objectiveReview', copy('3. Did you achieve your call objective? What evidence shows it?', '٣. هل حققت هدف المكالمة؟ ما الدليل؟'), copy('State what happened that supports your answer. It is okay if the evidence is unclear.', 'اذكر ما حدث ويدعم إجابتك. لا بأس إن لم يكن الدليل واضحاً.'),],
+    ['wentWell', copy('1. What good things did you do? (optional)', '١. ما الأشياء الجيدة التي قمت بها؟ (اختياري)'), copy('What did you do that helped the conversation?', 'ما الذي قمت به وساعد في الحوار؟')],
+    ['changeNextTime', copy('2. What would you change or what did you miss? (optional)', '٢. ما الذي ستغيّره أو ما الذي فاتك؟ (اختياري)'), copy('What could you improve in the next call?', 'ما الذي يمكنك تحسينه في المكالمة القادمة؟')],
+    ['objectiveReview', copy('3. Did you achieve your call objective? What evidence shows it? (optional)', '٣. هل حققت هدف المكالمة؟ ما الدليل؟ (اختياري)'), copy('State what happened that supports your answer. It is okay if the evidence is unclear.', 'اذكر ما حدث ويدعم إجابتك. لا بأس إن لم يكن الدليل واضحاً.'),],
   ] as const
   const fields = [
     ['summary', copy('Your call, in brief', 'ملخص مكالمتك')],
@@ -172,10 +172,10 @@ export default function AICoach() {
               onClick={() => setActionStatus(actionStatus === value ? null : value)}>{label}</button>)}
         </div>
       </div>}
-      <label style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{copy('What was your call objective?', 'ما هدف المكالمة؟')}
+      <label style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{copy('What was your call objective? (optional)', 'ما هدف المكالمة؟ (اختياري)')}
         <input value={objective} maxLength={500} disabled={locked || !!result} onChange={e => setObjective(e.target.value)} style={inputStyle} />
       </label>
-      <label style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{copy('How would you measure success?', 'كيف ستقيس النجاح؟')}
+      <label style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{copy('How would you measure success? (optional)', 'كيف ستقيس النجاح؟ (اختياري)')}
         <input value={successMeasure} maxLength={500} disabled={locked || !!result} onChange={e => setSuccessMeasure(e.target.value)} style={inputStyle} placeholder={copy('e.g. a specific next step is agreed', 'مثل: الاتفاق على خطوة تالية محددة')} />
       </label>
       <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--ink-dim)' }}>{copy('Record your own recollection after the call, up to 3 minutes. Audio is sent for transcription; review the text before coaching. Saved debriefs are private to your account.', 'سجّل ما تتذكره بعد المكالمة لمدة تصل إلى ٣ دقائق. يُرسل الصوت للتفريغ؛ راجع النص قبل التدريب. المراجعات المحفوظة خاصة بحسابك.')}</p>
@@ -209,7 +209,7 @@ export default function AICoach() {
           </div>
         </div>
       })}
-      {!result && <button style={{ ...primaryBtn, marginTop: 16 }} disabled={locked || !doctorId || account.trim().length < 20 || !objective.trim() || !successMeasure.trim() || Object.values(reflections).some(v => !v.trim())} onClick={() => void coach()}>{copy('Get coaching', 'احصل على التدريب')}</button>}
+      {!result && <button style={{ ...primaryBtn, marginTop: 16 }} disabled={locked || !doctorId || account.trim().length < 20} onClick={() => void coach()}>{copy('Get coaching', 'احصل على التدريب')}</button>}
       {result && <button disabled={locked} style={{ ...ghostBtn, marginTop: 12 }} onClick={revise}>{copy('Edit my debrief', 'تعديل مراجعتي')}</button>}
     </section>
     {busy && <p role="status">{copy('Working on your debrief…', 'جارٍ إعداد مراجعتك…')}</p>}

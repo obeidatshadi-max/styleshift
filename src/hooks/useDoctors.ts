@@ -45,10 +45,22 @@ export function useDoctors() {
     return (data as Doctor) ?? null
   }, [supabase])
 
+  /** Sets (or, with null, clears) the next-visit plan on one doctor. */
+  const savePlan = useCallback(async (id: string, plan: { objective: string; successMeasure: string } | null): Promise<Doctor | null> => {
+    const { data } = await supabase
+      .from('doctors')
+      .update({ plan_objective: plan?.objective.trim() || null, plan_success_measure: plan?.successMeasure.trim() || null })
+      .eq('id', id)
+      .select()
+      .single()
+    if (data) setDoctors(prev => prev.map(d => (d.id === id ? (data as Doctor) : d)))
+    return (data as Doctor) ?? null
+  }, [supabase])
+
   const removeDoctor = useCallback(async (id: string) => {
     await supabase.from('doctors').delete().eq('id', id)
     setDoctors(prev => prev.filter(d => d.id !== id))
   }, [supabase])
 
-  return { doctors, loading, saveDoctor, removeDoctor, reload: load }
+  return { doctors, loading, saveDoctor, savePlan, removeDoctor, reload: load }
 }

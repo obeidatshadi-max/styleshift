@@ -18,7 +18,7 @@ export default function AICoach() {
   const { lang } = useLang()
   const ar = lang === 'ar'
   const copy = (en: string, arabic: string) => ar ? arabic : en
-  const { doctors } = useDoctors()
+  const { doctors, savePlan } = useDoctors()
   const [doctorId, setDoctorId] = useState('')
   const [account, setAccount] = useState('')
   const [objective, setObjective] = useState('')
@@ -65,6 +65,12 @@ export default function AICoach() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // The plan set in Visit Prep fills the objective and measure, unless the rep has already typed their own.
+  function chooseDoctor(id: string) {
+    setDoctorId(id); setActionStatus(null)
+    const plan = doctors.find(d => d.id === id)
+    if (plan?.plan_objective && !objective.trim() && !successMeasure.trim()) { setObjective(plan.plan_objective); setSuccessMeasure(plan.plan_success_measure ?? '') }
+  }
   function revise() { setResult(null); setSaved(null); setActiveId(null); setError(''); setActionStatus(null) }
   async function startRecording(target: MicTarget = 'account') {
     setError(''); setMicStarting(true); targetRef.current = target; setMicTarget(target)
@@ -112,6 +118,9 @@ export default function AICoach() {
       const parsed = parseDebriefResult(JSON.stringify(data.result))
       if (!parsed) throw new Error()
       setResult(parsed); setActiveId(data.id ?? null); setSaved(data.saved === true)
+      // The plan has been debriefed, so clear it; a plan the rep edited away from stays put.
+      const planned = doctors.find(d => d.id === doctorId)
+      if (data.saved === true && planned?.plan_objective && planned.plan_objective === objective.trim()) void savePlan(planned.id, null)
       void loadHistory()
     } catch (e) {
       if (!controller.signal.aborted) setError(e instanceof Error && e.message === '429'
@@ -158,7 +167,7 @@ export default function AICoach() {
     </section>}
     <section style={card} aria-label={copy('Call debrief', 'مراجعة المكالمة')}>
       <label style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{copy('Which doctor was the call with?', 'مع أي طبيب كانت المكالمة؟')}
-        <select aria-label={copy('Choose a doctor', 'اختر طبيباً')} value={doctorId} disabled={locked || !!result} onChange={e => { setDoctorId(e.target.value); setActionStatus(null) }} style={inputStyle}>
+        <select aria-label={copy('Choose a doctor', 'اختر طبيباً')} value={doctorId} disabled={locked || !!result} onChange={e => chooseDoctor(e.target.value)} style={inputStyle}>
           <option value="">{copy('Select a doctor', 'اختر طبيباً')}</option>{doctors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
       </label>

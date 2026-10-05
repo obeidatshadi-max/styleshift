@@ -14,7 +14,7 @@ type MicTarget = 'account' | keyof typeof emptyReflections
 const REFLECTION_MAX = 2000
 const ACCOUNT_MAX = 12000
 
-export default function AICoach() {
+export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: string } = {}) {
   const { lang } = useLang()
   const ar = lang === 'ar'
   const copy = (en: string, arabic: string) => ar ? arabic : en
@@ -71,6 +71,15 @@ export default function AICoach() {
     const plan = doctors.find(d => d.id === id)
     if (plan?.plan_objective && !objective.trim() && !successMeasure.trim()) { setObjective(plan.plan_objective); setSuccessMeasure(plan.plan_success_measure ?? '') }
   }
+  // Arriving from a Home nudge selects that doctor once their profile list has loaded.
+  const appliedInitial = useRef(false)
+  useEffect(() => {
+    if (appliedInitial.current || !initialDoctorId || !doctors.some(d => d.id === initialDoctorId)) return
+    appliedInitial.current = true
+    chooseDoctor(initialDoctorId)
+  // chooseDoctor only reads state that is still empty on arrival.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialDoctorId, doctors])
   function revise() { setResult(null); setSaved(null); setActiveId(null); setError(''); setActionStatus(null) }
   async function startRecording(target: MicTarget = 'account') {
     setError(''); setMicStarting(true); targetRef.current = target; setMicTarget(target)

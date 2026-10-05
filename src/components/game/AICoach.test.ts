@@ -122,6 +122,11 @@ describe('AI Coach doctor-linked reflection flow', () => {
       expect(doctorsState.savePlan).not.toHaveBeenCalled()
     } finally { doctorsState.doctors = [{ id, name: 'Dr. Practice' }] }
   })
+  it('opens on the doctor a Home nudge pointed at', async () => {
+    const id = '00000000-0000-4000-8000-000000000001'
+    render(React.createElement(AICoach as React.ComponentType<{ initialDoctorId?: string }>, { initialDoctorId: id }))
+    await waitFor(() => expect((screen.getByLabelText('Which doctor was the call with?') as HTMLSelectElement).value).toBe(id))
+  })
   it('shows persistence failure without hiding useful coaching', async () => {
     fetchMock.mockImplementation(async (_url, init) => init?.method === 'POST' ? Response.json({ result: { questions: [], report }, saved: false }) : Response.json({ entries: [] }))
     render(React.createElement(AICoach)); fillForm(); fireEvent.click(screen.getByText('Get coaching'))

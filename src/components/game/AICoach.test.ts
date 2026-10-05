@@ -56,6 +56,20 @@ describe('AI Coach doctor-linked reflection flow', () => {
     expect((screen.getByLabelText('What happened? Review or edit before coaching.') as HTMLTextAreaElement).value).toBe(answers['What happened? Review or edit before coaching.'])
     view.unmount(); expect(recorder.abort).toHaveBeenCalled()
   })
+  it('records a spoken answer for one reflection question and transcribes it into that field only', async () => {
+    recorder.start.mockResolvedValue(true); recorder.stop.mockResolvedValue(undefined)
+    recorder.take.mockReturnValue({ blob: new Blob(['x']), durationSec: 5 })
+    fetchMock.mockImplementation(async (url, init) => url === '/api/transcribe' ? Response.json({ text: 'I asked open questions.' }) : init?.method === 'POST' ? Response.json({}) : Response.json({ entries: [] }))
+    render(React.createElement(AICoach))
+    const label = '1. What good things did you do?'
+    fireEvent.change(screen.getByLabelText(label), { target: { value: 'Opened well.' } })
+    fireEvent.click(screen.getByTestId('mic-wentWell'))
+    await screen.findByText(/Stop and transcribe/)
+    expect((screen.getByTestId('mic-changeNextTime') as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.click(screen.getByTestId('mic-wentWell'))
+    await waitFor(() => expect((screen.getByLabelText(label) as HTMLTextAreaElement).value).toBe('Opened well.\nI asked open questions.'))
+    expect((screen.getByLabelText('2. What would you change or what did you miss?') as HTMLTextAreaElement).value).toBe('')
+  })
   it('shows persistence failure without hiding useful coaching', async () => {
     fetchMock.mockImplementation(async (_url, init) => init?.method === 'POST' ? Response.json({ result: { questions: [], report }, saved: false }) : Response.json({ entries: [] }))
     render(React.createElement(AICoach)); fillForm(); fireEvent.click(screen.getByText('Get coaching'))

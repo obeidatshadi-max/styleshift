@@ -6,7 +6,7 @@ import {
   type PhysicianState,
 } from '@/lib/voice-partner-core'
 import type { StyleShiftSession } from '@/schemas/session'
-import type { RepTurnShape } from './behavior'
+import { withoutFalseOpenQuestion, type RepTurnShape } from './behavior'
 
 /** Plain-text role-play guardrails. Unlike the live judge's SYSTEM (which
  * demands JSON with CLEAR-step scoring), this agent's ONLY job is to speak as
@@ -70,11 +70,29 @@ export function personaBlock(session: StyleShiftSession): string {
 /** How the doctor reacts to the SHAPE of what the rep just did — phrased as a
  * felt reaction, never as feedback the doctor would voice. */
 function reactionCue(shape: RepTurnShape): string {
+  return [lengthAndQuestionCue(withoutFalseOpenQuestion(shape)), ...workshopCues(shape)].join(' ')
+}
+
+function lengthAndQuestionCue(shape: RepTurnShape): string {
   if (shape.words >= 130) return 'The rep just talked for a very long time without pausing. You are visibly losing patience: cut in, be much shorter, and show you are drifting.'
   if (shape.talkedTooLong) return 'The rep just gave a long speech. You are getting less engaged: keep it brief and a little impatient.'
   if (shape.askedOpenQuestion) return 'The rep just asked a genuine open question about you or your situation. You feel heard: warm up a little and answer more fully than you have so far.'
   if (shape.askedQuestion) return 'The rep asked a closed question. Answer it directly and briefly.'
   return 'The rep made a statement without asking about you. Stay as engaged as your state suggests, no more.'
+}
+
+/** Felt reactions to what the 3P workshop teaches reps to do or avoid. Written as feelings,
+ * never as feedback the doctor would voice. */
+function workshopCues(shape: RepTurnShape): string[] {
+  const cues: string[] = []
+  if (shape.productFirstOpening) cues.push('The rep opened by pitching their product instead of starting from your patients. You feel little reason to listen: be polite, short and a little distant.')
+  if (shape.problemFirstOpening) cues.push('The rep opened with something about your patients. That is relevant to you: lean in and give them a real opening to continue.')
+  if (shape.forbiddenQuestion) cues.push('The rep is probing why you prescribe what you prescribe. It feels like being questioned about your clinical judgement: be guarded and vague, say your choice depends on the patient, and do not list your reasons.')
+  if (shape.criteriaQuestion) cues.push('The rep asked what you look for in these patients, or what your patients struggle with. This is the kind of question you respect: answer concretely with one or two real criteria or patient problems.')
+  if (shape.labeledFeeling) cues.push('The rep put your concern into words and got it about right. You feel understood: acknowledge it ("that is right" in your own way) and let a little more of what is really bothering you show.')
+  if (shape.mirrored) cues.push('The rep echoed your last words back. It invites you to say more: elaborate on that point a little.')
+  if (shape.usedBut) cues.push('The rep said they understood and then added "but". That makes your concern feel brushed aside: become a little more defensive.')
+  return cues
 }
 
 export function buildDoctorReplyPrompt(

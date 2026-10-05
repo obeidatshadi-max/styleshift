@@ -15,6 +15,7 @@ import ChampionBanner from './ChampionBanner'
 import LeagueStrip from './LeagueStrip'
 import NextActionCard from './NextActionCard'
 import CoachNudgeCard from './CoachNudgeCard'
+import PushOptIn from './PushOptIn'
 import MyCoachingInsights from './MyCoachingInsights'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
@@ -110,6 +111,7 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
         )}
 
         <CoachNudgeCard onOpenCoach={onOpenCoach} />
+        <PushOptIn />
 
         <NextActionCard
           assignment={assignment} onStartAssignment={onStartAssignment} onAssignmentShared={onAssignmentShared}

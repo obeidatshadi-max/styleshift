@@ -45,3 +45,27 @@ self.addEventListener('fetch', (event) => {
     )
   }
 })
+
+// Debrief reminders (see /api/push/send). The payload is generic on purpose: it shows on the lock screen.
+self.addEventListener('push', (event) => {
+  let data = {}
+  try { data = event.data ? event.data.json() : {} } catch { /* malformed payload: show the default */ }
+  event.waitUntil(self.registration.showNotification(data.title || 'StyleShift', {
+    body: data.body || '',
+    icon: '/icon.svg',
+    badge: '/icon.svg',
+    tag: 'styleshift-debrief',
+    data: { url: data.url || '/play' },
+  }))
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const url = (event.notification.data && event.notification.data.url) || '/play'
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+    for (const client of windows) {
+      if ('focus' in client) { if ('navigate' in client) client.navigate(url); return client.focus() }
+    }
+    return self.clients.openWindow(url)
+  }))
+})

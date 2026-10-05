@@ -3,7 +3,8 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export async function proxy(request: NextRequest) {
   // This function checks its own Bearer token; do not turn JSON into login HTML.
-  if (request.nextUrl.pathname === '/.netlify/functions/assemblyai-proxy') {
+  // The hourly reminder trigger has no session; /api/push/send checks its own CRON_SECRET bearer.
+  if (request.nextUrl.pathname === '/.netlify/functions/assemblyai-proxy' || request.nextUrl.pathname === '/api/push/send') {
     return NextResponse.next({ request })
   }
   let supabaseResponse = NextResponse.next({ request })

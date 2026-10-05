@@ -16,6 +16,7 @@ import LeagueStrip from './LeagueStrip'
 import NextActionCard from './NextActionCard'
 import CoachNudgeCard from './CoachNudgeCard'
 import PushOptIn from './PushOptIn'
+import PracticePatternLine from './PracticePatternLine'
 import MyCoachingInsights from './MyCoachingInsights'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
@@ -121,6 +122,8 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
           unlocked={unlocked} earnedLevels={earnedLevels} onStartLevel={onStartLevel}
           onShowPrep={onShowPrep}
         />
+
+        <PracticePatternLine />
 
         <button onClick={() => setMoreOpen(o => !o)}
           style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', cursor:'pointer', fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.15em', textTransform:'uppercase', border:'1px solid var(--line)', color:'var(--ink-dim)', background:'transparent', borderRadius:10, padding:'10px 16px', touchAction:'manipulation' }}>

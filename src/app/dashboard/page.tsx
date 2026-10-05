@@ -17,6 +17,8 @@ import ScenarioEditorPanel from '@/components/dashboard/ScenarioEditorPanel'
 import BehavioralTrendsPanel from '@/components/dashboard/BehavioralTrendsPanel'
 import CompanyDoctorsPanel from '@/components/dashboard/CompanyDoctorsPanel'
 import { getBehavioralTrendsForReps } from '@/lib/behavioral-trends-dashboard'
+import WeeklyDigestPanel from '@/components/dashboard/WeeklyDigestPanel'
+import { buildWeeklyDigest, getRecentSessions } from '@/lib/weekly-digest'
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -45,6 +47,14 @@ export default async function DashboardPage() {
   const voiceStats = await getVoiceStats(stats.reps.map(r => r.id))
   const coachingQueue = await getCoachingQueue(user.id)
   const behavioralTrends = await getBehavioralTrendsForReps(stats.reps.map(r => r.id))
+
+  const nowMs = Date.now()
+  const digest = buildWeeklyDigest({
+    companyName: stats.companyName, reps: stats.reps, nowMs,
+    sessions: await getRecentSessions(stats.reps.map(r => r.id), nowMs),
+    voiceLastPracticed: Object.fromEntries([...voiceStats.byRep].map(([id, v]) => [id, v.lastPracticed])),
+    focusLabels: [...behavioralTrends.values()].map(t => t.mastermindInsights[0]?.experiment.label).filter((l): l is string => !!l),
+  })
 
   const flagCount = stats?.reps.filter(r => r.flag).length ?? 0
   const avgAccuracy = stats?.reps.length
@@ -90,6 +100,7 @@ export default async function DashboardPage() {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <Panel title="This Week"><WeeklyDigestPanel digest={digest} /></Panel>
         <Panel title="Team Pulse"><TeamPulsePanel pulse={pulse} siteUrl={siteUrl} /></Panel>
         {leagueBoard && <Panel title="Team League"><LeagueBoardPanel board={leagueBoard} /></Panel>}
         <CoachingQueueAndAssign

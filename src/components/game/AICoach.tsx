@@ -10,6 +10,9 @@ import type { Doctor } from '@/types/game'
 interface Entry { id: string; created_at: string; doctor_id: string | null; doctor_name: string | null; input: DebriefInput; result: DebriefResult }
 const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: '1px solid var(--line)', borderRadius: 10, padding: 12, background: 'var(--panel)', color: 'var(--ink)', font: 'inherit' }
 const emptyReflections = { wentWell: '', changeNextTime: '', objectiveReview: '' }
+type MicTarget = 'account' | keyof typeof emptyReflections
+const REFLECTION_MAX = 2000
+const ACCOUNT_MAX = 12000
 
 export default function AICoach() {
   const { lang } = useLang()
@@ -32,9 +35,13 @@ export default function AICoach() {
   const [practice, setPractice] = useState<Doctor | null>(null)
   const [recording, setRecording] = useState(false)
   const [micStarting, setMicStarting] = useState(false)
+  const [micTarget, setMicTarget] = useState<MicTarget | null>(null)
   const mounted = useRef(true)
   const requestRef = useRef<AbortController | null>(null)
-  const recorder = useAudioRecorder(null, lang, () => setRecording(false))
+  const targetRef = useRef<MicTarget | null>(null)
+  // The 3-minute auto-stop fires from inside the recorder, so it must also finish the job the
+  // Stop button would: a reflection answer is transcribed straight into its own field.
+  const recorder = useAudioRecorder(null, lang, () => { setRecording(false); if (targetRef.current && targetRef.current !== 'account') void transcribe() })
   const locked = busy || recording || micStarting
 
   async function loadHistory() {
@@ -56,15 +63,23 @@ export default function AICoach() {
   }, [])
 
   function revise() { setResult(null); setSaved(null); setActiveId(null); setError('') }
-  async function startRecording() {
-    setError(''); setMicStarting(true)
+  async function startRecording(target: MicTarget = 'account') {
+    setError(''); setMicStarting(true); targetRef.current = target; setMicTarget(target)
     const ok = await recorder.start()
     if (!mounted.current) { recorder.abort(); return }
     setMicStarting(false)
-    if (ok) setRecording(true)
-    else setError(copy('Microphone unavailable. You can type your account below.', 'تعذّر تشغيل الميكروفون. يمكنك كتابة ملخص المكالمة أدناه.'))
+    if (ok) { setRecording(true); return }
+    targetRef.current = null; setMicTarget(null)
+    setError(copy('Microphone unavailable. You can type your answer instead.', 'تعذّر تشغيل الميكروفون. يمكنك الكتابة بدلاً من ذلك.'))
+  }
+  async function stopRecording() {
+    await recorder.stop()
+    setRecording(false)
+    // Short reflection answers skip the listen-back step: transcribe straight into the field, where it stays editable.
+    if (targetRef.current && targetRef.current !== 'account') await transcribe()
   }
   async function transcribe() {
+    const target = targetRef.current ?? 'account'
     const take = recorder.take()
     if (!take) return
     setBusy(true); setError('')
@@ -75,9 +90,11 @@ export default function AICoach() {
       if (!res.ok) throw new Error()
       const data = await res.json()
       if (typeof data.text !== 'string' || !data.text.trim()) throw new Error()
-      setAccount(prev => `${prev}${prev ? '\n' : ''}${data.text}`.slice(0, 12000))
+      const append = (prev: string, max: number) => `${prev}${prev ? '\n' : ''}${data.text}`.slice(0, max)
+      if (target === 'account') setAccount(prev => append(prev, ACCOUNT_MAX))
+      else setReflections(prev => ({ ...prev, [target]: append(prev[target], REFLECTION_MAX) }))
     } catch { if (!controller.signal.aborted) setError(copy('Transcription unavailable. Please type your account or record again.', 'تعذّر تفريغ الصوت. اكتب ملخصك أو سجّل مجدداً.')) }
-    finally { if (mounted.current) setBusy(false) }
+    finally { if (mounted.current) { setBusy(false); setMicTarget(null) } targetRef.current = null }
   }
   async function coach() {
     setBusy(true); setError('')
@@ -150,22 +167,35 @@ export default function AICoach() {
       </label>
       <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--ink-dim)' }}>{copy('Record your own recollection after the call, up to 3 minutes. Audio is sent for transcription; review the text before coaching. Saved debriefs are private to your account.', 'سجّل ما تتذكره بعد المكالمة لمدة تصل إلى ٣ دقائق. يُرسل الصوت للتفريغ؛ راجع النص قبل التدريب. المراجعات المحفوظة خاصة بحسابك.')}</p>
       {!result && <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
-        <button style={ghostBtn} disabled={busy || micStarting || !!recorder.previewUrl} onClick={recording ? async () => { await recorder.stop(); setRecording(false) } : startRecording}>
-          {recording ? copy('Stop recording', 'إيقاف التسجيل') : micStarting ? copy('Opening microphone…', 'جارٍ فتح الميكروفون…') : copy('Record my recollection', 'سجّل ما تتذكره')}
+        <button style={ghostBtn} disabled={busy || micStarting || !!recorder.previewUrl || (recording && micTarget !== 'account')} onClick={recording ? () => void stopRecording() : () => void startRecording('account')}>
+          {recording && micTarget === 'account' ? copy('Stop recording', 'إيقاف التسجيل') : micStarting && micTarget === 'account' ? copy('Opening microphone…', 'جارٍ فتح الميكروفون…') : copy('Record my recollection', 'سجّل ما تتذكره')}
         </button>
-        {recording && <span role="status">{copy('Recording…', 'جارٍ التسجيل…')}</span>}
+        {recording && micTarget === 'account' && <span role="status">{copy('Recording…', 'جارٍ التسجيل…')}</span>}
         {recorder.previewUrl && <>
           <audio controls src={recorder.previewUrl} aria-label={copy('Review call recollection', 'استمع إلى ملخص المكالمة')} style={{ width: '100%' }} />
-          <button disabled={busy} style={ghostBtn} onClick={transcribe}>{copy('Transcribe recording', 'فرّغ التسجيل')}</button>
+          <button disabled={busy} style={ghostBtn} onClick={() => { targetRef.current = 'account'; void transcribe() }}>{copy('Transcribe recording', 'فرّغ التسجيل')}</button>
           <button disabled={busy} style={ghostBtn} onClick={recorder.discard}>{copy('Discard recording', 'إلغاء التسجيل')}</button>
         </>}
       </div>}
       <label style={{ display: 'grid', gap: 8 }}>{copy('What happened? Review or edit before coaching.', 'ماذا حدث؟ راجع النص أو عدّله قبل التدريب.')}
         <textarea rows={5} maxLength={12000} value={account} disabled={locked || !!result} onChange={e => setAccount(e.target.value)} style={inputStyle} placeholder={copy('What did the doctor say? How did you respond? What was agreed?', 'ماذا قال الطبيب؟ كيف رددت؟ وما الذي اتفقتما عليه؟')} />
       </label>
-      {!result && reflectionsFields.map(([key, label, hint]) => <label key={key} style={{ display: 'grid', gap: 8, marginTop: 18 }}>{label}
-        <textarea rows={3} maxLength={2000} value={reflections[key]} disabled={locked} onChange={e => setReflections(prev => ({ ...prev, [key]: e.target.value }))} style={inputStyle} placeholder={hint} />
-      </label>)}
+      {!result && reflectionsFields.map(([key, label, hint]) => {
+        const mine = micTarget === key
+        const micLabel = recording && mine ? copy('Stop and transcribe', 'إيقاف وتفريغ')
+          : micStarting && mine ? copy('Opening microphone…', 'جارٍ فتح الميكروفون…')
+          : busy && mine ? copy('Transcribing…', 'جارٍ التفريغ…')
+          : copy('Answer by voice', 'أجب بالصوت')
+        return <div key={key} style={{ display: 'grid', gap: 8, marginTop: 18 }}>
+          <label style={{ display: 'grid', gap: 8 }}>{label}
+            <textarea rows={3} maxLength={REFLECTION_MAX} value={reflections[key]} disabled={locked} onChange={e => setReflections(prev => ({ ...prev, [key]: e.target.value }))} style={inputStyle} placeholder={hint} />
+          </label>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <button type="button" data-testid={`mic-${key}`} style={ghostBtn} disabled={busy || micStarting || !!recorder.previewUrl || (recording && !mine)} onClick={recording && mine ? () => void stopRecording() : () => void startRecording(key)}>🎙 {micLabel}</button>
+            {recording && mine && <span role="status">{copy('Recording… up to 3 minutes', 'جارٍ التسجيل… حتى ٣ دقائق')}</span>}
+          </div>
+        </div>
+      })}
       {!result && <button style={{ ...primaryBtn, marginTop: 16 }} disabled={locked || !doctorId || account.trim().length < 20 || !objective.trim() || !successMeasure.trim() || Object.values(reflections).some(v => !v.trim())} onClick={() => void coach()}>{copy('Get coaching', 'احصل على التدريب')}</button>}
       {result && <button disabled={locked} style={{ ...ghostBtn, marginTop: 12 }} onClick={revise}>{copy('Edit my debrief', 'تعديل مراجعتي')}</button>}
     </section>

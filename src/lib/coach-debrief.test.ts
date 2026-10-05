@@ -22,6 +22,13 @@ describe('debrief evidence and contracts', () => {
       { ...input, successMeasure: '' }, { ...input, reflections: { ...input.reflections, wentWell: '' } },
       { ...input, lang: 'xx' }]) expect(parseDebriefInput(v)).toBeNull()
   })
+  it('accepts an optional previous action and rejects malformed ones', () => {
+    const pa = { text: ' Ask one clarifying question. ', status: 'partly' }
+    expect(parseDebriefInput({ ...input, previousAction: pa })?.previousAction).toEqual({ text: 'Ask one clarifying question.', status: 'partly' })
+    expect(parseDebriefInput(input)).not.toHaveProperty('previousAction')
+    for (const bad of ['x', { text: '', status: 'done' }, { text: 'x', status: 'maybe' }, { text: 'x'.repeat(2001), status: 'done' }]) expect(parseDebriefInput({ ...input, previousAction: bad })).toBeNull()
+    expect(debriefPrompt({ ...input, previousAction: { text: 'Ask one question.', status: 'done' } }, 'Dr X').prompt).toContain('previousAction')
+  })
   it('rejects incomplete reports and removes unrecognized model fields', () => {
     expect(parseDebriefResult(JSON.stringify({ questions: [], report: { summary: 'hello' } }))).toBeNull()
     expect(parseDebriefResult(JSON.stringify({ questions: [], report: { ...report, nextAction: ' ' } }))).toBeNull()

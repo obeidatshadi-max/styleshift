@@ -70,6 +70,20 @@ describe('AI Coach doctor-linked reflection flow', () => {
     await waitFor(() => expect((screen.getByLabelText(label) as HTMLTextAreaElement).value).toBe('Opened well.\nI asked open questions.'))
     expect((screen.getByLabelText('2. What would you change or what did you miss?') as HTMLTextAreaElement).value).toBe('')
   })
+  it('asks about the last planned action for this doctor and sends the answer', async () => {
+    const docId = '00000000-0000-4000-8000-000000000001'
+    const past = { id: 'old', created_at: '2026-10-01T00:00:00Z', doctor_id: docId, doctor_name: 'Dr. Practice', input: { account: 'Earlier call account text.', objective: 'Earlier objective' }, result: { questions: [], report: { ...report, nextAction: 'Ask what they compare us with.' } } }
+    fetchMock.mockImplementation(async (_url, init) => init?.method === 'POST'
+      ? Response.json({ result: { questions: [], report }, saved: true, id: 'saved' }) : Response.json({ entries: [past] }))
+    render(React.createElement(AICoach))
+    fillForm()
+    await screen.findByText('Ask what they compare us with.')
+    fireEvent.click(screen.getByText('Partly'))
+    fireEvent.click(screen.getByText('Get coaching'))
+    await screen.findByText('Clarify first.')
+    const payload = JSON.parse(fetchMock.mock.calls.find(c => c[1]?.method === 'POST')![1].body)
+    expect(payload.previousAction).toEqual({ text: 'Ask what they compare us with.', status: 'partly' })
+  })
   it('shows persistence failure without hiding useful coaching', async () => {
     fetchMock.mockImplementation(async (_url, init) => init?.method === 'POST' ? Response.json({ result: { questions: [], report }, saved: false }) : Response.json({ entries: [] }))
     render(React.createElement(AICoach)); fillForm(); fireEvent.click(screen.getByText('Get coaching'))

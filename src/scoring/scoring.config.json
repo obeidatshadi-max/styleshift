@@ -19,7 +19,9 @@
       "weight": 1,
       "behaviors": {
         "open_question":        { "points": 5,  "source": "user",     "description": "Asked an open-ended question that invites the doctor to explain." },
-        "leading_question":     { "points": -3, "source": "proposed", "description": "Asked a question that pushes the doctor toward the rep's preferred answer." }
+        "leading_question":     { "points": -3, "source": "proposed", "description": "Asked a question that pushes the doctor toward the rep's preferred answer." },
+        "forbidden_question":   { "points": -5, "source": "proposed", "description": "Asked why the doctor prescribes a drug, or what they prescribe in a given indication." },
+        "criteria_question":    { "points": 6,  "source": "proposed", "description": "Asked what the doctor looks for when choosing a treatment, or what their patients struggle with." }
       }
     },
     "active_listening": {
@@ -27,7 +29,9 @@
       "behaviors": {
         "paraphrasing":         { "points": 8,  "source": "user",     "description": "Restated or reflected the doctor's words or concern back to them." },
         "empathy_statement":    { "points": 6,  "source": "proposed", "description": "Acknowledged how the doctor feels or thinks about the issue." },
-        "interruption":         { "points": -6, "source": "user",     "description": "Cut in on or talked over the doctor before they finished." }
+        "interruption":         { "points": -6, "source": "user",     "description": "Cut in on or talked over the doctor before they finished." },
+        "mirrored_last_words":  { "points": 4,  "source": "proposed", "description": "Repeated the doctor's last few words back so they would say more." },
+        "labeled_emotion":      { "points": 6,  "source": "proposed", "description": "Named the doctor's feeling or concern in words, such as 'it sounds like...'." }
       }
     },
     "discovery": {
@@ -35,7 +39,9 @@
       "behaviors": {
         "clarification":        { "points": 7,  "source": "user",     "description": "Asked the doctor to clarify or expand on a concern, need or statement." },
         "need_uncovered":       { "points": 8,  "source": "proposed", "description": "Drew out a specific need, patient type or reason behind an objection." },
-        "premature_pitch":      { "points": -5, "source": "user",     "description": "Pitched the product before understanding the doctor's situation." }
+        "premature_pitch":      { "points": -5, "source": "user",     "description": "Pitched the product before understanding the doctor's situation." },
+        "problem_first_opening": { "points": 5,  "source": "proposed", "description": "Opened with a specific patient type or problem relevant to this doctor." },
+        "product_first_opening": { "points": -5, "source": "proposed", "description": "Opened by announcing or pitching the product instead of starting from the doctor's patients." }
       }
     },
     "adaptation": {
@@ -53,7 +59,9 @@
         "evidence_referenced":    { "points": 8,  "source": "proposed", "description": "Answered the objection with generic evidence, not bare reassurance." },
         "resolution_checked":     { "points": 6,  "source": "proposed", "description": "Asked whether the answer resolved the concern." },
         "ignored_objection":      { "points": -8, "source": "user",     "description": "Passed over or dismissed an objection the doctor raised." },
-        "argued_with_doctor":     { "points": -6, "source": "proposed", "description": "Countered the doctor's stated reason head-on instead of exploring it." }
+        "argued_with_doctor":     { "points": -6, "source": "proposed", "description": "Countered the doctor's stated reason head-on instead of exploring it." },
+        "accusation_audit":       { "points": 6,  "source": "proposed", "description": "Voiced a likely objection or doubt before the doctor did." },
+        "used_but_contradiction": { "points": -5, "source": "proposed", "description": "Acknowledged the doctor's concern and then undid it with 'but'." }
       }
     },
     "value_communication": {
@@ -69,7 +77,9 @@
       "behaviors": {
         "next_step_proposed":     { "points": 8,  "source": "proposed", "description": "Proposed a concrete next step or commitment." },
         "summarized":             { "points": 5,  "source": "proposed", "description": "Summarized what was agreed or understood before closing." },
-        "no_next_step":           { "points": -5, "source": "proposed", "description": "Ended the conversation without any next step." }
+        "no_next_step":           { "points": -5, "source": "proposed", "description": "Ended the conversation without any next step." },
+        "agreement_then_commitment": { "points": 6,  "source": "proposed", "description": "Checked the doctor's agreement on the benefits before asking for a specific commitment." },
+        "premature_close":           { "points": -5, "source": "proposed", "description": "Asked for a commitment before the doctor's needs were covered or concern resolved." }
       }
     }
   }

@@ -49,7 +49,8 @@ export function createDoctorAgent(complete: CompleteFn) {
       prompt = buildDoctorOpeningPrompt(session as StyleShiftSession, base)
     } else {
       if (!repText) return null
-      const shape = analyzeRepTurn(repText)
+      const lastDoctorText = [...session.transcript].reverse().find(t => t.role === 'doctor')?.text
+      const shape = analyzeRepTurn(repText, { firstRepTurn: !session.transcript.some(t => t.role === 'rep'), lastDoctorText })
       state = nextPhysicianState(base, shape)
       prompt = buildDoctorReplyPrompt(session as StyleShiftSession, repText, shape, state)
       newTurns.push({

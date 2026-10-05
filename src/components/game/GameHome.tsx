@@ -14,6 +14,7 @@ import PrivacyPanel from './PrivacyPanel'
 import ChampionBanner from './ChampionBanner'
 import LeagueStrip from './LeagueStrip'
 import NextActionCard from './NextActionCard'
+import CoachNudgeCard from './CoachNudgeCard'
 import MyCoachingInsights from './MyCoachingInsights'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
@@ -44,6 +45,8 @@ interface Props {
   onShowPrep: () => void
   onShowPerform: () => void
   onShowFieldCards: () => void
+  /** Opens the AI Coach, optionally on a given doctor. */
+  onOpenCoach: (doctorId?: string) => void
   onStartLevel: (n: number) => void
   /** True once the profile has loaded and the style quiz has not been taken. */
   spsPending: boolean
@@ -51,7 +54,7 @@ interface Props {
   tab: Section
 }
 
-export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, onAssignmentShared, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onShowPerform, onShowFieldCards, onStartLevel, spsPending, onTakeSps, tab }: Props) {
+export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, onAssignmentShared, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onShowPerform, onShowFieldCards, onOpenCoach, onStartLevel, spsPending, onTakeSps, tab }: Props) {
   const [moreOpen, setMoreOpen] = useState(false)
 
   const unlocked = [1, ...earnedLevels.map(n => n + 1)].filter(n => n <= 4)
@@ -105,6 +108,8 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
             <button onClick={onTakeSps} style={{ cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent', borderRadius:10, padding:'10px 16px', touchAction:'manipulation' }}>{t('sps.start')}</button>
           </>
         )}
+
+        <CoachNudgeCard onOpenCoach={onOpenCoach} />
 
         <NextActionCard
           assignment={assignment} onStartAssignment={onStartAssignment} onAssignmentShared={onAssignmentShared}

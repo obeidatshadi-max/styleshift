@@ -44,8 +44,11 @@ export default function GameShell() {
   const { L2 } = useGameData()
   const [screen, setScreen] = useState<Screen>('home')
   const [section, setSection] = useState<Section>('train')
+  // Set when the Home nudge opens the Coach on a particular doctor; cleared when the rep navigates by tab.
+  const [coachDoctorId, setCoachDoctorId] = useState('')
 
   function goToSection(s: Section) {
+    setCoachDoctorId('')
     setSection(s)
     setScreen('home')
   }
@@ -247,7 +250,7 @@ export default function GameShell() {
     return withNav(<HowItWorks onDone={finishIntro} />)
   }
 
-  if (section === 'coach') return withNav(<AICoach />)
+  if (section === 'coach') return withNav(<AICoach initialDoctorId={coachDoctorId} />)
 
   if (screen === 'prep') {
     // A doctor roleplay in there may have shared against the active
@@ -336,6 +339,7 @@ export default function GameShell() {
       onShowPrep={() => { setSection('rehearse'); setScreen('prep') }}
       onShowPerform={() => { setSection('perform'); setScreen('perform') }}
       onShowFieldCards={() => setScreen('fieldcards')}
+      onOpenCoach={id => { setCoachDoctorId(id ?? ''); setSection('coach'); setScreen('home') }}
       onStartLevel={startLevel}
       spsPending={!!profile && !profile.sps_top_key}
       onTakeSps={() => setScreen('sps')}

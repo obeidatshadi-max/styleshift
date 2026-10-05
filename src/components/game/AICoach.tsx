@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useLang } from '@/lib/i18n'
 import { useDoctors } from '@/hooks/useDoctors'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
-import { parseDebriefResult, type ActionStatus, type DebriefInput, type DebriefResult } from '@/lib/coach-debrief'
+import { DEBRIEF_FOCUSES, parseDebriefResult, type ActionStatus, type DebriefFocus, type DebriefInput, type DebriefResult } from '@/lib/coach-debrief'
 import { addPromise } from '@/lib/promises'
 import TextSimulation, { card, primaryBtn, ghostBtn } from './TextSimulation'
 import type { Doctor } from '@/types/game'
@@ -11,6 +11,12 @@ import type { Doctor } from '@/types/game'
 interface Entry { id: string; created_at: string; doctor_id: string | null; doctor_name: string | null; input: DebriefInput; result: DebriefResult }
 const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: '1px solid var(--line)', borderRadius: 10, padding: 12, background: 'var(--panel)', color: 'var(--ink)', font: 'inherit' }
 const emptyReflections = { wentWell: '', changeNextTime: '', objectiveReview: '' }
+const FOCUS_LABEL: Record<DebriefFocus, (copy: (en: string, ar: string) => string) => string> = {
+  opening: copy => copy('Opening', 'الافتتاح'),
+  questions: copy => copy('Questions', 'الأسئلة'),
+  objections: copy => copy('Objections', 'الاعتراضات'),
+  closing: copy => copy('Closing', 'الإغلاق'),
+}
 type MicTarget = 'account' | keyof typeof emptyReflections
 const REFLECTION_MAX = 2000
 const ACCOUNT_MAX = 12000
@@ -38,6 +44,7 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
   const [micStarting, setMicStarting] = useState(false)
   const [micTarget, setMicTarget] = useState<MicTarget | null>(null)
   const [actionStatus, setActionStatus] = useState<ActionStatus | null>(null)
+  const [focus, setFocus] = useState<DebriefFocus | null>(null)
   const [addedPromises, setAddedPromises] = useState<string[]>([])
   const [promiseError, setPromiseError] = useState(false)
   const mounted = useRef(true)
@@ -88,7 +95,7 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
     if (await addPromise(doctorId, text)) setAddedPromises(prev => [...prev, `${doctorId}:${text}`])
     else setPromiseError(true)
   }
-  function revise() { setResult(null); setSaved(null); setActiveId(null); setError(''); setActionStatus(null) }
+  function revise() { setResult(null); setSaved(null); setActiveId(null); setError(''); setActionStatus(null); setFocus(null) }
   async function startRecording(target: MicTarget = 'account') {
     setError(''); setMicStarting(true); targetRef.current = target; setMicTarget(target)
     const ok = await recorder.start()
@@ -128,7 +135,7 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
     try {
       const res = await fetch('/api/coach-debrief', {
         method: 'POST', headers: { 'content-type': 'application/json' }, signal: controller.signal,
-        body: JSON.stringify({ doctorId, account, objective, successMeasure, lang, reflections, ...(previousAction && actionStatus ? { previousAction: { text: previousAction, status: actionStatus } } : {}) }),
+        body: JSON.stringify({ doctorId, account, objective, successMeasure, lang, reflections, ...(focus ? { focus } : {}), ...(previousAction && actionStatus ? { previousAction: { text: previousAction, status: actionStatus } } : {}) }),
       })
       if (!res.ok) throw new Error(String(res.status))
       const data = await res.json()
@@ -196,6 +203,14 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
             <button key={value} type="button" aria-pressed={actionStatus === value} disabled={locked}
               style={{ ...ghostBtn, ...(actionStatus === value ? { borderColor: 'var(--cyan)', color: 'var(--cyan)' } : {}) }}
               onClick={() => setActionStatus(actionStatus === value ? null : value)}>{label}</button>)}
+        </div>
+      </div>}
+      {!result && <div role="group" aria-label={copy('Coaching focus (optional)', 'محور التدريب (اختياري)')} style={{ marginBottom: 18 }}>
+        <p style={{ margin: '0 0 8px' }}>{copy('Coaching focus (optional)', 'محور التدريب (اختياري)')}</p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {DEBRIEF_FOCUSES.map(value => <button key={value} type="button" aria-pressed={focus === value} disabled={locked}
+            style={{ ...ghostBtn, ...(focus === value ? { borderColor: 'var(--cyan)', color: 'var(--cyan)' } : {}) }}
+            onClick={() => setFocus(focus === value ? null : value)}>{FOCUS_LABEL[value](copy)}</button>)}
         </div>
       </div>}
       <label style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{copy('What was your call objective? (optional)', 'ما هدف المكالمة؟ (اختياري)')}
@@ -267,7 +282,7 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
     <section style={card}>
       <h2 style={{ fontSize: 19 }}>{copy('Recent debriefs', 'المراجعات الأخيرة')}</h2>
       {historyLoading ? <p role="status">{copy('Loading history…', 'تحميل السجل…')}</p> : historyError ? <p>{copy('History is unavailable.', 'السجل غير متاح.')} <button style={ghostBtn} onClick={() => void loadHistory()}>{copy('Retry', 'إعادة المحاولة')}</button></p> : !entries.length ? <p style={{ color: 'var(--ink-dim)' }}>{copy('Your completed coaching will appear here.', 'ستظهر مراجعاتك المكتملة هنا.')}</p> : entries.map(entry => <div key={entry.id} style={{ borderTop: '1px solid var(--line)', padding: '14px 0', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-        <button disabled={locked || !!recorder.previewUrl} style={{ ...ghostBtn, flex: 1, textAlign: 'start', letterSpacing: 0, textTransform: 'none' }} onClick={() => { setAccount(entry.input.account); setObjective(entry.input.objective); setSuccessMeasure(entry.input.successMeasure ?? ''); setReflections(entry.input.reflections ?? emptyReflections); setDoctorId(entry.doctor_id ?? entry.input.doctorId); setResult(entry.result); setSaved(true); setActiveId(entry.id); setError('') }}>
+        <button disabled={locked || !!recorder.previewUrl} style={{ ...ghostBtn, flex: 1, textAlign: 'start', letterSpacing: 0, textTransform: 'none' }} onClick={() => { setAccount(entry.input.account); setObjective(entry.input.objective); setSuccessMeasure(entry.input.successMeasure ?? ''); setReflections(entry.input.reflections ?? emptyReflections); setDoctorId(entry.doctor_id ?? entry.input.doctorId); setFocus(entry.input.focus ?? null); setResult(entry.result); setSaved(true); setActiveId(entry.id); setError('') }}>
           <span style={{ display: 'block', marginBottom: 6 }}>{new Date(entry.created_at).toLocaleDateString(ar ? 'ar' : 'en')} · {entry.doctor_name ?? ''}</span>{entry.input.objective || entry.input.account.slice(0, 85)}
         </button>
         <button disabled={locked} style={ghostBtn} onClick={() => void remove(entry.id)} aria-label={copy('Delete debrief', 'حذف المراجعة')}>{copy('Delete', 'حذف')}</button>

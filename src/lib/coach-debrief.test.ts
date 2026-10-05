@@ -40,6 +40,16 @@ describe('debrief evidence and contracts', () => {
     expect(parseDebriefResult(JSON.stringify({ questions: [], report }))?.promises).toEqual([])
     expect(debriefPrompt(input, 'Dr X').system).toContain('"promises"')
   })
+  it('accepts an optional coaching focus from the known list and rejects anything else', () => {
+    expect(parseDebriefInput({ ...input, focus: 'closing' })?.focus).toBe('closing')
+    expect(parseDebriefInput({ ...input, focus: '' })).not.toHaveProperty('focus')
+    expect(parseDebriefInput(input)).not.toHaveProperty('focus')
+    expect(parseDebriefInput({ ...input, focus: 'charm' })).toBeNull()
+    const prompt = debriefPrompt({ ...input, focus: 'objections' }, 'Dr X')
+    expect(prompt.system).toContain('"focus"')
+    expect(prompt.prompt).toContain('objections or concerns')
+    expect(debriefPrompt(input, 'Dr X').prompt).not.toContain('focusMeaning')
+  })
   it('rejects incomplete reports and removes unrecognized model fields', () => {
     expect(parseDebriefResult(JSON.stringify({ questions: [], report: { summary: 'hello' } }))).toBeNull()
     expect(parseDebriefResult(JSON.stringify({ questions: [], report: { ...report, nextAction: ' ' } }))).toBeNull()

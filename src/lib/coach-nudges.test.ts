@@ -30,6 +30,18 @@ describe('buildNudge', () => {
     expect(buildNudge(doctors, [debrief('a', 2, null)], now)).toBeNull()
     expect(buildNudge(doctors, [debrief('a', 5, null)], now)).toMatchObject({ kind: 'quiet', days: 5 })
   })
+  it('reminds about a promise once it is two days old, ahead of a coach next step', () => {
+    const p = { id: 'p1', doctor_id: 'a', text: ' Bring the study ', created_at: ago(3) }
+    expect(buildNudge(doctors, [], now, {}, [{ ...p, created_at: ago(1) }])).toBeNull()
+    expect(buildNudge(doctors, [debrief('b', 2)], now, {}, [p])).toMatchObject({ kind: 'open_promise', key: 'promise:p1', doctorName: 'Dr. A', text: 'Bring the study', days: 3 })
+    expect(buildNudge(doctors, [], now, {}, [{ ...p, doctor_id: 'gone' }, { ...p, id: 'p2', text: ' ' }])).toBeNull()
+  })
+  it('picks the longest-waiting promise and honours a snooze on it', () => {
+    const older = { id: 'old', doctor_id: 'a', text: 'Call back', created_at: ago(9) }
+    const newer = { id: 'new', doctor_id: 'b', text: 'Send samples', created_at: ago(3) }
+    expect(buildNudge(doctors, [], now, {}, [newer, older])).toMatchObject({ key: 'promise:old' })
+    expect(buildNudge(doctors, [], now, { 'promise:old': now + DAY }, [newer, older])).toMatchObject({ key: 'promise:new' })
+  })
   it('hides a snoozed nudge until the snooze ends, and brings back a changed plan', () => {
     const planned = [{ ...doctors[0], plan_objective: 'Agree a trial' }]
     const first = buildNudge(planned, [], now)!

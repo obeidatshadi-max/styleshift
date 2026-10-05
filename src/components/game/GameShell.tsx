@@ -46,9 +46,12 @@ export default function GameShell() {
   const [section, setSection] = useState<Section>('train')
   // Set when the Home nudge opens the Coach on a particular doctor; cleared when the rep navigates by tab.
   const [coachDoctorId, setCoachDoctorId] = useState('')
+  // Set when a Home nudge opens Visit Prep on a particular doctor.
+  const [prepDoctorId, setPrepDoctorId] = useState('')
 
   function goToSection(s: Section) {
     setCoachDoctorId('')
+    setPrepDoctorId('')
     setSection(s)
     setScreen('home')
   }
@@ -255,7 +258,7 @@ export default function GameShell() {
   if (screen === 'prep') {
     // A doctor roleplay in there may have shared against the active
     // assignment — refresh so the home banner reflects it.
-    return withNav(<VisitPrep onExit={() => { setScreen('home'); loadAssignment() }} />)
+    return withNav(<VisitPrep initialDoctorId={prepDoctorId} onExit={() => { setScreen('home'); loadAssignment() }} />)
   }
 
   if (screen === 'fieldcards') {
@@ -340,6 +343,7 @@ export default function GameShell() {
       onShowPerform={() => { setSection('perform'); setScreen('perform') }}
       onShowFieldCards={() => setScreen('fieldcards')}
       onOpenCoach={id => { setCoachDoctorId(id ?? ''); setSection('coach'); setScreen('home') }}
+      onOpenDoctor={id => { setPrepDoctorId(id); setSection('rehearse'); setScreen('prep') }}
       onStartLevel={startLevel}
       spsPending={!!profile && !profile.sps_top_key}
       onTakeSps={() => setScreen('sps')}

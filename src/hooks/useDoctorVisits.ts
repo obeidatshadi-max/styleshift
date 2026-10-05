@@ -44,5 +44,14 @@ export function useDoctorVisits(doctorId: string) {
     return (data as DoctorVisit) ?? null
   }, [supabase, doctorId])
 
-  return { visits, loading, addVisit, reload: load }
+  /** Ticks off the promise on a visit. Returns false when it could not be saved (e.g. offline). */
+  const completePromise = useCallback(async (visitId: string): Promise<boolean> => {
+    const doneAt = new Date().toISOString()
+    const { error } = await supabase.from('doctor_visits').update({ promise_done_at: doneAt }).eq('id', visitId)
+    if (error) return false
+    setVisits(prev => prev.map(v => (v.id === visitId ? { ...v, promise_done_at: doneAt } : v)))
+    return true
+  }, [supabase])
+
+  return { visits, loading, addVisit, completePromise, reload: load }
 }

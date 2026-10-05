@@ -61,11 +61,13 @@ export interface PushMessage { title: string; body: string; url: string }
 const COPY = {
   en: {
     planned_visit: { title: 'How did your visit go?', body: 'You set a goal for a visit. A one-minute debrief keeps the learning.' },
+    open_promise: { title: 'A promise is waiting', body: 'You told a doctor you would follow up on something. Keep it, then tick it off.' },
     open_action: { title: 'Your next step is waiting', body: 'Your coach set a next step after your last debrief. Did you try it?' },
     quiet: { title: 'Keep the habit going', body: 'One minute is enough: what happened on your last visit?' },
   },
   ar: {
     planned_visit: { title: 'كيف كانت زيارتك؟', body: 'حدّدت هدفاً لزيارة. مراجعة من دقيقة واحدة تحفظ ما تعلمته.' },
+    open_promise: { title: 'وعد بانتظارك', body: 'وعدت طبيباً بمتابعة أمر ما. أوفِ به ثم علّمه كمنجز.' },
     open_action: { title: 'خطوتك التالية بانتظارك', body: 'حدّد مدربك خطوة تالية بعد آخر مراجعة. هل جرّبتها؟' },
     quiet: { title: 'حافظ على العادة', body: 'دقيقة واحدة تكفي: ماذا حدث في آخر زيارة؟' },
   },

@@ -53,7 +53,7 @@ describe('send route', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const table = (rows: unknown[]): any => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const q: any = { select: () => q, eq: () => q, order: () => q, limit: () => q, update: vi.fn(() => q), delete: vi.fn(() => q), then: (res: (v: unknown) => void) => res({ data: rows, error: null }) }
+    const q: any = { select: () => q, eq: () => q, not: () => q, is: () => q, order: () => q, limit: () => q, update: vi.fn(() => q), delete: vi.fn(() => q), then: (res: (v: unknown) => void) => res({ data: rows, error: null }) }
     return q
   }
   const row = (over: Record<string, unknown>) => ({ id: 's1', rep_id: 'r1', endpoint: fcm, p256dh: 'p', auth: 'a', tz: 'Asia/Baghdad', lang: 'en', last_sent_on: null, last_nudge_key: null, ...over })
@@ -76,7 +76,7 @@ describe('send route', () => {
       row({ id: 's2', endpoint: 'https://fcm.googleapis.com/fcm/send/gone' }),
       row({ id: 's3', rep_id: 'r2', endpoint: fcm + '3', last_sent_on: '2026-10-10' }),
     ]
-    const tables = { push_subscriptions: table(subs), doctors: table([{ id: 'd1', name: 'Dr. X', plan_objective: 'Agree a trial' }]), coach_debriefs: table([]) }
+    const tables = { push_subscriptions: table(subs), doctors: table([{ id: 'd1', name: 'Dr. X', plan_objective: 'Agree a trial' }]), coach_debriefs: table([]), doctor_visits: table([]) }
     vi.mocked(createAdminClient).mockReturnValue({ from: (name: keyof typeof tables) => tables[name] } as never)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(webpush.sendNotification).mockImplementation((async (s: any) => {
@@ -93,7 +93,7 @@ describe('send route', () => {
   it('does not repeat the same nudge to the same device', async () => {
     vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-11T08:00:00Z'))
     const subs = [row({ last_sent_on: '2026-10-10', last_nudge_key: 'plan:d1:Agree a trial' })]
-    const tables = { push_subscriptions: table(subs), doctors: table([{ id: 'd1', name: 'Dr. X', plan_objective: 'Agree a trial' }]), coach_debriefs: table([]) }
+    const tables = { push_subscriptions: table(subs), doctors: table([{ id: 'd1', name: 'Dr. X', plan_objective: 'Agree a trial' }]), coach_debriefs: table([]), doctor_visits: table([]) }
     vi.mocked(createAdminClient).mockReturnValue({ from: (name: keyof typeof tables) => tables[name] } as never)
     expect(await (await send(sendReq('secret'))).json()).toMatchObject({ due: 1, sent: 0 })
     expect(webpush.sendNotification).not.toHaveBeenCalled()

@@ -87,7 +87,7 @@ export default function AICoach() {
     if (!take) return
     setBusy(true); setError('')
     const controller = new AbortController(); requestRef.current = controller
-    const form = new FormData(); form.append('audio', take.blob)
+    const form = new FormData(); form.append('audio', take.blob); form.append('lang', lang)
     try {
       const res = await fetch('/api/transcribe', { method: 'POST', body: form, signal: controller.signal })
       if (!res.ok) throw new Error()

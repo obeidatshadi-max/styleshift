@@ -1,6 +1,6 @@
 'use client'
 import { useRef, useState } from 'react'
-import { useT } from '@/lib/i18n'
+import { useLang, useT } from '@/lib/i18n'
 
 type State = 'idle' | 'recording' | 'transcribing' | 'error' | 'notconfigured'
 
@@ -9,6 +9,7 @@ type State = 'idle' | 'recording' | 'transcribing' | 'error' | 'notconfigured'
  * when transcription isn't configured server-side. */
 export default function VoiceRecorder({ onTranscript }: { onTranscript: (text: string) => void }) {
   const t = useT()
+  const { lang } = useLang()
   const [state, setState] = useState<State>('idle')
   const mediaRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -17,6 +18,7 @@ export default function VoiceRecorder({ onTranscript }: { onTranscript: (text: s
     const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
     const form = new FormData()
     form.append('audio', blob)
+    form.append('lang', lang)
     try {
       const res = await fetch('/api/transcribe', { method: 'POST', body: form })
       if (res.status === 503) { setState('notconfigured'); return }

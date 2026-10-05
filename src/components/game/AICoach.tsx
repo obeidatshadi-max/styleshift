@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useLang } from '@/lib/i18n'
 import { useDoctors } from '@/hooks/useDoctors'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
-import { parseDebriefResult, type DebriefInput, type DebriefResult } from '@/lib/coach-debrief'
+import { parseDebriefResult, type ActionStatus, type DebriefInput, type DebriefResult } from '@/lib/coach-debrief'
 import TextSimulation, { card, primaryBtn, ghostBtn } from './TextSimulation'
 import type { Doctor } from '@/types/game'
 
@@ -36,6 +36,7 @@ export default function AICoach() {
   const [recording, setRecording] = useState(false)
   const [micStarting, setMicStarting] = useState(false)
   const [micTarget, setMicTarget] = useState<MicTarget | null>(null)
+  const [actionStatus, setActionStatus] = useState<ActionStatus | null>(null)
   const mounted = useRef(true)
   const requestRef = useRef<AbortController | null>(null)
   const targetRef = useRef<MicTarget | null>(null)
@@ -43,6 +44,8 @@ export default function AICoach() {
   // Stop button would: a reflection answer is transcribed straight into its own field.
   const recorder = useAudioRecorder(null, lang, () => { setRecording(false); if (targetRef.current && targetRef.current !== 'account') void transcribe() })
   const locked = busy || recording || micStarting
+  // History is newest-first, so the first match is the latest debrief for this doctor.
+  const previousAction = doctorId ? entries.find(e => e.doctor_id === doctorId && e.result?.report?.nextAction)?.result.report?.nextAction : undefined
 
   async function loadHistory() {
     setHistoryLoading(true)
@@ -62,7 +65,7 @@ export default function AICoach() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function revise() { setResult(null); setSaved(null); setActiveId(null); setError('') }
+  function revise() { setResult(null); setSaved(null); setActiveId(null); setError(''); setActionStatus(null) }
   async function startRecording(target: MicTarget = 'account') {
     setError(''); setMicStarting(true); targetRef.current = target; setMicTarget(target)
     const ok = await recorder.start()
@@ -102,7 +105,7 @@ export default function AICoach() {
     try {
       const res = await fetch('/api/coach-debrief', {
         method: 'POST', headers: { 'content-type': 'application/json' }, signal: controller.signal,
-        body: JSON.stringify({ doctorId, account, objective, successMeasure, lang, reflections }),
+        body: JSON.stringify({ doctorId, account, objective, successMeasure, lang, reflections, ...(previousAction && actionStatus ? { previousAction: { text: previousAction, status: actionStatus } } : {}) }),
       })
       if (!res.ok) throw new Error(String(res.status))
       const data = await res.json()
@@ -155,10 +158,20 @@ export default function AICoach() {
     </section>}
     <section style={card} aria-label={copy('Call debrief', 'مراجعة المكالمة')}>
       <label style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{copy('Which doctor was the call with?', 'مع أي طبيب كانت المكالمة؟')}
-        <select aria-label={copy('Choose a doctor', 'اختر طبيباً')} value={doctorId} disabled={locked || !!result} onChange={e => setDoctorId(e.target.value)} style={inputStyle}>
+        <select aria-label={copy('Choose a doctor', 'اختر طبيباً')} value={doctorId} disabled={locked || !!result} onChange={e => { setDoctorId(e.target.value); setActionStatus(null) }} style={inputStyle}>
           <option value="">{copy('Select a doctor', 'اختر طبيباً')}</option>{doctors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
       </label>
+      {!result && previousAction && <div role="group" aria-label={copy('Last planned action', 'الإجراء المخطط له سابقاً')} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 12, marginBottom: 18, display: 'grid', gap: 10 }}>
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-dim)' }}>{copy('Last time you planned:', 'خطتك في المرة السابقة:')}</p>
+        <p style={{ margin: 0, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{previousAction}</p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {([['done', copy('Done', 'تم'), ], ['partly', copy('Partly', 'جزئياً')], ['not_done', copy('Not yet', 'لم يتم بعد')]] as const).map(([value, label]) =>
+            <button key={value} type="button" aria-pressed={actionStatus === value} disabled={locked}
+              style={{ ...ghostBtn, ...(actionStatus === value ? { borderColor: 'var(--cyan)', color: 'var(--cyan)' } : {}) }}
+              onClick={() => setActionStatus(actionStatus === value ? null : value)}>{label}</button>)}
+        </div>
+      </div>}
       <label style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{copy('What was your call objective?', 'ما هدف المكالمة؟')}
         <input value={objective} maxLength={500} disabled={locked || !!result} onChange={e => setObjective(e.target.value)} style={inputStyle} />
       </label>

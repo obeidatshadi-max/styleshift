@@ -6,11 +6,13 @@ vi.mock('@/lib/i18n', () => ({ useLang: () => ({ lang: 'en' }) }))
 const doctorsState = vi.hoisted(() => ({ doctors: [{ id: '00000000-0000-4000-8000-000000000001', name: 'Dr. Practice' }] as Record<string, unknown>[], savePlan: vi.fn() }))
 vi.mock('@/hooks/useDoctors', () => ({ useDoctors: () => doctorsState }))
 const recorder = vi.hoisted(() => ({ previewUrl: null, start: vi.fn(), stop: vi.fn(), discard: vi.fn(), take: vi.fn(), abort: vi.fn() }))
+vi.mock('@/lib/promises', () => ({ addPromise: vi.fn(async () => true) }))
 vi.mock('@/hooks/useAudioRecorder', () => ({ useAudioRecorder: () => recorder }))
 vi.mock('./TextSimulation', () => ({
   card: {}, primaryBtn: {}, ghostBtn: {},
   default: ({ initialPracticeFocus }: { initialPracticeFocus: string }) => React.createElement('div', null, `Practice focus: ${initialPracticeFocus}`),
 }))
+import { addPromise } from '@/lib/promises'
 import AICoach from './AICoach'
 const report = { summary: 'Based on your account, price was raised.', strength: 'You listened.', priority: 'Clarify first.', hypothesis: 'The comparison may matter.', betterResponse: 'Compared with what?', objectiveReview: 'No date was agreed.', nextAction: 'Ask one question.', practiceFocus: 'Clarify the price comparison.' }
 const fetchMock = vi.fn()
@@ -126,6 +128,16 @@ describe('AI Coach doctor-linked reflection flow', () => {
     const id = '00000000-0000-4000-8000-000000000001'
     render(React.createElement(AICoach as React.ComponentType<{ initialDoctorId?: string }>, { initialDoctorId: id }))
     await waitFor(() => expect((screen.getByLabelText('Which doctor was the call with?') as HTMLSelectElement).value).toBe(id))
+  })
+  it('lets the rep approve a promise the coach spotted into the tracker', async () => {
+    fetchMock.mockImplementation(async (_url, init) => init?.method === 'POST'
+      ? Response.json({ result: { questions: [], promises: ['Bring the study next week'], report }, saved: true, id: 'saved' }) : Response.json({ entries: [] }))
+    render(React.createElement(AICoach))
+    fillForm(); fireEvent.click(screen.getByText('Get coaching'))
+    await screen.findByText('Bring the study next week')
+    fireEvent.click(screen.getByText('Add to my promises'))
+    await screen.findByText('Added')
+    expect(addPromise).toHaveBeenCalledWith('00000000-0000-4000-8000-000000000001', 'Bring the study next week')
   })
   it('shows persistence failure without hiding useful coaching', async () => {
     fetchMock.mockImplementation(async (_url, init) => init?.method === 'POST' ? Response.json({ result: { questions: [], report }, saved: false }) : Response.json({ entries: [] }))

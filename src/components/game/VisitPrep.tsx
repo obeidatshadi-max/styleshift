@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import PlanPanel from './PlanPanel'
+import VisitBrief from './VisitBrief'
 import { useT, useLang, useGameData } from '@/lib/i18n'
 import { useDoctors } from '@/hooks/useDoctors'
 import { useDoctorVisits } from '@/hooks/useDoctorVisits'
@@ -31,7 +32,7 @@ import { CLOSING_CRITERIA } from '@/lib/voice-partner-closing'
 import VoicePartnerLive from './VoicePartnerLive'
 import TextSimulation from './TextSimulation'
 
-interface Props { onExit: () => void }
+interface Props { onExit: () => void; /** Opens straight onto this doctor's page (from a Home nudge). */ initialDoctorId?: string }
 
 const COLOR: Record<string, string> = { driver:'var(--purple)', expressive:'var(--green)', amiable:'var(--pink)', analytical:'var(--cyan)' }
 const STYLE_KEYS: StyleKey[] = ['driver', 'expressive', 'amiable', 'analytical']
@@ -83,12 +84,20 @@ function panel(title: string, children: React.ReactNode, right?: React.ReactNode
 const primaryBtn: React.CSSProperties = { cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'#04121c', background:'var(--cyan)', borderRadius:10, padding:'12px 18px', boxShadow:'var(--glow-cyan)', touchAction:'manipulation' }
 const ghostBtn: React.CSSProperties = { cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent', borderRadius:10, padding:'12px 18px', touchAction:'manipulation' }
 
-export default function VisitPrep({ onExit }: Props) {
+export default function VisitPrep({ onExit, initialDoctorId = '' }: Props) {
   const t = useT()
   const { lang } = useLang()
   const { STYLES, SPECIALTIES, L1, L2, L3 } = useGameData()
   const { doctors, loading, saveDoctor, savePlan, removeDoctor } = useDoctors()
   const [view, setView] = useState<View>({ mode: 'list' })
+  const openedInitial = useRef(false)
+  useEffect(() => {
+    if (openedInitial.current || !initialDoctorId) return
+    const target = doctors.find(d => d.id === initialDoctorId)
+    if (!target) return
+    openedInitial.current = true
+    setView({ mode: 'detail', doctor: target })
+  }, [initialDoctorId, doctors])
 
   const wrap = (children: React.ReactNode) => (
     <div style={{ position:'relative', zIndex:1, maxWidth:560, margin:'0 auto', padding:14, display:'flex', flexDirection:'column', gap:14 }}>{children}</div>
@@ -180,6 +189,8 @@ export default function VisitPrep({ onExit }: Props) {
             <button onClick={() => setView({ mode: 'form', doctor: d })} style={{ ...ghostBtn, fontSize:11, padding:'6px 12px' }}>{t('prep.edit')}</button>
           </>
         )}
+
+        <VisitBrief key={d.id} doctor={d} />
 
         {panel(t('plan.title'),
           <PlanPanel key={d.id} doctor={d} onSave={async plan => {

@@ -48,6 +48,8 @@ interface Props {
   onShowFieldCards: () => void
   /** Opens the AI Coach, optionally on a given doctor. */
   onOpenCoach: (doctorId?: string) => void
+  /** Opens a doctor's Visit Prep page. */
+  onOpenDoctor: (doctorId: string) => void
   onStartLevel: (n: number) => void
   /** True once the profile has loaded and the style quiz has not been taken. */
   spsPending: boolean
@@ -55,7 +57,7 @@ interface Props {
   tab: Section
 }
 
-export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, onAssignmentShared, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onShowPerform, onShowFieldCards, onOpenCoach, onStartLevel, spsPending, onTakeSps, tab }: Props) {
+export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, onAssignmentShared, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onShowPerform, onShowFieldCards, onOpenCoach, onOpenDoctor, onStartLevel, spsPending, onTakeSps, tab }: Props) {
   const [moreOpen, setMoreOpen] = useState(false)
 
   const unlocked = [1, ...earnedLevels.map(n => n + 1)].filter(n => n <= 4)
@@ -110,7 +112,7 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
           </>
         )}
 
-        <CoachNudgeCard onOpenCoach={onOpenCoach} />
+        <CoachNudgeCard onOpenCoach={onOpenCoach} onOpenDoctor={onOpenDoctor} />
         <PushOptIn />
 
         <NextActionCard

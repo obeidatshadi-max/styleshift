@@ -121,6 +121,8 @@ export interface DoctorVisit {
   promise_made: string | null
   what_worked: string | null
   note: string | null
+  /** Set when the rep ticks off the promise in promise_made. */
+  promise_done_at?: string | null
   created_at: string
 }
 

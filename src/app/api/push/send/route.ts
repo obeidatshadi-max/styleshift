@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { timingSafeEqual } from 'node:crypto'
 import webpush from 'web-push'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { buildNudge, type NudgeDebrief, type NudgeDoctor } from '@/lib/coach-nudges'
+import { buildNudge, type NudgeDebrief, type NudgeDoctor, type NudgePromise } from '@/lib/coach-nudges'
 import { isDue, localClock, renderPush } from '@/lib/push-core'
 
 // Called hourly by netlify/functions/push-cron.mjs. Sends each opted-in rep at most one debrief
@@ -36,11 +36,14 @@ export async function POST(req: Request) {
   for (const sub of (subs as SubRow[]).filter(s => isDue(s, now))) {
     result.due++
     if (!nudges.has(sub.rep_id)) {
-      const [{ data: doctors }, { data: debriefs }] = await Promise.all([
+      const [{ data: doctors }, { data: debriefs }, { data: owed }] = await Promise.all([
         db.from('doctors').select('id,name,plan_objective').eq('rep_id', sub.rep_id),
         db.from('coach_debriefs').select('doctor_id:input->>doctorId,created_at,nextAction:result->report->>nextAction').eq('rep_id', sub.rep_id).order('created_at', { ascending: false }).limit(30),
+        db.from('doctor_visits').select('id,doctor_id,promise_made,created_at').eq('rep_id', sub.rep_id).not('promise_made', 'is', null).is('promise_done_at', null).limit(50),
       ])
-      nudges.set(sub.rep_id, buildNudge((doctors ?? []) as NudgeDoctor[], (debriefs ?? []) as NudgeDebrief[], now))
+      const promises: NudgePromise[] = ((owed ?? []) as { id: string; doctor_id: string; promise_made: string; created_at: string }[])
+        .map(r => ({ id: r.id, doctor_id: r.doctor_id, text: r.promise_made, created_at: r.created_at }))
+      nudges.set(sub.rep_id, buildNudge((doctors ?? []) as NudgeDoctor[], (debriefs ?? []) as NudgeDebrief[], now, {}, promises))
     }
     const nudge = nudges.get(sub.rep_id)
     if (!nudge || nudge.key === sub.last_nudge_key) continue

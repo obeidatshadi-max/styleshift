@@ -4,6 +4,7 @@ import { useLang } from '@/lib/i18n'
 import { useDoctors } from '@/hooks/useDoctors'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { parseDebriefResult, type ActionStatus, type DebriefInput, type DebriefResult } from '@/lib/coach-debrief'
+import { addPromise } from '@/lib/promises'
 import TextSimulation, { card, primaryBtn, ghostBtn } from './TextSimulation'
 import type { Doctor } from '@/types/game'
 
@@ -37,6 +38,8 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
   const [micStarting, setMicStarting] = useState(false)
   const [micTarget, setMicTarget] = useState<MicTarget | null>(null)
   const [actionStatus, setActionStatus] = useState<ActionStatus | null>(null)
+  const [addedPromises, setAddedPromises] = useState<string[]>([])
+  const [promiseError, setPromiseError] = useState(false)
   const mounted = useRef(true)
   const requestRef = useRef<AbortController | null>(null)
   const targetRef = useRef<MicTarget | null>(null)
@@ -80,6 +83,11 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
   // chooseDoctor only reads state that is still empty on arrival.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialDoctorId, doctors])
+  async function trackPromise(text: string) {
+    setPromiseError(false)
+    if (await addPromise(doctorId, text)) setAddedPromises(prev => [...prev, `${doctorId}:${text}`])
+    else setPromiseError(true)
+  }
   function revise() { setResult(null); setSaved(null); setActiveId(null); setError(''); setActionStatus(null) }
   async function startRecording(target: MicTarget = 'account') {
     setError(''); setMicStarting(true); targetRef.current = target; setMicTarget(target)
@@ -235,6 +243,18 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
     {result?.report && <section style={{ display: 'grid', gap: 12 }} aria-label={copy('Your coaching', 'تدريبك')}>
       <p>{copy(`Based on your account with ${selectedDoctor?.name ?? 'this doctor'} — interpretations are possibilities to explore.`, `بناءً على روايتك للمكالمة مع ${selectedDoctor?.name ?? 'هذا الطبيب'} — التفسيرات احتمالات للنقاش.`)}</p>
       {fields.map(([key, title]) => <article key={key} style={card}><h2 style={{ fontSize: 17, color: key === 'priority' ? 'var(--cyan)' : 'var(--ink)' }}>{title}</h2><p style={{ lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{(result.report as unknown as Record<string, string>)[key] ?? copy('Not included in this older saved debrief.', 'لم تُسجّل في هذه المراجعة القديمة.')}</p></article>)}
+      {!!result.promises?.length && <article style={card} aria-label={copy('Promises I spotted', 'وعود لاحظتُها')}>
+        <h2 style={{ fontSize: 17 }}>{copy('Promises I spotted', 'وعود لاحظتُها')}</h2>
+        <p style={{ lineHeight: 1.6, color: 'var(--ink-dim)', fontSize: 13 }}>{copy('Add the ones you really made, so you do not forget them.', 'أضف ما وعدت به فعلاً حتى لا تنساه.')}</p>
+        {result.promises.map(text => {
+          const added = addedPromises.includes(`${doctorId}:${text}`)
+          return <div key={text} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', borderTop: '1px solid var(--line)', padding: '10px 0' }}>
+            <span style={{ flex: 1, lineHeight: 1.6 }}>{text}</span>
+            <button style={ghostBtn} disabled={added || !doctorId} onClick={() => void trackPromise(text)}>{added ? copy('Added', 'تمت الإضافة') : copy('Add to my promises', 'أضف إلى وعودي')}</button>
+          </div>
+        })}
+        {promiseError && <p role="alert">{copy('Could not add the promise. Please try again.', 'تعذّرت إضافة الوعد. حاول مجدداً.')}</p>}
+      </article>}
       <p role="status">{saved ? copy('Saved privately to your account.', 'حُفظت بشكل خاص في حسابك.') : copy('Coaching is ready, but could not be saved. Keep a copy before leaving.', 'التدريب جاهز لكن تعذّر حفظه. احتفظ بنسخة قبل المغادرة.')}</p>
       <div style={card}>
         <h2 style={{ fontSize: 18 }}>{copy('Practice this with AI Doctor', 'تدرّب على ذلك مع الطبيب الذكي')}</h2>

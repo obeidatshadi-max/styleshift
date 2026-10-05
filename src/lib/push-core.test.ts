@@ -51,6 +51,7 @@ describe('renderPush', () => {
   it('has Arabic copy for every nudge kind', () => {
     const nudges = [
       { kind: 'planned_visit', key: 'k', doctorId: 'd', doctorName: 'n', text: 't' },
+      { kind: 'open_promise', key: 'k', doctorId: 'd', doctorName: 'n', text: 't', days: 3 },
       { kind: 'open_action', key: 'k', doctorId: 'd', doctorName: 'n', text: 't' },
       { kind: 'quiet', key: 'k', days: 4 },
     ] as const

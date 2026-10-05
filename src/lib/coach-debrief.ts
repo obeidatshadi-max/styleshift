@@ -28,7 +28,11 @@ export interface DebriefReport {
   practiceFocus: string
 }
 
-export interface DebriefResult { questions: []; report: DebriefReport }
+/** `promises`: commitments the rep says they made to the doctor, for the rep to approve into their tracker. */
+export interface DebriefResult { questions: []; report: DebriefReport; promises?: string[] }
+
+const MAX_PROMISES = 3
+const MAX_PROMISE_CHARS = 300
 
 const isUuid = (value: unknown): value is string =>
   typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
@@ -70,7 +74,11 @@ export function parseDebriefResult(raw: string): DebriefResult | null {
     // reply for it threw away an otherwise valid report.
     if (!v || !v.report ||
       keys.some(k => typeof v.report[k] !== 'string' || !v.report[k].trim() || v.report[k].length > (k === 'practiceFocus' ? 1200 : 2000))) return null
-    return { questions: [], report: Object.fromEntries(keys.map(k => [k, v.report[k]])) as unknown as DebriefReport }
+    // Optional and lenient: a missing or malformed list must never cost the rep an otherwise valid report.
+    const promises = Array.isArray(v.promises)
+      ? v.promises.filter((p: unknown): p is string => typeof p === 'string' && !!p.trim() && p.length <= MAX_PROMISE_CHARS).map((p: string) => p.trim()).slice(0, MAX_PROMISES)
+      : []
+    return { questions: [], report: Object.fromEntries(keys.map(k => [k, v.report[k]])) as unknown as DebriefReport, promises }
   } catch { return null }
 }
 
@@ -81,7 +89,8 @@ The rep may leave the objective, success measure and reflections empty: an empty
 Say "Based on your account" (or its Arabic equivalent). Never invent quotes, commitments, motives, clinical data, efficacy numbers, studies, dosages or product evidence. Do not score or diagnose a social style, infer tone/pace from narration, or claim causation. Distinguish reported events from tentative interpretations. Acknowledge missing evidence. Give one specific improvement and one next action. Evaluate objective achievement only against the rep's stated success measure and reported evidence; if evidence is insufficient, say so.
 If "previousAction" is present, it is the next action you set after the previous call with this doctor, with the rep's own report of whether it happened. Open the "summary" with one sentence on it: credit it if done, ask nothing if not done, and do not invent what happened. Never treat it as verified.
 Do not ask questions: "questions" must be an empty array.
-Return JSON only: {"questions":[],"report":{"summary":"...","strength":"...","priority":"...","hypothesis":"...","betterResponse":"...","objectiveReview":"...","nextAction":"...","practiceFocus":"..."}}.
+"promises" lists up to 3 explicit commitments the rep says they made to the doctor (for example to bring a study or call back), each one short sentence in the rep's own words from the account. Use [] when there are none. Never infer or invent a promise.
+Return JSON only: {"questions":[],"promises":[],"report":{"summary":"...","strength":"...","priority":"...","hypothesis":"...","betterResponse":"...","objectiveReview":"...","nextAction":"...","practiceFocus":"..."}}.
 Each report field should be 1-3 short sentences. hypothesis must explicitly be tentative. betterResponse is a suggested future phrase, never a historical quote. practiceFocus describes a fictional practice situation and one observable skill; do not portray recollections as verified customer facts.`,
     prompt: JSON.stringify({ ...input, doctorName }), maxTokens: 2500,
   }

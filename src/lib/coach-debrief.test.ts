@@ -32,6 +32,14 @@ describe('debrief evidence and contracts', () => {
     for (const bad of ['x', { text: '', status: 'done' }, { text: 'x', status: 'maybe' }, { text: 'x'.repeat(2001), status: 'done' }]) expect(parseDebriefInput({ ...input, previousAction: bad })).toBeNull()
     expect(debriefPrompt({ ...input, previousAction: { text: 'Ask one question.', status: 'done' } }, 'Dr X').prompt).toContain('previousAction')
   })
+  it('keeps up to three short promises and never fails a report over a bad promise list', () => {
+    const parse = (promises: unknown) => parseDebriefResult(JSON.stringify({ questions: [], promises, report }))
+    expect(parse([' Bring the study ', 'Call back', 'x', 'four'])?.promises).toEqual(['Bring the study', 'Call back', 'x'])
+    expect(parse(['', 5, null, 'y'.repeat(301), 'ok'])?.promises).toEqual(['ok'])
+    expect(parse('not a list')?.promises).toEqual([])
+    expect(parseDebriefResult(JSON.stringify({ questions: [], report }))?.promises).toEqual([])
+    expect(debriefPrompt(input, 'Dr X').system).toContain('"promises"')
+  })
   it('rejects incomplete reports and removes unrecognized model fields', () => {
     expect(parseDebriefResult(JSON.stringify({ questions: [], report: { summary: 'hello' } }))).toBeNull()
     expect(parseDebriefResult(JSON.stringify({ questions: [], report: { ...report, nextAction: ' ' } }))).toBeNull()

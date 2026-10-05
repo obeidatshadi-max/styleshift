@@ -15,11 +15,14 @@ const report = {
 }
 
 describe('debrief evidence and contracts', () => {
-  it('requires a real doctor, objective, success measure and all three guided reflections', () => {
+  it('requires only a real doctor and an account; objective, measure and reflections may be empty', () => {
     expect(parseDebriefInput(input)).toEqual(input)
+    const bare = { ...input, objective: ' ', successMeasure: '', reflections: { wentWell: '', changeNextTime: ' ', objectiveReview: '' } }
+    expect(parseDebriefInput(bare)).toEqual({ ...input, objective: '', successMeasure: '', reflections: { wentWell: '', changeNextTime: '', objectiveReview: '' } })
     for (const v of [null, [], { ...input, doctorId: 'bad' }, { ...input, account: 'hi' },
-      { ...input, account: 'x'.repeat(12001) }, { ...input, objective: ' ' },
-      { ...input, successMeasure: '' }, { ...input, reflections: { ...input.reflections, wentWell: '' } },
+      { ...input, account: 'x'.repeat(12001) }, { ...input, objective: 'x'.repeat(501) },
+      { ...input, successMeasure: 5 }, { ...input, reflections: { ...input.reflections, wentWell: 'x'.repeat(2001) } },
+      { ...input, reflections: { ...input.reflections, wentWell: undefined } },
       { ...input, lang: 'xx' }]) expect(parseDebriefInput(v)).toBeNull()
   })
   it('accepts an optional previous action and rejects malformed ones', () => {

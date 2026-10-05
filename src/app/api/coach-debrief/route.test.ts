@@ -37,7 +37,7 @@ describe('private, doctor-linked debrief API', () => {
     expect(complete).not.toHaveBeenCalled()
   })
   it('validates and checks profile ownership before spending model tokens', async () => {
-    expect((await POST(request({ ...input, reflections: { ...input.reflections, wentWell: '' } }))).status).toBe(400)
+    expect((await POST(request({ ...input, account: 'short' }))).status).toBe(400)
     db.from.mockReturnValue({ select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }) }) })
     expect((await POST(request(input))).status).toBe(404)
     expect(complete).not.toHaveBeenCalled()

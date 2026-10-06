@@ -70,7 +70,7 @@
         "benefit_tied_to_need":   { "points": 8,  "source": "proposed", "description": "Linked the product to something this doctor said they care about." },
         "generic_claim":          { "points": -4, "source": "proposed", "description": "Made a broad claim not connected to the doctor's situation." },
         "unsupported_claim":      { "points": -6, "source": "proposed", "description": "Asserted a strong benefit with no reference to evidence." },
-        "hedged_delivery":        { "points": -3, "source": "proposed", "description": "Weakened their own message with repeated hedges, fillers or intensifiers (for example 'maybe', 'sort of', 'I guess', 'um'). Respectful address such as 'doctor' is not a hedge." }
+        "hedged_delivery":        { "points": -3, "source": "proposed", "description": "Weakened their own message with repeated hedges, fillers or intensifiers (for example 'maybe', 'sort of', 'I guess', 'um'). Respectful address such as 'doctor' is not a hedge, and honest uncertainty about medical information (for example 'let me check and come back to you') is not a weakness." }
       }
     },
     "closing": {

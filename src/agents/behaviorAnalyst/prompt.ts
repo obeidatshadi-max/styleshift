@@ -69,7 +69,7 @@ export function hedgeMeasurements(session: StyleShiftSession): string {
     .filter(r => r.count >= 2)
     .map(r => `- turn ${r.turn}: ${r.count} markers (${r.markers.join(', ')})`)
   return lines.length
-    ? `\nMeasured hedging/filler markers in rep turns (text count only; report hedged_delivery only if the quoted words really weaken the message in context):\n${lines.join('\n')}\n`
+    ? `\nMeasured hedging/filler markers in rep turns (text count only, a review indicator not a verdict: report hedged_delivery only if the quoted words really weaken the message in context. Honest uncertainty about medical facts, a real estimate, or meaningful \"يعني\"/\"زين\" is NOT a weakness; count it only when repeated without adding meaning, relative to turn length):\n${lines.join('\n')}\n`
     : ''
 }
 

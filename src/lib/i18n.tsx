@@ -710,6 +710,7 @@ const EN: Dict = {
   'sim.beh.used_but_contradiction': 'Undoing an acknowledgement with “but”',
   'sim.beh.agreement_then_commitment': 'Checking agreement before asking for commitment',
   'sim.beh.premature_close': 'Asking for commitment too early',
+  'sim.beh.hedged_delivery': 'Hedging or filler words weakening the message',
   'voiceLive.consentAgree': 'Start Call',
   'voiceLive.consentCancel': 'Cancel',
   'voiceLive.difficultyTitle': 'Difficulty',
@@ -1642,6 +1643,7 @@ const AR: Dict = {
   'sim.beh.used_but_contradiction': 'إلغاء الاعتراف بكلمة «لكن»',
   'sim.beh.agreement_then_commitment': 'التأكد من الاتفاق قبل طلب الالتزام',
   'sim.beh.premature_close': 'طلب الالتزام مبكراً',
+  'sim.beh.hedged_delivery': 'كلمات تردّد أو حشو تُضعف الرسالة', // DRAFT — native Arabic review pending
   'voiceLive.consentAgree': 'ابدأ المكالمة',
   'voiceLive.consentCancel': 'إلغاء',
   'voiceLive.difficultyTitle': 'مستوى الصعوبة',

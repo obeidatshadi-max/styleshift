@@ -3,6 +3,7 @@ import { CONTEXT_COACHING_RULES } from '@/lib/context-coaching'
 import type { StyleShiftSession } from '@/schemas/session'
 import { DRIVE } from '@/lib/doctor-context'
 import { langName } from '@/lib/voice-partner-core'
+import { countHedges } from '@/lib/hedging'
 import { defaultScoringConfig, type ScoringConfig } from '@/scoring/config'
 import { SCORED_COMPETENCIES } from '@/schemas/scoring'
 import type { StyleKey } from '@/types/game'
@@ -60,6 +61,18 @@ function catalogFor(competency: typeof COMPETENCIES[number], cfg: ScoringConfig)
   return Object.entries(rules).map(([key, r]) => `    * ${key} — ${r.description}`).join('\n')
 }
 
+/** Measured (not inferred) hedge/filler counts per REP turn, so the analyst can ground `hedged_delivery`. */
+export function hedgeMeasurements(session: StyleShiftSession): string {
+  const lines = session.transcript
+    .filter(t => t.role === 'rep')
+    .map(t => ({ turn: t.turnIndex, ...countHedges(t.text) }))
+    .filter(r => r.count >= 2)
+    .map(r => `- turn ${r.turn}: ${r.count} markers (${r.markers.join(', ')})`)
+  return lines.length
+    ? `\nMeasured hedging/filler markers in rep turns (text count only; report hedged_delivery only if the quoted words really weaken the message in context):\n${lines.join('\n')}\n`
+    : ''
+}
+
 export function buildAnalystPrompt(session: StyleShiftSession, cfg: ScoringConfig = defaultScoringConfig): string {
   const competencies = COMPETENCIES.map(c => `- ${c}: ${COMPETENCY_GUIDE[c]}\n${catalogFor(c, cfg)}`).join('\n')
   return `Session context:
@@ -74,7 +87,7 @@ ${competencies}
 
 Transcript (each line is "[turn N | speaker] text"):
 ${session.transcript.length ? formatTranscript(session) : '(empty)'}
-
+${hedgeMeasurements(session)}
 Task: list the rep's observable behaviors, each tied to one competency. Include both behaviors that moved the doctor toward engagement and behaviors that moved them away or passed over an opening. Report between 3 and 15 observations; fewer if the transcript is short.
 
 Return JSON exactly in this shape:

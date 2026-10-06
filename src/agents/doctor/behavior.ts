@@ -1,4 +1,5 @@
 import { applyStateDelta, type PhysicianState, type StateDelta } from '@/lib/voice-partner-core'
+import { countHedges } from '@/lib/hedging'
 
 /** What the rep's line LOOKS like to a busy doctor — length and question
  * shape only. Deterministic, no LLM: this drives how the doctor reacts (state
@@ -22,6 +23,8 @@ export interface RepTurnShape {
   mirrored: boolean
   /** "I understand, but…" — an acknowledgement undone by "but". */
   usedBut: boolean
+  /** Count of hedges/fillers/intensifiers in the rep's own words. Measurement only: not a doctor reaction or score. */
+  hedgeCount: number
 }
 
 /** What the caller knows beyond the rep's own line. */
@@ -80,6 +83,7 @@ export function analyzeRepTurn(text: string, context: RepTurnContext = {}): RepT
     labeledFeeling: LABEL_EN.test(trimmed) || LABEL_AR.test(trimmed),
     mirrored: echoesDoctor(trimmed, context.lastDoctorText),
     usedBut: BUT_EN.test(trimmed) || BUT_AR.test(trimmed),
+    hedgeCount: countHedges(trimmed).count,
   }
 }
 

@@ -18,8 +18,28 @@ describe('countHedges', () => {
     expect(countHedges('The summary was a very short hum of numbers, bummer.').count).toBe(1) // only "very"
     expect(countHedges('Perhapsthing').count).toBe(0)
   })
-  it('counts nothing in Arabic until a reviewed list is supplied', () => {
-    expect(countHedges('يمكن يعني شوية مو متأكد').count).toBe(0)
+  it('counts Iraqi/MSA hedges, fillers and intensifiers', () => {
+    expect(countHedges('اممم يعني كلش مفيد، تقريباً').count).toBe(4)
+  })
+  it('counts the longest phrase once, not its parts', () => {
+    expect(countHedges('مو متأكد كلش').count).toBe(1)
+    expect(countHedges('يمكن أكون غلطان').count).toBe(1)
+    expect(countHedges('والله العظيم').count).toBe(1)
+  })
+  it('treats spelling variants as the same marker and ignores diacritics', () => {
+    expect(countHedges('أگصد').count).toBe(1)
+    expect(countHedges('أقصد').count).toBe(1)
+    expect(countHedges('اقصد').count).toBe(1)
+    expect(countHedges('صدگ').count).toBe(1)
+    expect(countHedges('صدك').count).toBe(1)
+    expect(countHedges('فعلاً').count).toBe(1)
+    expect(countHedges('فعلا').count).toBe(1)
+  })
+  it('never counts respectful address or polite requests in Arabic', () => {
+    expect(countHedges('دكتور، حضرتك، سيدي، إذا تسمح، من فضلك، عمي').count).toBe(0)
+  })
+  it('matches whole Arabic words only', () => {
+    expect(countHedges('الحيلة والتقريبا').count).toBe(0)
   })
   it('flows into the turn shape as a measurement only', () => {
     expect(analyzeRepTurn('Maybe, sort of, I guess so.').hedgeCount).toBe(3)

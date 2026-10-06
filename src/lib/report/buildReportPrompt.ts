@@ -2,6 +2,7 @@ import {
   CERTAINTIES, COMMITMENT_STATUSES, OBJECTIVE_STATUSES, PERFORMANCE_DIMENSIONS, SIGNAL_CATEGORIES, SOCIAL_STYLES,
   type TranscriptSegment, type ReportContext, type SocialStyleSignal,
 } from '@/schemas/conversationReport'
+import { CONTEXT_COACHING_RULES } from '@/lib/context-coaching'
 
 const oneOf = (values: readonly string[]) => values.map(v => `"${v}"`).join(' | ')
 
@@ -11,6 +12,7 @@ const oneOf = (values: readonly string[]) => values.map(v => `"${v}"`).join(' | 
  * ungrounded. Enum lists come from the schema constants so they can't drift. */
 const EV = '{ "segmentIndex": <number>, "speakerRole": "rep"|"counterpart" }'
 const SHAPE_FIELDS = {
+  momentUnderstanding: `  "momentUnderstanding": { "evidence": ${EV}, "possibleMeanings": [string], "missingContext": string, "clarifyingQuestion": string, "subsequentResponse": ${EV}|null }|null`,
   visitSummary: `  "visitSummary": { "summary": string, "objectiveStatus": ${oneOf(OBJECTIVE_STATUSES)}, "objectiveStatusReason": string, "evidence": [${EV}] }`,
   customerUnderstanding: `  "customerUnderstanding": {
     "needs": [{ "text": string, "certainty": ${oneOf(CERTAINTIES)}, "evidence": [${EV}] }],
@@ -40,10 +42,10 @@ export type ReportLang = 'en' | 'ar'
 
 const PART_KEYS: Record<ReportPart, (keyof typeof SHAPE_FIELDS)[]> = {
   summary: ['visitSummary', 'customerUnderstanding', 'commitments'],
-  moments: ['performance', 'criticalMoments'],
+  moments: ['performance', 'criticalMoments', 'momentUnderstanding'],
   coaching: ['coachingPriority', 'strength'],
   style: ['socialStyle'],
-  all: ['visitSummary', 'customerUnderstanding', 'performance', 'criticalMoments', 'commitments', 'coachingPriority', 'strength', 'socialStyle'],
+  all: ['visitSummary', 'customerUnderstanding', 'performance', 'criticalMoments', 'momentUnderstanding', 'commitments', 'coachingPriority', 'strength', 'socialStyle'],
 }
 /** Merge the parts' parsed JSON, taking from each only the keys that part was asked for. A part
  * can echo another part's key (the objective line mentions visitSummary, so the coaching part
@@ -73,7 +75,7 @@ export const SYSTEM = 'You are an objective sales-conversation analyst, not a cl
   'not present in the transcript. Never present a simulated persona\'s configuration as real ' +
   'customer information. Never invent clinical data, efficacy numbers, or real/branded drug names. ' +
   'When evidence is insufficient, say so explicitly rather than guessing. ' +
-  'Output ONLY a single valid JSON object, no markdown fences, no commentary.'
+  'Output ONLY a single valid JSON object, no markdown fences, no commentary. ' + CONTEXT_COACHING_RULES
 
 function formatSegments(segments: TranscriptSegment[]): string {
   return segments.map(s => `[${s.segmentIndex}] ${s.speakerRole}: ${s.text}`).join('\n')
@@ -126,6 +128,8 @@ Keep it compact: every string at most 2 short sentences; at most 3 items in each
 references per item; at most 3 performance items; at most 3 strongestSignals per style read. Fewer,
 well-supported items beat many weak ones.
 ${SHAPES[part]}
+
+${part === 'moments' || part === 'all' ? `For momentUnderstanding, choose ONE ambiguous counterpart statement worth clarifying. Cite the counterpart's actual segment; never a rep statement. Give one or two tentative possibleMeanings, explicitly framed as possibilities, not established motives. State the missingContext and suggest one short, respectful clarifyingQuestion. Set subsequentResponse only to the first actual counterpart response after an intervening rep turn, if present; it is historical evidence, NOT a predicted response to your suggested question. Return null when no useful supported moment exists. Do not use hidden simulation configuration as evidence. Keep each field to one short sentence.` : ''}
 
 For every piece of evidence, cite ONLY { "segmentIndex": <number>, "speakerRole": "rep"|"counterpart" } —
 do NOT include the quoted text yourself; the exact words will be looked up separately from the real

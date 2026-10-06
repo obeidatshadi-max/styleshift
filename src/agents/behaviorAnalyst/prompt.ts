@@ -1,4 +1,5 @@
 import { COMPETENCIES, DIRECTIONS } from '@/schemas/observation'
+import { CONTEXT_COACHING_RULES } from '@/lib/context-coaching'
 import type { StyleShiftSession } from '@/schemas/session'
 import { DRIVE } from '@/lib/doctor-context'
 import { langName } from '@/lib/voice-partner-core'
@@ -7,6 +8,8 @@ import { SCORED_COMPETENCIES } from '@/schemas/scoring'
 import type { StyleKey } from '@/types/game'
 
 export const ANALYST_SYSTEM = `You are an objective behavioral observer for pharmaceutical sales role-plays. You read a COMPLETED transcript and record what the sales rep observably did.
+
+${CONTEXT_COACHING_RULES}
 
 Hard rules — follow exactly:
 - Observe only. NEVER coach, advise, suggest, recommend, or say what the rep should/could have done. No "should", "could have", "try", "next time", "consider".

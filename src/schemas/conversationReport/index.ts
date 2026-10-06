@@ -108,6 +108,15 @@ export interface CriticalMoment {
   betterResponseExample: string | null
 }
 
+export interface MomentUnderstanding {
+  evidence: EvidenceRef
+  possibleMeanings: string[]
+  missingContext: string
+  clarifyingQuestion: string
+  /** Actual subsequent counterpart words, never the predicted result of the suggestion. */
+  subsequentResponse: EvidenceRef | null
+}
+
 export interface VoiceMeasurement {
   metric: VoiceMetric
   value: number
@@ -187,6 +196,8 @@ export interface ConversationReport {
   customerUnderstanding: CustomerUnderstanding
   performance: PerformanceFinding[]
   criticalMoments: CriticalMoment[]
+  /** Additive field: older saved reports remain readable. */
+  momentUnderstanding?: MomentUnderstanding | null
   voiceMeasurements: VoiceMeasurement[]
   commitments: Commitment[]
   coachingPriority: CoachingPriority

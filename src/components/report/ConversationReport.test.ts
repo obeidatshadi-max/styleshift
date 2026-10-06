@@ -28,6 +28,21 @@ function renderReport(props: { report: Report; outdated: boolean; audioAvailable
 }
 
 describe('ConversationReport', () => {
+  it('shows the contextual question and uncertainty without inventing a response', () => {
+    renderReport({ outdated: false, report: minimalReport({ momentUnderstanding: {
+      evidence: { segmentIndex: 0, speakerRole: 'counterpart', quote: 'It is the same as the others.' },
+      possibleMeanings: ['A meaningful difference may be unclear.'], missingContext: 'The comparison criteria are unknown.',
+      clarifyingQuestion: 'Which difference matters most?', subsequentResponse: null,
+    } }) })
+    expect(screen.getByRole('region', { name: 'Understand this moment' })).toBeTruthy()
+    expect(screen.getByText('Which difference matters most?')).toBeTruthy()
+    expect(screen.getByText('The comparison criteria are unknown.')).toBeTruthy()
+    expect(screen.getByText('No subsequent doctor response was recorded.')).toBeTruthy()
+  })
+  it('keeps older saved reports readable without the optional card', () => {
+    renderReport({ report: minimalReport(), outdated: false })
+    expect(screen.queryByRole('region', { name: 'Understand this moment' })).toBeNull()
+  })
   it('renders the visit summary without inventing an objective when none was supplied', () => {
     renderReport({ report: minimalReport(), outdated: false })
     expect(screen.getByText('Short intro visit.')).toBeTruthy()

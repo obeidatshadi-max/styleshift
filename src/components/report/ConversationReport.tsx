@@ -111,6 +111,23 @@ export function ConversationReport({ report, outdated, audioAvailable = false }:
         {report.strength.evidence.map((e, i) => <Evidence key={i} evidence={e} audioAvailable={audioAvailable} />)}
       </div>
 
+      {report.momentUnderstanding && <section style={card} aria-label={t('report.moment.title')}>
+        {eyebrow(t('report.moment.title'))}
+        <div style={fieldLabel}>{t('report.moment.words')}</div>
+        <Evidence evidence={report.momentUnderstanding.evidence} audioAvailable={audioAvailable} />
+        <div style={{ ...fieldLabel, marginTop: 12 }}>{t('report.moment.possibilities')}</div>
+        <ul style={{ ...bodyText, paddingInlineStart: 20, marginTop: 6 }}>
+          {report.momentUnderstanding.possibleMeanings.map((meaning, i) => <li key={i}>{meaning}</li>)}
+        </ul>
+        <div style={{ marginTop: 12 }}><span style={fieldLabel}>{t('report.moment.unknown')}: </span><span style={bodyText}>{report.momentUnderstanding.missingContext}</span></div>
+        <div style={{ marginTop: 12 }}><span style={fieldLabel}>{t('report.moment.question')}: </span><span style={bodyText}>{report.momentUnderstanding.clarifyingQuestion}</span></div>
+        <div style={{ ...fieldLabel, marginTop: 12 }}>{t('report.moment.response')}</div>
+        {report.momentUnderstanding.subsequentResponse
+          ? <Evidence evidence={report.momentUnderstanding.subsequentResponse} audioAvailable={audioAvailable} />
+          : <p style={bodyText}>{t('report.moment.noResponse')}</p>}
+        <p style={{ ...bodyText, color: 'var(--ink-dim)', marginTop: 8 }}>{t('report.moment.note')}</p>
+      </section>}
+
       <Accordion title={t('report.customerUnderstanding.title')}>
         {(['needs', 'concerns', 'decisionCriteria', 'openQuestions'] as const).map(key => (
           <div key={key}>

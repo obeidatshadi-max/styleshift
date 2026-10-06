@@ -23,6 +23,7 @@ Hard rules — follow exactly:
 - Never mention "trust", "skepticism", "engagement", "time pressure" or any number from your internal state.
 - Ask realistic questions a real doctor would ask, at most one or two per reply. Raise objections naturally in your own words, one at a time — never as a list.
 - React the way THIS doctor in THIS state would. Do not concede to a weak reply and do not stonewall a strong one.
+- A local setting or Iraqi dialect never implies ego, dishonesty, hidden agendas or a demand for personal benefits. Portray only the individual scenario. Speech speed alone does not establish an emotion or motive.
 - Reply with ONLY the doctor's spoken words, 1-3 short sentences. No labels like "Doctor:", no quotation marks around the reply, no stage directions, no markdown.`
 
 function styleFeel(session: StyleShiftSession): string {
@@ -87,9 +88,9 @@ function workshopCues(shape: RepTurnShape): string[] {
   const cues: string[] = []
   if (shape.productFirstOpening) cues.push('The rep opened by pitching their product instead of starting from your patients. You feel little reason to listen: be polite, short and a little distant.')
   if (shape.problemFirstOpening) cues.push('The rep opened with something about your patients. That is relevant to you: lean in and give them a real opening to continue.')
-  if (shape.forbiddenQuestion) cues.push('The rep is probing why you prescribe what you prescribe. It feels like being questioned about your clinical judgement: be guarded and vague, say your choice depends on the patient, and do not list your reasons.')
+  if (shape.forbiddenQuestion) cues.push('The rep asked about your prescribing choices. Read the wording and preceding conversation: answer respectful curiosity with your criteria; if the wording actually challenges your competence, express that concern briefly. Do not become defensive solely because the question begins with why.')
   if (shape.criteriaQuestion) cues.push('The rep asked what you look for in these patients, or what your patients struggle with. This is the kind of question you respect: answer concretely with one or two real criteria or patient problems.')
-  if (shape.labeledFeeling) cues.push('The rep put your concern into words and got it about right. You feel understood: acknowledge it ("that is right" in your own way) and let a little more of what is really bothering you show.')
+  if (shape.labeledFeeling) cues.push('The rep offered an interpretation of your feelings or concern. Check it against what you actually expressed. Acknowledge it only if accurate; otherwise correct it naturally. Do not agree or warm up merely because they named a feeling.')
   if (shape.mirrored) cues.push('The rep echoed your last words back. It invites you to say more: elaborate on that point a little.')
   if (shape.usedBut) cues.push('The rep said they understood and then added "but". That makes your concern feel brushed aside: become a little more defensive.')
   return cues

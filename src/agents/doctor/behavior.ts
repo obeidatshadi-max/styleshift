@@ -89,11 +89,11 @@ export function analyzeRepTurn(text: string, context: RepTurnContext = {}): RepT
  * engine already enforces. */
 export function repTurnToDelta(shape: RepTurnShape): StateDelta {
   const adds: StateDelta[] = []
-  if (shape.forbiddenQuestion) adds.push({ trustDelta: -3, skepticismDelta: 3, engagementDelta: -3 })
+  // A prescribing question or a feeling label is only a wording signal.
+  // Contextual fit is handled by the doctor prompt, not an automatic bonus/penalty.
   if (shape.criteriaQuestion) adds.push({ trustDelta: 2, skepticismDelta: -2, engagementDelta: 3 })
   if (shape.productFirstOpening) adds.push({ trustDelta: -1, skepticismDelta: 1, engagementDelta: -4 })
   if (shape.problemFirstOpening) adds.push({ trustDelta: 2, skepticismDelta: -1, engagementDelta: 4 })
-  if (shape.labeledFeeling) adds.push({ trustDelta: 3, skepticismDelta: -2, engagementDelta: 1 })
   if (shape.mirrored) adds.push({ trustDelta: 1, skepticismDelta: 0, engagementDelta: 3 })
   if (shape.usedBut) adds.push({ trustDelta: -2, skepticismDelta: 2, engagementDelta: -1 })
   // applyStateDelta clamps each total to the engine's -10..+10 range.
@@ -104,9 +104,9 @@ export function repTurnToDelta(shape: RepTurnShape): StateDelta {
   }), lengthAndQuestionDelta(withoutFalseOpenQuestion(shape)))
 }
 
-/** "Why do you prescribe X?" starts with an open-question word but probes rather than invites, so it earns no open-question credit. */
+/** These phrases need contextual interpretation before receiving open-question credit. */
 export function withoutFalseOpenQuestion(shape: RepTurnShape): RepTurnShape {
-  return shape.forbiddenQuestion ? { ...shape, askedOpenQuestion: false } : shape
+  return shape.forbiddenQuestion || shape.labeledFeeling ? { ...shape, askedOpenQuestion: false } : shape
 }
 
 function lengthAndQuestionDelta(shape: RepTurnShape): StateDelta {

@@ -41,7 +41,7 @@ describe('buildReportPrompt', () => {
       expect(prompt).toContain(field)
   })
   it('splits the shape across parts that each hold only their own keys and together cover the full report', () => {
-    const topKeys = ['visitSummary', 'customerUnderstanding', 'performance', 'criticalMoments', 'commitments', 'coachingPriority', 'strength', 'socialStyle']
+    const topKeys = ['visitSummary', 'customerUnderstanding', 'performance', 'criticalMoments', 'momentUnderstanding', 'commitments', 'coachingPriority', 'strength', 'socialStyle']
     const all = buildReportPrompt(segments, context, [], [], 'all')
     const covered = new Set<string>()
     for (const part of REPORT_PARTS) {

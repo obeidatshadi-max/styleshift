@@ -31,6 +31,7 @@ import VoicePartnerClosing from './VoicePartnerClosing'
 import { CLOSING_CRITERIA } from '@/lib/voice-partner-closing'
 import VoicePartnerLive from './VoicePartnerLive'
 import TextSimulation from './TextSimulation'
+import { IraqiVisitPractice } from './IraqiVisitPractice'
 
 interface Props { onExit: () => void; /** Opens straight onto this doctor's page (from a Home nudge). */ initialDoctorId?: string }
 
@@ -58,7 +59,7 @@ type View =
   | { mode: 'voiceFab'; doctor: Doctor }
   | { mode: 'voiceClosing'; doctor: Doctor }
   | { mode: 'voiceLive'; doctor: Doctor }
-  | { mode: 'textSim'; doctor: Doctor }
+  | { mode: 'textSim'; doctor: Doctor; practiceFocus?: string }
 
 const inputStyle: React.CSSProperties = {
   background:'rgba(0,0,0,.3)', border:'1px solid var(--line)', borderRadius:10,
@@ -160,7 +161,7 @@ export default function VisitPrep({ onExit, initialDoctorId = '' }: Props) {
 
   // ───────────────────────── MULTI-AGENT TEXT SIMULATION ─────────────────────────
   if (view.mode === 'textSim') {
-    return <TextSimulation doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
+    return <TextSimulation doctor={view.doctor} initialPracticeFocus={view.practiceFocus} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
   }
 
   // ───────────────────────── DETAIL / PREP ─────────────────────────
@@ -206,6 +207,7 @@ export default function VisitPrep({ onExit, initialDoctorId = '' }: Props) {
               <p style={{ fontSize: 13, color: 'var(--ink-dim)', lineHeight: 1.6 }}>{t('practice.voiceHint')}</p>
               <button onClick={() => setView({ mode: 'textSim', doctor: d })} style={{ ...ghostBtn, width: '100%' }}>{t('practice.text')}</button>
               <p style={{ fontSize: 13, color: 'var(--ink-dim)', lineHeight: 1.6 }}>{t('practice.textHint')}</p>
+              <IraqiVisitPractice onPractice={practiceFocus => setView({ mode: 'textSim', doctor: d, practiceFocus })} />
             </div></>)}
 
         {style && panel(t('prep.cheatTitle'),

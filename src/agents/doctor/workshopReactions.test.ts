@@ -35,12 +35,12 @@ describe('workshop detectors', () => {
 })
 
 describe('doctor feelings and prompt', () => {
-  it('a patient-first opening and a criteria question warm the doctor; forbidden questions and "but" cool it', () => {
+  it('rewards patient-focused discovery without automatically penalizing a prescribing question', () => {
     const warm = repTurnToDelta(analyzeRepTurn('What challenges do your patients face with their current treatment?', first))
     const cold = repTurnToDelta(analyzeRepTurn('Why do you prescribe that one?', first))
     expect(warm.engagementDelta).toBeGreaterThan(cold.engagementDelta)
     expect(warm.trustDelta).toBeGreaterThan(0)
-    expect(cold.trustDelta).toBeLessThan(0)
+    expect(cold.trustDelta).toBeGreaterThanOrEqual(0)
     expect(repTurnToDelta(analyzeRepTurn('I understand, but our data is strong.')).trustDelta).toBeLessThan(0)
   })
   it('keeps stacked effects inside the engine range', () => {
@@ -53,7 +53,16 @@ describe('doctor feelings and prompt', () => {
     const s = createEmptySession('s1', 'r1')
     const text = 'Why do you prescribe that one?'
     const prompt = buildDoctorReplyPrompt(s, text, analyzeRepTurn(text, first), state)
-    expect(prompt).toContain('guarded and vague')
+    expect(prompt).toContain('answer respectful curiosity with your criteria')
     expect(prompt).not.toMatch(/forbidden|mistake|should have/i)
+  })
+  it('does not award trust merely for naming an unexpressed feeling', () => {
+    for (const text of ['It sounds like you are anxious.', 'يبدو أنك قلق.']) {
+      const shape = analyzeRepTurn(text)
+      expect(shape.labeledFeeling).toBe(true)
+      expect(repTurnToDelta(shape)).toEqual({ trustDelta: 0, skepticismDelta: 0, engagementDelta: 0 })
+      const prompt = buildDoctorReplyPrompt(createEmptySession('s1', 'r1'), text, shape, state)
+      expect(prompt).toContain('otherwise correct it naturally')
+    }
   })
 })

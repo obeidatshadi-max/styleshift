@@ -40,6 +40,35 @@ describe('stripSegmentRefs', () => {
 })
 
 describe('groundReport', () => {
+  const moment = {
+    evidence: { segmentIndex: 0 }, possibleMeanings: ['They may need a concise comparison.'],
+    missingContext: 'Which evidence matters most?', clarifyingQuestion: 'Which comparison would help?',
+    subsequentResponse: { segmentIndex: 999, quote: 'I agree to prescribe.' },
+  }
+  it('grounds a context card and never invents a subsequent response', () => {
+    const report = groundReport(minimalRaw({ momentUnderstanding: moment }), segments, context, base)!
+    expect(report.momentUnderstanding?.evidence.quote).toBe(segments[0].text)
+    expect(report.momentUnderstanding?.subsequentResponse).toBeNull()
+  })
+  it('uses the first actual doctor response after a rep turn, not a model-selected outcome', () => {
+    const extended: TranscriptSegment[] = [...segments,
+      { ...segments[0], segmentIndex: 2, text: 'Show me the comparison.' },
+      { ...segments[0], segmentIndex: 3, text: 'Thank you.' },
+    ]
+    const report = groundReport(minimalRaw({ momentUnderstanding: { ...moment, subsequentResponse: { segmentIndex: 3 } } }), extended, context, base)!
+    expect(report.momentUnderstanding?.subsequentResponse?.quote).toBe('Show me the comparison.')
+  })
+  it('rejects a rep anchor, absent evidence or incomplete interpretation without losing the report', () => {
+    for (const invalid of [
+      { ...moment, evidence: { segmentIndex: 1, speakerRole: 'counterpart' } },
+      { ...moment, evidence: { segmentIndex: 99 } },
+      { ...moment, possibleMeanings: [] },
+      { ...moment, clarifyingQuestion: '' },
+    ]) {
+      expect(groundReport(minimalRaw({ momentUnderstanding: invalid }), segments, context, base)?.momentUnderstanding).toBeNull()
+    }
+    expect(groundReport(minimalRaw(), segments, context, base)?.momentUnderstanding).toBeNull()
+  })
   it('strips transcript indices from free-text report fields', () => {
     const raw = minimalRaw({ coachingPriority: { behavior: 'Ask open questions ([1], [3]) before pitching', evidence: [{ segmentIndex: 1, speakerRole: 'rep' }], betterPhrase: 'What matters most?', practiceExercise: 'One open question [1].', successLooksLike: 'A need is named.' } })
     const report = groundReport(raw, segments, context, base)!

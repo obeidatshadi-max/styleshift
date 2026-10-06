@@ -145,6 +145,26 @@ export function groundReport(
     }
   }).filter((x): x is NonNullable<typeof x> => x !== null).slice(0, 5)
 
+  // Optional context card. Anchor it to the counterpart, and resolve the
+  // actual next response from transcript order rather than a model prediction.
+  const mu = (r.momentUnderstanding && typeof r.momentUnderstanding === 'object'
+    ? r.momentUnderstanding : {}) as Record<string, unknown>
+  const momentEvidence = groundEvidence(mu.evidence, segments)
+  const possibleMeanings = Array.isArray(mu.possibleMeanings)
+    ? mu.possibleMeanings.map(v => str(v)).filter(Boolean).slice(0, 2) : []
+  const missingContext = str(mu.missingContext)
+  const clarifyingQuestion = str(mu.clarifyingQuestion)
+  const following = momentEvidence ? [...segments]
+    .filter(s => s.segmentIndex > momentEvidence.segmentIndex)
+    .sort((a, b) => a.segmentIndex - b.segmentIndex) : []
+  const repReply = following.find(s => s.speakerRole === 'rep')
+  const nextReply = repReply ? following.find(s => s.speakerRole === 'counterpart' && s.segmentIndex > repReply.segmentIndex) : null
+  const momentUnderstanding = momentEvidence?.speakerRole === 'counterpart'
+    && possibleMeanings.length > 0 && missingContext && clarifyingQuestion ? {
+      evidence: momentEvidence, possibleMeanings, missingContext, clarifyingQuestion,
+      subsequentResponse: nextReply ? groundEvidence(nextReply, segments) : null,
+    } : null
+
   // ── Commitments — status must be exactly one of the three valid values ──
   const commitments = (Array.isArray(r.commitments) ? r.commitments : []).map(item => {
     const c = (item && typeof item === 'object' ? item : {}) as Record<string, unknown>
@@ -234,7 +254,7 @@ export function groundReport(
     transcriptVersion: opts.transcriptVersion,
     scoringConfigVersion: typeof context.deterministicMetrics.scoringConfigVersion === 'string' ? context.deterministicMetrics.scoringConfigVersion : null,
     generatedAt: new Date().toISOString(),
-    visitSummary, customerUnderstanding, performance, criticalMoments,
+    visitSummary, customerUnderstanding, performance, criticalMoments, momentUnderstanding,
     voiceMeasurements: buildVoiceMeasurements(context.deterministicMetrics),
     commitments, coachingPriority, strength,
     socialStyle: { customer: customerRead, rep: repRead, adaptation, signalChanges, coachingCard },

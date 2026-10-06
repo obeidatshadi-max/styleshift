@@ -1,3 +1,5 @@
+import { CONTEXT_COACHING_RULES } from './context-coaching'
+
 export const ACTION_STATUSES = ['done', 'partly', 'not_done'] as const
 export type ActionStatus = typeof ACTION_STATUSES[number]
 /** The next action the coach set after the previous call with this doctor, and what the rep says happened to it. */
@@ -112,6 +114,8 @@ Say "Based on your account" (or its Arabic equivalent). Never invent quotes, com
 If "focus" is present, the rep chose to concentrate on one part of the call. Make "priority", "betterResponse" and "practiceFocus" about that part. If the account says little about it, say so in "priority" and name what to notice next time; never invent what happened.
 If "previousAction" is present, it is the next action you set after the previous call with this doctor, with the rep's own report of whether it happened. Open the "summary" with one sentence on it: credit it if done, ask nothing if not done, and do not invent what happened. Never treat it as verified.
 Do not ask questions: "questions" must be an empty array.
+${CONTEXT_COACHING_RULES}
+
 "promises" lists up to 3 explicit commitments the rep says they made to the doctor (for example to bring a study or call back), each one short sentence in the rep's own words from the account. Use [] when there are none. Never infer or invent a promise.
 Return JSON only: {"questions":[],"promises":[],"report":{"summary":"...","strength":"...","priority":"...","hypothesis":"...","betterResponse":"...","objectiveReview":"...","nextAction":"...","practiceFocus":"..."}}.
 Each report field should be 1-3 short sentences. hypothesis must explicitly be tentative. betterResponse is a suggested future phrase, never a historical quote. practiceFocus describes a fictional practice situation and one observable skill; do not portray recollections as verified customer facts.`,

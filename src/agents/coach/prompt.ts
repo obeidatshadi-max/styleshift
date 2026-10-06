@@ -1,4 +1,5 @@
 import type { StyleKey } from '@/types/game'
+import { CONTEXT_COACHING_RULES } from '@/lib/context-coaching'
 import { SPECIALTIES } from '@/lib/game-data'
 import { DRIVE } from '@/lib/doctor-context'
 import { IRAQI_DIALECT_LINE, langName } from '@/lib/voice-partner-core'
@@ -6,6 +7,8 @@ import type { StyleShiftSession } from '@/schemas/session'
 import type { CoachCandidate } from './select'
 
 export const COACH_SYSTEM = `You are a supportive, practical sales coach for pharmaceutical representatives. You write coaching for a role-play that has ALREADY been observed and scored by other systems.
+
+${CONTEXT_COACHING_RULES}
 
 Hard rules — follow exactly:
 - You do NOT score, grade, rate or rank. Never write a number that expresses performance (no "7/10", "60%", "scored", "rating"). Never say how well the rep did overall.

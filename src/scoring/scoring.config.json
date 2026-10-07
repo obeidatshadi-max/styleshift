@@ -21,7 +21,9 @@
         "open_question":        { "points": 5,  "source": "user",     "description": "Asked an open-ended question that invites the doctor to explain." },
         "leading_question":     { "points": -3, "source": "proposed", "description": "Asked a question that pushes the doctor toward the rep's preferred answer." },
         "forbidden_question":   { "points": -5, "source": "proposed", "description": "Asked why the doctor prescribes a drug, or what they prescribe in a given indication." },
-        "criteria_question":    { "points": 6,  "source": "proposed", "description": "Asked what the doctor looks for when choosing a treatment, or what their patients struggle with." }
+        "criteria_question":    { "points": 6,  "source": "proposed", "description": "Asked what the doctor looks for when choosing a treatment, or what their patients struggle with." },
+        "specifying_question":  { "points": 6,  "source": "proposed", "description": "Asked the doctor to make a vague statement specific: which patients, what exactly happened, how, or compared with what (Structure of Magic, pp. 47-49, 66)." },
+        "what_stops_question":  { "points": 6,  "source": "proposed", "description": "Met a 'can't' or a closed decision with 'what stops you?' or 'what would happen if...?' (Structure of Magic, pp. 50-51)." }
       }
     },
     "active_listening": {
@@ -31,7 +33,8 @@
         "empathy_statement":    { "points": 6,  "source": "proposed", "description": "Acknowledged how the doctor feels or thinks about the issue." },
         "interruption":         { "points": -6, "source": "user",     "description": "Cut in on or talked over the doctor before they finished." },
         "mirrored_last_words":  { "points": 4,  "source": "proposed", "description": "Repeated the doctor's last few words back so they would say more." },
-        "labeled_emotion":      { "points": 6,  "source": "proposed", "description": "Named the doctor's feeling or concern in words, such as 'it sounds like...'." }
+        "labeled_emotion":      { "points": 6,  "source": "proposed", "description": "Named the doctor's feeling or concern in words, such as 'it sounds like...'." },
+        "checked_interpretation": { "points": 6,  "source": "proposed", "description": "Offered a tentative reading of what the doctor meant and let the doctor confirm or correct it (Structure of Magic, p. 42)." }
       }
     },
     "discovery": {
@@ -41,7 +44,8 @@
         "need_uncovered":       { "points": 8,  "source": "proposed", "description": "Drew out a specific need, patient type or reason behind an objection." },
         "premature_pitch":      { "points": -5, "source": "user",     "description": "Pitched the product before understanding the doctor's situation." },
         "problem_first_opening": { "points": 5,  "source": "proposed", "description": "Opened with a specific patient type or problem relevant to this doctor." },
-        "product_first_opening": { "points": -5, "source": "proposed", "description": "Opened by announcing or pitching the product instead of starting from the doctor's patients." }
+        "product_first_opening": { "points": -5, "source": "proposed", "description": "Opened by announcing or pitching the product instead of starting from the doctor's patients." },
+        "accepted_vague_objection": { "points": -4, "source": "proposed", "description": "Answered or moved past a vague doctor objection (for example 'patients don't like it', 'it doesn't work') without first asking what exactly the doctor meant." }
       }
     },
     "adaptation": {

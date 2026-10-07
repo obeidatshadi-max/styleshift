@@ -69,6 +69,26 @@ describe('groundReport', () => {
     }
     expect(groundReport(minimalRaw(), segments, context, base)?.momentUnderstanding).toBeNull()
   })
+  it('grounds vague statements to the counterpart and looks up the rep\'s real reply', () => {
+    const report = groundReport(minimalRaw({ vagueStatements: [
+      { evidence: { segmentIndex: 0, quote: 'invented' }, pattern: 'unspecified_referent', precisionQuestion: 'Which evidence, specifically?', repReply: { segmentIndex: 0 } },
+    ] }), segments, context, base)!
+    expect(report.vagueStatements).toHaveLength(1)
+    expect(report.vagueStatements![0].evidence.quote).toBe(segments[0].text)
+    expect(report.vagueStatements![0].repReply?.quote).toBe(segments[1].text)
+  })
+  it('drops vague statements with a rep anchor, unknown pattern, empty question or duplicate segment, and caps at 3', () => {
+    const ok = { evidence: { segmentIndex: 0 }, pattern: 'deletion', precisionQuestion: 'About what?' }
+    const report = groundReport(minimalRaw({ vagueStatements: [
+      { ...ok, evidence: { segmentIndex: 1 } }, { ...ok, pattern: 'mind_reading' }, { ...ok, precisionQuestion: '' }, ok, ok,
+    ] }), segments, context, base)!
+    expect(report.vagueStatements).toHaveLength(1)
+    expect(report.vagueStatements![0].repReply?.segmentIndex).toBe(1)
+    const many: TranscriptSegment[] = [0, 2, 4, 6, 8].map(i => ({ ...segments[0], segmentIndex: i, text: `Doctor line ${i}.` }))
+    const capped = groundReport(minimalRaw({ vagueStatements: many.map(m => ({ ...ok, evidence: { segmentIndex: m.segmentIndex } })) }), [...segments.slice(1), ...many], context, base)!
+    expect(capped.vagueStatements).toHaveLength(3)
+    expect(groundReport(minimalRaw(), segments, context, base)?.vagueStatements).toEqual([])
+  })
   it('strips transcript indices from free-text report fields', () => {
     const raw = minimalRaw({ coachingPriority: { behavior: 'Ask open questions ([1], [3]) before pitching', evidence: [{ segmentIndex: 1, speakerRole: 'rep' }], betterPhrase: 'What matters most?', practiceExercise: 'One open question [1].', successLooksLike: 'A need is named.' } })
     const report = groundReport(raw, segments, context, base)!

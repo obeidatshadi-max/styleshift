@@ -93,6 +93,16 @@ describe('prompt', () => {
     expect(p).toContain('Hmm. I have heard that before.')
     expect(p).not.toMatch(/\b(score|scored)\b.*\d/i)
   })
+
+  it('adds a Structure of Magic technique note only to behaviors that have one', () => {
+    const s = mixed()
+    const p = buildCoachPrompt(s, selectCoachingCandidates(s))
+    const pitchBlock = p.slice(p.indexOf('behavior "premature_pitch"'))
+    expect(pitchBlock).toMatch(/Technique note: .*Structure of Magic, p\. 50/)
+    const ignoredBlock = p.slice(p.indexOf('behavior "ignored_objection"'), p.indexOf('behavior "premature_pitch"'))
+    expect(ignoredBlock).not.toContain('Technique note')
+    expect(COACH_SYSTEM).toMatch(/Never invent other books/)
+  })
 })
 
 describe('groundCoaching', () => {

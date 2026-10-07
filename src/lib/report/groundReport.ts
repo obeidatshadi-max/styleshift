@@ -1,3 +1,4 @@
+import { isVaguePattern } from '@/lib/precision-language'
 import {
   isCertainty, isCommitmentStatus, isObjectiveStatus, isPerformanceDimension, isSocialStyle, isSignalCategory,
   VOICE_METRICS,
@@ -165,6 +166,21 @@ export function groundReport(
       subsequentResponse: nextReply ? groundEvidence(nextReply, segments) : null,
     } : null
 
+  // Vague counterpart statements (Structure of Magic). The quote and the rep's reply both come from the
+  // real transcript; the model only picks the segment, the pattern and the suggested question.
+  const seenVague = new Set<number>()
+  const vagueStatements = (Array.isArray(r.vagueStatements) ? r.vagueStatements : []).map(item => {
+    const v = (item && typeof item === 'object' ? item : {}) as Record<string, unknown>
+    const evidence = groundEvidence(v.evidence, segments)
+    const precisionQuestion = str(v.precisionQuestion)
+    if (!evidence || evidence.speakerRole !== 'counterpart' || !isVaguePattern(v.pattern) || !precisionQuestion) return null
+    if (seenVague.has(evidence.segmentIndex)) return null
+    seenVague.add(evidence.segmentIndex)
+    const reply = [...segments].sort((a, b) => a.segmentIndex - b.segmentIndex)
+      .find(seg => seg.segmentIndex > evidence.segmentIndex && seg.speakerRole === 'rep')
+    return { evidence, pattern: v.pattern, precisionQuestion, repReply: reply ? groundEvidence(reply, segments) : null }
+  }).filter((x): x is NonNullable<typeof x> => x !== null).slice(0, 3)
+
   // ── Commitments — status must be exactly one of the three valid values ──
   const commitments = (Array.isArray(r.commitments) ? r.commitments : []).map(item => {
     const c = (item && typeof item === 'object' ? item : {}) as Record<string, unknown>
@@ -254,7 +270,7 @@ export function groundReport(
     transcriptVersion: opts.transcriptVersion,
     scoringConfigVersion: typeof context.deterministicMetrics.scoringConfigVersion === 'string' ? context.deterministicMetrics.scoringConfigVersion : null,
     generatedAt: new Date().toISOString(),
-    visitSummary, customerUnderstanding, performance, criticalMoments, momentUnderstanding,
+    visitSummary, customerUnderstanding, performance, criticalMoments, momentUnderstanding, vagueStatements,
     voiceMeasurements: buildVoiceMeasurements(context.deterministicMetrics),
     commitments, coachingPriority, strength,
     socialStyle: { customer: customerRead, rep: repRead, adaptation, signalChanges, coachingCard },

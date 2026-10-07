@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { createEmptySession } from '@/schemas/session/factory'
 import { analyzeRepTurn, repTurnToDelta } from './behavior'
-import { buildDoctorReplyPrompt } from './prompt'
+import { buildDoctorReplyPrompt, buildDoctorOpeningPrompt } from './prompt'
 import { applyStateDelta } from '@/lib/voice-partner-core'
 
 const first = { firstRepTurn: true }
@@ -64,5 +64,35 @@ describe('doctor feelings and prompt', () => {
       const prompt = buildDoctorReplyPrompt(createEmptySession('s1', 'r1'), text, shape, state)
       expect(prompt).toContain('otherwise correct it naturally')
     }
+  })
+})
+
+describe('precision questions (Structure of Magic)', () => {
+  it('recognises questions that ask the doctor to be specific', () => {
+    for (const q of [
+      'Which patients, specifically?', 'What exactly happened with them?', 'Better compared with what?',
+      'What stops you from trying it in new patients?', 'What would happen if you tried it once?',
+      'أي مرضى بالضبط؟', 'شنو اللي يمنعك؟',
+    ]) expect(analyzeRepTurn(q).specifyingQuestion, q).toBe(true)
+  })
+  it('does not flag statements or ordinary questions', () => {
+    expect(analyzeRepTurn('Our product is exactly what you need.').specifyingQuestion).toBe(false)
+    expect(analyzeRepTurn('Do you have time today?').specifyingQuestion).toBe(false)
+  })
+  it('warms the doctor and asks for one concrete detail', () => {
+    const shape = analyzeRepTurn('Which patients, specifically?')
+    expect(repTurnToDelta(shape).trustDelta).toBeGreaterThan(0)
+    const prompt = buildDoctorReplyPrompt(createEmptySession('s1', 'r1'), 'Which patients, specifically?', shape, state)
+    expect(prompt).toContain('answer with one concrete detail')
+  })
+  it('only makes the doctor speak in general terms on the harder difficulties', () => {
+    const s = createEmptySession('s1', 'r1')
+    const shape = analyzeRepTurn('Hello.')
+    s.difficulty = 'realistic'
+    expect(buildDoctorReplyPrompt(s, 'Hello.', shape, state)).not.toContain('Voice objections in general terms first')
+    s.difficulty = 'resistant'
+    expect(buildDoctorReplyPrompt(s, 'Hello.', shape, state)).toContain('Voice objections in general terms first')
+    s.difficulty = 'pressure_test'
+    expect(buildDoctorOpeningPrompt(s, state)).toContain('Voice objections in general terms first')
   })
 })

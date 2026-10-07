@@ -4,6 +4,7 @@ import type { StyleShiftSession } from '@/schemas/session'
 import { DRIVE } from '@/lib/doctor-context'
 import { langName } from '@/lib/voice-partner-core'
 import { countHedges } from '@/lib/hedging'
+import { findUnanchoredComparatives } from '@/lib/comparatives'
 import { defaultScoringConfig, type ScoringConfig } from '@/scoring/config'
 import { SCORED_COMPETENCIES } from '@/schemas/scoring'
 import type { StyleKey } from '@/types/game'
@@ -73,6 +74,22 @@ export function hedgeMeasurements(session: StyleShiftSession): string {
     : ''
 }
 
+/** Measured comparative claims with no stated comparison in REP turns ("better tolerated", "most effective"),
+ * so the analyst can ground `unsupported_claim`. Structure of Magic I, p. 66: "better" than what? */
+export function comparativeMeasurements(session: StyleShiftSession): string {
+  const lines = session.transcript
+    .filter(t => t.role === 'rep')
+    .map(t => ({ turn: t.turnIndex, ...findUnanchoredComparatives(t.text) }))
+    .filter(r => r.count > 0)
+    .map(r => `- turn ${r.turn}: ${r.markers.join(', ')}`)
+  return lines.length
+    ? `\nMeasured comparative claims with no stated comparison in rep turns (text match only, a review indicator not a verdict: report unsupported_claim only if the rep really asserted the product is better/safer/more effective without saying compared with what or citing evidence. A comparison stated in a nearby sentence, or a phrase that is not about the product, does not count):\n${lines.join('\n')}\n`
+    : ''
+}
+
+/** Keeps the new precision-questioning keys from being double-counted with older, broader ones. */
+const PRECISION_KEYS_NOTE = `Precision questioning (from The Structure of Magic): use "specifying_question" when the rep asked which/who/what exactly/how/compared with what about the doctor's OWN vague words; use "clarification" for a general request to say more. Use "what_stops_question" for "what stops you?" / "what would happen if…?" after a "can't" or a closed decision. Use "checked_interpretation" when the rep offered a tentative reading and invited the doctor to confirm or correct it. Use "accepted_vague_objection" only when the doctor voiced a vague objection and the rep's very next turn answered or moved on without asking what was meant. Never report two of these for the same rep turn.`
+
 export function buildAnalystPrompt(session: StyleShiftSession, cfg: ScoringConfig = defaultScoringConfig): string {
   const competencies = COMPETENCIES.map(c => `- ${c}: ${COMPETENCY_GUIDE[c]}\n${catalogFor(c, cfg)}`).join('\n')
   return `Session context:
@@ -87,7 +104,9 @@ ${competencies}
 
 Transcript (each line is "[turn N | speaker] text"):
 ${session.transcript.length ? formatTranscript(session) : '(empty)'}
-${hedgeMeasurements(session)}
+${hedgeMeasurements(session)}${comparativeMeasurements(session)}
+${PRECISION_KEYS_NOTE}
+
 Task: list the rep's observable behaviors, each tied to one competency. Include both behaviors that moved the doctor toward engagement and behaviors that moved them away or passed over an opening. Report between 3 and 15 observations; fewer if the transcript is short.
 
 Return JSON exactly in this shape:

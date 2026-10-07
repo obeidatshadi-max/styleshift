@@ -137,5 +137,17 @@ Short tips for the coach library: "Hold the pitch until the doctor's picture is 
 
 **My suggestion:** start with **A + B + F**. They're small and testable, they reuse existing pipelines, and they strengthen rules StyleShift already has. Do **C → D → E** after you've seen A's observations on real sessions.
 
+## Implementation status (2026-10-07)
+
+All six ideas are built:
+- **A** — `specifying_question`, `what_stops_question` (questioning), `checked_interpretation` (active listening), `accepted_vague_objection` (discovery) in `src/scoring/scoring.config.json`, all `proposed`; the analyst prompt explains when to use each.
+- **B** — `src/lib/comparatives.ts` (English only), fed to the analyst as a review indicator for `unsupported_claim`.
+- **C** — typed Precision Questions drill: `src/components/game/PrecisionDrill.tsx`, `src/app/api/voice-partner/precision-drill/route.ts`, `src/lib/precision-drill.ts`. Three rounds; nothing is saved (logging a visit would need a `doctor_visits.source` migration).
+- **D** — the AI doctor (`src/agents/doctor`) states objections in general terms on resistant/pressure-test difficulty and gives one concrete detail when asked a specifying question.
+- **E** — "Vague statements to pin down" card in the conversation report (`vagueStatements`, grounded to the real transcript).
+- **F** — book-based technique notes passed to the coach (`TECHNIQUE_NOTES` in `src/lib/precision-language.ts`).
+
+Arabic UI strings and the Arabic specifying-question patterns were written without a native speaker's review and should be checked.
+
 ## To finish the book
 Split the PDF at p. 66 (e.g. pages 66–end) and convert that part with *Open with → Google Docs* again. Then the Generalization chapter, the transcripts and Chapter 6 can be added to this report. Chapter 5's transcripts in particular would be useful for drill content.

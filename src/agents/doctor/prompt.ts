@@ -91,6 +91,7 @@ function workshopCues(shape: RepTurnShape): string[] {
   if (shape.forbiddenQuestion) cues.push('The rep asked about your prescribing choices. Read the wording and preceding conversation: answer respectful curiosity with your criteria; if the wording actually challenges your competence, express that concern briefly. Do not become defensive solely because the question begins with why.')
   if (shape.criteriaQuestion) cues.push('The rep asked what you look for in these patients, or what your patients struggle with. This is the kind of question you respect: answer concretely with one or two real criteria or patient problems.')
   if (shape.labeledFeeling) cues.push('The rep offered an interpretation of your feelings or concern. Check it against what you actually expressed. Acknowledge it only if accurate; otherwise correct it naturally. Do not agree or warm up merely because they named a feeling.')
+  if (shape.specifyingQuestion) cues.push('The rep asked you to be specific about something you said in general terms (which patients, what exactly happened, compared with what, or what stops you). That is a fair question: answer with one concrete detail, such as a patient type or what you actually saw, instead of repeating the general statement.')
   if (shape.mirrored) cues.push('The rep echoed your last words back. It invites you to say more: elaborate on that point a little.')
   if (shape.usedBut) cues.push('The rep said they understood and then added "but". That makes your concern feel brushed aside: become a little more defensive.')
   return cues
@@ -107,7 +108,7 @@ export function buildDoctorReplyPrompt(
   const revealHidden = session.physician.hiddenConcern?.trim() && shape.askedOpenQuestion
     ? '\nThe rep asked a genuinely good open question — let a little of your private underlying concern color this reply. Hint at it, do not state it outright.'
     : ''
-  return `${personaBlock(session)}${objection}
+  return `${personaBlock(session)}${objection}${vagueSpeechLine(session)}
 ${stateInstructionBlock(state)}${revealHidden}
 
 Conversation so far:
@@ -120,6 +121,14 @@ Reply now as the doctor — spoken words only.`
 }
 
 const hasPracticeFocus = (session: StyleShiftSession) => session.learningObjectives.length > 0
+
+/** On the harder difficulties the doctor talks the way busy doctors often do: objections in general terms
+ * first, with the specific patient, event or comparison held back until the rep asks for it. This gives the
+ * rep something to make specific (Structure of Magic I, pp. 41-51, 66). Never evasive for its own sake. */
+export function vagueSpeechLine(session: StyleShiftSession): string {
+  if (session.difficulty !== 'resistant' && session.difficulty !== 'pressure_test') return ''
+  return '\nVoice objections in general terms first, the way busy doctors often do ("patients don\'t like it", "it didn\'t work", "the other one is better", "I can\'t change what works"). Do not volunteer the specific patient type, event or comparison behind it. When the rep asks about it specifically, give one concrete detail. Never be evasive with a rep who asks a clear, specific question.'
+}
 
 /** With a practice focus (the Coach hands one over), the opening must create THAT
  * situation. The objection theme is picked at random and used to win: a rep asked to
@@ -137,7 +146,7 @@ export function buildDoctorOpeningPrompt(session: StyleShiftSession, state: Phys
     ? 'The rep has just walked in. Open the conversation as the doctor so that the practice situation is clear from your first words — 1-2 sentences, spoken words only.'
     : 'The rep has just walked in. Open the conversation as the doctor with a short objection or realistic question about "your product" — 1-2 sentences, spoken words only.'
   return `${personaBlock(session)}
-${objection}
+${objection}${vagueSpeechLine(session)}
 ${stateInstructionBlock(state)}
 
 ${task}`

@@ -5,6 +5,7 @@ import { DRIVE } from '@/lib/doctor-context'
 import { IRAQI_DIALECT_LINE, langName } from '@/lib/voice-partner-core'
 import type { StyleShiftSession } from '@/schemas/session'
 import type { CoachCandidate } from './select'
+import { TECHNIQUE_NOTES } from '@/lib/precision-language'
 
 export const COACH_SYSTEM = `You are a supportive, practical sales coach for pharmaceutical representatives. You write coaching for a role-play that has ALREADY been observed and scored by other systems.
 
@@ -17,6 +18,7 @@ Hard rules — follow exactly:
 - NEVER invent clinical data, efficacy numbers, statistics, percentages, trial results, study names, dosages, or real/branded drug names. Refer to the product only as "your product" and to evidence generically ("the trial data", "the evidence pack").
 - Be specific and actionable, warm and direct. Address the rep as "you". No shaming, no generic advice ("build rapport", "be confident").
 - The "better response" must be something the rep could actually say to THIS doctor, in the rep's own voice, short (1-3 sentences), fitting the doctor's style and the situation.
+- Some points carry a "Technique note" from the book The Structure of Magic (Bandler & Grinder). You may use its idea in whyItMattered or whatToDoDifferently and say briefly that it comes from that book. Never invent other books, authors, quotes or page numbers.
 - Output ONLY a single valid JSON object. No markdown fences, no commentary.`
 
 const STYLE_KEYS: readonly StyleKey[] = ['driver', 'expressive', 'amiable', 'analytical']
@@ -54,7 +56,13 @@ function candidateBlock(c: CoachCandidate): string {
   Evidence:
 ${evidence}
   Doctor's next line: ${c.doctorReaction ? `"${c.doctorReaction}"` : '(none)'}
-  Standing: ${c.standing === 'unranked' ? 'not ranked' : standing}`
+  Standing: ${c.standing === 'unranked' ? 'not ranked' : standing}${techniqueLine(c.behavior)}`
+}
+
+/** A book-grounded idea for this behavior, if there is one. Optional context for the coach, never a new point. */
+function techniqueLine(behavior: string): string {
+  const note = TECHNIQUE_NOTES[behavior]
+  return note ? `\n  Technique note: ${note}` : ''
 }
 
 export function buildCoachPrompt(session: StyleShiftSession, candidates: CoachCandidate[]): string {

@@ -128,6 +128,26 @@ export function ConversationReport({ report, outdated, audioAvailable = false }:
         <p style={{ ...bodyText, color: 'var(--ink-dim)', marginTop: 8 }}>{t('report.moment.note')}</p>
       </section>}
 
+      {report.vagueStatements && report.vagueStatements.length > 0 && <section style={card} aria-label={t('report.vague.title')}>
+        {eyebrow(t('report.vague.title'))}
+        <p style={{ ...bodyText, color: 'var(--ink-dim)', marginBottom: 6 }}>{t('report.vague.intro')}</p>
+        {report.vagueStatements.map((v, i) => (
+          <div key={i} style={{ borderTop: i > 0 ? '1px solid var(--line)' : 'none', paddingTop: i > 0 ? 12 : 0, marginTop: i > 0 ? 12 : 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={fieldLabel}>{t('report.vague.doctor')}</span>
+              <Badge text={t(`precision.pattern.${v.pattern}`)} color="var(--amber)" />
+            </div>
+            <Evidence evidence={v.evidence} audioAvailable={audioAvailable} />
+            <div style={{ ...fieldLabel, marginTop: 8 }}>{t('report.vague.reply')}</div>
+            {v.repReply
+              ? <Evidence evidence={v.repReply} audioAvailable={audioAvailable} />
+              : <p style={bodyText}>{t('report.vague.noReply')}</p>}
+            <div style={{ marginTop: 8 }}><span style={fieldLabel}>{t('report.vague.question')}: </span><span style={bodyText}>{v.precisionQuestion}</span></div>
+          </div>
+        ))}
+        <p style={{ ...bodyText, color: 'var(--ink-dim)', marginTop: 12 }}>{t('report.vague.note')}</p>
+      </section>}
+
       <Accordion title={t('report.customerUnderstanding.title')}>
         {(['needs', 'concerns', 'decisionCriteria', 'openQuestions'] as const).map(key => (
           <div key={key}>

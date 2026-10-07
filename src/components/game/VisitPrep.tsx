@@ -24,6 +24,7 @@ import VoicePartner from './VoicePartner'
 import VoicePartnerOpening from './VoicePartnerOpening'
 import { OPENING_CRITERIA } from '@/lib/voice-partner-opening'
 import QuestionDrill from './QuestionDrill'
+import PrecisionDrill from './PrecisionDrill'
 import { LISTENING_CUES } from '@/lib/voice-partner-questioning'
 import VoicePartnerFab from './VoicePartnerFab'
 import { FAB_CRITERIA } from '@/lib/voice-partner-fab'
@@ -56,6 +57,7 @@ type View =
   | { mode: 'voice'; doctor: Doctor }
   | { mode: 'voiceOpening'; doctor: Doctor }
   | { mode: 'questionDrill'; doctor: Doctor }
+  | { mode: 'precisionDrill'; doctor: Doctor }
   | { mode: 'voiceFab'; doctor: Doctor }
   | { mode: 'voiceClosing'; doctor: Doctor }
   | { mode: 'voiceLive'; doctor: Doctor }
@@ -142,6 +144,11 @@ export default function VisitPrep({ onExit, initialDoctorId = '' }: Props) {
   // ───────────────────────── AI VOICE PARTNER: QUESTION DRILL ─────────────────────────
   if (view.mode === 'questionDrill') {
     return <QuestionDrillScreen doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
+  }
+
+  // ───────────────────────── PRECISION QUESTIONS (typed; The Structure of Magic) ─────────────────────────
+  if (view.mode === 'precisionDrill') {
+    return <PrecisionDrill doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
   }
 
   // ───────────────────────── AI VOICE PARTNER: FEATURES & BENEFITS ─────────────────────────
@@ -257,6 +264,10 @@ export default function VisitPrep({ onExit, initialDoctorId = '' }: Props) {
             <button onClick={() => setView({ mode: 'questionDrill', doctor: d })}
               style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               {t('voiceQuestion.entryButton')} · {t('voice.premium')}
+            </button>
+            <button onClick={() => setView({ mode: 'precisionDrill', doctor: d })}
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              {t('precision.entryButton')} · {t('voice.premium')}
             </button>
             <button onClick={() => setView({ mode: 'voiceFab', doctor: d })}
               style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>

@@ -1,3 +1,4 @@
+import type { VaguePattern } from '@/lib/precision-language'
 export const REPORT_SESSION_TYPES = ['human_partner', 'ai_doctor_voice', 'ai_doctor_text', 'customer_visit'] as const
 export type ReportSessionType = typeof REPORT_SESSION_TYPES[number]
 export function isReportSessionType(v: unknown): v is ReportSessionType {
@@ -117,6 +118,16 @@ export interface MomentUnderstanding {
   subsequentResponse: EvidenceRef | null
 }
 
+/** A counterpart statement left vague that the rep did not ask to make specific, with one question that
+ * would have. Patterns: The Structure of Magic I (Bandler & Grinder 1975), pp. 40-66. */
+export interface VagueStatement {
+  evidence: EvidenceRef
+  pattern: VaguePattern
+  precisionQuestion: string
+  /** The rep's actual next turn, looked up from the transcript — never written by the model. */
+  repReply: EvidenceRef | null
+}
+
 export interface VoiceMeasurement {
   metric: VoiceMetric
   value: number
@@ -198,6 +209,8 @@ export interface ConversationReport {
   criticalMoments: CriticalMoment[]
   /** Additive field: older saved reports remain readable. */
   momentUnderstanding?: MomentUnderstanding | null
+  /** Additive field: older saved reports remain readable. */
+  vagueStatements?: VagueStatement[]
   voiceMeasurements: VoiceMeasurement[]
   commitments: Commitment[]
   coachingPriority: CoachingPriority

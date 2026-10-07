@@ -41,7 +41,7 @@ describe('buildReportPrompt', () => {
       expect(prompt).toContain(field)
   })
   it('splits the shape across parts that each hold only their own keys and together cover the full report', () => {
-    const topKeys = ['visitSummary', 'customerUnderstanding', 'performance', 'criticalMoments', 'momentUnderstanding', 'commitments', 'coachingPriority', 'strength', 'socialStyle']
+    const topKeys = ['visitSummary', 'customerUnderstanding', 'performance', 'criticalMoments', 'momentUnderstanding', 'vagueStatements', 'commitments', 'coachingPriority', 'strength', 'socialStyle']
     const all = buildReportPrompt(segments, context, [], [], 'all')
     const covered = new Set<string>()
     for (const part of REPORT_PARTS) {
@@ -55,6 +55,13 @@ describe('buildReportPrompt', () => {
     expect([...covered].sort()).toEqual([...topKeys].sort())
     expect(topKeys.every(key => all.prompt.includes(`
   "${key}":`))).toBe(true)
+  })
+  it('asks the moments part for vague counterpart statements with the Structure of Magic patterns', () => {
+    const { prompt } = buildReportPrompt(segments, context, [], [], 'moments')
+    expect(prompt).toContain('"vagueStatements": [{ "evidence"')
+    expect(prompt).toContain('"missing_comparison"')
+    expect(prompt).toMatch(/did not ask to make specific/)
+    expect(buildReportPrompt(segments, context, [], [], 'coaching').prompt).not.toContain('vagueStatements')
   })
   it('merges only the keys each part owns, so a stray key cannot overwrite another part', () => {
     const merged = mergeReportParts({

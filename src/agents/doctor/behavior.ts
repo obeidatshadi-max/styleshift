@@ -25,6 +25,9 @@ export interface RepTurnShape {
   usedBut: boolean
   /** Count of hedges/fillers/intensifiers in the rep's own words. Measurement only: not a doctor reaction or score. */
   hedgeCount: number
+  /** Asks the doctor to make something specific: which patients, what exactly, compared with what, what stops you
+   * (Structure of Magic I, pp. 47-51, 66). */
+  specifyingQuestion: boolean
 }
 
 /** What the caller knows beyond the rep's own line. */
@@ -57,6 +60,11 @@ const LABEL_AR = /(يبدو|يظهر|أحس|أشعر|اشعر)\s+(لي\s+)?(إن
 const BUT_EN = /\b(i understand|i agree|i see|that'?s true|that'?s fair|you'?re right|understood)\b[^.?!]{0,30}[,;]?\s+but\b/i
 const BUT_AR = /(أفهم|أتفهم|معك حق|صحيح)[^.؟!]{0,30}\s(لكن|بس)\s/
 
+// "Which patients, specifically?", "What exactly happened?", "Compared with what?", "What stops you?" —
+// the Meta-Model recovery questions (Structure of Magic I, pp. 47-51, 66). Arabic forms need native review.
+const SPECIFYING_EN = /\b(which|what|who|how|where|when)\b[^?.!]{0,50}\b(specifically|exactly|in particular)\b|\bwhich (patients?|ones?|cases?|side effects?|data|study|studies)\b|\bcompared (to|with) what\b|\bthan what\b|\bwhat (stops|is stopping|keeps) you\b|\bwhat (would|might) happen if\b|\bwhat did you (see|notice)\b/i
+const SPECIFYING_AR = /(بالضبط|بالتحديد|تحديداً|تحديدا)|(أي|اي|ياهم|منو)\s+(المرضى|مرضى|مريض)|(شنو|ماذا|شو)\s+(اللي\s+)?(يمنعك|يوقفك)|(شنو|ماذا)\s+(يصير|سيحدث|يحدث)\s+(لو|إذا|اذا)|مقارنة\s+(ب|مع)\s*(شنو|ماذا)/
+
 const normalizeWords = (text: string) => text.toLowerCase().replace(/[.,!?؟،;:"'()]/g, ' ').split(/\s+/).filter(Boolean)
 
 /** True when a short rep line repeats the last two words of the doctor's line (the workshop's "repeat the last words"). */
@@ -84,6 +92,7 @@ export function analyzeRepTurn(text: string, context: RepTurnContext = {}): RepT
     mirrored: echoesDoctor(trimmed, context.lastDoctorText),
     usedBut: BUT_EN.test(trimmed) || BUT_AR.test(trimmed),
     hedgeCount: countHedges(trimmed).count,
+    specifyingQuestion: askedQuestion && (SPECIFYING_EN.test(trimmed) || SPECIFYING_AR.test(trimmed)),
   }
 }
 
@@ -96,6 +105,7 @@ export function repTurnToDelta(shape: RepTurnShape): StateDelta {
   // A prescribing question or a feeling label is only a wording signal.
   // Contextual fit is handled by the doctor prompt, not an automatic bonus/penalty.
   if (shape.criteriaQuestion) adds.push({ trustDelta: 2, skepticismDelta: -2, engagementDelta: 3 })
+  if (shape.specifyingQuestion) adds.push({ trustDelta: 2, skepticismDelta: -1, engagementDelta: 3 })
   if (shape.productFirstOpening) adds.push({ trustDelta: -1, skepticismDelta: 1, engagementDelta: -4 })
   if (shape.problemFirstOpening) adds.push({ trustDelta: 2, skepticismDelta: -1, engagementDelta: 4 })
   if (shape.mirrored) adds.push({ trustDelta: 1, skepticismDelta: 0, engagementDelta: 3 })

@@ -3,6 +3,7 @@ import {
   type TranscriptSegment, type ReportContext, type SocialStyleSignal,
 } from '@/schemas/conversationReport'
 import { CONTEXT_COACHING_RULES } from '@/lib/context-coaching'
+import { VAGUE_PATTERNS, patternPromptList } from '@/lib/precision-language'
 
 const oneOf = (values: readonly string[]) => values.map(v => `"${v}"`).join(' | ')
 
@@ -13,6 +14,7 @@ const oneOf = (values: readonly string[]) => values.map(v => `"${v}"`).join(' | 
 const EV = '{ "segmentIndex": <number>, "speakerRole": "rep"|"counterpart" }'
 const SHAPE_FIELDS = {
   momentUnderstanding: `  "momentUnderstanding": { "evidence": ${EV}, "possibleMeanings": [string], "missingContext": string, "clarifyingQuestion": string, "subsequentResponse": ${EV}|null }|null`,
+  vagueStatements: `  "vagueStatements": [{ "evidence": ${EV}, "pattern": ${oneOf(VAGUE_PATTERNS)}, "precisionQuestion": string }]`,
   visitSummary: `  "visitSummary": { "summary": string, "objectiveStatus": ${oneOf(OBJECTIVE_STATUSES)}, "objectiveStatusReason": string, "evidence": [${EV}] }`,
   customerUnderstanding: `  "customerUnderstanding": {
     "needs": [{ "text": string, "certainty": ${oneOf(CERTAINTIES)}, "evidence": [${EV}] }],
@@ -42,10 +44,10 @@ export type ReportLang = 'en' | 'ar'
 
 const PART_KEYS: Record<ReportPart, (keyof typeof SHAPE_FIELDS)[]> = {
   summary: ['visitSummary', 'customerUnderstanding', 'commitments'],
-  moments: ['performance', 'criticalMoments', 'momentUnderstanding'],
+  moments: ['performance', 'criticalMoments', 'momentUnderstanding', 'vagueStatements'],
   coaching: ['coachingPriority', 'strength'],
   style: ['socialStyle'],
-  all: ['visitSummary', 'customerUnderstanding', 'performance', 'criticalMoments', 'momentUnderstanding', 'commitments', 'coachingPriority', 'strength', 'socialStyle'],
+  all: ['visitSummary', 'customerUnderstanding', 'performance', 'criticalMoments', 'momentUnderstanding', 'vagueStatements', 'commitments', 'coachingPriority', 'strength', 'socialStyle'],
 }
 /** Merge the parts' parsed JSON, taking from each only the keys that part was asked for. A part
  * can echo another part's key (the objective line mentions visitSummary, so the coaching part
@@ -85,6 +87,11 @@ function formatSignals(label: string, signals: SocialStyleSignal[]): string {
   if (signals.length === 0) return `${label}: none detected.`
   return `${label}:\n` + signals.map(s => `- [${s.evidence.segmentIndex}] (${s.category}) "${s.text}"`).join('\n')
 }
+
+/** Structure of Magic I (pp. 40-66): counterpart statements left vague that the rep did not make specific. */
+const VAGUE_RULE = `For vagueStatements, list at most 3 counterpart statements that were left vague in one of these ways AND that the rep's very next turn did not ask to make specific (the rep answered, pitched or moved on instead). Cite only the counterpart's actual segment, never a rep statement. Choose the one pattern that fits best:
+${patternPromptList()}
+For each, write one short, respectful precisionQuestion the rep could have asked, using the counterpart's own words. Return [] when the rep did follow up, or when nothing the counterpart said was meaningfully vague. Do not use hidden simulation configuration as evidence.`
 
 const REQUIRED_NOTE: Record<ReportPart, string> = {
   all: 'coachingPriority and visitSummary.summary are required and coachingPriority needs at least one evidence reference.',
@@ -129,7 +136,9 @@ references per item; at most 3 performance items; at most 3 strongestSignals per
 well-supported items beat many weak ones.
 ${SHAPES[part]}
 
-${part === 'moments' || part === 'all' ? `For momentUnderstanding, choose ONE ambiguous counterpart statement worth clarifying. Cite the counterpart's actual segment; never a rep statement. Give one or two tentative possibleMeanings, explicitly framed as possibilities, not established motives. State the missingContext and suggest one short, respectful clarifyingQuestion. Set subsequentResponse only to the first actual counterpart response after an intervening rep turn, if present; it is historical evidence, NOT a predicted response to your suggested question. Return null when no useful supported moment exists. Do not use hidden simulation configuration as evidence. Keep each field to one short sentence.` : ''}
+${part === 'moments' || part === 'all' ? `For momentUnderstanding, choose ONE ambiguous counterpart statement worth clarifying. Cite the counterpart's actual segment; never a rep statement. Give one or two tentative possibleMeanings, explicitly framed as possibilities, not established motives. State the missingContext and suggest one short, respectful clarifyingQuestion. Set subsequentResponse only to the first actual counterpart response after an intervening rep turn, if present; it is historical evidence, NOT a predicted response to your suggested question. Return null when no useful supported moment exists. Do not use hidden simulation configuration as evidence. Keep each field to one short sentence.
+
+${VAGUE_RULE}` : ''}
 
 For every piece of evidence, cite ONLY { "segmentIndex": <number>, "speakerRole": "rep"|"counterpart" } —
 do NOT include the quoted text yourself; the exact words will be looked up separately from the real
@@ -146,5 +155,6 @@ ${LANGUAGE_RULE[lang]}
 
 Never claim one behavior caused a reaction merely because it came first in the transcript.`
 
-  return { system: SYSTEM, prompt, maxTokens: part === 'all' ? 4000 : 2200 }
+  // The moments part also lists vagueStatements, so it gets a little more room (Arabic runs long).
+  return { system: SYSTEM, prompt, maxTokens: part === 'all' ? 4000 : part === 'moments' ? 2600 : 2200 }
 }

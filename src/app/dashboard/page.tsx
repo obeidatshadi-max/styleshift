@@ -18,6 +18,8 @@ import SimScenarioBuilderPanel from '@/components/dashboard/SimScenarioBuilderPa
 import { scenarioBuilderEnabled } from '@/lib/sim-scenarios'
 import MethodologyBuilderPanel from '@/components/dashboard/MethodologyBuilderPanel'
 import { methodologyBuilderEnabled } from '@/lib/methodologies'
+import KnowledgePackPanel from '@/components/dashboard/KnowledgePackPanel'
+import { knowledgePacksEnabled } from '@/lib/knowledge-packs'
 import BehavioralTrendsPanel from '@/components/dashboard/BehavioralTrendsPanel'
 import CompanyDoctorsPanel from '@/components/dashboard/CompanyDoctorsPanel'
 import { getBehavioralTrendsForReps } from '@/lib/behavioral-trends-dashboard'
@@ -118,6 +120,7 @@ export default async function DashboardPage() {
           </Panel>
         )}
         {methodologyBuilderEnabled() && <Panel title="Selling Methodology"><MethodologyBuilderPanel /></Panel>}
+        {knowledgePacksEnabled() && <Panel title="Product Knowledge"><KnowledgePackPanel /></Panel>}
         <Panel title="AI Doctor Profiles"><CompanyDoctorsPanel reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} /></Panel>
         <Panel title="Team Leaderboard"><Leaderboard reps={stats?.reps ?? []} /></Panel>
         <Panel title="Skill Gap Heatmap"><SkillHeatmap levelAccuracy={stats?.levelAccuracy ?? []} /></Panel>

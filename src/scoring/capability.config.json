@@ -13,7 +13,7 @@
       "description": "Conversation management, sequencing and responsiveness.",
       "behaviors": {
         "interruption": 1.5, "paraphrasing": 1, "mirrored_last_words": 0.5, "labeled_emotion": 1, "empathy_statement": 1,
-        "ignored_objection": 1.5, "used_but_contradiction": 1, "accusation_audit": 1, "hedged_delivery": 0.75
+        "ignored_objection": 1.5, "used_but_contradiction": 1, "accusation_audit": 1, "checked_interpretation": 1, "hedged_delivery": 0.75
       }
     },
     "clinical": {
@@ -28,7 +28,7 @@
     "discovery": {
       "description": "Questioning, clarification, need discovery and objection exploration.",
       "behaviors": {
-        "open_question": 1, "criteria_question": 1, "leading_question": 1, "forbidden_question": 1, "clarification": 1.5,
+        "open_question": 1, "criteria_question": 1, "specifying_question": 1.5, "what_stops_question": 1.25, "accepted_vague_objection": 1.25, "leading_question": 1, "forbidden_question": 1, "clarification": 1.5,
         "need_uncovered": 1.5, "premature_pitch": 1.5, "problem_first_opening": 1, "product_first_opening": 1,
         "objection_acknowledged": 1, "resolution_checked": 1, "argued_with_doctor": 1
       }

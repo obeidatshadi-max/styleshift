@@ -21,6 +21,7 @@ import PracticePatternLine from './PracticePatternLine'
 import AssignedScenarios from './AssignedScenarios'
 import MicroPractice from './MicroPractice'
 import CapabilityCard from './CapabilityCard'
+import NextChallengeCard from './NextChallengeCard'
 import MyCoachingInsights from './MyCoachingInsights'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
@@ -133,6 +134,8 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
         <AssignedScenarios />
 
         <MicroPractice />
+
+        <NextChallengeCard />
 
         <CapabilityCard />
 

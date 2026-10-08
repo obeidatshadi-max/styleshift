@@ -16,6 +16,8 @@ import { getCoachingQueue } from '@/lib/coaching-queue'
 import ScenarioEditorPanel from '@/components/dashboard/ScenarioEditorPanel'
 import SimScenarioBuilderPanel from '@/components/dashboard/SimScenarioBuilderPanel'
 import { scenarioBuilderEnabled } from '@/lib/sim-scenarios'
+import MethodologyBuilderPanel from '@/components/dashboard/MethodologyBuilderPanel'
+import { methodologyBuilderEnabled } from '@/lib/methodologies'
 import BehavioralTrendsPanel from '@/components/dashboard/BehavioralTrendsPanel'
 import CompanyDoctorsPanel from '@/components/dashboard/CompanyDoctorsPanel'
 import { getBehavioralTrendsForReps } from '@/lib/behavioral-trends-dashboard'
@@ -115,6 +117,7 @@ export default async function DashboardPage() {
             <SimScenarioBuilderPanel reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} />
           </Panel>
         )}
+        {methodologyBuilderEnabled() && <Panel title="Selling Methodology"><MethodologyBuilderPanel /></Panel>}
         <Panel title="AI Doctor Profiles"><CompanyDoctorsPanel reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} /></Panel>
         <Panel title="Team Leaderboard"><Leaderboard reps={stats?.reps ?? []} /></Panel>
         <Panel title="Skill Gap Heatmap"><SkillHeatmap levelAccuracy={stats?.levelAccuracy ?? []} /></Panel>

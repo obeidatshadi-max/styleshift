@@ -93,3 +93,12 @@ There is **no lint script** in `package.json` (no eslint configured) — lint ca
 4. The rep sees the full preview before starting and can switch off any recorded fact; inferences that rested on it drop out. The preview seed fixes the challenge so what is shown is what runs.
 5. Flag `PRACTICE_MY_DOCTOR_ENABLED` (start also needs the simulation flags). No migration; the session stores only ids of the facts, inferences and challenge it was given.
 6. Not in this phase: showing the assumptions inside the finished report; Arabic review of the new text; voice mode.
+
+## Phase 6 detail (Methodology Builder)
+
+1. A methodology is configuration over the fixed behavior list: stages (order, optional, weight, expected and prohibited behaviors, required evidence, coaching prompts), a company name for any behavior, and a company name for each of the five capability dimensions. No new detectors: two companies with different wording get identical analytics (tested).
+2. Governance: managers only; one active methodology per company; activating archives the current one; editing the ACTIVE one creates a new draft version and leaves what reps see untouched until activation. A stored config that no longer validates is ignored.
+3. Where it shows up: rep-facing behavior and dimension names (capability card, recommended-practice card), a "stages" card for the rep (seen, partly seen, not seen, needs attention, per stage, no score), and the AI Coach: each new simulation snapshots the active methodology onto the session, and the coach prompt gets the company names and stage guidance only for the behaviors being coached. Company text is quoted and the coach is told it is data, not instructions.
+4. Three starter templates (generic four-stage structures; not copies of any vendor model).
+5. Flag `METHODOLOGY_BUILDER_ENABLED`. No migration beyond 035 (table `methodologies`).
+6. Not in this phase: analyst or doctor prompts do not use the methodology; the shared conversation-report pipeline is not yet methodology-aware; stage weights are stored and shown but no stage-level score is computed; Arabic stage prompts are entered in English only in the builder.

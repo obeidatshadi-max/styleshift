@@ -21,6 +21,7 @@ import PracticePatternLine from './PracticePatternLine'
 import AssignedScenarios from './AssignedScenarios'
 import MicroPractice from './MicroPractice'
 import CapabilityCard from './CapabilityCard'
+import MethodologyCard from './MethodologyCard'
 import NextChallengeCard from './NextChallengeCard'
 import PracticeMyDoctor from './PracticeMyDoctor'
 import MyCoachingInsights from './MyCoachingInsights'
@@ -141,6 +142,8 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
         <NextChallengeCard />
 
         <CapabilityCard />
+
+        <MethodologyCard />
 
         <button onClick={() => setMoreOpen(o => !o)}
           style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', cursor:'pointer', fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.15em', textTransform:'uppercase', border:'1px solid var(--line)', color:'var(--ink-dim)', background:'transparent', borderRadius:10, padding:'10px 16px', touchAction:'manipulation' }}>

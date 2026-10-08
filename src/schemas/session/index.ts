@@ -7,6 +7,7 @@ import type {
 import type { Observation } from '@/schemas/observation'
 import type { SessionScore } from '@/schemas/scoring'
 import type { CoachingRecommendation } from '@/schemas/coaching'
+import type { Methodology } from '@/schemas/methodology'
 
 /**
  * The single shared StyleShift session object. The orchestrator builds it once
@@ -119,6 +120,8 @@ export interface StyleShiftSession {
   /** Set when the session was started from a recommended challenge (the behavior it targets). */
   challenge?: { behavior: string } | null
   /** Set for "Practice my doctor": which recorded facts, inferences and practice challenge the simulation was given (ids only; the text stays in the rep's own records). */
+  /** The company's active methodology when the session started: a snapshot, so a finished report keeps the wording it was coached in. */
+  methodology?: Methodology | null
   practiceContext?: { factIds: string[]; inferenceIds: string[]; challenge: string } | null
 
   rep: MedicalRep

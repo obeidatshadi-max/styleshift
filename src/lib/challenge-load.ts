@@ -21,10 +21,10 @@ export interface ChallengeData {
 }
 
 /** The rep's own finished, scored simulations (row-level security confines the query). */
-export async function loadChallengeData(supabase: SupabaseClient, repId: string): Promise<ChallengeData> {
+export async function loadChallengeData(supabase: SupabaseClient, repId: string, window = WINDOW): Promise<ChallengeData> {
   const { data } = await supabase.from('agent_sessions').select('record')
     .eq('rep_id', repId).in('phase', ['scored', 'reported'])
-    .order('created_at', { ascending: false }).limit(WINDOW)
+    .order("created_at", { ascending: false }).limit(window)
   const sessions = ((data as Array<{ record: SessionRecord }> | null) ?? []).map(r => r.record.session)
   return {
     events: sessions.flatMap(s => eventsFromSession(s)),

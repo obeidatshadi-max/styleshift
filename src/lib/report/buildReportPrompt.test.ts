@@ -96,3 +96,40 @@ describe('buildReportPrompt', () => {
     expect(SYSTEM.toLowerCase()).toMatch(/never invent/)
   })
 })
+
+describe('knowledge in the report prompt', () => {
+  const withKnowledge = {
+    ...context,
+    knowledge: {
+      analystSection: 'ANALYST-SECTION fact f1',
+      coachSection: 'COACH-SECTION fact f1',
+      prohibitedHits: [{ itemId: 'p1', phrase: 'cures heart disease', segmentIndex: 1 }],
+    },
+  }
+
+  it('gives the coaching part the coach section and the observation parts the analyst section', () => {
+    expect(buildReportPrompt(segments, withKnowledge, [], [], 'coaching', 'en').prompt).toContain('COACH-SECTION')
+    expect(buildReportPrompt(segments, withKnowledge, [], [], 'coaching', 'en').prompt).not.toContain('ANALYST-SECTION')
+    expect(buildReportPrompt(segments, withKnowledge, [], [], 'moments', 'en').prompt).toContain('ANALYST-SECTION')
+    expect(buildReportPrompt(segments, withKnowledge, [], [], 'all', 'en').prompt).toContain('COACH-SECTION')
+  })
+
+  it('lists prohibited-claim matches as review signals, not verdicts', () => {
+    const p = buildReportPrompt(segments, withKnowledge, [], [], 'summary', 'en').prompt
+    expect(p).toMatch(/not verdicts/)
+    expect(p).toContain('cures heart disease')
+  })
+
+  it('lets suggested wording use an approved fact only when a knowledge section is present', () => {
+    const exception = /you may state an approved fact from the knowledge section above exactly as written/
+    expect(buildReportPrompt(segments, withKnowledge, [], [], 'coaching', 'en').prompt).toMatch(exception)
+    const without = buildReportPrompt(segments, context, [], [], 'coaching', 'en').prompt
+    expect(without).not.toMatch(exception)
+    expect(without).toMatch(/NEVER assert what the product does or achieves/)
+  })
+
+  it('adds nothing for a context without knowledge', () => {
+    const p = buildReportPrompt(segments, context, [], [], 'coaching', 'en').prompt
+    expect(p).not.toContain('review signals')
+  })
+})

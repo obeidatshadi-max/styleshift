@@ -8,6 +8,7 @@ import type { Observation } from '@/schemas/observation'
 import type { SessionScore } from '@/schemas/scoring'
 import type { CoachingRecommendation } from '@/schemas/coaching'
 import type { Methodology } from '@/schemas/methodology'
+import type { KnowledgePack } from '@/schemas/knowledge'
 
 /**
  * The single shared StyleShift session object. The orchestrator builds it once
@@ -122,6 +123,8 @@ export interface StyleShiftSession {
   /** Set for "Practice my doctor": which recorded facts, inferences and practice challenge the simulation was given (ids only; the text stays in the rep's own records). */
   /** The company's active methodology when the session started: a snapshot, so a finished report keeps the wording it was coached in. */
   methodology?: Methodology | null
+  /** The linked knowledge pack when the session started: a snapshot of its approved facts and messaging only (never coaching notes, because the rep can read this record). */
+  knowledge?: KnowledgePack | null
   practiceContext?: { factIds: string[]; inferenceIds: string[]; challenge: string } | null
 
   rep: MedicalRep

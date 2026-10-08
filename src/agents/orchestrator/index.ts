@@ -2,6 +2,7 @@ import { createEmptySession } from '@/schemas/session/factory'
 import type { LearningObjective, SessionStatus, StyleShiftSession } from '@/schemas/session'
 import type { SessionReport } from '@/schemas/report'
 import type { Methodology } from '@/schemas/methodology'
+import type { KnowledgePack } from '@/schemas/knowledge'
 import { scoreSession } from '@/scoring/engine'
 import { DEFAULT_DIFFICULTY, pickObjectionType, type Difficulty, type ObjectionType } from '@/lib/voice-partner-core'
 import { applyAgentPatch } from './patch'
@@ -24,6 +25,8 @@ export interface OrchestratorDeps {
   pickObjection?: () => ObjectionType
   /** The company's active methodology for a rep (snapshotted onto the session at start). */
   methodology?: (repId: string) => Promise<Methodology | null>
+  /** The approved knowledge pack linked to a scenario (snapshotted onto the session at start). */
+  knowledge?: (scenarioId: string, repId: string) => Promise<KnowledgePack | null>
 }
 
 export interface OrchestratorOptions {
@@ -108,6 +111,8 @@ export function createOrchestrator(deps: OrchestratorDeps, options: Orchestrator
 
     // A missing or failing methodology lookup never blocks practice: the app's own wording is used.
     const methodology = await deps.methodology?.(input.repId).catch(() => null) ?? null
+    // Same rule for knowledge: a missing, unapproved or failing lookup never blocks practice; the session runs generic.
+    const knowledge = input.scenarioId ? await deps.knowledge?.(input.scenarioId, input.repId).catch(() => null) ?? null : null
 
     let session: StyleShiftSession = {
       ...record.session, ...persona,
@@ -118,6 +123,7 @@ export function createOrchestrator(deps: OrchestratorDeps, options: Orchestrator
       ...(input.challenge ? { challenge: input.challenge } : {}),
       ...(input.practiceContext ? { practiceContext: input.practiceContext } : {}),
       ...(methodology ? { methodology } : {}),
+      ...(knowledge ? { knowledge } : {}),
     }
 
     const opening = await deps.doctor.respond(session, { repText: null })

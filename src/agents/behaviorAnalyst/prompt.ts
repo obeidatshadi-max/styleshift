@@ -4,6 +4,7 @@ import type { StyleShiftSession } from '@/schemas/session'
 import { DRIVE } from '@/lib/doctor-context'
 import { langName } from '@/lib/voice-partner-core'
 import { countHedges } from '@/lib/hedging'
+import { knowledgeSectionFor } from '@/lib/knowledge-pack'
 import { findUnanchoredComparatives } from '@/lib/comparatives'
 import { defaultScoringConfig, type ScoringConfig } from '@/scoring/config'
 import { SCORED_COMPETENCIES } from '@/schemas/scoring'
@@ -105,6 +106,7 @@ ${competencies}
 Transcript (each line is "[turn N | speaker] text"):
 ${session.transcript.length ? formatTranscript(session) : '(empty)'}
 ${hedgeMeasurements(session)}${comparativeMeasurements(session)}
+${knowledgeSectionFor(session.knowledge, 'analyst', session.lang) ? `\n${knowledgeSectionFor(session.knowledge, 'analyst', session.lang)}\n` : ''}
 ${PRECISION_KEYS_NOTE}
 
 Task: list the rep's observable behaviors, each tied to one competency. Include both behaviors that moved the doctor toward engagement and behaviors that moved them away or passed over an opening. Report between 3 and 15 observations; fewer if the transcript is short.

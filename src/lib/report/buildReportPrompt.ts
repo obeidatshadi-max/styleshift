@@ -83,7 +83,10 @@ const NO_CLAIMS_RULE = 'In every suggested phrase or example wording for the rep
   'The transcript is not evidence for such a claim. Instead acknowledge the doctor\'s point, ask a question, or offer to bring the approved evidence ' +
   '(for example "I can bring you the approved data on this point") — never describe what that data shows.'
 
-export const SYSTEM = 'You are an objective sales-conversation analyst, not a clinician. ' +
+/** Added only when a knowledge section is present: the pack is then a legitimate source for suggested wording. */
+const KNOWLEDGE_EXCEPTION = ' Exception: you may state an approved fact from the knowledge section above exactly as written there, naming its id in words (for example "fact f1"), and no more than it says.'
+
+export const SYSTEM ='You are an objective sales-conversation analyst, not a clinician. ' +
   'You write evidence-based reports for a medical sales rep about their own conversation. ' +
   'Never invent a quote, a score, a date, an owner, an agreement, a hidden emotion, or a fact ' +
   'not present in the transcript. Never present a simulated persona\'s configuration as real ' +
@@ -127,9 +130,17 @@ export function buildReportPrompt(
       'Never describe it as something the customer revealed or that was measured from the conversation.'
     : 'This is a REAL conversation (human colleague or real customer). Do not invent a "hidden concern" or force a style label — insufficient evidence is a valid, expected answer.'
 
+  const k = context.knowledge
+  const knowledgeSection = k ? (part === 'coaching' || part === 'all' ? k.coachSection : k.analystSection) : ''
+  const signalLines = k && k.prohibitedHits.length
+    ? `Review signals (deterministic matches against the company's prohibited-claim list; these are review signals, not verdicts - judge each in context and cite the rep's actual segment):\n${k.prohibitedHits.map(h => `- the rep's turn at segmentIndex ${h.segmentIndex} contains the phrase "${h.phrase}"`).join('\n')}`
+    : ''
+  const knowledgeBlock = [knowledgeSection, signalLines].filter(Boolean).join('\n\n')
+
   const prompt = `${objectiveLine}
 ${simulationLine}
 ${context.productContext ? `Product context: ${context.productContext}` : ''}
+${knowledgeBlock}
 
 TRANSCRIPT (each line: [segmentIndex] speakerRole: text — "rep" is the sales rep, "counterpart" is the doctor/colleague/customer):
 ${formatSegments(segments)}
@@ -165,7 +176,7 @@ evidence itself; refer to moments in words ("when the doctor asked about interac
 
 ${LANGUAGE_RULE[lang]}
 
-${NO_CLAIMS_RULE}
+${NO_CLAIMS_RULE}${knowledgeSection ? KNOWLEDGE_EXCEPTION : ''}
 
 Never claim one behavior caused a reaction merely because it came first in the transcript.`
 

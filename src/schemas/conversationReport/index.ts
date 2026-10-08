@@ -219,6 +219,15 @@ export interface ConversationReport {
   qualityFlags: string[]
 }
 
+export interface ReportKnowledge {
+  /** Lead-in plus approved facts and messaging, for the observation parts of the report. */
+  analystSection: string
+  /** Same content for the coaching part. */
+  coachSection: string
+  /** Rep turns that contain a phrase from the pack's approved prohibited-claim list. A review signal, never a verdict. */
+  prohibitedHits: Array<{ itemId: string; phrase: string; segmentIndex: number }>
+}
+
 /** Context an adapter builds from the flow's own data, given to the prompt
  * builder alongside the segments. Never re-derived by the model. */
 export interface ReportContext {
@@ -229,4 +238,5 @@ export interface ReportContext {
   savedCounterpartStyle: SocialStyle | null
   deterministicMetrics: Record<string, number | string | boolean | null>
   qualityFlags: string[]
+  knowledge?: ReportKnowledge | null
 }

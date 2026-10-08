@@ -24,6 +24,7 @@ import CapabilityCard from './CapabilityCard'
 import MethodologyCard from './MethodologyCard'
 import NextChallengeCard from './NextChallengeCard'
 import PracticeMyDoctor from './PracticeMyDoctor'
+import ProgressCard from './ProgressCard'
 import MyCoachingInsights from './MyCoachingInsights'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
@@ -136,6 +137,8 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
         <AssignedScenarios />
 
         <MicroPractice />
+
+        <ProgressCard />
 
         <PracticeMyDoctor />
 

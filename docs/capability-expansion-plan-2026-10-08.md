@@ -102,3 +102,12 @@ There is **no lint script** in `package.json` (no eslint configured) — lint ca
 4. Three starter templates (generic four-stage structures; not copies of any vendor model).
 5. Flag `METHODOLOGY_BUILDER_ENABLED`. No migration beyond 035 (table `methodologies`).
 6. Not in this phase: analyst or doctor prompts do not use the methodology; the shared conversation-report pipeline is not yet methodology-aware; stage weights are stored and shown but no stage-level score is computed; Arabic stage prompts are entered in English only in the builder.
+
+## Phase 7 detail (Professional progress)
+
+1. Derived only: no new table, no points, levels to grind or badges. Everything is computed from the rep's own scored simulations (newest 30) and drill attempts.
+2. Volume cannot move anything: the weekly target counts distinct practice DAYS (default 3 per week), so many sessions or attempts in one day count once; a session counts only if it reached a scored result with at least 3 rep turns; a drill attempt counts only if it was assessed; mastery and improvement use the best score of each day across several days, so retrying the same drill within a day cannot create "improvement".
+3. Streak = consecutive weeks meeting the target; the current week never breaks it. Days and weeks follow the rep's local clock (browser sends its offset).
+4. Shown: weekly rhythm, highlights that are currently true (improved about N% on a drill over D days, current personal best with a physician style, N sessions in a row without a behavior that used to hurt, a capability dimension that is improving), skill mastery per drill type (practising, proficient, mastered), and milestones derived from history. Percentages are rounded to steps of 5; nothing is a ranking.
+5. Flag `PROGRESS_TRACKING_ENABLED`. Existing XP, daily challenge streak and leagues are untouched; they still reward activity and are NOT part of this panel.
+6. Not in this phase: a rep-set weekly target (fixed at 3 for now); permanent milestone records (milestones are recomputed from the visible history, so deleting history removes them); voice-session and AI-Coach activity do not count as practice days yet.

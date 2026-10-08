@@ -84,3 +84,12 @@ There is **no lint script** in `package.json` (no eslint configured) — lint ca
 4. The server recomputes the target from the rep's own history on start; the request body cannot choose it. A recommendation never changes scoring config (`changesScoringConfig: false`).
 5. The card separates what the sessions show, a hedged reading ("may be a habit... not a fixed trait") with a confidence label, and what to practise. Progress is shown with a caveat that targeted sessions are harder.
 6. Flag `ADAPTIVE_CHALLENGES_ENABLED`; targeted start also needs the simulation flags. No migration: the target is stored in the existing session JSON.
+
+## Phase 5 detail (Practice my doctor)
+
+1. Positioned as a context-informed simulation of the likely interaction, never a copy of a person. Only the rep's own records are read (doctor profile, visits, coach debriefs) through row-level security; another rep's doctor id resolves to nothing.
+2. Three kinds of content are kept apart end to end (preview, prompt, stored session): facts the rep recorded (verbatim, clipped, with source), inferences (hedged, each pointing at the facts it rests on, never emotions, motives or prescribing), and a random practice challenge labelled as invented. The doctor agent is told which is which and not to claim memories beyond the list. Rep-written text is quoted so it cannot act as instructions.
+3. "Practice my next visit": a suggested doctor from open promises, a visit plan, a coach next action and time since contact, with the reason shown and the doctor changeable. There is no visit calendar, so it is a suggestion.
+4. The rep sees the full preview before starting and can switch off any recorded fact; inferences that rested on it drop out. The preview seed fixes the challenge so what is shown is what runs.
+5. Flag `PRACTICE_MY_DOCTOR_ENABLED` (start also needs the simulation flags). No migration; the session stores only ids of the facts, inferences and challenge it was given.
+6. Not in this phase: showing the assumptions inside the finished report; Arabic review of the new text; voice mode.

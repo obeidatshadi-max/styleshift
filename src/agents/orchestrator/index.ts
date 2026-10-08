@@ -38,6 +38,8 @@ export interface StartInput {
   scenarioId?: string
   /** The behavior a recommended challenge targets; lets progress be measured later. */
   challenge?: { behavior: string }
+  /** What a "Practice my doctor" simulation was given. */
+  practiceContext?: { factIds: string[]; inferenceIds: string[]; challenge: string }
   lang?: 'en' | 'ar'
   difficulty?: Difficulty
   objectionType?: ObjectionType
@@ -108,6 +110,7 @@ export function createOrchestrator(deps: OrchestratorDeps, options: Orchestrator
       learningObjectives: input.learningObjectives ?? [],
       ...(input.scenarioId ? { scenarioId: input.scenarioId } : {}),
       ...(input.challenge ? { challenge: input.challenge } : {}),
+      ...(input.practiceContext ? { practiceContext: input.practiceContext } : {}),
     }
 
     const opening = await deps.doctor.respond(session, { repText: null })

@@ -23,6 +23,7 @@ import MicroPractice from './MicroPractice'
 import CapabilityCard from './CapabilityCard'
 import MethodologyCard from './MethodologyCard'
 import NextChallengeCard from './NextChallengeCard'
+import PatternMemoryCard from './PatternMemoryCard'
 import PracticeMyDoctor from './PracticeMyDoctor'
 import ProgressCard from './ProgressCard'
 import MyCoachingInsights from './MyCoachingInsights'
@@ -143,6 +144,8 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
         <PracticeMyDoctor />
 
         <NextChallengeCard />
+
+        <PatternMemoryCard />
 
         <CapabilityCard />
 

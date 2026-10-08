@@ -63,17 +63,53 @@ export interface PatternRecord {
   eventIds: string[]
 }
 
-export interface Interpretation {
-  patternKey: string
-  /** Always hedged, e.g. "tends to"; never a trait claim. */
-  text: string
-  certainty: 'inferred'
-  caveats: string[]
+export type InsightKind = 'recurring_hurt' | 'recurring_strength' | 'context_contrast' | 'resolved_hurt'
+export type ConfidenceLevel = 'low' | 'medium' | 'high'
+
+/** What was counted. Numbers and verbatim quotes only; no reading of them. */
+export interface InsightObserved {
+  /** Sessions where it occurred / sessions considered (recurring and resolved insights). */
+  sessionsWith?: number
+  sessionsConsidered: number
+  behavior?: string
+  trend?: TrendDirection
+  context?: PatternRecord['dominantContext']
+  /** context_contrast: the capability dimension, the context field compared and the two groups. */
+  contrast?: {
+    dimension: string
+    contextKey: 'physicianStyle' | 'objectionType'
+    higher: { value: string; positive: number; sessions: number }
+    lower: { value: string; positive: number; sessions: number }
+  }
+  /** Verbatim transcript text of the rep's own turns. Never model-written. */
+  evidence: EventEvidence[]
 }
 
-export interface Recommendation {
-  patternKey: string
-  practice: string
+export type CaveatCode = 'small_sample' | 'no_cause_known' | 'scenarios_not_random'
+
+/** A hedged reading of what was observed. Always labelled as inference; it explains nothing about why. */
+export interface Interpretation {
+  code: 'recurring_habit' | 'habit_under_conditions' | 'reliable_strength' | 'varies_by_context' | 'habit_changed'
+  certainty: 'inferred'
+  caveats: CaveatCode[]
+}
+
+export interface InsightRecommendation {
+  kind: 'drill' | 'keep_going'
+  /** Micro-practice drill id to try. */
+  drillId: string | null
+  /** The behavior or capability area the practice is about. */
+  focus: string | null
   /** Scoring weights are never changed by a recommendation. */
   changesScoringConfig: false
+}
+
+/** Observed -> interpretation -> coaching, kept as three separate parts of one insight. */
+export interface PatternInsight {
+  id: string
+  kind: InsightKind
+  observed: InsightObserved
+  interpretation: Interpretation
+  recommendation: InsightRecommendation
+  confidence: ConfidenceLevel
 }

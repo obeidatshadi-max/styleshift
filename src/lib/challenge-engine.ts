@@ -43,7 +43,7 @@ export type ChallengeRecommendation =
 
 const maxPoints = Math.max(...[...behaviorIndex(defaultScoringConfig).values()].map(v => Math.abs(v.rule.points)))
 
-function confidenceLevel(p: PatternRecord): ConfidenceLevel {
+export function confidenceLevel(p: PatternRecord): ConfidenceLevel {
   const points = (p.sessionsWith >= 5 ? 1 : 0) + (p.confidence >= 0.7 ? 1 : 0) + (p.trend !== 'unclear' ? 1 : 0)
   return points >= 3 ? 'high' : points === 2 ? 'medium' : 'low'
 }

@@ -23,7 +23,7 @@ export function eventsFromSession(session: Readonly<StyleShiftSession>): Behavio
     difficulty: session.difficulty,
     language: session.lang,
     objectionType: session.objections.activeType,
-    scenarioId: null,
+    scenarioId: session.scenarioId ?? null,
   }
   const events = new Map<string, BehaviorEvent>()
   for (const [competency, comp] of Object.entries(session.scores.competencies)) {

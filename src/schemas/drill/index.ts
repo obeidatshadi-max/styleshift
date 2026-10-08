@@ -53,6 +53,8 @@ export interface DrillTemplate {
   /** Share of weighted criteria (0-1) needed to pass, on top of all `required` ones. */
   passMark: number
   retry: { maxAttempts: number; hintAfterAttempts: number }
+  /** Shown after `retry.hintAfterAttempts` tries; never reveals a model answer. */
+  hint: LocalText
   /** Arabic text native-speaker checked. False = flag for review. */
   arabicReviewed: boolean
 }
@@ -125,6 +127,7 @@ export function validateDrillTemplate(input: unknown): ValidationResult<DrillTem
     criteria,
     passMark: r.num('passMark', 0.3, 1, 0.6),
     retry: { maxAttempts, hintAfterAttempts },
+    hint: r.localText('hint', { max: 300 }),
     arabicReviewed: r.bool('arabicReviewed', false),
   }
   return finish(r, value)

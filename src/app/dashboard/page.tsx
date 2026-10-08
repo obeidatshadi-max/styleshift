@@ -14,6 +14,8 @@ import { getVoiceStats } from '@/lib/voice-stats'
 import CoachingQueueAndAssign from '@/components/dashboard/CoachingQueueAndAssign'
 import { getCoachingQueue } from '@/lib/coaching-queue'
 import ScenarioEditorPanel from '@/components/dashboard/ScenarioEditorPanel'
+import SimScenarioBuilderPanel from '@/components/dashboard/SimScenarioBuilderPanel'
+import { scenarioBuilderEnabled } from '@/lib/sim-scenarios'
 import BehavioralTrendsPanel from '@/components/dashboard/BehavioralTrendsPanel'
 import CompanyDoctorsPanel from '@/components/dashboard/CompanyDoctorsPanel'
 import { getBehavioralTrendsForReps } from '@/lib/behavioral-trends-dashboard'
@@ -108,6 +110,11 @@ export default async function DashboardPage() {
           reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))}
         />
         <Panel title="Company Scenarios"><ScenarioEditorPanel /></Panel>
+        {scenarioBuilderEnabled() && (
+          <Panel title="Simulation Scenarios">
+            <SimScenarioBuilderPanel reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} />
+          </Panel>
+        )}
         <Panel title="AI Doctor Profiles"><CompanyDoctorsPanel reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} /></Panel>
         <Panel title="Team Leaderboard"><Leaderboard reps={stats?.reps ?? []} /></Panel>
         <Panel title="Skill Gap Heatmap"><SkillHeatmap levelAccuracy={stats?.levelAccuracy ?? []} /></Panel>

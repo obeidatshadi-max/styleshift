@@ -114,6 +114,9 @@ export interface StyleShiftSession {
   startedAt: string | null
   endedAt: string | null
 
+  /** Set when the session ran from a saved simulation scenario. Absent on older sessions. */
+  scenarioId?: string | null
+
   rep: MedicalRep
   physician: PhysicianPersona
   specialty: Specialty | null

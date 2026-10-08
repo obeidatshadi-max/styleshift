@@ -70,7 +70,7 @@ const LANGUAGE_RULE: Record<ReportLang, string> = {
   ar: 'Write every free-text field in Arabic (clear Modern Standard Arabic, natural for a pharmaceutical sales rep in Iraq). ' +
     'Keep drug and product names, numbers and units as given. JSON keys and enumerated values (such as "partial" or "inferred") stay in English exactly as listed below. ' +
     'Every field typed "string" is free text and MUST be Arabic, including "behavior", "whatHappened", "whyItMattered", "improvement", "interpretation", ' +
-    '"practiceExercise", "successLooksLike", "mostUsefulAdjustment" and "summary"; never answer a free-text field in English. ' +
+    '"practiceExercise", "successLooksLike", "mostUsefulAdjustment", "summary", "possibleMeanings", "missingContext", "clarifyingQuestion" and "precisionQuestion"; never answer a free-text field in English. ' +
     'Example wording for a rep to say ("betterPhrase", "betterResponseExample", "suggestedWordingNextVisit", "clarifyingQuestion", "precisionQuestion") may use natural Iraqi dialect.',
 }
 

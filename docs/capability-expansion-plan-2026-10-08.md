@@ -55,3 +55,13 @@ There is **no lint script** in `package.json` (no eslint configured) — lint ca
 8. Risks: migration written but **not applied** to Supabase; unused tables until Phase 2; scenario `skeptical` has no engine equivalent (mapped to `realistic` + skepticism bias, documented).
 9. Backward compat: no existing table/column/type changed; saved reports untouched.
 10. Tests: validators (accept/reject), difficulty mapping, knowledge-tier separation + unavailable-reporting, methodology key validation + terminology fallback, pattern-event extraction from a real `SessionScore`.
+
+## Phase 2 detail (Scenario Builder + Micro-practice)
+
+1. Architecture touched: orchestrator `start()` (optional `persona` + `scenarioId`; `doctorId` now optional), `StyleShiftSession` (optional `scenarioId`), `/api/simulation/start` (optional `scenarioId`), `useTextSimulation`/`TextSimulation` (optional `scenarioId`), `GameHome` (two cards), manager dashboard (one panel), `privacy.ts` (new history table).
+2. Scenarios reuse the saved-doctor path: `doctorFromScenario` builds an in-memory `Doctor`, then the existing `personaFromDoctor` maps it. The doctor agent, analyst and scorer need no change.
+3. DB: migration 036 `drill_attempts` (own-row RLS; stores derived result only, never the rep's text).
+4. API: `/api/sim-scenarios` (GET, POST), `/[id]` (GET, PUT, PATCH status), `/[id]/duplicate`, `/[id]/assign` (GET, POST, DELETE), `/mine`; `/api/micro-practice` (GET), `/attempt` (POST). Flags: `SCENARIO_BUILDER_ENABLED`, `MICRO_PRACTICE_ENABLED` (off = 404).
+5. Governance: editing an approved scenario returns it to draft; reps can start only approved scenarios assigned to them or the whole company; managers can test any scenario of their company.
+6. Drills: 15 English templates as data (`lib/drill-templates.ts`); responses analysed by the existing Behavior Analyst, scored deterministically; unassessable replies are not stored and do not use a retry; retries capped per drill per UTC day.
+7. Not in this phase: knowledge-pack content reaching the doctor prompt (the link is stored and flagged in the preview), Arabic drills, scoring-weight changes.

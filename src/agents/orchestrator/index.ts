@@ -7,7 +7,7 @@ import { applyAgentPatch } from './patch'
 import { assembleReport } from './report'
 import type {
   AnalystPort, CoachPort, DoctorPort, OrchestratorError, PersonaLoader, Phase, Result,
-  Scorer, SessionRecord, SessionStore, Step,
+  PersonaData, Scorer, SessionRecord, SessionStore, Step,
 } from './types'
 
 export interface OrchestratorDeps {
@@ -30,7 +30,12 @@ export interface OrchestratorOptions {
 
 export interface StartInput {
   repId: string
-  doctorId: string
+  /** A saved doctor to load; omit when `persona` is supplied. */
+  doctorId?: string
+  /** A ready persona (e.g. built from a scenario). Skips the doctor lookup. */
+  persona?: PersonaData
+  /** Stored on the session so results can later be grouped by scenario. */
+  scenarioId?: string
   lang?: 'en' | 'ar'
   difficulty?: Difficulty
   objectionType?: ObjectionType
@@ -89,7 +94,8 @@ export function createOrchestrator(deps: OrchestratorDeps, options: Orchestrator
     const record: SessionRecord = { session: createEmptySession(sessionId, input.repId), phase: 'in_roleplay', trace, report: null }
     log(record, 'create_session', true)
 
-    const persona = await deps.personas.load(input.repId, input.doctorId, { difficulty })
+    const persona = input.persona
+      ?? (input.doctorId ? await deps.personas.load(input.repId, input.doctorId, { difficulty }) : null)
     if (!persona) return fail('persona_not_found')
     log(record, 'load_persona', true)
 
@@ -98,6 +104,7 @@ export function createOrchestrator(deps: OrchestratorDeps, options: Orchestrator
       lang: input.lang ?? 'en', difficulty, startedAt: now().toISOString(),
       objections: { ...persona.objections, activeType: input.objectionType ?? persona.objections.activeType ?? pickObjection() },
       learningObjectives: input.learningObjectives ?? [],
+      ...(input.scenarioId ? { scenarioId: input.scenarioId } : {}),
     }
 
     const opening = await deps.doctor.respond(session, { repText: null })

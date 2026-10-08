@@ -1,0 +1,41 @@
+{
+  "version": "1.0.0",
+  "description": "Which scoring-catalog behaviors feed each capability dimension, and how much. Separate from scoring.config.json on purpose: changing a weight here re-groups existing evidence, it never changes a competency score. Each behavior belongs to at most one dimension (no double counting). There is deliberately no overall score.",
+  "window": 10,
+  "minEvents": 3,
+  "minSessions": 2,
+  "trend": { "minSessions": 4, "minChange": 8 },
+  "roundTo": 5,
+  "shrinkage": 1,
+  "bands": { "developing": 0, "building": 40, "strong": 60, "advanced": 80 },
+  "dimensions": {
+    "interaction": {
+      "description": "Conversation management, sequencing and responsiveness.",
+      "behaviors": {
+        "interruption": 1.5, "paraphrasing": 1, "mirrored_last_words": 0.5, "labeled_emotion": 1, "empathy_statement": 1,
+        "ignored_objection": 1.5, "used_but_contradiction": 1, "accusation_audit": 1, "hedged_delivery": 0.75
+      }
+    },
+    "clinical": {
+      "description": "Use of evidence and relevance of claims, judged from what was said. Accuracy against approved product sources is not measured until a knowledge pack is linked.",
+      "limit": "accuracy_not_measured",
+      "behaviors": { "evidence_referenced": 1.5, "unsupported_claim": 1.5, "benefit_tied_to_need": 1, "generic_claim": 0.75 }
+    },
+    "adaptation": {
+      "description": "How well the rep adjusts to the physician's style and reactions.",
+      "behaviors": { "style_matched": 1.5, "adjusted_to_reaction": 1.25, "style_mismatch": 1.5 }
+    },
+    "discovery": {
+      "description": "Questioning, clarification, need discovery and objection exploration.",
+      "behaviors": {
+        "open_question": 1, "criteria_question": 1, "leading_question": 1, "forbidden_question": 1, "clarification": 1.5,
+        "need_uncovered": 1.5, "premature_pitch": 1.5, "problem_first_opening": 1, "product_first_opening": 1,
+        "objection_acknowledged": 1, "resolution_checked": 1, "argued_with_doctor": 1
+      }
+    },
+    "commitment": {
+      "description": "Moving toward an appropriate next action without forcing the close.",
+      "behaviors": { "next_step_proposed": 1.5, "agreement_then_commitment": 1.25, "summarized": 0.75, "no_next_step": 1.5, "premature_close": 1.5 }
+    }
+  }
+}

@@ -65,3 +65,12 @@ There is **no lint script** in `package.json` (no eslint configured) — lint ca
 5. Governance: editing an approved scenario returns it to draft; reps can start only approved scenarios assigned to them or the whole company; managers can test any scenario of their company.
 6. Drills: 15 English templates as data (`lib/drill-templates.ts`); responses analysed by the existing Behavior Analyst, scored deterministically; unassessable replies are not stored and do not use a retry; retries capped per drill per UTC day.
 7. Not in this phase: knowledge-pack content reaching the doctor prompt (the link is stored and flagged in the preview), Arabic drills, scoring-weight changes.
+
+## Phase 3 detail (Capability IQ scores)
+
+1. Derived layer only: `SessionScore`, `scoring.config.json` and saved reports are untouched. Input is the Phase 1 behavior events built from stored scored simulations (`agent_sessions`); no new table.
+2. `scoring/capability.config.json` maps scoring-catalog behaviors to five dimensions (each behavior in exactly one), with weights, window, minimum evidence, trend and rounding rules. Weights are changed in config, not code.
+3. Rules: a dimension is scored only with at least 3 behavior events across at least 2 sessions; score is rounded to steps of 5 and shown with a band; confidence and trend are reported separately; no overall score; every score opens to the behaviors and the rep's own words behind it.
+4. Clinical IQ currently measures use of evidence and relevance of claims from what was said. Accuracy against approved sources needs a linked knowledge pack and is stated as not measured.
+5. Flag `CAPABILITY_IQ_ENABLED`; route `/api/progress/capability`; Home card `CapabilityCard`.
+6. Not in this phase: drill attempts do not feed the dimensions (they keep no evidence text); report-level split of behavioral vs clinical/message feedback; manager view.

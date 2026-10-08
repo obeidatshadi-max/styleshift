@@ -1,6 +1,7 @@
 import type { StyleKey } from '@/types/game'
 import { SPECIALTIES } from '@/lib/game-data'
 import { DRIVE } from '@/lib/doctor-context'
+import { knowledgeSectionFor } from '@/lib/knowledge-pack'
 import {
   IRAQI_DIALECT_LINE, SPECIALTY_CONTEXT, langName, objectionInstruction, stateInstructionBlock,
   type PhysicianState,
@@ -65,6 +66,7 @@ export function personaBlock(session: StyleShiftSession): string {
   return [
     `You are ${physician.name || 'a physician'}${specialtyPart}, ${styleFeel(session)}.${workplace} ${languageLine}`,
     domain, phrases, onProfile, notes, context.join(' '), hidden,
+    knowledgeSectionFor(session.knowledge, 'doctor', lang),
   ].filter(Boolean).join('\n')
 }
 

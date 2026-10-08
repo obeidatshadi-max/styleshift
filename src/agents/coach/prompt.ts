@@ -6,6 +6,7 @@ import { IRAQI_DIALECT_LINE, langName } from '@/lib/voice-partner-core'
 import type { StyleShiftSession } from '@/schemas/session'
 import type { CoachCandidate } from './select'
 import { TECHNIQUE_NOTES } from '@/lib/precision-language'
+import { knowledgeSectionFor } from '@/lib/knowledge-pack'
 
 export const COACH_SYSTEM = `You are a supportive, practical sales coach for pharmaceutical representatives. You write coaching for a role-play that has ALREADY been observed and scored by other systems.
 
@@ -103,7 +104,7 @@ ${personaSummary(session)}
 Learning objectives for this rep:
 ${objectivesBlock(session)}
 
-${methodologyBlock(session, candidates)}Coaching points to write (already chosen and ordered; do not change them):
+${methodologyBlock(session, candidates)}${knowledgeSectionFor(session.knowledge, 'coach', session.lang) ? `${knowledgeSectionFor(session.knowledge, 'coach', session.lang)}\n\n` : ''}Coaching points to write (already chosen and ordered; do not change them):
 ${candidates.map(candidateBlock).join('\n\n')}
 
 For EACH point, write:

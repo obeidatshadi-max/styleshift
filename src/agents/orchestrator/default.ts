@@ -9,7 +9,7 @@ import type { PersonaLoader, SessionStore } from './types'
  * not configured, so a route can answer 503 exactly like the existing
  * voice-partner routes do. */
 export function createDefaultOrchestrator(
-  store: SessionStore, personas: PersonaLoader, options?: OrchestratorOptions, extra: Partial<Pick<OrchestratorDeps, 'methodology'>> = {},
+  store: SessionStore, personas: PersonaLoader, options?: OrchestratorOptions, extra: Partial<Pick<OrchestratorDeps, 'methodology' | 'knowledge'>> = {},
 ) {
   const key = process.env.ANTHROPIC_API_KEY
   if (!key) return null

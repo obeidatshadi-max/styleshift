@@ -118,6 +118,8 @@ export interface StyleShiftSession {
   scenarioId?: string | null
   /** Set when the session was started from a recommended challenge (the behavior it targets). */
   challenge?: { behavior: string } | null
+  /** Set for "Practice my doctor": which recorded facts, inferences and practice challenge the simulation was given (ids only; the text stays in the rep's own records). */
+  practiceContext?: { factIds: string[]; inferenceIds: string[]; challenge: string } | null
 
   rep: MedicalRep
   physician: PhysicianPersona

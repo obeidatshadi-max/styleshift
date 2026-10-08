@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useT, useLang, useGameData } from '@/lib/i18n'
 import type { Doctor } from '@/types/game'
-import { useTextSimulation } from '@/hooks/useTextSimulation'
+import { useTextSimulation, type HcpStart } from '@/hooks/useTextSimulation'
 import PracticeReport from './PracticeReport'
 
 export const fs = (px: number) => `max(${px}px, var(--voice-min-font, 0px))`
@@ -19,6 +19,8 @@ interface Props {
   scenarioId?: string
   /** Start a simulation targeted at the rep's recommended challenge. */
   challenge?: boolean
+  /** Start from a doctor's recorded history ("Practice my doctor"). */
+  hcp?: HcpStart
   initialPracticeFocus?: string
   onDone: () => void
 }
@@ -32,11 +34,11 @@ const shell = (children: React.ReactNode) => (
 /** Text role-play against the AI Doctor, then the multi-agent report. The
  * conversation and analysis are driven server-side by the orchestrator; this
  * component only collects input and shows results. */
-export default function TextSimulation({ doctor, scenarioId, challenge, onDone, initialPracticeFocus = '' }: Props) {
+export default function TextSimulation({ doctor, scenarioId, challenge, hcp, onDone, initialPracticeFocus = '' }: Props) {
   const t = useT()
   const { lang } = useLang()
   const { STYLES } = useGameData()
-  const { phase, errorKind, messages, sessionId, start, send, end } = useTextSimulation(doctor.id, lang, scenarioId, challenge)
+  const { phase, errorKind, messages, sessionId, start, send, end } = useTextSimulation(doctor.id, lang, scenarioId, challenge, hcp)
   const [draft, setDraft] = useState('')
   const [practiceFocus, setPracticeFocus] = useState(initialPracticeFocus)
   const startedRef = useRef(false)

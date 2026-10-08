@@ -3,6 +3,9 @@ import { useCallback, useRef, useState } from 'react'
 import type { SessionReport } from '@/schemas/report'
 import type { Difficulty } from '@/lib/voice-partner-core'
 
+/** "Practice my doctor" start request: the preview's seed and the facts the rep chose to leave out. */
+export interface HcpStart { doctorId?: string; seed: string; exclude: string[] }
+
 export type SimPhase = 'idle' | 'starting' | 'live' | 'sending' | 'ending' | 'end_error' | 'report' | 'error'
 export type SimErrorKind = 'not_configured' | 'rate_limited' | 'unavailable' | 'no_rep_turns' | 'turn_limit' | 'generic'
 export interface SimMessage { role: 'doctor' | 'rep'; text: string }
@@ -33,7 +36,7 @@ async function post<T>(url: string, body: unknown): Promise<{ ok: true; data: T 
  * on the server (orchestrator); this only tracks what to show. Failures never
  * lose the conversation: a failed send removes only the optimistic message,
  * and a failed end can simply be pressed again (the server resumes). */
-export function useTextSimulation(doctorId: string, lang: 'en' | 'ar', scenarioId?: string, challenge = false) {
+export function useTextSimulation(doctorId: string, lang: 'en' | 'ar', scenarioId?: string, challenge = false, hcp?: HcpStart) {
   const [phase, setPhase] = useState<SimPhase>('idle')
   const [errorKind, setErrorKind] = useState<SimErrorKind | null>(null)
   const [messages, setMessages] = useState<SimMessage[]>([])
@@ -47,13 +50,17 @@ export function useTextSimulation(doctorId: string, lang: 'en' | 'ar', scenarioI
     busyRef.current = true
     setPhase('starting'); setErrorKind(null); setMessages([]); setReport(null); sessionRef.current = null; hasReportRef.current = false
     // A scenario run fixes persona, difficulty and language server-side.
-    const res = await post<{ sessionId: string; doctorText: string }>(challenge ? '/api/challenges/start' : '/api/simulation/start', challenge ? { lang } : scenarioId ? { scenarioId } : { doctorId, lang, difficulty, practiceFocus })
+    const [url, body] = hcp ? ['/api/practice-my-doctor/start', { ...hcp, lang, difficulty }]
+      : challenge ? ['/api/challenges/start', { lang }]
+      : scenarioId ? ['/api/simulation/start', { scenarioId }] // a scenario run fixes persona, difficulty and language server-side
+      : ['/api/simulation/start', { doctorId, lang, difficulty, practiceFocus }]
+    const res = await post<{ sessionId: string; doctorText: string }>(url as string, body)
     busyRef.current = false
     if (!res.ok) { setErrorKind(res.kind); setPhase('error'); return }
     sessionRef.current = res.data.sessionId
     setMessages([{ role: 'doctor', text: res.data.doctorText }])
     setPhase('live')
-  }, [doctorId, lang, scenarioId, challenge])
+  }, [doctorId, lang, scenarioId, challenge, hcp])
 
   /** Resolves true when the doctor replied; false leaves the text for the
    * caller to put back in the input box. */

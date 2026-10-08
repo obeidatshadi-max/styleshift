@@ -133,3 +133,10 @@ describe('knowledge in the report prompt', () => {
     expect(p).not.toContain('review signals')
   })
 })
+
+describe('Arabic rule covers the moment-understanding fields', () => {
+  it('names possibleMeanings, missingContext and clarifyingQuestion as Arabic free text', () => {
+    const ar = buildReportPrompt(segments, context, [], [], 'moments', 'ar').prompt
+    expect(ar).toMatch(/MUST be Arabic[^]*"possibleMeanings"[^]*"missingContext"[^]*"clarifyingQuestion"/)
+  })
+})

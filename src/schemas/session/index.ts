@@ -116,6 +116,8 @@ export interface StyleShiftSession {
 
   /** Set when the session ran from a saved simulation scenario. Absent on older sessions. */
   scenarioId?: string | null
+  /** Set when the session was started from a recommended challenge (the behavior it targets). */
+  challenge?: { behavior: string } | null
 
   rep: MedicalRep
   physician: PhysicianPersona

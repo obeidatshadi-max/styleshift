@@ -28,7 +28,7 @@ type Phase = 'compose' | 'checking' | 'result'
 /** Home card: short focused drills. Renders nothing when the feature is off or
  * no drill exists in the rep's language. Scoring, limits and storage are all
  * server-side; this only collects a reply and shows the result. */
-export default function MicroPractice() {
+export default function MicroPractice({ focusDrillId, onClose }: { focusDrillId?: string; onClose?: () => void } = {}) {
   const t = useT()
   const { lang } = useLang()
   const [drills, setDrills] = useState<DrillSummary[]>([])
@@ -48,8 +48,14 @@ export default function MicroPractice() {
   }
   useEffect(() => { void load() }, [lang]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (!focusDrillId || active) return
+    const d = drills.find(x => x.id === focusDrillId)
+    if (d) open(d)
+  }, [focusDrillId, drills]) // eslint-disable-line react-hooks/exhaustive-deps
+
   function open(d: DrillSummary) { setActive(d); setPhase('compose'); setReply(''); setResult(null); setError(null) }
-  async function close() { setActive(null); await load() }
+  async function close() { setActive(null); await load(); onClose?.() }
 
   async function submit() {
     if (!active || !reply.trim() || phase === 'checking') return

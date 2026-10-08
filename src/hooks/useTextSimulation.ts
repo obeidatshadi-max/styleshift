@@ -33,7 +33,7 @@ async function post<T>(url: string, body: unknown): Promise<{ ok: true; data: T 
  * on the server (orchestrator); this only tracks what to show. Failures never
  * lose the conversation: a failed send removes only the optimistic message,
  * and a failed end can simply be pressed again (the server resumes). */
-export function useTextSimulation(doctorId: string, lang: 'en' | 'ar', scenarioId?: string) {
+export function useTextSimulation(doctorId: string, lang: 'en' | 'ar', scenarioId?: string, challenge = false) {
   const [phase, setPhase] = useState<SimPhase>('idle')
   const [errorKind, setErrorKind] = useState<SimErrorKind | null>(null)
   const [messages, setMessages] = useState<SimMessage[]>([])
@@ -47,13 +47,13 @@ export function useTextSimulation(doctorId: string, lang: 'en' | 'ar', scenarioI
     busyRef.current = true
     setPhase('starting'); setErrorKind(null); setMessages([]); setReport(null); sessionRef.current = null; hasReportRef.current = false
     // A scenario run fixes persona, difficulty and language server-side.
-    const res = await post<{ sessionId: string; doctorText: string }>('/api/simulation/start', scenarioId ? { scenarioId } : { doctorId, lang, difficulty, practiceFocus })
+    const res = await post<{ sessionId: string; doctorText: string }>(challenge ? '/api/challenges/start' : '/api/simulation/start', challenge ? { lang } : scenarioId ? { scenarioId } : { doctorId, lang, difficulty, practiceFocus })
     busyRef.current = false
     if (!res.ok) { setErrorKind(res.kind); setPhase('error'); return }
     sessionRef.current = res.data.sessionId
     setMessages([{ role: 'doctor', text: res.data.doctorText }])
     setPhase('live')
-  }, [doctorId, lang, scenarioId])
+  }, [doctorId, lang, scenarioId, challenge])
 
   /** Resolves true when the doctor replied; false leaves the text for the
    * caller to put back in the input box. */

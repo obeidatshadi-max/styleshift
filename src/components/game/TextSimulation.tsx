@@ -17,6 +17,8 @@ interface Props {
   doctor: Doctor
   /** When set, the server runs this saved scenario instead of the doctor row. */
   scenarioId?: string
+  /** Start a simulation targeted at the rep's recommended challenge. */
+  challenge?: boolean
   initialPracticeFocus?: string
   onDone: () => void
 }
@@ -30,11 +32,11 @@ const shell = (children: React.ReactNode) => (
 /** Text role-play against the AI Doctor, then the multi-agent report. The
  * conversation and analysis are driven server-side by the orchestrator; this
  * component only collects input and shows results. */
-export default function TextSimulation({ doctor, scenarioId, onDone, initialPracticeFocus = '' }: Props) {
+export default function TextSimulation({ doctor, scenarioId, challenge, onDone, initialPracticeFocus = '' }: Props) {
   const t = useT()
   const { lang } = useLang()
   const { STYLES } = useGameData()
-  const { phase, errorKind, messages, sessionId, start, send, end } = useTextSimulation(doctor.id, lang, scenarioId)
+  const { phase, errorKind, messages, sessionId, start, send, end } = useTextSimulation(doctor.id, lang, scenarioId, challenge)
   const [draft, setDraft] = useState('')
   const [practiceFocus, setPracticeFocus] = useState(initialPracticeFocus)
   const startedRef = useRef(false)

@@ -36,6 +36,8 @@ export interface StartInput {
   persona?: PersonaData
   /** Stored on the session so results can later be grouped by scenario. */
   scenarioId?: string
+  /** The behavior a recommended challenge targets; lets progress be measured later. */
+  challenge?: { behavior: string }
   lang?: 'en' | 'ar'
   difficulty?: Difficulty
   objectionType?: ObjectionType
@@ -105,6 +107,7 @@ export function createOrchestrator(deps: OrchestratorDeps, options: Orchestrator
       objections: { ...persona.objections, activeType: input.objectionType ?? persona.objections.activeType ?? pickObjection() },
       learningObjectives: input.learningObjectives ?? [],
       ...(input.scenarioId ? { scenarioId: input.scenarioId } : {}),
+      ...(input.challenge ? { challenge: input.challenge } : {}),
     }
 
     const opening = await deps.doctor.respond(session, { repText: null })

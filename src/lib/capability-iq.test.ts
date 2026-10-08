@@ -27,6 +27,12 @@ describe('capability config', () => {
     expect(dimensionOfBehavior(defaultCapabilityConfig).get('clarification')).toBe('discovery')
   })
 
+  it('places every scoring-catalog behavior in a dimension (guards against new behaviors silently going uncounted)', () => {
+    const mapped = dimensionOfBehavior(defaultCapabilityConfig)
+    const missing = [...behaviorIndex(defaultScoringConfig).keys()].filter(k => !mapped.has(k))
+    expect(missing).toEqual([])
+  })
+
   it('rejects a behavior that is not in the catalog, a double claim, bad bands and a bad weight', () => {
     const unknown = clone(); unknown.dimensions.discovery.behaviors.made_up = 1
     expect(() => parseCapabilityConfig(unknown)).toThrow(/not in the scoring catalog/)

@@ -73,4 +73,14 @@ There is **no lint script** in `package.json` (no eslint configured) — lint ca
 3. Rules: a dimension is scored only with at least 3 behavior events across at least 2 sessions; score is rounded to steps of 5 and shown with a band; confidence and trend are reported separately; no overall score; every score opens to the behaviors and the rep's own words behind it.
 4. Clinical IQ currently measures use of evidence and relevance of claims from what was said. Accuracy against approved sources needs a linked knowledge pack and is stated as not measured.
 5. Flag `CAPABILITY_IQ_ENABLED`; route `/api/progress/capability`; Home card `CapabilityCard`.
-6. Not in this phase: drill attempts do not feed the dimensions (they keep no evidence text); report-level split of behavioral vs clinical/message feedback; manager view.
+6. Update after merging main: four scoring-catalog behaviors added by the precision-questioning work (`specifying_question`, `what_stops_question`, `checked_interpretation`, `accepted_vague_objection`) were not in any dimension; they are now mapped and a test fails if a catalog behavior is ever left out.
+7. Not in this phase: drill attempts do not feed the dimensions (they keep no evidence text); report-level split of behavioral vs clinical/message feedback; manager view.
+
+## Phase 4 detail (Adaptive Challenge Engine)
+
+1. Loop: stored scored sessions -> behavior events -> recurring patterns (`pattern-records.ts`, reusable by Phase 8) -> ranked weaknesses -> one recommended exercise (a quick drill plus a targeted simulation) -> sessions tagged with the behavior they target -> before/after comparison.
+2. Only behaviors that cost points in the scoring catalog can be recommended (`challenge-map.ts`, a test enforces full coverage). A weakness needs 3 distinct sessions, and is dropped if absent from the 5 newest.
+3. Ranking is deterministic: frequency 0.4, severity 0.3, recency 0.2, trend bonus. The targeted simulation uses the physician style, objection and difficulty where the behavior actually appeared, one step harder unless the pattern is worsening; pressure_test only from resistant doctors when improving.
+4. The server recomputes the target from the rep's own history on start; the request body cannot choose it. A recommendation never changes scoring config (`changesScoringConfig: false`).
+5. The card separates what the sessions show, a hedged reading ("may be a habit... not a fixed trait") with a confidence label, and what to practise. Progress is shown with a caveat that targeted sessions are harder.
+6. Flag `ADAPTIVE_CHALLENGES_ENABLED`; targeted start also needs the simulation flags. No migration: the target is stored in the existing session JSON.

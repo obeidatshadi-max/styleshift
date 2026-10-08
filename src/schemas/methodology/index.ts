@@ -1,4 +1,5 @@
 import { behaviorIndex, defaultScoringConfig } from '@/scoring/config'
+import { CAPABILITY_DIMENSIONS, type CapabilityDimension } from '@/scoring/capability'
 import { asRecord, finish, Reader, type LocalText, type ValidationResult } from '@/schemas/validation'
 
 /**
@@ -31,6 +32,8 @@ export interface Methodology {
   stages: MethodologyStage[]
   /** Client-facing label per ontology behavior, e.g. specifying_question -> "Clarify the Need". */
   terminology: Record<string, LocalText>
+  /** Client-facing name per capability dimension, e.g. discovery -> "Deep Discovery". */
+  dimensionTerms: Partial<Record<CapabilityDimension, LocalText>>
 }
 
 export function validateMethodology(input: unknown): ValidationResult<Methodology> {
@@ -89,9 +92,19 @@ export function validateMethodology(input: unknown): ValidationResult<Methodolog
     terminology[key] = text
   }
 
+  const dimensionTerms: Partial<Record<CapabilityDimension, LocalText>> = {}
+  const rawDims = asRecord(r.raw('dimensionTerms')) ?? {}
+  for (const [key, val] of Object.entries(rawDims)) {
+    if (!(CAPABILITY_DIMENSIONS as readonly string[]).includes(key)) { r.fail('dimensionTerms', `"${key}" is not a capability dimension`); continue }
+    const holder = new Reader({ v: val }, `dimensionTerms.${key}`)
+    const text = holder.localText('v', { required: true, max: 80 })
+    r.errors.push(...holder.errors.map(e => e.replace(/[.]v:/, ':')))
+    dimensionTerms[key as CapabilityDimension] = text
+  }
+
   const value: Methodology = {
     name: r.str('name', { max: 120 }), version: r.int('version', 1, 100000, 1),
-    stages: stages.sort((a, b) => a.order - b.order), terminology,
+    stages: stages.sort((a, b) => a.order - b.order), terminology, dimensionTerms,
   }
   return finish(r, value)
 }
@@ -121,4 +134,19 @@ export function stageCoverage(m: Pick<Methodology, 'stages'>, observed: Iterable
     expectedMissing: s.expectedBehaviors.filter(k => !seen.has(k)),
     prohibitedSeen: s.prohibitedBehaviors.filter(k => seen.has(k)),
   }))
+}
+
+/** Client-facing name for a capability dimension, or the given default (the app's own wording). */
+export function dimensionTerm(m: Pick<Methodology, 'dimensionTerms'> | null | undefined, dimension: CapabilityDimension, lang: 'en' | 'ar', fallback: string): string {
+  const t = m?.dimensionTerms?.[dimension]
+  return t?.[lang] ?? t?.en ?? fallback
+}
+
+export type StageStatus = 'covered' | 'partial' | 'not_seen' | 'needs_attention'
+
+/** One line per stage for a rep: what their recent practice showed against the company's stage. Descriptive only. */
+export function stageStatus(c: StageCoverage): StageStatus {
+  if (c.prohibitedSeen.length) return 'needs_attention'
+  if (c.expectedSeen.length === 0) return 'not_seen'
+  return c.expectedMissing.length === 0 ? 'covered' : 'partial'
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { activeMethodologyFor, methodologyBuilderEnabled } from '@/lib/methodologies'
 import { createDefaultOrchestrator } from '@/agents/orchestrator/default'
 import { createSupabasePersonaLoader, createSupabaseSessionStore } from '@/agents/orchestrator/supabase'
 import type { OrchestratorError } from '@/agents/orchestrator/types'
@@ -31,7 +32,8 @@ export async function simulationContext() {
   }
 
   const orchestrator = createDefaultOrchestrator(
-    createSupabaseSessionStore(supabase), createSupabasePersonaLoader(supabase),
+    createSupabaseSessionStore(supabase), createSupabasePersonaLoader(supabase), undefined,
+    methodologyBuilderEnabled() ? { methodology: activeMethodologyFor } : {},
   )
   if (!orchestrator) return { response: NextResponse.json({ error: 'not_configured' }, { status: 503 }) } as const
   return { orchestrator, userId: user.id } as const

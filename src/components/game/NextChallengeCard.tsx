@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useGameData, useLang, useT } from '@/lib/i18n'
 import type { Doctor, StyleKey } from '@/types/game'
 import type { ChallengeProgress, ChallengeRecommendation } from '@/lib/challenge-engine'
+import { useBehaviorLabel } from '@/lib/methodology-client'
 import { card, ghostBtn, primaryBtn, sectionLabel, bodyText, smallLabel } from './TextSimulation'
 import TextSimulation from './TextSimulation'
 import MicroPractice from './MicroPractice'
@@ -16,6 +17,7 @@ export default function NextChallengeCard() {
   const t = useT()
   const { lang } = useLang()
   const { STYLES } = useGameData()
+  const behaviorLabel = useBehaviorLabel()
   const [next, setNext] = useState<Next | null>(null)
   const [mode, setMode] = useState<'card' | 'drill' | 'sim'>('card')
 
@@ -46,7 +48,7 @@ export default function NextChallengeCard() {
 
       <div style={smallLabel}>{t('chal.observed')}</div>
       <p style={bodyText}>
-        {t('chal.statement', { behavior: t(`sim.beh.${p.behavior}`), n: p.sessionsWith, m: p.sessionsConsidered })}
+        {t('chal.statement', { behavior: behaviorLabel(p.behavior), n: p.sessionsWith, m: p.sessionsConsidered })}
         {p.dominantContext.physicianStyle && ` ${t('chal.withStyle', { style: STYLES[p.dominantContext.physicianStyle].name })}`}
         {` ${t(`chal.trend.${p.trend}`)}`}
       </p>

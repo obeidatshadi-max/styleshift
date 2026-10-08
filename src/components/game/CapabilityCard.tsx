@@ -3,14 +3,17 @@ import { useEffect, useState } from 'react'
 import { useT } from '@/lib/i18n'
 import type { CapabilityReport, DimensionResult } from '@/lib/capability-iq'
 import { CAPABILITY_DIMENSIONS } from '@/scoring/capability'
+import { useBehaviorLabel, useDimensionLabel } from '@/lib/methodology-client'
 import { card, sectionLabel, bodyText, smallLabel, ghostBtn } from './TextSimulation'
 
 const BAND_COLOR = { developing: 'var(--red)', building: 'var(--amber, #e8c060)', strong: 'var(--cyan)', advanced: 'var(--green)' } as const
 
 function Row({ r, sessions }: { r: DimensionResult; sessions: number }) {
   const t = useT()
+  const label = useBehaviorLabel()
+  const dimensionLabel = useDimensionLabel()
   const [open, setOpen] = useState(false)
-  const name = t(`cap.${r.dimension}`)
+  const name = dimensionLabel(r.dimension)
 
   if (r.status === 'insufficient_evidence') {
     return (
@@ -41,7 +44,7 @@ function Row({ r, sessions }: { r: DimensionResult; sessions: number }) {
               <ul style={{ margin: 0, paddingInlineStart: 18 }}>
                 {r.evidence[side].map((e, i) => (
                   <li key={i} style={bodyText}>
-                    {t(`sim.beh.${e.behavior}`)}
+                    {label(e.behavior)}
                     {e.quote && <span dir="auto" style={{ color: 'var(--ink-dim)' }}> - “{e.quote}”</span>}
                   </li>
                 ))}

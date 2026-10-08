@@ -33,7 +33,8 @@ export default function MicroPractice({ focusDrillId, onClose }: { focusDrillId?
   const { lang } = useLang()
   const [drills, setDrills] = useState<DrillSummary[]>([])
   const [prompts, setPrompts] = useState<Record<string, string>>({})
-  const [active, setActive] = useState<DrillSummary | null>(null)
+  const [drillLang, setDrillLang] = useState<'en' | 'ar'>(lang)
+  const [active,setActive] = useState<DrillSummary | null>(null)
   const [phase, setPhase] = useState<Phase>('compose')
   const [reply, setReply] = useState('')
   const [result, setResult] = useState<AttemptResult | null>(null)
@@ -42,9 +43,10 @@ export default function MicroPractice({ focusDrillId, onClose }: { focusDrillId?
   async function load() {
     const res = await fetch(`/api/micro-practice?lang=${lang}`).catch(() => null)
     if (!res?.ok) { setDrills([]); return }
-    const data = await res.json() as { drills: DrillSummary[]; prompts?: Record<string, string> }
+    const data = await res.json() as { drills: DrillSummary[]; prompts?: Record<string, string>; drillLang?: 'en' | 'ar' }
     setDrills(data.drills)
     setPrompts(data.prompts ?? {})
+    setDrillLang(data.drillLang ?? lang)
   }
   useEffect(() => { void load() }, [lang]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -61,7 +63,7 @@ export default function MicroPractice({ focusDrillId, onClose }: { focusDrillId?
     if (!active || !reply.trim() || phase === 'checking') return
     setPhase('checking'); setError(null)
     const res = await fetch('/api/micro-practice/attempt', {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ drillId: active.id, response: reply, lang }),
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ drillId: active.id, response: reply, lang: drillLang }),
     }).catch(() => null)
     const data = await res?.json().catch(() => null)
     if (!res?.ok || !data) {
@@ -119,6 +121,7 @@ export default function MicroPractice({ focusDrillId, onClose }: { focusDrillId?
   return (
     <div style={card}>
       <div style={sectionLabel}>{t('mp.title')}</div>
+      {drillLang !== lang && <p style={{ ...bodyText, color: 'var(--ink-dim)', marginBottom: 10 }}>{t('mp.englishOnly')}</p>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {drills.map(d => (
           <button key={d.id} onClick={() => open(d)} style={{ ...ghostBtn, textAlign: 'start', textTransform: 'none', letterSpacing: 0, display: 'block', width: '100%' }}>

@@ -25,12 +25,14 @@ export function useMethodology(): Methodology | null {
   return m
 }
 
-/** Label for a scoring-catalog behavior: the company's wording if it set one, else the app's own. */
+/** Label for a scoring-catalog behavior: the company's wording in the rep's own language if it set one,
+ * else the app's own label. A company term written only in English is never shown inside an Arabic
+ * screen (and the reverse), so the screen does not mix languages mid-sentence. */
 export function useBehaviorLabel() {
   const t = useT()
   const { lang } = useLang()
   const m = useMethodology()
-  return useCallback((behavior: string) => (m?.terminology[behavior] ? termFor(m, behavior, lang) : t(`sim.beh.${behavior}`)), [m, lang, t])
+  return useCallback((behavior: string) => m?.terminology[behavior]?.[lang] ? termFor(m, behavior, lang) : t(`sim.beh.${behavior}`), [m, lang, t])
 }
 
 /** Name of a capability dimension: the company's wording if it set one, else the app's own. */

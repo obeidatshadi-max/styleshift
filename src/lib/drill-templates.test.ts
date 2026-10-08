@@ -46,6 +46,8 @@ describe('drill run helpers', () => {
 
   it('ignores low-confidence observations, like the scorer does', () => {
     expect(observedBehaviors([obs('clarification', 0.2), obs('open_question', 0.8)])).toEqual(['open_question'])
+    // Only the drill's own criteria are kept when a filter is given: stray analyst guesses are dropped.
+    expect(observedBehaviors([obs('open_question', 0.8), obs('ignored_objection', 0.9)], new Set(['open_question']))).toEqual(['open_question'])
   })
 
   it('shows the rep\'s own quote only for criteria that were met', () => {

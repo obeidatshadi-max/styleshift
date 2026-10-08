@@ -26,10 +26,13 @@ export function drillSession(t: DrillTemplate, response: string, lang: 'en' | 'a
   }
 }
 
-/** Behaviors the analyst saw with enough confidence to count (same floor the scorer uses). */
-export function observedBehaviors(observations: readonly Observation[]): string[] {
+/** Behaviors the analyst saw with enough confidence to count (same floor the scorer uses).
+ * When `only` is given, anything outside it is dropped: a one-line drill measures just its own
+ * criteria, and the analyst's extra guesses (e.g. an "ignored objection" on a reply that scored
+ * 100) would otherwise be stored as if observed and later read by the pattern features. */
+export function observedBehaviors(observations: readonly Observation[], only?: ReadonlySet<string>): string[] {
   const floor = defaultScoringConfig.minConfidence
-  return [...new Set(observations.filter(o => o.confidence >= floor).map(o => o.behavior))]
+  return [...new Set(observations.filter(o => o.confidence >= floor && (!only || only.has(o.behavior))).map(o => o.behavior))]
 }
 
 export interface CriterionFeedback {

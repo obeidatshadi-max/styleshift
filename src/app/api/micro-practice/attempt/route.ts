@@ -46,7 +46,7 @@ export async function POST(req: Request) {
   const attemptNo = attempts.filter(a => a.drillId === template.id).length + 1
   const saved = await saveAttempt(supabase, {
     drillId: template.id, drillVersion: template.version, repId: user.id, attemptNo, lang,
-    observedBehaviors: observedBehaviors(analysis.observations), score: result.score, passed: result.passed,
+    observedBehaviors: observedBehaviors(analysis.observations, new Set(template.criteria.map(c => c.behavior))), score: result.score, passed: result.passed,
   })
   if (!saved) return NextResponse.json({ error: 'store_failed' }, { status: 500 })
 

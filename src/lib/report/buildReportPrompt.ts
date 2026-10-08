@@ -68,8 +68,20 @@ const SHAPES = Object.fromEntries((Object.keys(PART_KEYS) as ReportPart[]).map(p
 const LANGUAGE_RULE: Record<ReportLang, string> = {
   en: 'Write every free-text field in English.',
   ar: 'Write every free-text field in Arabic (clear Modern Standard Arabic, natural for a pharmaceutical sales rep in Iraq). ' +
-    'Keep drug and product names, numbers and units as given. JSON keys and enumerated values (such as "partial" or "inferred") stay in English exactly as listed below.',
+    'Keep drug and product names, numbers and units as given. JSON keys and enumerated values (such as "partial" or "inferred") stay in English exactly as listed below. ' +
+    'Every field typed "string" is free text and MUST be Arabic, including "behavior", "whatHappened", "whyItMattered", "improvement", "interpretation", ' +
+    '"practiceExercise", "successLooksLike", "mostUsefulAdjustment" and "summary"; never answer a free-text field in English. ' +
+    'Example wording for a rep to say ("betterPhrase", "betterResponseExample", "suggestedWordingNextVisit", "clarifyingQuestion", "precisionQuestion") may use natural Iraqi dialect.',
 }
+
+/** Suggested wording is the one place the model can put words in the rep's mouth. A rep who
+ * repeats an invented efficacy claim to a doctor is a compliance problem, so no suggested
+ * phrase may state product results, comparative benefit or outcomes — only ask, acknowledge,
+ * or offer to bring the company's approved evidence. */
+const NO_CLAIMS_RULE = 'In every suggested phrase or example wording for the rep, NEVER assert what the product does or achieves: no efficacy, speed of effect, ' +
+  'comparison with another treatment, safety, or patient-outcome statements, even generic ones such as "faster improvement" or "better control". ' +
+  'The transcript is not evidence for such a claim. Instead acknowledge the doctor\'s point, ask a question, or offer to bring the approved evidence ' +
+  '(for example "I can bring you the approved data on this point") — never describe what that data shows.'
 
 export const SYSTEM = 'You are an objective sales-conversation analyst, not a clinician. ' +
   'You write evidence-based reports for a medical sales rep about their own conversation. ' +
@@ -152,6 +164,8 @@ In every text field, never write segment numbers or bracketed references such as
 evidence itself; refer to moments in words ("when the doctor asked about interactions").
 
 ${LANGUAGE_RULE[lang]}
+
+${NO_CLAIMS_RULE}
 
 Never claim one behavior caused a reaction merely because it came first in the transcript.`
 

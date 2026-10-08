@@ -83,6 +83,15 @@ describe('buildReportPrompt', () => {
     expect(en).not.toContain('in Arabic')
     expect(buildReportPrompt(segments, context, []).prompt).toContain('in English')
   })
+  it('names the coaching free-text fields as Arabic so they are not left in English', () => {
+    const ar = buildReportPrompt(segments, context, [], [], 'coaching', 'ar').prompt
+    expect(ar).toMatch(/MUST be Arabic.*"behavior".*"practiceExercise"/)
+  })
+  it('forbids suggested wording that asserts product efficacy, in every part and language', () => {
+    for (const part of ['all', 'summary', 'moments', 'coaching', 'style'] as const)
+      for (const lang of ['en', 'ar'] as const)
+        expect(buildReportPrompt(segments, context, [], [], part, lang).prompt).toMatch(/NEVER assert what the product does or achieves/)
+  })
   it('system prompt forbids fabricating commitments/dates/scores', () => {
     expect(SYSTEM.toLowerCase()).toMatch(/never invent/)
   })

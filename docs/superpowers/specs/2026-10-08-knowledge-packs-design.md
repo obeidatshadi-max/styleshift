@@ -136,3 +136,12 @@ doctor challenges with a fact and the report cites it).
   approve clinical facts? (Current design: one manager, no second approver.)
 - Should the doctor be allowed to cite fact ids to the rep, or only use the
   content? (Current design: content only; ids appear in the coach/report.)
+
+## Changes made while planning
+
+- No separate `/api/knowledge-packs/approved` route: the scenario picker filters the list response for `status === 'approved'` (manager-only data either way).
+- Coaching notes (`coaching_note`, tier `coaching_interpretation`) are not snapshotted onto the session because the rep can read their own session record. The coach therefore sees approved facts and company messaging only. Wiring coaching notes needs a server-side lookup at report time and is deferred.
+- The doctor prompt includes item ids in the block but is told never to read them aloud.
+- Editing an approved pack returns it to draft (clears the approval); the version rises on every save.
+- The prompt block is capped at 6000 characters, dropping messaging before facts.
+- A rep can read the snapshot in their own `agent_sessions` row through RLS: approved facts, approved messaging and the prohibited-claim phrase list for scenarios they ran. Nothing else from the pack is stored there.

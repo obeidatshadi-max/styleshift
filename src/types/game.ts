@@ -102,6 +102,9 @@ export interface Doctor {
   product_context?: string | null
   meeting_stage?: string | null
   available_time_min?: number | null
+  // Next-visit plan set in Visit Prep, consumed by the AI Coach debrief.
+  plan_objective?: string | null
+  plan_success_measure?: string | null
 }
 
 // Fields a rep can set when creating/editing a doctor profile.
@@ -113,16 +116,20 @@ export interface DoctorVisit {
   id: string
   doctor_id: string
   rep_id: string
-  source: 'manual' | 'warmup' | 'ai_drill' | 'voice_partner' | 'voice_partner_opening' | 'voice_partner_question' | 'voice_partner_fab' | 'voice_partner_closing'
+  source: 'manual' | 'warmup' | 'ai_drill' | 'voice_partner' | 'voice_partner_opening' | 'voice_partner_question' | 'voice_partner_fab' | 'voice_partner_closing' | 'voice_partner_live'
   objection_raised: string | null
   promise_made: string | null
   what_worked: string | null
   note: string | null
+  /** Set when the rep ticks off the promise in promise_made. */
+  promise_done_at?: string | null
+  is_contact?: boolean
+  contact_at?: string | null
   created_at: string
 }
 
 export type DoctorVisitInput = Pick<DoctorVisit, 'source'> &
-  Partial<Pick<DoctorVisit, 'objection_raised' | 'promise_made' | 'what_worked' | 'note'>>
+  Partial<Pick<DoctorVisit, 'objection_raised' | 'promise_made' | 'what_worked' | 'note' | 'contact_at'>>
 
 // A single persisted turn in an AI-Doctor voice-partner session — the
 // evidence store Phase 2 (docs/ai-doctor-phase-1-plan.md's "Deferred" list)

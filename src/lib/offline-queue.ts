@@ -1,4 +1,5 @@
 'use client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 // A tiny IndexedDB-backed write queue. Field reps lose signal in clinics and
 // rural areas — a write made offline (logging a visit, mainly) shouldn't be
@@ -29,7 +30,8 @@ function openDb(): Promise<IDBDatabase> {
 /** Queues a write for later. Returns a locally-synthesized id for optimistic UI. */
 export async function enqueueWrite(table: string, payload: Record<string, unknown>): Promise<string> {
   const db = await openDb()
-  const entry: Omit<PendingWrite, 'id'> = { table, payload, created_at: new Date().toISOString() }
+  const stablePayload = { ...payload, id: payload.id ?? crypto.randomUUID() }
+  const entry: Omit<PendingWrite, 'id'> = { table, payload: stablePayload, created_at: new Date().toISOString() }
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite')
     tx.objectStore(STORE).add(entry)
@@ -37,7 +39,7 @@ export async function enqueueWrite(table: string, payload: Record<string, unknow
     tx.onerror = () => reject(tx.error)
   })
   db.close()
-  return `offline-${crypto.randomUUID()}`
+  return `offline-${stablePayload.id}`
 }
 
 export async function listPendingWrites(): Promise<PendingWrite[]> {
@@ -70,25 +72,58 @@ async function removePendingWrite(id: number): Promise<void> {
  */
 export function looksOffline(err: unknown): boolean {
   if (typeof navigator !== 'undefined' && !navigator.onLine) return true
-  const msg = err instanceof Error ? err.message : String(err ?? '')
+  const msg = err instanceof Error ? err.message : typeof err === 'object' && err !== null && 'message' in err ? String(err.message) : String(err ?? '')
   return /failed to fetch|network|load failed/i.test(msg)
 }
 
 /**
  * Replays every queued write in order, via the given Supabase client.
- * Stops at the first failure (keeps remaining entries queued) so a bad
- * connection doesn't drop writes out of order.
+ * Stops on transport failure. Rejected independent visits stay queued while
+ * later valid visits can sync. Replays are scoped to the authenticated owner.
  */
-export async function flushPendingWrites(
-  supabase: { from: (table: string) => { insert: (payload: Record<string, unknown>) => PromiseLike<{ error: unknown }> } }
-): Promise<{ flushed: number }> {
-  const pending = await listPendingWrites()
-  let flushed = 0
+export async function replayPendingWrites(
+  supabase: SupabaseClient, pending: PendingWrite[], remove: (id: number) => Promise<void>,
+): Promise<{ flushed: number; failed: number }> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { flushed: 0, failed: 0 }
+  let flushed = 0, failed = 0
   for (const entry of pending.sort((a, b) => a.id - b.id)) {
-    const { error } = await supabase.from(entry.table).insert(entry.payload)
-    if (error) break
-    await removePendingWrite(entry.id)
-    flushed++
+    if (entry.payload.rep_id !== user.id) continue
+    if (entry.table !== 'doctor_visits' || !entry.payload.id) { failed++; continue }
+    try {
+      const { error } = await supabase.from(entry.table).insert(entry.payload)
+      if (error) {
+        if (error.code === '23505') {
+          const { data } = await supabase.from(entry.table).select('*').eq('id', entry.payload.id).eq('rep_id', user.id).maybeSingle()
+          // Only acknowledge this exact operation, never a different uniqueness conflict.
+          if (!data || Object.entries(entry.payload).some(([k, v]) => k !== 'created_at' && data[k] !== v)) { failed++; continue }
+        } else {
+          if (looksOffline(error.message)) break
+          failed++; continue // Keep a rejected write visible without starving later independent visits.
+        }
+      }
+      await remove(entry.id); flushed++
+    } catch { failed++; break }
   }
-  return { flushed }
+  return { flushed, failed }
+}
+
+let flushing: Promise<{ flushed: number; failed: number }> | null = null
+export function flushPendingWrites(supabase: SupabaseClient): Promise<{ flushed: number; failed: number }> {
+  if (flushing) return flushing
+  flushing = (async () => {
+    const pending = await listPendingWrites()
+    // Upgrade legacy entries before sending, so a lost response is safe on the next replay.
+    for (const entry of pending) if (!entry.payload.id) {
+      entry.payload.id = crypto.randomUUID()
+      const db = await openDb()
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(STORE, 'readwrite'); tx.objectStore(STORE).put(entry)
+        tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error)
+      })
+      db.close()
+    }
+    return replayPendingWrites(supabase, pending, removePendingWrite)
+  })().finally(() => { flushing = null })
+  return flushing
 }

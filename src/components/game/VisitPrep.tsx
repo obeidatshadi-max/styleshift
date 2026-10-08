@@ -1,9 +1,15 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import PlanPanel from './PlanPanel'
+import VisitBrief from './VisitBrief'
 import { useT, useLang, useGameData } from '@/lib/i18n'
 import { useDoctors } from '@/hooks/useDoctors'
 import { useDoctorVisits } from '@/hooks/useDoctorVisits'
 import { useDoctorRoleplaySessions } from '@/hooks/useDoctorRoleplaySessions'
+import { useDoctorTextSimulations } from '@/hooks/useDoctorTextSimulations'
+import { useDoctorCoachDebriefs } from '@/hooks/useDoctorCoachDebriefs'
+import { quoted } from '@/lib/quote'
+import PastSimulation from './PastSimulation'
 import RoleplayHistorySummaryCard from './RoleplayHistorySummaryCard'
 import { deriveStyle, OBJECTION_CATEGORIES } from '@/lib/social-style'
 import type { Assertiveness, Responsiveness } from '@/lib/social-style'
@@ -18,13 +24,17 @@ import VoicePartner from './VoicePartner'
 import VoicePartnerOpening from './VoicePartnerOpening'
 import { OPENING_CRITERIA } from '@/lib/voice-partner-opening'
 import QuestionDrill from './QuestionDrill'
+import PrecisionDrill from './PrecisionDrill'
 import { LISTENING_CUES } from '@/lib/voice-partner-questioning'
 import VoicePartnerFab from './VoicePartnerFab'
 import { FAB_CRITERIA } from '@/lib/voice-partner-fab'
 import VoicePartnerClosing from './VoicePartnerClosing'
 import { CLOSING_CRITERIA } from '@/lib/voice-partner-closing'
+import VoicePartnerLive from './VoicePartnerLive'
+import TextSimulation from './TextSimulation'
+import { IraqiVisitPractice } from './IraqiVisitPractice'
 
-interface Props { onExit: () => void }
+interface Props { onExit: () => void; /** Opens straight onto this doctor's page (from a Home nudge). */ initialDoctorId?: string }
 
 const COLOR: Record<string, string> = { driver:'var(--purple)', expressive:'var(--green)', amiable:'var(--pink)', analytical:'var(--cyan)' }
 const STYLE_KEYS: StyleKey[] = ['driver', 'expressive', 'amiable', 'analytical']
@@ -47,8 +57,11 @@ type View =
   | { mode: 'voice'; doctor: Doctor }
   | { mode: 'voiceOpening'; doctor: Doctor }
   | { mode: 'questionDrill'; doctor: Doctor }
+  | { mode: 'precisionDrill'; doctor: Doctor }
   | { mode: 'voiceFab'; doctor: Doctor }
   | { mode: 'voiceClosing'; doctor: Doctor }
+  | { mode: 'voiceLive'; doctor: Doctor }
+  | { mode: 'textSim'; doctor: Doctor; practiceFocus?: string }
 
 const inputStyle: React.CSSProperties = {
   background:'rgba(0,0,0,.3)', border:'1px solid var(--line)', borderRadius:10,
@@ -74,11 +87,20 @@ function panel(title: string, children: React.ReactNode, right?: React.ReactNode
 const primaryBtn: React.CSSProperties = { cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'#04121c', background:'var(--cyan)', borderRadius:10, padding:'12px 18px', boxShadow:'var(--glow-cyan)', touchAction:'manipulation' }
 const ghostBtn: React.CSSProperties = { cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent', borderRadius:10, padding:'12px 18px', touchAction:'manipulation' }
 
-export default function VisitPrep({ onExit }: Props) {
+export default function VisitPrep({ onExit, initialDoctorId = '' }: Props) {
   const t = useT()
+  const { lang } = useLang()
   const { STYLES, SPECIALTIES, L1, L2, L3 } = useGameData()
-  const { doctors, loading, saveDoctor, removeDoctor } = useDoctors()
+  const { doctors, loading, saveDoctor, savePlan, removeDoctor } = useDoctors()
   const [view, setView] = useState<View>({ mode: 'list' })
+  const openedInitial = useRef(false)
+  useEffect(() => {
+    if (openedInitial.current || !initialDoctorId) return
+    const target = doctors.find(d => d.id === initialDoctorId)
+    if (!target) return
+    openedInitial.current = true
+    setView({ mode: 'detail', doctor: target })
+  }, [initialDoctorId, doctors])
 
   const wrap = (children: React.ReactNode) => (
     <div style={{ position:'relative', zIndex:1, maxWidth:560, margin:'0 auto', padding:14, display:'flex', flexDirection:'column', gap:14 }}>{children}</div>
@@ -124,6 +146,11 @@ export default function VisitPrep({ onExit }: Props) {
     return <QuestionDrillScreen doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
   }
 
+  // ───────────────────────── PRECISION QUESTIONS (typed; The Structure of Magic) ─────────────────────────
+  if (view.mode === 'precisionDrill') {
+    return <PrecisionDrill doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
+  }
+
   // ───────────────────────── AI VOICE PARTNER: FEATURES & BENEFITS ─────────────────────────
   if (view.mode === 'voiceFab') {
     return <VoicePartnerFabScreen doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
@@ -132,6 +159,16 @@ export default function VisitPrep({ onExit }: Props) {
   // ───────────────────────── AI VOICE PARTNER: CLOSING ─────────────────────────
   if (view.mode === 'voiceClosing') {
     return <VoicePartnerClosingScreen doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
+  }
+
+  // ───────────────────────── AI VOICE PARTNER: LIVE CALL ─────────────────────────
+  if (view.mode === 'voiceLive') {
+    return <VoicePartnerLiveScreen doctor={view.doctor} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
+  }
+
+  // ───────────────────────── MULTI-AGENT TEXT SIMULATION ─────────────────────────
+  if (view.mode === 'textSim') {
+    return <TextSimulation doctor={view.doctor} initialPracticeFocus={view.practiceFocus} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
   }
 
   // ───────────────────────── DETAIL / PREP ─────────────────────────
@@ -156,10 +193,29 @@ export default function VisitPrep({ onExit }: Props) {
                 {s && <div style={{ fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.05em', color:c, marginTop:2 }}>{s.name} · {s.drive}</div>}
               </div>
             </div>
-            {d.key_phrases && <div style={{ fontSize:13, color:'var(--ink-dim)', borderInlineStart:`2px solid ${c}`, paddingInlineStart:10, marginBottom:6, lineHeight:1.5 }}>“{d.key_phrases}”</div>}
+            {d.key_phrases && <div style={{ fontSize:13, color:'var(--ink-dim)', borderInlineStart:`2px solid ${c}`, paddingInlineStart:10, marginBottom:6, lineHeight:1.5 }}>{quoted(d.key_phrases, lang)}</div>}
             <button onClick={() => setView({ mode: 'form', doctor: d })} style={{ ...ghostBtn, fontSize:11, padding:'6px 12px' }}>{t('prep.edit')}</button>
           </>
         )}
+
+        <VisitBrief key={d.id} doctor={d} />
+
+        {panel(t('plan.title'),
+          <PlanPanel key={d.id} doctor={d} onSave={async plan => {
+            const updated = await savePlan(d.id, plan)
+            if (updated) setView({ mode: 'detail', doctor: updated })
+            return !!updated
+          }} />
+        )}
+
+        {style && panel(t('practice.title'), <>            <div style={{ borderTop: '1px solid var(--line)', paddingTop: 16 }}>
+              <p style={{ color: 'var(--ink-dim)', margin: '0 0 14px', lineHeight: 1.6 }}>{t('practice.intro')}</p>
+              <button onClick={() => setView({ mode: 'voiceLive', doctor: d })} style={primaryBtn}>{t('practice.voice')}</button>
+              <p style={{ fontSize: 13, color: 'var(--ink-dim)', lineHeight: 1.6 }}>{t('practice.voiceHint')}</p>
+              <button onClick={() => setView({ mode: 'textSim', doctor: d })} style={{ ...ghostBtn, width: '100%' }}>{t('practice.text')}</button>
+              <p style={{ fontSize: 13, color: 'var(--ink-dim)', lineHeight: 1.6 }}>{t('practice.textHint')}</p>
+              <IraqiVisitPractice onPractice={practiceFocus => setView({ mode: 'textSim', doctor: d, practiceFocus })} />
+            </div></>)}
 
         {style && panel(t('prep.cheatTitle'),
           <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
@@ -181,8 +237,13 @@ export default function VisitPrep({ onExit }: Props) {
             </div>
             <div style={{ border:`1px solid ${c}`, borderRadius:10, padding:'11px 13px', background:'rgba(0,0,0,.2)' }}>
               <span style={labelStyle}>{t('prep.opener')}</span>
-              <div style={{ fontSize:14, lineHeight:1.55, color:'var(--ink)' }}>“{t(`prep.cheat.${style}.opener`)}”</div>
+              <div style={{ fontSize:14, lineHeight:1.55, color:'var(--ink)' }}>{quoted(t(`prep.cheat.${style}.opener`), lang)}</div>
             </div>
+
+            <details>
+              <summary style={{ cursor: 'pointer', padding: '14px 0', color: 'var(--cyan)' }}>{t('practice.skills')}</summary>
+              <p style={{ fontSize: 13, color: 'var(--ink-dim)', lineHeight: 1.6 }}>{t('practice.skillsHint')}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <button onClick={() => setView({ mode: 'warmup', doctor: d })} style={{ ...primaryBtn, marginTop:2 }}>{t('prep.start')}</button>
             <button onClick={() => setView({ mode: 'ai', doctor: d })}
               style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
@@ -204,6 +265,10 @@ export default function VisitPrep({ onExit }: Props) {
               style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               {t('voiceQuestion.entryButton')} · {t('voice.premium')}
             </button>
+            <button onClick={() => setView({ mode: 'precisionDrill', doctor: d })}
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              {t('precision.entryButton')} · {t('voice.premium')}
+            </button>
             <button onClick={() => setView({ mode: 'voiceFab', doctor: d })}
               style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               {t('voiceFab.entryButton')} · {t('voice.premium')}
@@ -212,6 +277,9 @@ export default function VisitPrep({ onExit }: Props) {
               style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               {t('voiceClosing.entryButton')} · {t('voice.premium')}
             </button>
+
+              </div>
+            </details>
           </div>
         )}
         {!style && panel(t('prep.cheatTitle'),
@@ -788,9 +856,31 @@ function VoicePartnerClosingScreen({ doctor, onDone }: { doctor: Doctor; onDone:
   )
 }
 
+// ───────────────────────── AI voice partner (live call) wrapper (owns doctor_visits logging) ─────────────────────────
+function VoicePartnerLiveScreen({ doctor, onDone }: { doctor: Doctor; onDone: () => void }) {
+  const t = useT()
+  const { addVisit } = useDoctorVisits(doctor.id)
+
+  return (
+    <VoicePartnerLive
+      doctor={doctor}
+      onDone={(outcome, meta) => {
+        if (meta.turns > 0) {
+          void addVisit({
+            source: 'voice_partner_live',
+            objection_raised: meta.openingCrisis || null,
+            note: t('practice.liveNote', { turns: meta.turns, outcome: t(`practice.outcome.${outcome}`) }),
+          })
+        }
+        onDone()
+      }}
+    />
+  )
+}
+
 // ───────────────────────── Doctor history (Digital Twin) ─────────────────────────
 const SOURCE_LABEL_KEY: Record<DoctorVisit['source'], string> = {
-  manual: 'visit.sourceManual', warmup: 'visit.sourceWarmup', ai_drill: 'visit.sourceAiDrill', voice_partner: 'visit.sourceVoicePartner', voice_partner_opening: 'visit.sourceVoicePartnerOpening', voice_partner_question: 'visit.sourceVoicePartnerQuestion', voice_partner_fab: 'visit.sourceVoicePartnerFab', voice_partner_closing: 'visit.sourceVoicePartnerClosing',
+  manual: 'visit.sourceManual', warmup: 'visit.sourceWarmup', ai_drill: 'visit.sourceAiDrill', voice_partner: 'visit.sourceVoicePartner', voice_partner_opening: 'visit.sourceVoicePartnerOpening', voice_partner_question: 'visit.sourceVoicePartnerQuestion', voice_partner_fab: 'visit.sourceVoicePartnerFab', voice_partner_closing: 'visit.sourceVoicePartnerClosing', voice_partner_live: 'visit.sourceVoicePartnerLive',
 }
 
 const historyRow: React.CSSProperties = { fontSize:13, lineHeight:1.5, marginBottom:3 }
@@ -800,29 +890,55 @@ function DoctorHistory({ doctorId }: { doctorId: string }) {
   const t = useT()
   const { lang } = useLang()
   const { visits, loading } = useDoctorVisits(doctorId)
+  const { debriefs, loading: debriefsLoading } = useDoctorCoachDebriefs(doctorId)
 
-  if (loading) return <div style={{ color:'var(--ink-dim)', fontSize:13 }}>…</div>
-  if (visits.length === 0) return <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.5 }}>{t('visit.empty')}</div>
+  if (loading || debriefsLoading) return <div style={{ color:'var(--ink-dim)', fontSize:13 }}>…</div>
+  if (visits.length === 0 && debriefs.length === 0) return <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.5 }}>{t('visit.empty')}</div>
+
+  const card: React.CSSProperties = { border:'1px solid var(--line)', borderRadius:10, padding:'10px 12px', background:'rgba(0,0,0,.18)' }
+  const kindStyle: React.CSSProperties = { fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.1em', textTransform:'uppercase', color:'var(--cyan)' }
+  const dateStyle: React.CSSProperties = { fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-dim)' }
+  // Real visits, practice sessions and Coach debriefs share one timeline, newest first.
+  const entries = [
+    ...visits.map(visit => ({ kind: 'visit' as const, created_at: visit.created_at, visit })),
+    ...debriefs.map(debrief => ({ kind: 'debrief' as const, created_at: debrief.created_at, debrief })),
+  ].sort((a, b) => b.created_at.localeCompare(a.created_at))
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-      {visits.map(v => (
-        <div key={v.id} style={{ border:'1px solid var(--line)', borderRadius:10, padding:'10px 12px', background:'rgba(0,0,0,.18)' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
-            <span style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.1em', textTransform:'uppercase', color:'var(--cyan)' }}>{t(SOURCE_LABEL_KEY[v.source])}</span>
-            <span style={{ display:'flex', alignItems:'center', gap:8 }}>
-              {v.id.startsWith('offline-') && (
-                <span style={{ fontFamily:'var(--mono)', fontSize:9, letterSpacing:'.08em', textTransform:'uppercase', color:'var(--amber)', border:'1px solid var(--amber)', borderRadius:8, padding:'1px 6px' }}>{t('visit.pendingSync')}</span>
-              )}
-              <span style={{ fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-dim)' }}>{new Date(v.created_at).toLocaleDateString(lang === 'ar' ? 'ar' : 'en')}</span>
-            </span>
+      {entries.map(entry => {
+        if (entry.kind === 'debrief') {
+          const d = entry.debrief
+          return (
+            <div key={d.id} style={card}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                <span style={kindStyle}>{t('visit.coachDebriefLabel')}</span>
+                <span style={dateStyle}>{new Date(d.created_at).toLocaleString(lang === 'ar' ? 'ar' : 'en', { dateStyle:'short', timeStyle:'short' })}</span>
+              </div>
+              {d.objective && <div style={historyRow}><span style={historyLabel}>{t('visit.coachObjective')}:</span> {d.objective}</div>}
+              {d.nextAction && <div style={{ ...historyRow, marginBottom:0 }}><span style={historyLabel}>{t('visit.coachNextAction')}:</span> {d.nextAction}</div>}
+            </div>
+          )
+        }
+        const v = entry.visit
+        return (
+          <div key={v.id} style={card}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+              <span style={kindStyle}>{t(SOURCE_LABEL_KEY[v.source])}</span>
+              <span style={{ display:'flex', alignItems:'center', gap:8 }}>
+                {v.id.startsWith('offline-') && (
+                  <span style={{ fontFamily:'var(--mono)', fontSize:9, letterSpacing:'.08em', textTransform:'uppercase', color:'var(--amber)', border:'1px solid var(--amber)', borderRadius:8, padding:'1px 6px' }}>{t('visit.pendingSync')}</span>
+                )}
+                <span style={dateStyle}>{new Date(v.created_at).toLocaleDateString(lang === 'ar' ? 'ar' : 'en')}</span>
+              </span>
+            </div>
+            {v.objection_raised && <div style={historyRow}><span style={historyLabel}>{t('visit.objectionRaised')}:</span> {v.objection_raised}</div>}
+            {v.promise_made && <div style={historyRow}><span style={historyLabel}>{t('visit.promiseMade')}:</span> {v.promise_made}</div>}
+            {v.what_worked && <div style={historyRow}><span style={historyLabel}>{t('visit.whatWorked')}:</span> {v.what_worked}</div>}
+            {v.note && <div style={{ ...historyRow, color:'var(--ink-dim)', marginBottom:0 }}>{v.note}</div>}
           </div>
-          {v.objection_raised && <div style={historyRow}><span style={historyLabel}>{t('visit.objectionRaised')}:</span> {v.objection_raised}</div>}
-          {v.promise_made && <div style={historyRow}><span style={historyLabel}>{t('visit.promiseMade')}:</span> {v.promise_made}</div>}
-          {v.what_worked && <div style={historyRow}><span style={historyLabel}>{t('visit.whatWorked')}:</span> {v.what_worked}</div>}
-          {v.note && <div style={{ ...historyRow, color:'var(--ink-dim)', marginBottom:0 }}>{v.note}</div>}
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -831,23 +947,42 @@ function DoctorRoleplayHistory({ doctorId }: { doctorId: string }) {
   const t = useT()
   const { lang } = useLang()
   const { sessions, loading } = useDoctorRoleplaySessions(doctorId)
+  const { sims, loading: simsLoading } = useDoctorTextSimulations(doctorId)
+  const [openSimId, setOpenSimId] = useState<string | null>(null)
 
-  if (loading) return <div style={{ color:'var(--ink-dim)', fontSize:13 }}>…</div>
-  if (sessions.length === 0) return <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.5 }}>{t('perform.historyEmpty')}</div>
+  if (openSimId) return <PastSimulation sessionId={openSimId} onBack={() => setOpenSimId(null)} />
+  if (loading || simsLoading) return <div style={{ color:'var(--ink-dim)', fontSize:13 }}>…</div>
+  if (sessions.length === 0 && sims.length === 0) return <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.5 }}>{t('perform.historyEmpty')}</div>
+
+  // Date and time: several practice sessions on one day must be tellable apart.
+  const date = (iso: string) => new Date(iso).toLocaleString(lang === 'ar' ? 'ar' : 'en', { dateStyle: 'short', timeStyle: 'short' })
+  const card: React.CSSProperties = { border:'1px solid var(--line)', borderRadius:10, padding:'10px 12px', background:'rgba(0,0,0,.18)' }
+  const dateStyle: React.CSSProperties = { fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-dim)', marginBottom:6 }
+  // Live roleplay and text simulations share one list, newest first.
+  const entries = [
+    ...sims.map(sim => ({ kind: 'text' as const, created_at: sim.created_at, sim })),
+    ...sessions.map(session => ({ kind: 'roleplay' as const, created_at: session.created_at, session })),
+  ].sort((a, b) => b.created_at.localeCompare(a.created_at))
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-      <RoleplayHistorySummaryCard sessions={sessions} />
-      {sessions.map(s => (
-        <div key={s.id} style={{ border:'1px solid var(--line)', borderRadius:10, padding:'10px 12px', background:'rgba(0,0,0,.18)' }}>
-          <div style={{ fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-dim)', marginBottom:6 }}>
-            {new Date(s.created_at).toLocaleDateString(lang === 'ar' ? 'ar' : 'en')}
-          </div>
-          <div style={historyRow}><span style={historyLabel}>{t('roleplay.talkRatio')}:</span> {Math.round(s.talk_ratio * 100)}%</div>
-          <div style={historyRow}><span style={historyLabel}>{t('roleplay.questionRatio')}:</span> {Math.round(s.question_ratio * 100)}%</div>
-          {s.open_question_ratio != null && <div style={historyRow}><span style={historyLabel}>{t('roleplay.openQuestionRatio')}:</span> {Math.round(s.open_question_ratio * 100)}%</div>}
-          {s.paraphrase_score != null && <div style={historyRow}><span style={historyLabel}>{t('roleplay.paraphraseScore')}:</span> {Math.round(s.paraphrase_score * 100)}%</div>}
-          {s.active_listening_score != null && <div style={{ ...historyRow, marginBottom:0 }}><span style={historyLabel}>{t('roleplay.activeListeningTitle')}:</span> {s.active_listening_score}</div>}
+      {sessions.length > 0 && <RoleplayHistorySummaryCard sessions={sessions} />}
+      {entries.map(entry => entry.kind === 'text' ? (
+        <button key={entry.sim.id} type="button" onClick={() => setOpenSimId(entry.sim.id)}
+          style={{ ...card, display:'block', width:'100%', textAlign:'start', cursor:'pointer', font:'inherit', color:'inherit' }}>
+          <div style={dateStyle}>{date(entry.created_at)} · {t('visit.textSimLabel')}</div>
+          {entry.sim.overall != null && <div style={historyRow}><span style={historyLabel}>{t('sim.report.overall')}:</span> {entry.sim.overall}</div>}
+          <div style={historyRow}>{entry.sim.repTurns === 1 ? t('sim.repTurnsOne') : t('sim.repTurns', { n: entry.sim.repTurns })}</div>
+          <div style={{ ...historyRow, marginBottom:0, color:'var(--cyan, var(--ink))' }}>{t('visit.viewReport')} ›</div>
+        </button>
+      ) : (
+        <div key={entry.session.id} style={card}>
+          <div style={dateStyle}>{date(entry.created_at)}</div>
+          <div style={historyRow}><span style={historyLabel}>{t('roleplay.talkRatio')}:</span> {Math.round(entry.session.talk_ratio * 100)}%</div>
+          <div style={historyRow}><span style={historyLabel}>{t('roleplay.questionRatio')}:</span> {Math.round(entry.session.question_ratio * 100)}%</div>
+          {entry.session.open_question_ratio != null && <div style={historyRow}><span style={historyLabel}>{t('roleplay.openQuestionRatio')}:</span> {Math.round(entry.session.open_question_ratio * 100)}%</div>}
+          {entry.session.paraphrase_score != null && <div style={historyRow}><span style={historyLabel}>{t('roleplay.paraphraseScore')}:</span> {Math.round(entry.session.paraphrase_score * 100)}%</div>}
+          {entry.session.active_listening_score != null && <div style={{ ...historyRow, marginBottom:0 }}><span style={historyLabel}>{t('roleplay.activeListeningTitle')}:</span> {entry.session.active_listening_score}</div>}
         </div>
       ))}
     </div>
@@ -862,6 +997,7 @@ function LogVisitForm({ doctor, onDone, onCancel }: { doctor: Doctor; onDone: ()
   const [promise, setPromise] = useState('')
   const [worked, setWorked] = useState('')
   const [note, setNote] = useState('')
+  const [visitDate, setVisitDate] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(false)
 
@@ -870,6 +1006,7 @@ function LogVisitForm({ doctor, onDone, onCancel }: { doctor: Doctor; onDone: ()
     setSaveError(false)
     const saved = await addVisit({
       source: 'manual',
+      contact_at: new Date(`${visitDate}T12:00:00`).toISOString(),
       objection_raised: objection.trim() || null,
       promise_made: promise.trim() || null,
       what_worked: worked.trim() || null,
@@ -896,6 +1033,7 @@ function LogVisitForm({ doctor, onDone, onCancel }: { doctor: Doctor; onDone: ()
     <div style={{ position:'relative', zIndex:1, maxWidth:560, margin:'0 auto', padding:14 }}>
       {panel(t('visit.logVisit'),
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+          <label style={{ display:'grid', gap:6 }}><span style={labelStyle}>{t('visit.actualDate')}</span><input type="date" required value={visitDate} onChange={e => setVisitDate(e.target.value)} style={inputStyle} /></label>
           {field(t('visit.objectionRaised'), objection, setObjection)}
           {field(t('visit.promiseMade'), promise, setPromise)}
           {field(t('visit.whatWorked'), worked, setWorked)}

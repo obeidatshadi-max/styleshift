@@ -91,7 +91,12 @@ export function classifySocialStyle(metrics: AcousticMetrics, warmthDensity = 0)
   const dx = Math.abs(assertiveness - 50)
   const dy = Math.abs(responsiveness - 50)
   const dist = Math.sqrt(dx * dx + dy * dy)
-  const confidence = Math.round(Math.max(50, Math.min(95, 50 + (dist / 70.7) * 45)))
+  // dist=0 (dead center on both axes — the read couldn't be more ambiguous)
+  // used to floor at 50%, i.e. "coin-flip confident" minimum on every single
+  // read, however noisy the recording. 25% is this classifier's actual
+  // chance baseline (1-in-4 styles) — a read that's exactly on the fence
+  // between all of them should be reported near there, not at 50%.
+  const confidence = Math.round(Math.max(25, Math.min(95, 25 + (dist / 70.7) * 70)))
 
   return {
     style, confidence, assertiveness, responsiveness,
@@ -174,45 +179,30 @@ export function computeRapidTurnSwitches(turns: Turn[], thresholdMs = 400): numb
   return count
 }
 
-const QUESTION_STARTERS_AR = /^(هل|ماذا|كيف|متى|لماذا|أين|من|كم)\b/
+// Unicode boundaries work with Arabic; speech transcripts may omit punctuation.
+function questionKind(text: string): 'open' | 'closed' | null {
+  const normalized = text.normalize('NFKC').replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[أإآ]/g, 'ا').trim()
+  const clauses = normalized.split(/[.!؟?،,;؛\n]+/).map(part => part.trim().replace(/^(?:(?:دكتور|دكتورة|يا دكتور|يا دكتورة|طيب|تمام|لو سمحت|شكرا|doctor|sure|okay|thanks)\s+)+/iu, ''))
+  const openAr = /^(?:و?(?:ماذا|كيف|متى|لماذا|اين|كم|شو|ايش|ليش|وين|مين|شلون|ازاي|ايه)|اخبرني|احكيلي|احكي لي|خبرني|اشرح لي)(?![\p{L}\p{N}])/u
+  const closedAr = /^(?:هل|ممكن|بتقدر|تقدر|يمكنك)(?![\p{L}\p{N}])/u
+  const openEn = /^(?:what|how|why|when|where|which|who|tell me|walk me through|describe|explain)\b/i
+  const closedEn = /^(?:can|could|would|will|do|does|did|is|are|have|has|should)\s+(?:you|we|i|it|this|that|there|your|the)\b/i
+  if (clauses.some(part => openAr.test(part) || openEn.test(part) || (/^من(?![\p{L}\p{N}])/u.test(part) && /[?؟]/.test(text)))) return 'open'
+  if (clauses.some(part => closedAr.test(part) || closedEn.test(part)) || /[?؟]/.test(text)) return 'closed'
+  return null
+}
 
 export function computeQuestionRatio(turns: Turn[], repSpeaker: string): number {
   const repTurns = turns.filter(t => t.speaker === repSpeaker)
-  if (!repTurns.length) return 0
-  const isQuestion = (text: string) => {
-    const trimmed = text.trim()
-    return trimmed.endsWith('?') || trimmed.endsWith('؟') || QUESTION_STARTERS_AR.test(trimmed)
-  }
-  const questions = repTurns.filter(t => isQuestion(t.text)).length
-  return questions / repTurns.length
+  return repTurns.length ? repTurns.filter(t => questionKind(t.text) !== null).length / repTurns.length : 0
 }
-
-// "Contains" rather than "starts with" — a wh-word or yes/no marker rarely
-// opens the sentence exactly ("Sure, what have you got?"), so anchoring to
-// the start would miss it.
-const OPEN_MARKERS_EN = /\b(what|how|why|when|where|which|tell me|walk me through|describe|explain)\b/i
-const OPEN_MARKERS_AR = /^(?:ماذا|كيف|متى|لماذا|أين|من|كم)(?![\p{L}\p{N}])/u
 
 export interface QuestionBreakdown { total: number; open: number; closed: number; openRatio: number }
 
-/**
- * Splits a speaker's questions into open-ended (wh-word / "tell me" / "walk
- * me through" style — invites the other person to elaborate) vs. closed
- * (yes/no-shaped, or a question with no open marker). A question with no
- * detected open marker defaults to closed rather than "undetermined" — most
- * unmarked questions ("This works for you?") are yes/no-shaped in practice.
- */
+/** Counts question-bearing turns consistently with computeQuestionRatio. */
 export function classifyQuestions(turns: Turn[], repSpeaker: string): QuestionBreakdown {
-  const repTurns = turns.filter(t => t.speaker === repSpeaker)
-  const isQuestion = (text: string) => {
-    const trimmed = text.trim()
-    return trimmed.endsWith('?') || trimmed.endsWith('؟') || QUESTION_STARTERS_AR.test(trimmed)
-  }
-  const questions = repTurns.map(t => t.text).filter(isQuestion)
-  const open = questions.filter(q => {
-    const trimmed = q.trim()
-    return OPEN_MARKERS_EN.test(trimmed) || OPEN_MARKERS_AR.test(trimmed)
-  }).length
+  const questions = turns.filter(t => t.speaker === repSpeaker).map(t => questionKind(t.text)).filter(kind => kind !== null)
+  const open = questions.filter(kind => kind === 'open').length
   const total = questions.length
   return { total, open, closed: total - open, openRatio: total > 0 ? open / total : 0 }
 }
@@ -230,10 +220,28 @@ function contentWords(text: string): Set<string> {
   return new Set(words.filter(w => w.length > 2 && !STOPWORDS.has(w)))
 }
 
+/** Jaccard similarity (|intersection| / |union|) between the rep's and the
+ * partner's distinct content vocabulary across the whole conversation — a
+ * rapport signal (shared terminology/mirroring), distinct from paraphrase
+ * score (which measures immediate reply-echoes turn-by-turn, not overall
+ * vocabulary convergence). 0 when either side has no content words. */
+export function computeTermOverlap(turns: Turn[], repSpeaker: string): number {
+  const repWords = contentWords(turns.filter(t => t.speaker === repSpeaker).map(t => t.text).join(' '))
+  const partnerWords = contentWords(turns.filter(t => t.speaker !== repSpeaker).map(t => t.text).join(' '))
+  if (repWords.size === 0 || partnerWords.size === 0) return 0
+  const union = new Set([...repWords, ...partnerWords])
+  let intersectionSize = 0
+  for (const w of repWords) if (partnerWords.has(w)) intersectionSize++
+  return intersectionSize / union.size
+}
+
 /**
  * For each rep turn that immediately follows a partner turn, scores what
- * fraction of the partner's content words the rep's reply echoes back — a
- * proxy for paraphrasing/rephrasing what was just said. Reads partner-turn
+ * fraction of the partner's content words the rep's reply echoes back
+ * VERBATIM — a mirroring/rapport signal (UI label: "Word Mirroring"), not
+ * a paraphrase-quality score. A rep who genuinely rewords the partner's
+ * point in different vocabulary scores LOW here, same as one who ignores
+ * it entirely; this only rewards literal word reuse. Reads partner-turn
  * TEXT transiently (same in-memory Utterance[] the pipeline already
  * discards after scoring) — only the resulting number is ever persisted.
  * Returns the average across all measured rep-follows-partner pairs, or 0
@@ -328,12 +336,28 @@ export function computeAdaptationScore(
   return { score, label }
 }
 
+/** No coded minimum existed for the ratio-based metrics (talk ratio,
+ * question ratio, term overlap, active listening) before this — only the
+ * acoustic pitch-sample gate (processAcousticData) had one. 10 total turns
+ * ~= 5 real exchanges each way, the practical floor below which these
+ * percentages are dominated by noise, not signal. Not a validated number —
+ * same status as the AI Doctor cross-session thresholds: a reasoned
+ * starting point, revisit once real session-length data exists. */
+export const MIN_RELIABLE_TURNS = 10
+
+export function isLowSampleSession(turnCount: number): boolean {
+  return turnCount < MIN_RELIABLE_TURNS
+}
+
 export interface RoleplayResult {
   talkRatio: TalkRatio
   rapidTurnSwitches: number
+  turnCount: number
   questionRatio: number
+  questionCount: number
   openQuestionRatio: number
   paraphraseScore: number
+  termOverlap: number
   activeListening: ActiveListeningResult
   repRead: SocialStyleRead | null
   partnerRead: SocialStyleRead | null
@@ -352,8 +376,10 @@ export function buildRoleplayResult(
   const talkRatio = computeTalkRatio(turns, repSpeaker)
   const rapidTurnSwitches = computeRapidTurnSwitches(turns)
   const questionRatio = computeQuestionRatio(turns, repSpeaker)
-  const openQuestionRatio = classifyQuestions(turns, repSpeaker).openRatio
+  const questionBreakdown = classifyQuestions(turns, repSpeaker)
+  const openQuestionRatio = questionBreakdown.openRatio
   const paraphraseScore = computeParaphraseScore(turns, repSpeaker)
+  const termOverlap = computeTermOverlap(turns, repSpeaker)
   const activeListening = computeActiveListeningScore(talkRatio, rapidTurnSwitches, paraphraseScore)
   const transcript = repTranscript(turns, repSpeaker)
   const { pitchSamples: repPitch, silencePeriods: repSilence } = scopeAcousticToSpeaker(pitchSamples, silencePeriods, turns, repSpeaker)
@@ -379,8 +405,8 @@ export function buildRoleplayResult(
   const adaptationScore = computeAdaptationScore(repRead, partnerRead)
 
   return {
-    talkRatio, rapidTurnSwitches, questionRatio, openQuestionRatio, paraphraseScore, activeListening, repRead,
-    partnerRead, adaptationScore,
+    talkRatio, rapidTurnSwitches, turnCount: turns.length, questionRatio, questionCount: questionBreakdown.total, openQuestionRatio,
+    paraphraseScore, termOverlap, activeListening, repRead, partnerRead, adaptationScore,
     durationSec: talkRatio.totalMs / 1000, warmth: delivery.warmth, predicates: delivery.predicates,
   }
 }

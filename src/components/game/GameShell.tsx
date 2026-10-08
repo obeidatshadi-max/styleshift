@@ -7,6 +7,7 @@ import { L2_OBJECTION } from '@/lib/scenario-meta'
 import { shuffle } from '@/lib/scenario-engine'
 import { XP_VALUES } from '@/lib/game-data'
 import GameHome from './GameHome'
+import AICoach from './AICoach'
 import LevelOne from './LevelOne'
 import LevelTwo from './LevelTwo'
 import LevelThree from './LevelThree'
@@ -24,9 +25,9 @@ import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
 
 type Screen = 'home' | 'level' | 'result' | 'daily' | 'how' | 'prep' | 'perform' | 'assignment' | 'sps' | 'fieldcards'
-// Screens with no completed profile/onboarding state yet — no escape hatch,
-// so the forced first-run funnel (intro -> Level 1 -> SPS) can't be skipped.
-const NO_NAV_SCREENS: Screen[] = ['how', 'sps']
+// Screens shown without the nav: the one-time intro carousel. The style quiz keeps the nav so
+// a rep who opens it from the home screen can still leave without answering every question.
+const NO_NAV_SCREENS: Screen[] = ['how']
 const INTRO_KEY = 'styleshift_intro_done'
 
 interface LevelState {
@@ -43,8 +44,14 @@ export default function GameShell() {
   const { L2 } = useGameData()
   const [screen, setScreen] = useState<Screen>('home')
   const [section, setSection] = useState<Section>('train')
+  // Set when the Home nudge opens the Coach on a particular doctor; cleared when the rep navigates by tab.
+  const [coachDoctorId, setCoachDoctorId] = useState('')
+  // Set when a Home nudge opens Visit Prep on a particular doctor.
+  const [prepDoctorId, setPrepDoctorId] = useState('')
 
   function goToSection(s: Section) {
+    setCoachDoctorId('')
+    setPrepDoctorId('')
     setSection(s)
     setScreen('home')
   }
@@ -72,34 +79,27 @@ export default function GameShell() {
   }, [])
   useEffect(() => { loadDaily(); loadStandings(); loadAssignment() }, [loadDaily, loadStandings, loadAssignment])
 
-  // First-run routing, decided once per session-load (guarded by the ref
-  // below, not by [loading, profile] alone) — playing Level 1 changes
-  // `profile` via addXp/saveSession, and a reactive effect would re-fire
-  // mid-playthrough and yank a brand-new rep back out of their first level.
+  // First-run routing, decided once per session-load (guarded by the ref below, not by
+  // [loading, profile] alone: playing a level changes `profile` via addXp/saveSession, and a
+  // reactive effect would re-fire mid-playthrough).
   //
-  // Order for a brand-new rep: the one-time intro carousel (localStorage,
-  // reopenable from the home screen) -> the SPS self-assessment (DB-persisted,
-  // so it survives across devices) -> Level 1, now played with the rep's own
-  // style already known -> its result screen -> home. SPS goes first because
-  // it's the diagnostic the whole Driver/Expressive/Amiable/Analytical
-  // curriculum is built on — a facilitator running a classroom session needs
-  // every trainee's style before pairing them for Live Roleplay, not after.
-  // A rep who already finished SPS but closed the app before Level 1 resumes
-  // straight into Level 1, without re-seeing an intro they've already seen.
+  // A brand-new rep sees the one-time intro carousel (localStorage, reopenable from the home
+  // screen) and then the home screen. The SPS style quiz and Level 1 used to be forced in
+  // that order; they are now offered from the home screen instead. A facilitator who wants
+  // every trainee's style before pairing them for Live Roleplay can ask for the quiz.
   const initialRouteRef = useRef(false)
   useEffect(() => {
     if (loading || initialRouteRef.current) return
     initialRouteRef.current = true
+    // Only the short "How it works" intro is shown first. The style quiz and Level 1 are
+    // offered from the home screen, never forced: a rep must be able to open the AI Coach,
+    // AI Doctor or Live Roleplay without finishing either.
     const seenIntro = typeof window !== 'undefined' && !!localStorage.getItem(INTRO_KEY)
-    if (!seenIntro) { setScreen('how'); return }
-    if (profile && !profile.sps_top_key) { setScreen('sps'); return }
-    if (profile && !completedLevels.includes(1)) { startLevel(1); return }
-  }, [loading, profile, completedLevels])
+    if (!seenIntro) setScreen('how')
+  }, [loading])
 
   function finishIntro() {
     try { localStorage.setItem(INTRO_KEY, '1') } catch { /* ignore */ }
-    if (profile && !profile.sps_top_key) { setScreen('sps'); return }
-    if (profile && !completedLevels.includes(1)) { startLevel(1); return }
     setScreen('home')
   }
 
@@ -235,19 +235,14 @@ export default function GameShell() {
   function handleHome(conf: number) {
     setConfidence(conf)
     loadStandings() // XP changed this session — refresh the team ranking
-    // Only reachable for a rep who completed Level 1 under the old
-    // Level-1-then-SPS order and never got to the assessment — send them
-    // into it now instead of the dashboard. New reps hit SPS before Level 1.
-    if (profile && !profile.sps_top_key) { setScreen('sps'); return }
     setScreen('home')
   }
 
   if (screen === 'sps') {
-    return (
+    return withNav(
       <SpsAssessment
         onComplete={async (result) => {
           await saveSpsAssessment(result)
-          if (profile && !completedLevels.includes(1)) { startLevel(1); return }
           setScreen('home')
         }}
       />
@@ -258,10 +253,12 @@ export default function GameShell() {
     return withNav(<HowItWorks onDone={finishIntro} />)
   }
 
+  if (section === 'coach') return withNav(<AICoach initialDoctorId={coachDoctorId} />)
+
   if (screen === 'prep') {
     // A doctor roleplay in there may have shared against the active
     // assignment — refresh so the home banner reflects it.
-    return withNav(<VisitPrep onExit={() => { setScreen('home'); loadAssignment() }} />)
+    return withNav(<VisitPrep initialDoctorId={prepDoctorId} onExit={() => { setScreen('home'); loadAssignment() }} />)
   }
 
   if (screen === 'fieldcards') {
@@ -345,7 +342,11 @@ export default function GameShell() {
       onShowPrep={() => { setSection('rehearse'); setScreen('prep') }}
       onShowPerform={() => { setSection('perform'); setScreen('perform') }}
       onShowFieldCards={() => setScreen('fieldcards')}
+      onOpenCoach={id => { setCoachDoctorId(id ?? ''); setSection('coach'); setScreen('home') }}
+      onOpenDoctor={id => { setPrepDoctorId(id); setSection('rehearse'); setScreen('prep') }}
       onStartLevel={startLevel}
+      spsPending={!!profile && !profile.sps_top_key}
+      onTakeSps={() => setScreen('sps')}
       tab={section}
     />
   )

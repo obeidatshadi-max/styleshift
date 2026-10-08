@@ -1,4 +1,5 @@
 'use client'
+import { clearCoachDrafts } from '@/lib/coach-drafts'
 import { useState } from 'react'
 import RankBar from './RankBar'
 import GroupPanel from './GroupPanel'
@@ -14,6 +15,18 @@ import PrivacyPanel from './PrivacyPanel'
 import ChampionBanner from './ChampionBanner'
 import LeagueStrip from './LeagueStrip'
 import NextActionCard from './NextActionCard'
+import CoachNudgeCard from './CoachNudgeCard'
+import PushOptIn from './PushOptIn'
+import PracticePatternLine from './PracticePatternLine'
+import AssignedScenarios from './AssignedScenarios'
+import MicroPractice from './MicroPractice'
+import CapabilityCard from './CapabilityCard'
+import MethodologyCard from './MethodologyCard'
+import NextChallengeCard from './NextChallengeCard'
+import PatternMemoryCard from './PatternMemoryCard'
+import PracticeMyDoctor from './PracticeMyDoctor'
+import ProgressCard from './ProgressCard'
+import MyCoachingInsights from './MyCoachingInsights'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
 
@@ -43,11 +56,18 @@ interface Props {
   onShowPrep: () => void
   onShowPerform: () => void
   onShowFieldCards: () => void
+  /** Opens the AI Coach, optionally on a given doctor. */
+  onOpenCoach: (doctorId?: string) => void
+  /** Opens a doctor's Visit Prep page. */
+  onOpenDoctor: (doctorId: string) => void
   onStartLevel: (n: number) => void
+  /** True once the profile has loaded and the style quiz has not been taken. */
+  spsPending: boolean
+  onTakeSps: () => void
   tab: Section
 }
 
-export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, onAssignmentShared, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onShowPerform, onShowFieldCards, onStartLevel, tab }: Props) {
+export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, onAssignmentShared, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onShowPerform, onShowFieldCards, onOpenCoach, onOpenDoctor, onStartLevel, spsPending, onTakeSps, tab }: Props) {
   const [moreOpen, setMoreOpen] = useState(false)
 
   const unlocked = [1, ...earnedLevels.map(n => n + 1)].filter(n => n <= 4)
@@ -61,6 +81,7 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
     [...RANKS].reverse().find(r => points >= r.minXp)?.name ?? RANKS[0].name
 
   async function signOut() {
+    clearCoachDrafts()
     await createClient().auth.signOut()
     router.push('/login')
     router.refresh()
@@ -95,12 +116,40 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
         {tab === 'train' && <>
 
+        {spsPending && panel(t('sps.title'),
+          <>
+            <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.55, marginBottom:12 }}>{t('sps.intro')}</div>
+            <button onClick={onTakeSps} style={{ cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent', borderRadius:10, padding:'10px 16px', touchAction:'manipulation' }}>{t('sps.start')}</button>
+          </>
+        )}
+
+        <CoachNudgeCard onOpenCoach={onOpenCoach} onOpenDoctor={onOpenDoctor} />
+        <PushOptIn />
+
         <NextActionCard
           assignment={assignment} onStartAssignment={onStartAssignment} onAssignmentShared={onAssignmentShared}
           daily={daily} onStartDaily={onStartDaily}
           unlocked={unlocked} earnedLevels={earnedLevels} onStartLevel={onStartLevel}
           onShowPrep={onShowPrep}
         />
+
+        <PracticePatternLine />
+
+        <AssignedScenarios />
+
+        <MicroPractice />
+
+        <ProgressCard />
+
+        <PracticeMyDoctor />
+
+        <NextChallengeCard />
+
+        <PatternMemoryCard />
+
+        <CapabilityCard />
+
+        <MethodologyCard />
 
         <button onClick={() => setMoreOpen(o => !o)}
           style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', cursor:'pointer', fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.15em', textTransform:'uppercase', border:'1px solid var(--line)', color:'var(--ink-dim)', background:'transparent', borderRadius:10, padding:'10px 16px', touchAction:'manipulation' }}>
@@ -115,6 +164,8 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
         />
 
         <LeagueStrip />
+
+        <MyCoachingInsights />
 
         {standings && standings.standings.length > 0 && panel(t('rank.title'),
           <>

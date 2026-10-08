@@ -14,6 +14,15 @@ const METRIC_LABEL_KEY: Record<RoleplayMetricKey, string> = {
 
 const METRIC_ORDER: RoleplayMetricKey[] = ['talkRatio', 'questionRatio', 'openQuestionRatio', 'paraphraseScore', 'activeListening', 'adaptationScore']
 
+const TREND_TIP_KEY: Record<RoleplayMetricKey, string> = {
+  talkRatio: 'roleplay.trendTip.talkRatio',
+  questionRatio: 'roleplay.trendTip.questionRatio',
+  openQuestionRatio: 'roleplay.trendTip.openQuestionRatio',
+  paraphraseScore: 'roleplay.trendTip.paraphraseScore',
+  activeListening: 'roleplay.trendTip.activeListening',
+  adaptationScore: 'roleplay.trendTip.adaptationScore',
+}
+
 const row: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 6 }
 const label: React.CSSProperties = { color: 'var(--ink-dim)' }
 
@@ -47,6 +56,14 @@ export default function RoleplayHistorySummaryCard({ sessions }: { sessions: Rol
             metric: t(METRIC_LABEL_KEY[summary.trend.metric]),
             delta: summary.trend.delta,
           })}
+        </div>
+      )}
+      {/* Only on a decline — an improving trend needs no fix, and manufacturing
+          one here would repeat buildRoleplayInsight's same "don't invent a
+          critique when things are fine" rule at the history level. */}
+      {summary.trend?.direction === 'declining' && (
+        <div style={{ marginTop: 4, fontSize: 11.5, color: 'var(--ink-dim)', lineHeight: 1.5 }}>
+          {t(TREND_TIP_KEY[summary.trend.metric])}
         </div>
       )}
     </div>

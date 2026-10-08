@@ -10,7 +10,8 @@ import { flushPendingWrites, listPendingWrites } from '@/lib/offline-queue'
  * there's something to say (offline, or actively syncing).
  */
 export default function OfflineSync() {
-  const [status, setStatus] = useState<'online' | 'offline' | 'syncing' | 'synced'>('online')
+  const [retry, setRetry] = useState(0)
+  const [status, setStatus] = useState<'online' | 'offline' | 'syncing' | 'synced' | 'failed'>('online')
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -23,7 +24,9 @@ export default function OfflineSync() {
       const pendingBefore = await listPendingWrites().catch(() => [])
       if (pendingBefore.length === 0) return
       setStatus('syncing')
-      const { flushed } = await flushPendingWrites(supabase).catch(() => ({ flushed: 0 }))
+      const { flushed, failed } = await flushPendingWrites(supabase).catch(() => ({ flushed: 0, failed: 1 }))
+      if (flushed) window.dispatchEvent(new Event('styleshift:offline-synced'))
+      if (failed) { setStatus('failed'); return }
       if (flushed > 0) {
         setStatus('synced')
         setTimeout(() => setStatus(navigator.onLine ? 'online' : 'offline'), 3000)
@@ -43,13 +46,13 @@ export default function OfflineSync() {
       window.removeEventListener('online', goOnline)
       window.removeEventListener('offline', goOffline)
     }
-  }, [])
+  }, [retry])
 
   if (status === 'online') return null
 
-  const label = status === 'offline' ? 'Offline — changes will save and sync later'
+  const label = status === 'failed' ? 'Some visits could not sync. They are kept on this device for retry.' : status === 'offline' ? 'Offline — changes will save and sync later'
     : status === 'syncing' ? 'Syncing offline changes…' : 'Synced ✓'
-  const color = status === 'offline' ? 'var(--amber)' : status === 'syncing' ? 'var(--cyan)' : 'var(--green)'
+  const color = status === 'failed' ? 'var(--red)' : status === 'offline' ? 'var(--amber)' : status === 'syncing' ? 'var(--cyan)' : 'var(--green)'
 
   return (
     <div style={{
@@ -62,6 +65,7 @@ export default function OfflineSync() {
         padding: '6px 14px', boxShadow: '0 8px 24px rgba(0,0,0,.4)',
       }}>
         {label}
+        {status === 'failed' && <button type="button" style={{ pointerEvents: 'auto', marginInlineStart: 8 }} onClick={() => setRetry(n => n + 1)}>Retry sync</button>}
       </div>
     </div>
   )

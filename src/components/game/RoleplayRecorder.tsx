@@ -3,13 +3,14 @@ import { useEffect, useState } from 'react'
 import { useT } from '@/lib/i18n'
 import { useRoleplayRecorder } from '@/hooks/useRoleplayRecorder'
 import { buildRoleplayInsight } from '@/lib/roleplay-insight'
+import { isLowSampleSession } from '@/lib/roleplay-core'
 import type { RepAssignment } from '@/types/game'
 
 interface Props { doctorId: string | null; colleagueId: string | null; onDone: () => void }
 
 export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Props) {
   const t = useT()
-  const { phase, error, elapsedSec, speakerPreviews, result, sessionId, start, stop, pickSpeaker, backToPickSpeaker, reset } = useRoleplayRecorder(doctorId, colleagueId)
+  const { phase, error, previewUrl, saveError, retryAnalysis, elapsedSec, speakerPreviews, result, sessionId, start, stop, pickSpeaker, backToPickSpeaker, reset } = useRoleplayRecorder(doctorId, colleagueId)
   const [consentChecked, setConsentChecked] = useState(false)
   const [consented, setConsented] = useState(false)
 
@@ -65,7 +66,11 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
     touchAction: 'manipulation', marginTop: 10,
   }
 
-  if (!consented) {
+  // phase === 'done' on first mount means useRoleplayRecorder restored a
+  // report saved to sessionStorage from before this component unmounted
+  // (e.g. the rep left the page and came back) — skip the mic-consent gate
+  // and go straight to showing it instead of forcing a re-record.
+  if (!consented && phase !== 'done') {
     return (
       <div style={wrap}>
         <div style={card}>
@@ -95,8 +100,20 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
             {error === 'mic' ? t('roleplay.errorMic')
               : error === 'session' ? t('roleplay.errorSession')
               : error === 'speakers' ? t('roleplay.errorSpeakers')
+              : error === 'timeout' ? t('roleplay.errorTimeout')
+              : error === 'too_large' ? t('roleplay.errorTooLarge')
+              : error === 'mic_lost' ? t('roleplay.errorMicLost')
               : t('roleplay.errorDiarize')}
           </p>
+          {previewUrl && (
+            <>
+              <audio controls src={previewUrl} style={{ width: '100%', marginBottom: 12 }} />
+              <a href={previewUrl} download="styleshift-roleplay" style={{ display: 'block', marginBottom: 16, color: 'var(--cyan)' }}>{t('roleplay.saveRecording')}</a>
+              {error !== 'speakers' && error !== 'too_large' && error !== 'session' && (
+                <button style={btnPrimary} onClick={retryAnalysis}>{t('roleplay.retryAnalysis')}</button>
+              )}
+            </>
+          )}
           <button style={btnPrimary} onClick={() => { reset(); setConsented(false); setConsentChecked(false) }}>{t('roleplay.done')}</button>
         </div>
       </div>
@@ -175,6 +192,25 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
       <div style={{ ...card, maxWidth: 520 }}>
         {eyebrow(t('roleplay.resultEyebrow'))}
         <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 16 }}>{t('roleplay.resultTitle')}</h2>
+        {saveError && <p role="alert" style={{ color: 'var(--amber)', marginBottom: 16 }}>{t('roleplay.errorSave')}</p>}
+
+        {/* Whole-interaction framing before the "You vs. partner" breakdown
+            below — surfaced here because reps found the per-metric cards
+            confusing without first knowing what the numbers are about. */}
+        <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 16, background: 'rgba(0,0,0,.12)' }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('roleplay.interactionSummaryTitle')}</div>
+          <p style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--ink)' }}>
+            {t('roleplay.interactionSummaryDuration', { mmss: `${String(Math.floor(r.durationSec / 60)).padStart(2, '0')}:${String(Math.round(r.durationSec) % 60).padStart(2, '0')}` })}
+            {' '}{t('roleplay.interactionSummaryQuestions', { count: r.questionCount })}
+            {r.adaptationScore && <> {t('roleplay.interactionSummaryToneMatch', { pct: r.adaptationScore.score })}</>}
+            {' '}{t('roleplay.interactionSummaryTermOverlap', { pct: Math.round(r.termOverlap * 100) })}
+          </p>
+          {isLowSampleSession(r.turnCount) && (
+            <p style={{ fontSize: 11.5, color: 'var(--amber)', lineHeight: 1.5, marginTop: 8 }}>
+              ⚠ {t('roleplay.lowSampleWarning')}
+            </p>
+          )}
+        </div>
 
         {insight && (
           <div style={{ border: '1px solid var(--amber)', borderRadius: 12, padding: '13px 14px', marginBottom: 16, background: 'rgba(255,190,80,.06)' }}>
@@ -305,6 +341,7 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
         )}
 
         <button style={btnGhost} onClick={backToPickSpeaker}>{t('roleplay.pickDifferentSpeaker')}</button>
+        <button style={btnGhost} onClick={() => { reset(); setConsented(false); setConsentChecked(false) }}>{t('roleplay.recordAnother')}</button>
         <button style={btnPrimary} onClick={onDone}>{t('roleplay.done')}</button>
       </div>
     </div>

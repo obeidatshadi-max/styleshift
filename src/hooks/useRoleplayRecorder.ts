@@ -1,21 +1,22 @@
 'use client'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
-import { diarizeAudio, type DiarizedUtterance } from '@/lib/assemblyai-client'
+import { diarizeAudio, DiarizationError, type DiarizationJob, type DiarizedUtterance } from '@/lib/assemblyai-client'
 import {
   buildRoleplayResult, type PitchSample, type SilencePeriod, type Utterance, type RoleplayResult,
 } from '@/lib/roleplay-core'
 import { XP_VALUES } from '@/lib/game-data'
+import { persistTranscriptSegments } from '@/lib/transcript-segments'
 
 export type RecorderPhase = 'idle' | 'recording' | 'processing' | 'pick-speaker' | 'done' | 'error'
-export type RecorderError = 'mic' | 'diarize' | 'session' | 'speakers'
+export type RecorderError = 'mic' | 'diarize' | 'session' | 'speakers' | 'timeout' | 'too_large' | 'mic_lost'
 
 export interface RawSpeakerPreview { speaker: string; sample: string }
 
 // ── Pitch/silence capture, ported from Verbal Mirror (ssm-app's
 // dev/voice-logic.js live-capture section, already shipped in
 // ssm-app-v4.html) — same autocorrelation pitch detector, unchanged. ──
-function autoCorrelate(bufIn: Float32Array, sampleRate: number): number {
+function autoCorrelate(bufIn: Float32Array, sampleRate: number, scratch: Float64Array): number {
   let buf = bufIn, SIZE = buf.length, rms = 0
   for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i]
   rms = Math.sqrt(rms / SIZE)
@@ -24,13 +25,28 @@ function autoCorrelate(bufIn: Float32Array, sampleRate: number): number {
   const thres = 0.2
   for (let i = 0; i < SIZE / 2; i++) { if (Math.abs(buf[i]) < thres) { r1 = i; break } }
   for (let i = 1; i < SIZE / 2; i++) { if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break } }
-  buf = buf.slice(r1, r2); SIZE = buf.length
-  const c = new Array(SIZE).fill(0)
-  for (let i = 0; i < SIZE; i++) for (let j = 0; j < SIZE - i; j++) c[i] += buf[j] * buf[j + i]
+  // subarray() is a view (no copy) — the previous slice() allocated and
+  // copied up to the full fftSize buffer every 100ms for the whole
+  // recording, which on mid-range phones was enough sustained allocation
+  // pressure to freeze the tab partway through, even after capping maxLag
+  // below reduced the correlation work itself.
+  buf = buf.subarray(r1, r2); SIZE = buf.length
+  // Only lags covering the accepted pitch range (60-600Hz) matter to the
+  // caller — it discards anything outside that band a few lines down at the
+  // call site. Correlating every lag up to SIZE (the old code did) burns
+  // ~10x the CPU for lags that can never be picked, called every 100ms for
+  // the whole recording. On mid-range phones that sustained full-buffer
+  // correlation was enough to starve the main thread and freeze the Stop
+  // button a couple minutes in — capping the search window is the fix.
+  const maxLag = Math.min(SIZE - 1, Math.ceil(sampleRate / 55))
+  // Reused scratch buffer (typed, pre-zeroed by the caller) instead of a
+  // fresh boxed Array every tick — same reasoning as subarray() above.
+  const c = scratch
+  for (let i = 0; i <= maxLag + 1; i++) { c[i] = 0; for (let j = 0; j < SIZE - i; j++) c[i] += buf[j] * buf[j + i] }
   let d = 0
-  while (d < SIZE && c[d] > c[d + 1]) d++
+  while (d < maxLag && c[d] > c[d + 1]) d++
   let maxval = -1, maxpos = -1
-  for (let i = d; i < SIZE; i++) if (c[i] > maxval) { maxval = c[i]; maxpos = i }
+  for (let i = d; i <= maxLag; i++) if (c[i] > maxval) { maxval = c[i]; maxpos = i }
   let T0 = maxpos
   const x1 = c[T0 - 1], x2 = c[T0], x3 = c[T0 + 1]
   const a = (x1 + x3 - 2 * x2) / 2, b = (x3 - x1) / 2
@@ -38,14 +54,39 @@ function autoCorrelate(bufIn: Float32Array, sampleRate: number): number {
   return sampleRate / T0
 }
 
+// Report was only ever kept in this hook's React state — leaving the page
+// (back button, tab switch, app backgrounding on mobile) unmounts the
+// component and the just-finished report is gone for good, even though it
+// was already saved to Supabase. Mirroring it into sessionStorage lets a
+// remount of the same doctor/colleague roleplay screen restore straight to
+// the 'done' report instead of forcing a brand-new recording.
+function reportStorageKey(doctorId: string | null, colleagueId: string | null) {
+  return `styleshift.roleplayReport.${doctorId ?? 'x'}.${colleagueId ?? 'x'}`
+}
+
 export function useRoleplayRecorder(doctorId: string | null, colleagueId: string | null) {
   const supabase = createClient()
-  const [phase, setPhase] = useState<RecorderPhase>('idle')
+  const storageKey = reportStorageKey(doctorId, colleagueId)
+  const restored = (() => {
+    if (typeof window === 'undefined') return null
+    try {
+      const raw = window.sessionStorage.getItem(storageKey)
+      return raw ? (JSON.parse(raw) as { result: RoleplayResult; sessionId: string | null }) : null
+    } catch { return null }
+  })()
+  const [phase, setPhase] = useState<RecorderPhase>(restored ? 'done' : 'idle')
   const [error, setError] = useState<RecorderError | null>(null)
   const [elapsedSec, setElapsedSec] = useState(0)
   const [speakerPreviews, setSpeakerPreviews] = useState<RawSpeakerPreview[]>([])
-  const [result, setResult] = useState<RoleplayResult | null>(null)
-  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [result, setResult] = useState<RoleplayResult | null>(restored?.result ?? null)
+  const [sessionId, setSessionId] = useState<string | null>(restored?.sessionId ?? null)
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState(false)
+  const blobRef = useRef<Blob | null>(null)
+  const previewRef = useRef<string | null>(null)
+  const jobRef = useRef<DiarizationJob>({})
+  const analysisRef = useRef<AbortController | null>(null)
 
   const streamRef = useRef<MediaStream | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
@@ -60,6 +101,25 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
   const pitchIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const utterancesRef = useRef<DiarizedUtterance[]>([])
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+  // True from start() until stop() is called or the recorder dies on its own
+  // (iOS Safari silently kills mic capture on screen-lock/backgrounding
+  // without ever throwing — the elapsed-time interval keeps ticking so the
+  // rep sees a live-looking timer over a dead recording). Lets the single
+  // onstop handler below tell "rep pressed Stop" apart from "mic died".
+  const recordingActiveRef = useRef(false)
+  const pendingStopResolveRef = useRef<((blob: Blob) => void) | null>(null)
+
+  const persistReport = useCallback((r: RoleplayResult, sid: string | null) => {
+    try {
+      window.sessionStorage.setItem(storageKey, JSON.stringify({ result: r, sessionId: sid }))
+    } catch { /* storage unavailable (private mode, quota) — report still shows for this mount */ }
+  }, [storageKey])
+
+  const releaseWakeLock = useCallback(() => {
+    wakeLockRef.current?.release().catch(() => {})
+    wakeLockRef.current = null
+  }, [])
 
   const cleanupCapture = useCallback(() => {
     if (pitchIntervalRef.current) { clearInterval(pitchIntervalRef.current); pitchIntervalRef.current = null }
@@ -67,6 +127,29 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     if (audioCtxRef.current) { audioCtxRef.current.close().catch(() => {}); audioCtxRef.current = null }
     analyserRef.current = null
     if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null }
+    releaseWakeLock()
+  }, [releaseWakeLock])
+
+  useEffect(() => () => {
+    recordingActiveRef.current = false
+    analysisRef.current?.abort()
+    if (mediaRecRef.current?.state === 'recording') mediaRecRef.current.stop()
+    cleanupCapture()
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current)
+  }, [cleanupCapture])
+
+  // The Wake Lock API auto-releases whenever the tab is hidden and does NOT
+  // reacquire itself when it becomes visible again — without this, a rep who
+  // glances away and back mid-recording gets exactly one screen-lock's worth
+  // of protection before the same iOS mic-death bug resurfaces.
+  useEffect(() => {
+    const reacquire = () => {
+      if (document.visibilityState !== 'visible' || !recordingActiveRef.current) return
+      if (!('wakeLock' in navigator)) return
+      navigator.wakeLock.request('screen').then(lock => { wakeLockRef.current = lock }).catch(() => {})
+    }
+    document.addEventListener('visibilitychange', reacquire)
+    return () => document.removeEventListener('visibilitychange', reacquire)
   }, [])
 
   const start = useCallback(async () => {
@@ -102,6 +185,14 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     }
     streamRef.current = stream
 
+    // Best-effort: keeps iOS/Android from auto-locking the screen mid-recording,
+    // which is what silently kills getUserMedia capture on iOS Safari (see
+    // recordingActiveRef above). Unsupported browsers just skip this — the
+    // onstop/track-ended handling below still catches the failure either way.
+    if ('wakeLock' in navigator) {
+      navigator.wakeLock.request('screen').then(lock => { wakeLockRef.current = lock }).catch(() => {})
+    }
+
     const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
     const source = audioCtx.createMediaStreamSource(stream)
     const analyser = audioCtx.createAnalyser()
@@ -117,11 +208,17 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     silenceStartRef.current = null
     startTimeRef.current = Date.now()
 
+    // Allocated once per recording and reused every tick below — the old
+    // code allocated a fresh Float32Array/Uint8Array/correlation buffer on
+    // every 100ms tick for the whole recording, which was enough sustained
+    // GC pressure on mid-range phones to freeze the tab partway through.
+    const buf = new Float32Array(analyser.fftSize)
+    const volBuf = new Uint8Array(analyser.frequencyBinCount)
+    const corrScratch = new Float64Array(analyser.fftSize + 2)
+
     pitchIntervalRef.current = setInterval(() => {
-      const buf = new Float32Array(analyser.fftSize)
       analyser.getFloatTimeDomainData(buf)
-      const f0 = autoCorrelate(buf, audioCtx.sampleRate)
-      const volBuf = new Uint8Array(analyser.frequencyBinCount)
+      const f0 = autoCorrelate(buf, audioCtx.sampleRate, corrScratch)
       analyser.getByteFrequencyData(volBuf)
       const vol = volBuf.reduce((a, b) => a + b, 0) / volBuf.length
       const now = Date.now() - startTimeRef.current
@@ -144,7 +241,7 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     chunksRef.current = []
     let mediaRec: MediaRecorder
     try {
-      mediaRec = new MediaRecorder(stream)
+      mediaRec = new MediaRecorder(stream, { audioBitsPerSecond: 64_000 })
     } catch (err) {
       // Throws synchronously on browsers/devices with no MediaRecorder
       // support (e.g. old iOS Safari) — was uncaught before, so recording
@@ -156,49 +253,54 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
       return
     }
     mediaRec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+
+    // Single onstop handler for the whole recording lifetime, dispatched by
+    // recordingActiveRef rather than reassigned per-call: a manual stop()
+    // resolves pendingStopResolveRef; anything else (browser auto-stopping
+    // the recorder because a track ended, or iOS silently killing capture)
+    // is the mic-death case and gets its own error state instead of leaving
+    // the rep staring at a timer over dead audio.
+    mediaRec.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: mediaRec.mimeType || 'audio/webm' })
+      if (pendingStopResolveRef.current) {
+        pendingStopResolveRef.current(blob)
+        pendingStopResolveRef.current = null
+        return
+      }
+      if (!recordingActiveRef.current) return
+      recordingActiveRef.current = false
+      cleanupCapture()
+      blobRef.current = blob
+      if (previewRef.current) URL.revokeObjectURL(previewRef.current)
+      previewRef.current = URL.createObjectURL(blob)
+      setPreviewUrl(previewRef.current)
+      setError('mic_lost')
+      setPhase('error')
+    }
+    // Some browsers fire 'ended' on the track without auto-stopping the
+    // recorder itself — force the stop so the handler above always runs.
+    stream.getAudioTracks().forEach(track => {
+      track.onended = () => { if (mediaRecRef.current?.state === 'recording') mediaRecRef.current.stop() }
+    })
+
     mediaRec.start()
     mediaRecRef.current = mediaRec
+    recordingActiveRef.current = true
 
     setPhase('recording')
   }, [supabase, cleanupCapture])
 
-  const stop = useCallback(async () => {
-    const mediaRec = mediaRecRef.current
-    if (!mediaRec) return
-    if (silenceStartRef.current !== null && lastSpeechTimeRef.current !== null) {
-      silencePeriodsRef.current.push({ start: silenceStartRef.current, end: Date.now() - startTimeRef.current })
-    }
+  const analyzeRecording = useCallback(async () => {
+    const blob = blobRef.current
+    if (!blob) return
+    analysisRef.current?.abort()
+    const controller = new AbortController()
+    analysisRef.current = controller
+    setError(null)
     setPhase('processing')
-
-    // mediaRec.onstop MUST be attached and mediaRec.stop() called before
-    // cleanupCapture() touches the underlying MediaStream tracks. Stopping
-    // the tracks first (the old order) can make the browser auto-stop the
-    // recorder and fire its own 'stop' event before our handler is attached
-    // — the promise below then never resolves and the UI hangs forever on
-    // "Separating speakers…" with no network request ever sent. A timeout
-    // is also added so any other stall surfaces an error instead of a
-    // silent freeze.
-    let blob: Blob
     try {
-      blob = await new Promise<Blob>((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('MediaRecorder stop timed out')), 15000)
-        mediaRec.onstop = () => {
-          clearTimeout(timeout)
-          resolve(new Blob(chunksRef.current, { type: mediaRec.mimeType || 'audio/webm' }))
-        }
-        mediaRec.stop()
-      })
-    } catch (err) {
-      console.error('roleplay stop: MediaRecorder failed to stop:', err)
-      cleanupCapture()
-      setError('diarize')
-      setPhase('error')
-      return
-    }
-    cleanupCapture()
-
-    try {
-      const utterances = await diarizeAudio(blob)
+      const utterances = await diarizeAudio(blob, jobRef.current, controller.signal)
+      if (controller.signal.aborted) return
       utterancesRef.current = utterances
       const speakers = Array.from(new Set(utterances.map(u => u.speaker)))
       if (speakers.length < 2) {
@@ -213,18 +315,54 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
       })))
       setPhase('pick-speaker')
     } catch (err) {
-      console.error('roleplay stop: diarizeAudio failed:', err)
-      // Session can expire mid-recording (long roleplay + idle token) — the
-      // whole practice is lost either way, but at least tell the rep why
-      // instead of the generic "analysis failed" message.
-      if (err instanceof Error && err.message === 'Not signed in.') {
-        setError('session')
-      } else {
-        setError('diarize')
-      }
+      if (controller.signal.aborted) return
+      console.error('roleplay analysis failed:', err)
+      setError(err instanceof DiarizationError ? err.code : 'diarize')
       setPhase('error')
     }
-  }, [cleanupCapture])
+  }, [])
+
+  const stop = useCallback(async () => {
+    const mediaRec = mediaRecRef.current
+    if (!mediaRec || mediaRec.state !== 'recording') return
+    recordingActiveRef.current = false
+    if (silenceStartRef.current !== null && lastSpeechTimeRef.current !== null) {
+      silencePeriodsRef.current.push({ start: silenceStartRef.current, end: Date.now() - startTimeRef.current })
+    }
+    setPhase('processing')
+
+    // mediaRec.stop() is called before cleanupCapture() touches the
+    // underlying MediaStream tracks. Stopping the tracks first (the old
+    // order) can make the browser auto-stop the recorder and fire its own
+    // 'stop' event before our handler is attached — the promise below then
+    // never resolves and the UI hangs forever on "Separating speakers…" with
+    // no network request ever sent. A timeout is also added so any other
+    // stall surfaces an error instead of a silent freeze. The handler itself
+    // lives on mediaRec.onstop set once in start() — pendingStopResolveRef
+    // routes this manual stop to it instead of reassigning onstop, so an
+    // unrelated auto-stop (mic death) can never be mistaken for this one.
+    let blob: Blob
+    try {
+      blob = await new Promise<Blob>((resolve, reject) => {
+        const timeout = setTimeout(() => { pendingStopResolveRef.current = null; reject(new Error('MediaRecorder stop timed out')) }, 15000)
+        pendingStopResolveRef.current = (b: Blob) => { clearTimeout(timeout); resolve(b) }
+        mediaRec.stop()
+      })
+    } catch (err) {
+      console.error('roleplay stop: MediaRecorder failed to stop:', err)
+      cleanupCapture()
+      setError('diarize')
+      setPhase('error')
+      return
+    }
+    cleanupCapture()
+
+    blobRef.current = blob
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current)
+    previewRef.current = URL.createObjectURL(blob)
+    setPreviewUrl(previewRef.current)
+    await analyzeRecording()
+  }, [cleanupCapture, analyzeRecording])
 
   const pickSpeaker = useCallback(async (repSpeaker: string) => {
     const utterances: Utterance[] = utterancesRef.current.map(u => ({
@@ -232,59 +370,87 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     }))
     const built = buildRoleplayResult(utterances, repSpeaker, pitchSamplesRef.current, silencePeriodsRef.current)
     setResult(built)
+    setSaveError(false)
+    setPhase('done')
+    persistReport(built, sessionId)
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      const payload = {
-        rep_id: user.id,
-        doctor_id: doctorId,
-        colleague_id: colleagueId,
-        duration_sec: Math.round(built.durationSec),
-        talk_ratio: built.talkRatio.repRatio,
-        rapid_turn_switches: built.rapidTurnSwitches,
-        question_ratio: built.questionRatio,
-        open_question_ratio: built.openQuestionRatio,
-        paraphrase_score: built.paraphraseScore,
-        active_listening_score: built.activeListening.score,
-        rep_style: built.repRead?.style ?? null,
-        rep_confidence: built.repRead?.confidence ?? null,
-        // rep_metrics is JSONB — no migration needed to add fields here.
-        // warmth/predicates ride alongside repRead's own proof (pace/pitch
-        // range/hesitation) so the tonality report can be rebuilt from
-        // history later without re-running acoustic analysis.
-        rep_metrics: built.repRead ? { ...built.repRead, warmth: built.warmth, predicates: built.predicates } : null,
-        partner_style: built.partnerRead?.style ?? null,
-        partner_confidence: built.partnerRead?.confidence ?? null,
-        adaptation_score: built.adaptationScore?.score ?? null,
-      }
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Session expired before saving report')
+      if (user) {
+        const payload = {
+          rep_id: user.id,
+          doctor_id: doctorId,
+          colleague_id: colleagueId,
+          duration_sec: Math.round(built.durationSec),
+          talk_ratio: built.talkRatio.repRatio,
+          rapid_turn_switches: built.rapidTurnSwitches,
+          question_ratio: built.questionRatio,
+          open_question_ratio: built.openQuestionRatio,
+          paraphrase_score: built.paraphraseScore,
+          active_listening_score: built.activeListening.score,
+          rep_style: built.repRead?.style ?? null,
+          rep_confidence: built.repRead?.confidence ?? null,
+          // rep_metrics is JSONB — no migration needed to add fields here.
+          // warmth/predicates ride alongside repRead's own proof (pace/pitch
+          // range/hesitation) so the tonality report can be rebuilt from
+          // history later without re-running acoustic analysis.
+          rep_metrics: built.repRead ? { ...built.repRead, warmth: built.warmth, predicates: built.predicates } : null,
+          partner_style: built.partnerRead?.style ?? null,
+          partner_confidence: built.partnerRead?.confidence ?? null,
+          adaptation_score: built.adaptationScore?.score ?? null,
+        }
 
-      if (sessionId) {
-        // Rep went back and re-picked the other speaker — update the same
-        // row instead of inserting a duplicate session and double-awarding XP.
-        // .select() so an RLS policy silently blocking the write (returns no
-        // error, zero rows) is still caught, not just a real error.
-        const { data: updated, error: updateError } = await supabase.from('roleplay_sessions').update(payload).eq('id', sessionId).select('id')
-        if (updateError) console.error('roleplay_sessions update failed:', updateError.message)
-        else if (!updated || updated.length === 0) console.error('roleplay_sessions update affected 0 rows (RLS?) for session', sessionId)
-      } else {
-        const { data: inserted, error: insertError } = await supabase.from('roleplay_sessions').insert(payload).select('id').single()
-        if (insertError) {
-          console.error('roleplay_sessions insert failed:', insertError.message)
+        if (sessionId) {
+          // Rep went back and re-picked the other speaker — update the same
+          // row instead of inserting a duplicate session and double-awarding XP.
+          // .select() so an RLS policy silently blocking the write (returns no
+          // error, zero rows) is still caught, not just a real error.
+          const { data: updated, error: updateError } = await supabase.from('roleplay_sessions').update(payload).eq('id', sessionId).select('id')
+          if (updateError || !updated?.length) throw new Error('Roleplay report could not be saved')
+
+          const segResult = await persistTranscriptSegments(supabase, {
+            utterances: utterancesRef.current.map(u => ({ speaker: u.speaker, text: u.text, start: u.start, end: u.end })),
+            repSpeaker,
+            sessionType: 'human_partner',
+            sessionId, // whichever branch this runs in
+            repId: user.id,
+            transcriptVersion: 1,
+          })
+          if (!segResult.ok) console.error('transcript segment save failed:', segResult.error)
         } else {
-          setSessionId(inserted.id)
-          const { data: profile, error: profileError } = await supabase.from('profiles').select('xp').eq('id', user.id).single()
-          if (profileError) {
-            console.error('profile xp read failed:', profileError.message)
-          } else if (profile) {
-            const { error: xpError } = await supabase.from('profiles').update({ xp: profile.xp + XP_VALUES.roleplayComplete }).eq('id', user.id)
-            if (xpError) console.error('profile xp update failed:', xpError.message)
+          const { data: inserted, error: insertError } = await supabase.from('roleplay_sessions').insert(payload).select('id').single()
+          if (insertError) {
+            throw new Error('Roleplay report could not be saved')
+          } else {
+            setSessionId(inserted.id)
+            persistReport(built, inserted.id)
+
+            const segResult = await persistTranscriptSegments(supabase, {
+              utterances: utterancesRef.current.map(u => ({ speaker: u.speaker, text: u.text, start: u.start, end: u.end })),
+              repSpeaker,
+              sessionType: 'human_partner',
+              sessionId: inserted.id, // whichever branch this runs in
+              repId: user.id,
+              transcriptVersion: 1,
+            })
+            if (!segResult.ok) console.error('transcript segment save failed:', segResult.error)
+
+            const { data: profile, error: profileError } = await supabase.from('profiles').select('xp').eq('id', user.id).single()
+            if (profileError) {
+              console.error('profile xp read failed:', profileError.message)
+            } else if (profile) {
+              const { error: xpError } = await supabase.from('profiles').update({ xp: profile.xp + XP_VALUES.roleplayComplete }).eq('id', user.id)
+              if (xpError) console.error('profile xp update failed:', xpError.message)
+            }
           }
         }
       }
+    } catch (err) {
+      console.error('roleplay report save failed:', err)
+      setSaveError(true)
     }
-
-    setPhase('done')
-  }, [doctorId, colleagueId, supabase, sessionId])
+  }, [doctorId, colleagueId, supabase, sessionId, persistReport])
 
   // Lets the rep back out of the result screen to re-pick the other speaker
   // (e.g. they tapped the wrong one) without re-recording or losing the
@@ -294,7 +460,18 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
   }, [])
 
   const reset = useCallback(() => {
+    recordingActiveRef.current = false
+    pendingStopResolveRef.current = null
+    analysisRef.current?.abort()
+    if (mediaRecRef.current?.state === 'recording') mediaRecRef.current.stop()
+    mediaRecRef.current = null
     cleanupCapture()
+    blobRef.current = null
+    jobRef.current = {}
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current)
+    previewRef.current = null
+    setPreviewUrl(null)
+    setSaveError(false)
     utterancesRef.current = []
     setSpeakerPreviews([])
     setResult(null)
@@ -302,7 +479,8 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     setError(null)
     setElapsedSec(0)
     setPhase('idle')
-  }, [cleanupCapture])
+    try { window.sessionStorage.removeItem(storageKey) } catch { /* ignore */ }
+  }, [cleanupCapture, storageKey])
 
-  return { phase, error, elapsedSec, speakerPreviews, result, sessionId, start, stop, pickSpeaker, backToPickSpeaker, reset }
+  return { phase, error, previewUrl, saveError, retryAnalysis: analyzeRecording, elapsedSec, speakerPreviews, result, sessionId, start, stop, pickSpeaker, backToPickSpeaker, reset }
 }

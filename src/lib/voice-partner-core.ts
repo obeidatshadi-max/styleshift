@@ -1,10 +1,11 @@
 import type { Doctor, StyleKey, Specialty } from '@/types/game'
+import type { VocalFeedback } from '@/lib/oruk'
 import { DRIVE } from '@/lib/doctor-context'
 import { SPECIALTIES, SPECIALTY_ORDER } from '@/lib/game-data'
 
 export const TURN_CAP = 5
 
-export type VoicePartnerTurn = { role: 'doctor' | 'rep'; text: string }
+export type VoicePartnerTurn = { role: 'doctor' | 'rep'; text: string; vocalFeedback?: VocalFeedback | null }
 export type TurnOutcome = 'continue' | 'won' | 'escalated'
 
 // Hard guardrail shared by both the opening line and every judged reply —
@@ -79,7 +80,7 @@ const OBJECTION_INSTRUCTIONS: Record<ObjectionType, string> = {
   false_objection: 'State a reason that is not a real reason — a stated excuse you reach for reflexively rather than something you actually believe or care about (distinct from indifference, which is low engagement with no stated reason at all; here you DO state a reason, it just is not your true one). Do not defend this stated reason hard if challenged directly — it should feel thin. The rep is meant to stay patient, not argue the stated reason, and ask questions to surface what is actually behind it — reward that patience and curiosity over a rep who takes the stated reason at face value and tries to counter it directly.',
 }
 
-function objectionInstruction(type: ObjectionType): string {
+export function objectionInstruction(type: ObjectionType): string {
   return OBJECTION_INSTRUCTIONS[type]
 }
 
@@ -235,7 +236,7 @@ export function isPhysicianState(value: unknown): value is PhysicianState {
 
 /** Internal-only prompt block describing current state — never surfaced to
  * the rep; the SYSTEM guardrail also forbids naming these values directly. */
-function stateInstructionBlock(state: PhysicianState): string {
+export function stateInstructionBlock(state: PhysicianState): string {
   return `\nInternal state (never reveal these numbers or mention them — they only shape your tone): trust ${state.trust}/100, skepticism ${state.skepticism}/100, engagement ${state.engagement}/100, time pressure ${state.timePressure}/100. Lower trust → shorter, more guarded replies. Higher skepticism → demand more evidence before conceding. Lower engagement → terser, less curious. Higher time pressure → want to wrap up quickly, less patience for a long pitch.`
 }
 
@@ -248,6 +249,41 @@ function stateInstructionBlock(state: PhysicianState): string {
  * doctor. Reads the Phase 1 weighted-persona/hidden-concern/scenario-context
  * columns straight off `d` when present; every existing call site keeps
  * working unchanged since the signature hasn't changed. */
+// Matches pipecat-agent/scenario.py's realtime dialect steering — the
+// turn-based persona previously just said "Write ALL text in Arabic" (bare
+// langName), which OpenAI TTS then rendered as generic MSA. Real Iraqi
+// vocabulary examples, same as scenario.py, keep both surfaces consistent.
+export const IRAQI_DIALECT_LINE = 'Write ALL text in natural spoken Iraqi Arabic (central/Baghdadi) — not Modern Standard Arabic, and not Gulf, Levantine, Egyptian or Maghrebi dialect. Prefer Iraqi forms: شنو (what), شلون (how), ليش (why), وين (where), هسه (now), أكو / ماكو (there is / there is not), كلش or هواية (very / a lot), أريد (I want), تعتقد or تحسب (you think). Never use Gulf أبي / أبغى / نبغي / وايد, Levantine بدي / بدّك / هلق / كتير / شو or the Levantine بـ verb prefix (say يسبب، يروحون، ياخذ — not بيسبب، بيروحون، بياخذ), Egyptian عايز / دلوقتي / أيوه / حاجة / إزاي / تفتكر, or Maghrebi ديال. Match this register: "شنو الفرق بينه وبين الدواء اللي أستخدمه هسه؟ كلش مشغول، اختصر." / "أكو عندي مرضى هواية ما يستجيبون زين، أريد شي أحسن مو أي شي." / "ماكو وقت اليوم، ارجع لي الخميس بعد العيادة."'
+
+/** The model keeps drifting to Gulf / Levantine / Egyptian forms even when told to write Iraqi
+ * (measured: "ما أبي" and "الحين" in about one doctor reply in six). Prompting alone did not
+ * remove them, so the most common tells are rewritten to their Iraqi equivalents. Whole words
+ * only, and only forms that cannot be another word: bare "أبي" is also "my father", so it is
+ * only rewritten before a first-person verb ("أبي أتأكد"). */
+const AR = 'ء-ي'
+const word = (pattern: string) => new RegExp(`(?<![${AR}])(?:${pattern})(?![${AR}])`, 'g')
+const LEVANTINE_VERB_STEMS = ['خلي', 'ساعد', 'سبب', 'روح', 'صير', 'شتغل', 'حتاج', 'قدر', 'عطي', 'تحسن', 'زيد', 'قلل', 'عمل', 'شوف', 'عرف', 'فيد', 'ضر', 'تأكد', 'ركز', 'ناسب', 'تأثر', 'فرق', 'سيطر', 'جيب', 'غير', 'نفع'].join('|')
+
+const IRAQI_REWRITES: [RegExp, string][] = [
+  [word('ما (?:أبي|أبغى|أبغي|أبغا|بدّ?ي)'), 'ما أريد'],
+  [word('ما (?:نبغي|نبغى|بدّ?نا)'), 'ما نريد'],
+  [word('ما بدّ?ك'), 'ما تريد'],
+  [new RegExp(`(?<![${AR}])أبي (?=[أن][${AR}]+)`, 'g'), 'أريد '],
+  [word('أبغى|أبغي|أبغا|بدّ?ي|عايز|عاوز'), 'أريد'],
+  [word('بدّ?ك'), 'تريد'],
+  [word('نبغي|نبغى|بدّ?نا'), 'نريد'],
+  [word('الحين|هلأ|هلق|دلوقتي|دلوقت'), 'هسه'],
+  [word('كتير|وايد'), 'كلش'],
+  [word('أيوه|إيوه'), 'إي'],
+  // Levantine "ب" present-tense prefix (بيخليه، بتصير → يخليه، تصير). Only for stems a doctor
+  // actually says: a blanket rule would break nouns that start the same way (بيانات، بيت، بنك).
+  // The ب may follow a one-letter conjunction that is written attached (وبتصير، فبيساعد).
+  [new RegExp(`(?:(?<![${AR}])|(?<=(?<![${AR}])[وف]))ب(?=[يتن](?:${LEVANTINE_VERB_STEMS}))`, 'g'), ''],
+]
+export function normalizeIraqiDialect(text: string): string {
+  return IRAQI_REWRITES.reduce((out, [pattern, replacement]) => out.replace(pattern, replacement), text)
+}
+
 export function personaLines(d: Doctor, style: StyleKey, lang: 'en' | 'ar'): string {
   const specialtyLabel = d.specialty ? (isSpecialty(d.specialty) ? SPECIALTIES[d.specialty].name : d.specialty) : ''
   const specialty = specialtyLabel ? `, ${specialtyLabel}` : ''
@@ -255,7 +291,8 @@ export function personaLines(d: Doctor, style: StyleKey, lang: 'en' | 'ar'): str
   const phrases = d.key_phrases?.trim() ? `They often say things like: "${d.key_phrases.trim()}".` : ''
   const objections = d.objections?.length ? `Objection theme(s) they are likely to raise: ${d.objections.join(', ')}.` : ''
   const descriptor = styleDescriptor(styleWeights(d), style)
-  return `You are ${d.name}${specialty}, ${descriptor}. Write ALL text in ${langName(lang)}.
+  const languageLine = lang === 'ar' ? IRAQI_DIALECT_LINE : `Write ALL text in ${langName(lang)}.`
+  return `You are ${d.name}${specialty}, ${descriptor}. ${languageLine}
 ${domainFlavor}
 ${phrases}
 ${objections}${hiddenConcernLine(d)}${scenarioContextLine(d)}`
@@ -297,12 +334,26 @@ export function parseOpeningResponse(text: string): string | null {
  * deterministic function — is what turns this into a pedagogical outcome. */
 export type PersonaState = 'resistant' | 'satisfied' | 'disengaged'
 
+/** The judge previously scored a rep turn on its text alone — `vocalFeedback`
+ * was computed (Oruk) and attached to the turn object but never reached the
+ * prompt. Rep-only, and only when Oruk actually returned something. */
+function vocalDeliveryNote(turn: VoicePartnerTurn): string {
+  if (turn.role !== 'rep' || !turn.vocalFeedback) return ''
+  const { emotions, styles } = turn.vocalFeedback
+  if (emotions.length === 0 && styles.length === 0) return ''
+  const parts: string[] = []
+  if (emotions.length) parts.push(`emotion: ${emotions.map(e => e.label).join(', ')}`)
+  if (styles.length) parts.push(`style: ${styles.map(s => s.label).join(', ')}`)
+  return ` [vocal delivery — ${parts.join(' · ')}]`
+}
+
 export function buildJudgePrompt(
   doctor: Doctor, style: StyleKey, lang: 'en' | 'ar', historyContext: string,
   turns: VoicePartnerTurn[], repReply: string, turnCount: number, objectionType: ObjectionType,
   state?: PhysicianState, clarifyUnlocked = false,
 ): string {
-  const transcript = turns.map(t => `${t.role === 'doctor' ? 'Doctor' : 'Rep'}: ${t.text}`).join('\n')
+  const transcript = turns.map(t => `${t.role === 'doctor' ? 'Doctor' : 'Rep'}: ${t.text}${vocalDeliveryNote(t)}`).join('\n')
+  const hasVocalData = turns.some(t => vocalDeliveryNote(t) !== '')
   return `${personaLines(doctor, style, lang)}
 ${historyContext}
 
@@ -313,7 +364,7 @@ Conversation so far:
 ${transcript || '(this is the opening line — the rep has not spoken yet)'}
 Rep: ${repReply}
 
-This is rep reply #${turnCount} of a maximum ${TURN_CAP}. React as the doctor would, in character, given your persona and internal state above.
+This is rep reply #${turnCount} of a maximum ${TURN_CAP}. React as the doctor would, in character, given your persona and internal state above.${hasVocalData ? ' Some rep lines carry a bracketed [vocal delivery] note from independent voice analysis — weigh it as you would tone of voice, alongside the words themselves, never instead of them.' : ''}
 
 Separately (as an objective observer, not a judgment of the rep), identify which of the CLEAR objection-handling steps the rep's reply demonstrated, if any:
 - "clarify": asked an open-ended question to understand your concern better

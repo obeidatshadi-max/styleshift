@@ -14,8 +14,17 @@ import { getVoiceStats } from '@/lib/voice-stats'
 import CoachingQueueAndAssign from '@/components/dashboard/CoachingQueueAndAssign'
 import { getCoachingQueue } from '@/lib/coaching-queue'
 import ScenarioEditorPanel from '@/components/dashboard/ScenarioEditorPanel'
+import SimScenarioBuilderPanel from '@/components/dashboard/SimScenarioBuilderPanel'
+import { scenarioBuilderEnabled } from '@/lib/sim-scenarios'
+import MethodologyBuilderPanel from '@/components/dashboard/MethodologyBuilderPanel'
+import { methodologyBuilderEnabled } from '@/lib/methodologies'
+import KnowledgePackPanel from '@/components/dashboard/KnowledgePackPanel'
+import { knowledgePacksEnabled } from '@/lib/knowledge-packs'
 import BehavioralTrendsPanel from '@/components/dashboard/BehavioralTrendsPanel'
+import CompanyDoctorsPanel from '@/components/dashboard/CompanyDoctorsPanel'
 import { getBehavioralTrendsForReps } from '@/lib/behavioral-trends-dashboard'
+import WeeklyDigestPanel from '@/components/dashboard/WeeklyDigestPanel'
+import { buildWeeklyDigest, getRecentSessions } from '@/lib/weekly-digest'
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -44,6 +53,14 @@ export default async function DashboardPage() {
   const voiceStats = await getVoiceStats(stats.reps.map(r => r.id))
   const coachingQueue = await getCoachingQueue(user.id)
   const behavioralTrends = await getBehavioralTrendsForReps(stats.reps.map(r => r.id))
+
+  const nowMs = Date.now()
+  const digest = buildWeeklyDigest({
+    companyName: stats.companyName, reps: stats.reps, nowMs,
+    sessions: await getRecentSessions(stats.reps.map(r => r.id), nowMs),
+    voiceLastPracticed: Object.fromEntries([...voiceStats.byRep].map(([id, v]) => [id, v.lastPracticed])),
+    focusLabels: [...behavioralTrends.values()].map(t => t.mastermindInsights[0]?.experiment.label).filter((l): l is string => !!l),
+  })
 
   const flagCount = stats?.reps.filter(r => r.flag).length ?? 0
   const avgAccuracy = stats?.reps.length
@@ -89,6 +106,7 @@ export default async function DashboardPage() {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <Panel title="This Week"><WeeklyDigestPanel digest={digest} /></Panel>
         <Panel title="Team Pulse"><TeamPulsePanel pulse={pulse} siteUrl={siteUrl} /></Panel>
         {leagueBoard && <Panel title="Team League"><LeagueBoardPanel board={leagueBoard} /></Panel>}
         <CoachingQueueAndAssign
@@ -96,6 +114,14 @@ export default async function DashboardPage() {
           reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))}
         />
         <Panel title="Company Scenarios"><ScenarioEditorPanel /></Panel>
+        {scenarioBuilderEnabled() && (
+          <Panel title="Simulation Scenarios">
+            <SimScenarioBuilderPanel reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} />
+          </Panel>
+        )}
+        {methodologyBuilderEnabled() && <Panel title="Selling Methodology"><MethodologyBuilderPanel /></Panel>}
+        {knowledgePacksEnabled() && <Panel title="Product Knowledge"><KnowledgePackPanel /></Panel>}
+        <Panel title="AI Doctor Profiles"><CompanyDoctorsPanel reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} /></Panel>
         <Panel title="Team Leaderboard"><Leaderboard reps={stats?.reps ?? []} /></Panel>
         <Panel title="Skill Gap Heatmap"><SkillHeatmap levelAccuracy={stats?.levelAccuracy ?? []} /></Panel>
         <Panel title="Voice Practice">

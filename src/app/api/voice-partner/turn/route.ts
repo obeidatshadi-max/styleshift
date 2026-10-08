@@ -9,6 +9,8 @@ import {
 } from '@/lib/voice-partner-core'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { validateAudioUpload } from '@/lib/audio-upload'
+import { analyzeVocalDelivery } from '@/lib/oruk'
+import { transcribeWithDeepgram } from '@/lib/deepgram'
 import type { Doctor, DoctorVisit } from '@/types/game'
 
 // A full conversation is at most TURN_CAP rep lines plus TURN_CAP doctor lines.
@@ -121,7 +123,18 @@ export async function POST(req: Request) {
     .order('created_at', { ascending: false }).limit(5)
   const historyContext = buildHistoryContext((visits as DoctorVisit[]) ?? [])
 
-  const repText = repTextInput || (audio ? await transcribeAudio(audio, openaiKey, lang) : null)
+  // Dialect-aware Deepgram Nova-3 (ar-IQ) trialed against generic Whisper
+  // for the Arabic path only — gated on its own key so it's a straight A/B
+  // comparison, not a silent fallback chain. English is untouched.
+  // Typed text (repTextInput) skips transcription and vocal analysis.
+  const [repText, vocalFeedback] = repTextInput || !audio
+    ? [repTextInput || null, null]
+    : await Promise.all([
+        lang === 'ar' && process.env.DEEPGRAM_API_KEY
+          ? transcribeWithDeepgram(audio, lang)
+          : transcribeAudio(audio, openaiKey, lang),
+        analyzeVocalDelivery(audio, lang),
+      ])
   if (!repText) return NextResponse.json({ error: 'upstream' }, { status: 502 })
 
   const turnCount = history.filter(h => h.role === 'rep').length + 1
@@ -174,6 +187,6 @@ export async function POST(req: Request) {
   if (turnInsertError) console.warn('conversation_turns insert failed (turn):', turnInsertError.message)
 
   return NextResponse.json({
-    repText, doctorText: judged.doctorReply, outcome, turnCount, clearSteps: judged.clearSteps, state: nextState,
+    repText, doctorText: judged.doctorReply, outcome, turnCount, clearSteps: judged.clearSteps, state: nextState, vocalFeedback,
   })
 }

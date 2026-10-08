@@ -3,7 +3,8 @@ import {
   processAcousticData, classifySocialStyle, buildTurns, computeTalkRatio,
   computeRapidTurnSwitches, computeQuestionRatio, classifyQuestions, computeParaphraseScore,
   computeActiveListeningScore, repTranscript,
-  scopeAcousticToSpeaker, buildRoleplayResult, computeAdaptationScore,
+  scopeAcousticToSpeaker, buildRoleplayResult, computeAdaptationScore, computeTermOverlap,
+  isLowSampleSession, MIN_RELIABLE_TURNS,
   type Utterance, type PitchSample, type SilencePeriod, type SocialStyleRead,
 } from './roleplay-core'
 
@@ -88,6 +89,7 @@ describe('turn-taking analysis', () => {
     const result = buildRoleplayResult(utterances, 'A', pitchSamples, [])
     expect(result.talkRatio.repRatio).toBeGreaterThan(0.5)
     expect(result.rapidTurnSwitches).toBe(3)
+    expect(result.turnCount).toBeGreaterThan(0)
     expect(result.questionRatio).toBe(0)
     expect(result.durationSec).toBeCloseTo(14, 0)
     expect(result.openQuestionRatio).toBe(0) // rep (A) asked no questions in this fixture
@@ -230,5 +232,66 @@ describe('active listening score', () => {
     const result = computeActiveListeningScore(talkRatio, 20, 0)
     expect(result.score).toBe(15)
     expect(result.label).toBe('developing')
+  })
+})
+
+describe('isLowSampleSession', () => {
+  // No coded minimum existed for the ratio-based metrics (talk ratio,
+  // question ratio, term overlap, active listening) before this — only
+  // the acoustic pitch-sample gate (processAcousticData, line 26) had one.
+  // 10 total turns ~= 5 real exchanges each way, the practical floor below
+  // which these percentages are dominated by noise, not signal.
+  it('flags a session below the reliable-turn floor', () => {
+    expect(isLowSampleSession(MIN_RELIABLE_TURNS - 1)).toBe(true)
+  })
+
+  it('does not flag a session at or above the floor', () => {
+    expect(isLowSampleSession(MIN_RELIABLE_TURNS)).toBe(false)
+    expect(isLowSampleSession(MIN_RELIABLE_TURNS + 5)).toBe(false)
+  })
+})
+
+describe('computeTermOverlap', () => {
+  const turn = (text: string, speaker: string) => ({ text, speaker, start: 0, end: 1000, durationMs: 1000 })
+
+  it('is 100% when both speakers use exactly the same content words', () => {
+    const turns = [turn('the pricing model works well', 'rep'), turn('pricing model works well', 'partner')]
+    expect(computeTermOverlap(turns, 'rep')).toBe(1)
+  })
+
+  it('is 0% when the two speakers share no content words', () => {
+    const turns = [turn('completely different topics here', 'rep'), turn('another unrelated subject entirely', 'partner')]
+    expect(computeTermOverlap(turns, 'rep')).toBe(0)
+  })
+
+  it('is a partial ratio for partial overlap, ignoring stopwords and short words', () => {
+    // rep content words: {pricing, model, great}; partner: {concerned, pricing, model}
+    // union = {pricing, model, great, concerned} (4), intersection = {pricing, model} (2) -> 0.5
+    const turns = [turn('the pricing model is great', 'rep'), turn('I am concerned but the pricing model', 'partner')]
+    expect(computeTermOverlap(turns, 'rep')).toBeCloseTo(0.5, 5)
+  })
+
+  it('returns 0 rather than dividing by zero when one side has no content words at all', () => {
+    const turns = [turn('a', 'rep'), turn('pricing model', 'partner')]
+    expect(computeTermOverlap(turns, 'rep')).toBe(0)
+  })
+})
+
+describe('spoken question detection regressions', () => {
+  const turn = (text: string, speaker = 'rep') => ({ text, speaker, start: 0, end: 1000, durationMs: 1000 })
+  it.each(['كيف تتعامل مع هذه الحالات', 'دكتور شو اهم تحدي عندك', 'طيب، ليش بتفضل هذا الخيار', 'وَكَيْفَ تتعامل مع المرضى', 'احكيلي عن تجربتك', 'Doctor what concerns you most'])('recognizes unpunctuated open questions: %s', text => {
+    expect(classifyQuestions([turn(text)], 'rep')).toEqual({ total: 1, open: 1, closed: 0, openRatio: 1 })
+    expect(computeQuestionRatio([turn(text)], 'rep')).toBe(1)
+  })
+  it.each(['هل هذا يناسبك', 'ممكن نحدد موعد', 'Can you explain your concern', 'هل يمكنني الحصول على عينة من هذا الدواء؟'])('recognizes closed questions: %s', text => {
+    expect(classifyQuestions([turn(text)], 'rep').closed).toBe(1)
+  })
+  it.each(['من المهم الالتزام بالعلاج', 'كمية الدواء مناسبة', 'هذا يوضح كيف يعمل العلاج', 'I know what you mean'])('does not score statements as questions: %s', text => {
+    expect(computeQuestionRatio([turn(text)], 'rep')).toBe(0)
+  })
+  it('counts a question followed by a statement and excludes doctor questions', () => {
+    const turns = [turn('هل يناسبك؟ شكرا.'), turn('هذا واضح'), turn('شو السبب', 'doctor')]
+    expect(computeQuestionRatio(turns, 'rep')).toBe(0.5)
+    expect(classifyQuestions(turns, 'rep').total).toBe(1)
   })
 })

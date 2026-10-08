@@ -1,8 +1,8 @@
 'use client'
 import { useT } from '@/lib/i18n'
 
-export type Section = 'train' | 'rehearse' | 'perform'
-const SECTIONS: Section[] = ['train', 'rehearse', 'perform']
+export type Section = 'train' | 'rehearse' | 'perform' | 'coach'
+const SECTIONS: Section[] = ['train', 'rehearse', 'perform', 'coach']
 
 interface Props {
   activeSection: Section
@@ -12,7 +12,7 @@ interface Props {
 }
 
 /**
- * Persistent nav rendered on every screen: the three main sections (always
+ * Persistent nav rendered on every screen: the main sections (always
  * reachable, not just from the home tab bar) plus contextual Back/Home when
  * inside a sub-screen. Selecting a section always lands on its home tab —
  * this is the only nav surface, so it doubles as "go home".
@@ -42,6 +42,19 @@ export default function AppNav({ activeSection, onSelectSection, showBack, onBac
       <div role="tablist" aria-label={t('nav.tabsLabel')} style={{ display: 'flex', gap: 6, borderBottom: '1px solid var(--line)' }}>
         {SECTIONS.map(s => (
           <button key={s} role="tab" aria-selected={activeSection === s} tabIndex={activeSection === s ? 0 : -1}
+            onKeyDown={e => {
+              const index = SECTIONS.indexOf(s)
+              const rtl = document.documentElement.dir === 'rtl'
+              let next = index
+              if (e.key === 'ArrowRight') next = (index + (rtl ? -1 : 1) + SECTIONS.length) % SECTIONS.length
+              else if (e.key === 'ArrowLeft') next = (index + (rtl ? 1 : -1) + SECTIONS.length) % SECTIONS.length
+              else if (e.key === 'Home') next = 0
+              else if (e.key === 'End') next = SECTIONS.length - 1
+              else return
+              e.preventDefault()
+              onSelectSection(SECTIONS[next])
+              e.currentTarget.parentElement?.querySelectorAll('button')[next]?.focus()
+            }}
             onClick={() => onSelectSection(s)} style={tabStyle(activeSection === s)}>
             {t(`nav.tab${s[0].toUpperCase()}${s.slice(1)}`)}
           </button>

@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useState } from 'react'
 import type { AdaptationScores, CompetencyScores, CriticalMoment, DoctorStyleProfile, SessionSignals } from '@/lib/session-evaluator'
+import type { PressureShiftResult } from '@/lib/pressure-shift'
 
 export type SessionAnalysisStatus = 'idle' | 'loading' | 'ready' | 'notconfigured' | 'ratelimited' | 'error'
 
@@ -12,6 +13,8 @@ export interface SessionAnalysisResult {
   adaptationScore: number | null
   adaptationRecommendation: string
   doctorStyleProfile: DoctorStyleProfile
+  pressureShift: PressureShiftResult | null
+  pressureShiftInsight: string
 }
 
 // Deep Analysis is deliberately lazy/on-demand (see session-analysis/route.ts's

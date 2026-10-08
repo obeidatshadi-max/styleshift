@@ -5,6 +5,7 @@ import {
   pickObjectionType, computeObjectionWeights, isObjectionType, OBJECTION_TYPES,
   isSpecialty, SPECIALTY_CONTEXT,
   seedPhysicianState, applyStateDelta, isPhysicianState, isDifficulty, DIFFICULTY_LEVELS,
+  normalizeIraqiDialect, IRAQI_DIALECT_LINE,
   type VoicePartnerTurn, type ObjectionType, type PhysicianState,
 } from './voice-partner-core'
 import type { Doctor } from '@/types/game'
@@ -216,6 +217,30 @@ describe('personaLines via buildOpeningPrompt — specialty domain-flavor', () =
   })
 })
 
+describe('personaLines — Arabic dialect steering', () => {
+  // The realtime Pipecat bot's scenario.py already steers Iraqi dialect
+  // explicitly; the turn-based doctor persona previously just said "Arabic"
+  // (langName), which OpenAI TTS then rendered as generic MSA — a documented
+  // gap (docs/ai-doctor-gap-analysis.md). This aligns the two.
+  it('steers the doctor persona toward Iraqi dialect, not generic Arabic, for ar', () => {
+    const prompt = buildOpeningPrompt(doctorFixture(), 'analytical', 'ar', '', 'doubt')
+    expect(prompt).toContain('Iraqi')
+    expect(prompt).not.toContain('Write ALL text in Arabic.')
+  })
+
+  it('explicitly rules out Modern Standard Arabic and neighboring dialects', () => {
+    const prompt = buildOpeningPrompt(doctorFixture(), 'analytical', 'ar', '', 'doubt')
+    expect(prompt).toMatch(/not.*Modern Standard Arabic/i)
+    expect(prompt).toMatch(/Egyptian|Levantine/)
+  })
+
+  it('leaves English untouched', () => {
+    const prompt = buildOpeningPrompt(doctorFixture(), 'analytical', 'en', '', 'doubt')
+    expect(prompt).toContain('Write ALL text in English.')
+    expect(prompt).not.toContain('Iraqi')
+  })
+})
+
 describe('personaLines — weighted style blend (1.4)', () => {
   it('uses the legacy single-style line when no weight columns are set', () => {
     const prompt = buildOpeningPrompt(doctorFixture(), 'analytical', 'en', '', 'doubt')
@@ -357,6 +382,31 @@ describe('buildJudgePrompt', () => {
     expect(prompt).toContain('the rep has not spoken yet')
   })
 
+  it("annotates a rep turn's vocal delivery when Oruk data is present", () => {
+    const withVocal: VoicePartnerTurn[] = [
+      { role: 'doctor', text: 'Your product costs too much.' },
+      { role: 'rep', text: 'I hear you.', vocalFeedback: { emotions: [{ label: 'anxious', score: 0.7 }], styles: [{ label: 'hesitant', score: 0.6 }] } },
+    ]
+    const prompt = buildJudgePrompt(doctorFixture(), 'driver', 'en', '', withVocal, 'reply', 2, 'doubt')
+    expect(prompt).toContain('Rep: I hear you.')
+    expect(prompt).toContain('anxious')
+    expect(prompt).toContain('hesitant')
+  })
+
+  it('renders a rep turn with no vocal data exactly as before, with no stray annotation', () => {
+    const noVocal: VoicePartnerTurn[] = [{ role: 'rep', text: 'Plain reply.' }]
+    const prompt = buildJudgePrompt(doctorFixture(), 'driver', 'en', '', noVocal, 'reply', 2, 'doubt')
+    expect(prompt).toContain('Rep: Plain reply.\n')
+    expect(prompt).not.toContain('vocal')
+  })
+
+  it('does not annotate a doctor turn even if it carried vocalFeedback', () => {
+    const weirdTurn: VoicePartnerTurn[] = [{ role: 'doctor', text: 'Hi.', vocalFeedback: { emotions: [{ label: 'calm', score: 0.5 }], styles: [] } }]
+    const prompt = buildJudgePrompt(doctorFixture(), 'driver', 'en', '', weirdTurn, 'reply', 2, 'doubt')
+    expect(prompt).toContain('Doctor: Hi.\n')
+    expect(prompt).not.toContain('calm')
+  })
+
   it('includes the specialty, key phrases, and objections when the doctor has them', () => {
     const prompt = buildJudgePrompt(doctorFixture({
       specialty: 'Oncology',
@@ -442,5 +492,47 @@ describe('parseJudgeResponse', () => {
     expect(parseJudgeResponse('{"personaState":"resistant","doctorReply":"x","stateDelta":{"trustDelta":999,"skepticismDelta":-999,"engagementDelta":"nope"}}')).toEqual({
       personaState: 'resistant', doctorReply: 'x', clearSteps: [], stateDelta: { trustDelta: 10, skepticismDelta: -10, engagementDelta: 0 },
     })
+  })
+})
+
+describe('Iraqi dialect', () => {
+  it('rewrites the Gulf, Levantine and Egyptian forms the model leaks', () => {
+    expect(normalizeIraqiDialect('ما أبي كلام عام')).toBe('ما أريد كلام عام')
+    expect(normalizeIraqiDialect('ما بدي أسمع عن الدراسات')).toBe('ما أريد أسمع عن الدراسات')
+    expect(normalizeIraqiDialect('أبي أتأكد إنه آمن')).toBe('أريد أتأكد إنه آمن')
+    expect(normalizeIraqiDialect('أبغى أتأكد من الأمان')).toBe('أريد أتأكد من الأمان')
+    expect(normalizeIraqiDialect('نبغي نتأكد، ما نبغي مضاعفات')).toBe('نريد نتأكد، ما نريد مضاعفات')
+    expect(normalizeIraqiDialect('خمس دقائق عندي الحين')).toBe('خمس دقائق عندي هسه')
+    expect(normalizeIraqiDialect('هلأ ما عندي وقت كتير')).toBe('هسه ما عندي وقت كلش')
+    expect(normalizeIraqiDialect('أيوه تمام')).toBe('إي تمام')
+    expect(normalizeIraqiDialect('شنو اللي بدّك تحكي بسرعة؟')).toBe('شنو اللي تريد تحكي بسرعة؟')
+    expect(normalizeIraqiDialect('شنو اللي بدك تحكي؟ ما بدّك تسمع؟')).toBe('شنو اللي تريد تحكي؟ ما تريد تسمع؟')
+    expect(normalizeIraqiDialect('بدّي أتأكد، بدّنا نتأكد')).toBe('أريد أتأكد، نريد نتأكد')
+  })
+  it('drops the Levantine ب verb prefix on common doctor verbs', () => {
+    expect(normalizeIraqiDialect('شنو الفرق اللي بيخليه أحسن؟')).toBe('شنو الفرق اللي يخليه أحسن؟')
+    expect(normalizeIraqiDialect('الدواء بيساعدهم وبتصير الحالة أحسن')).toBe('الدواء يساعدهم وتصير الحالة أحسن')
+    expect(normalizeIraqiDialect('ما بيسبب مشاكل، بيروحون للطوارئ، بنتأكد')).toBe('ما يسبب مشاكل، يروحون للطوارئ، نتأكد')
+    expect(normalizeIraqiDialect('بيتحسن المريض وبيقدر يشتغل')).toBe('يتحسن المريض ويقدر يشتغل')
+    expect(normalizeIraqiDialect('وما بيجيب مشاكل ولا بيغير الحالة')).toBe('وما يجيب مشاكل ولا يغير الحالة')
+  })
+  it('does not touch nouns and phrases that merely start with ب', () => {
+    for (const text of ['عندي بيانات عن الأمان', 'بيت المريض بعيد', 'بنسبة كبيرة', 'بتحسن الحالة', 'بتأثير الدواء', 'بتغيير الجرعة', 'بيننا وقت قصير', 'يخليه ويساعدهم']) {
+      expect(normalizeIraqiDialect(text)).toBe(text)
+    }
+  })
+  it('leaves Iraqi text and the word for "my father" alone', () => {
+    for (const text of ['شنو الفرق؟ كلش مشغول، أكو مريض ينتظرني هسه', 'أريد شي أحسن مو أي شي', 'أبي يعاني من ضغط الدم', 'ما أريد كلام عام']) {
+      expect(normalizeIraqiDialect(text)).toBe(text)
+    }
+  })
+  it('does not rewrite inside longer words', () => {
+    expect(normalizeIraqiDialect('الأبيض كتيرات')).toBe('الأبيض كتيرات')
+  })
+  it('asks for Iraqi, names the dialects to avoid and gives register examples', () => {
+    expect(IRAQI_DIALECT_LINE).toMatch(/Iraqi/)
+    expect(IRAQI_DIALECT_LINE).toMatch(/not Modern Standard Arabic, and not Gulf, Levantine, Egyptian or Maghrebi/)
+    expect(IRAQI_DIALECT_LINE).toContain('شنو')
+    expect(IRAQI_DIALECT_LINE).toContain('Match this register')
   })
 })

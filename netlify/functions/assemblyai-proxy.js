@@ -96,7 +96,13 @@ exports.handler = async function (event) {
         // recording is always exactly one rep + one practice partner, and
         // without the hint short/close-together same-mic recordings were
         // consistently clustering both voices into a single speaker.
-        body: JSON.stringify({ audio_url: body.audio_url, speaker_labels: true, speakers_expected: 2 }),
+        body: JSON.stringify({
+          audio_url: body.audio_url,
+          speech_models: ['universal-3-pro', 'universal-2'],
+          language_detection: true,
+          speaker_labels: true,
+          speakers_expected: 2,
+        }),
       })
       const data = await response.json()
       if (!response.ok) console.error('assemblyai submit failed:', response.status, JSON.stringify(data))
@@ -118,7 +124,6 @@ exports.handler = async function (event) {
         const speakerCount = new Set((data.utterances || []).map(u => u.speaker)).size
         const wordSpeakers = new Set((data.words || []).map(w => w.speaker)).size
         console.log(`assemblyai poll completed: ${speakerCount} distinct speakers (utterances), ${wordSpeakers} distinct speakers (words), ${(data.utterances || []).length} utterances, ${(data.words || []).length} words, audio_duration=${data.audio_duration}, text_length=${(data.text || '').length}`)
-        console.log('assemblyai transcript snippet:', JSON.stringify((data.text || '').slice(0, 200)))
         console.log('assemblyai speaker_labels config used:', data.speaker_labels, 'speakers_expected:', data.speakers_expected)
       } else if (data.status === 'error') {
         console.error('assemblyai transcription error:', data.error)

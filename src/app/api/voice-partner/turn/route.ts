@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { authenticateVoicePartnerRequest } from '@/lib/voice-partner-auth'
 import { buildHistoryContext } from '@/lib/doctor-context'
 import {
   SYSTEM, TURN_CAP, buildJudgePrompt, parseJudgeResponse, resolveTurn, isObjectionType, transcribeAudio,
@@ -51,9 +53,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'not_configured' }, { status: 503 })
   }
 
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const auth = await authenticateVoicePartnerRequest(req)
+  if (!auth) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const user = { id: auth.userId }
+  const supabase = auth.viaToken ? createAdminClient() : await createClient()
 
   // Shared bucket with open/turn/speak (see open/route.ts).
   if (!(await checkRateLimit('voice-partner', user.id, 20, 3600)))
@@ -66,11 +69,22 @@ export async function POST(req: Request) {
   const sessionId = form.get('sessionId')
   const lang = form.get('lang') === 'ar' ? 'ar' : 'en'
   const historyRaw = form.get('history')
-  const audioCheck = validateAudioUpload(form.get('audio'))
+  const repTextField = form.get('repText')
+  const repTextInput = typeof repTextField === 'string' ? repTextField.trim() : ''
   if (typeof doctorId !== 'string' || !doctorId) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   if (typeof sessionId !== 'string' || !sessionId) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
-  if (!audioCheck.ok) return NextResponse.json({ error: audioCheck.error }, { status: audioCheck.status })
-  const audio = audioCheck.blob
+
+  let audio: Blob | null = null
+  if (!repTextInput) {
+    const audioCheck = validateAudioUpload(form.get('audio'))
+    if (!audioCheck.ok) return NextResponse.json({ error: audioCheck.error }, { status: audioCheck.status })
+    audio = audioCheck.blob
+  }
+
+  const repStartedAtRaw = form.get('repStartedAt')
+  const repEndedAtRaw = form.get('repEndedAt')
+  const repStartedAt = typeof repStartedAtRaw === 'string' && !Number.isNaN(Date.parse(repStartedAtRaw)) ? repStartedAtRaw : null
+  const repEndedAt = typeof repEndedAtRaw === 'string' && !Number.isNaN(Date.parse(repEndedAtRaw)) ? repEndedAtRaw : null
 
   const objectionTypeRaw = form.get('objectionType')
   if (typeof objectionTypeRaw !== 'string' || !isObjectionType(objectionTypeRaw)) {
@@ -98,7 +112,8 @@ export async function POST(req: Request) {
   if (!history) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
 
   // RLS ensures the rep can only read their own doctor.
-  const { data: doctor } = await supabase.from('doctors').select('*').eq('id', doctorId).single()
+  const { data: doctor } = await supabase.from('doctors').select('*')
+    .eq('id', doctorId).eq('rep_id', user.id).single()
   if (!doctor) return NextResponse.json({ error: 'not_found' }, { status: 404 })
   const style = (doctor as Doctor).style
   if (!style) return NextResponse.json({ error: 'no_style' }, { status: 422 })
@@ -111,12 +126,15 @@ export async function POST(req: Request) {
   // Dialect-aware Deepgram Nova-3 (ar-IQ) trialed against generic Whisper
   // for the Arabic path only — gated on its own key so it's a straight A/B
   // comparison, not a silent fallback chain. English is untouched.
-  const [repText, vocalFeedback] = await Promise.all([
-    lang === 'ar' && process.env.DEEPGRAM_API_KEY
-      ? transcribeWithDeepgram(audio, lang)
-      : transcribeAudio(audio, openaiKey, lang),
-    analyzeVocalDelivery(audio, lang),
-  ])
+  // Typed text (repTextInput) skips transcription and vocal analysis.
+  const [repText, vocalFeedback] = repTextInput || !audio
+    ? [repTextInput || null, null]
+    : await Promise.all([
+        lang === 'ar' && process.env.DEEPGRAM_API_KEY
+          ? transcribeWithDeepgram(audio, lang)
+          : transcribeAudio(audio, openaiKey, lang),
+        analyzeVocalDelivery(audio, lang),
+      ])
   if (!repText) return NextResponse.json({ error: 'upstream' }, { status: 502 })
 
   const turnCount = history.filter(h => h.role === 'rep').length + 1
@@ -157,11 +175,13 @@ export async function POST(req: Request) {
       session_id: sessionId, rep_id: user.id, doctor_id: doctorId, turn_index: baseIndex,
       role: 'rep', text: repText, objection_type: objectionTypeRaw, clear_steps_hit: judged.clearSteps,
       trust: nextState.trust, skepticism: nextState.skepticism, engagement: nextState.engagement, time_pressure: nextState.timePressure,
+      started_at: repStartedAt, ended_at: repEndedAt,
     },
     {
       session_id: sessionId, rep_id: user.id, doctor_id: doctorId, turn_index: baseIndex + 1,
       role: 'doctor', text: judged.doctorReply, objection_type: objectionTypeRaw, clear_steps_hit: [],
       trust: nextState.trust, skepticism: nextState.skepticism, engagement: nextState.engagement, time_pressure: nextState.timePressure,
+      started_at: null, ended_at: null, // patched by /api/voice-partner/turn-timing once TTS finishes playing
     },
   ])
   if (turnInsertError) console.warn('conversation_turns insert failed (turn):', turnInsertError.message)

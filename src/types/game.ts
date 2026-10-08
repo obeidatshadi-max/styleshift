@@ -149,6 +149,10 @@ export interface ConversationTurn {
   skepticism: number | null
   engagement: number | null
   time_pressure: number | null
+  // Realtime-path only (migration 030) — null for every text-based-path
+  // turn. ISO timestamps from the actual speech start/stop, not turn_index.
+  started_at: string | null
+  ended_at: string | null
   created_at: string
 }
 

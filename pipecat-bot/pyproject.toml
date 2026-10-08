@@ -1,0 +1,12 @@
+[project]
+name = "styleshift-voice-partner-bot"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "pipecat-ai[daily,deepgram,elevenlabs,runner]==1.10.0",
+  "httpx",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

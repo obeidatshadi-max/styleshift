@@ -17,7 +17,8 @@ function turn(overrides: Partial<ConversationTurn>): ConversationTurn {
   return {
     id: 't1', session_id: 's1', rep_id: 'r1', doctor_id: 'd1', turn_index: 0,
     role: 'doctor', text: 'It costs too much.', objection_type: 'true_objection', clear_steps_hit: [],
-    trust: 50, skepticism: 50, engagement: 50, time_pressure: 30, created_at: '2026-01-01T00:00:00Z',
+    trust: 50, skepticism: 50, engagement: 50, time_pressure: 30,
+    started_at: null, ended_at: null, created_at: '2026-01-01T00:00:00Z',
     ...overrides,
   }
 }
@@ -78,6 +79,20 @@ describe('computeSessionSignals', () => {
     expect(s.repTurnCount).toBe(0)
     expect(s.questionCount).toBe(0)
     expect(s.avgRepTurnLength).toBe(0)
+  })
+
+  it('includes realtimeSignals when turns carry real timing', () => {
+    const turns = [
+      turn({ turn_index: 0, role: 'doctor', started_at: '2026-01-01T00:00:00.000Z', ended_at: '2026-01-01T00:00:02.000Z' }),
+      turn({ turn_index: 1, role: 'rep', started_at: '2026-01-01T00:00:03.000Z', ended_at: '2026-01-01T00:00:06.000Z' }),
+    ]
+    const signals = computeSessionSignals(turns, false)
+    expect(signals.realtimeSignals).not.toBeNull()
+    expect(signals.realtimeSignals!.talkRatio.repMs).toBe(3000)
+  })
+
+  it('leaves realtimeSignals null for a text-based-path session with no timing', () => {
+    expect(computeSessionSignals(sampleSession, false).realtimeSignals).toBeNull()
   })
 })
 

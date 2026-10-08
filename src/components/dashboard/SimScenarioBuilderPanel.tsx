@@ -32,7 +32,7 @@ interface Form {
   mainConcerns: string; hiddenConcern: string; competitorSituation: string; patientPopulation: string
   visitPurpose: string; learningObjectives: string; expectedCompetencies: Competency[]
   difficulty: string; language: string; availableTimeMin: string; desiredNextStep: string
-  required: ObjectionType[]; optional: ObjectionType[]; focus: string[]; coachInstructions: string
+  required: ObjectionType[]; optional: ObjectionType[]; focus: string[]; coachInstructions: string; knowledgePackId: string
 }
 
 const EMPTY: Form = {
@@ -41,7 +41,7 @@ const EMPTY: Form = {
   mainConcerns: '', hiddenConcern: '', competitorSituation: '', patientPopulation: '',
   visitPurpose: '', learningObjectives: '', expectedCompetencies: ['discovery'],
   difficulty: 'normal', language: 'en', availableTimeMin: '5', desiredNextStep: '',
-  required: [], optional: [], focus: [], coachInstructions: '',
+  required: [], optional: [], focus: [], coachInstructions: '', knowledgePackId: '',
 }
 
 const lines = (s: string) => s.split('\n').map(x => x.trim()).filter(Boolean)
@@ -49,7 +49,7 @@ const lines = (s: string) => s.split('\n').map(x => x.trim()).filter(Boolean)
 function toPayload(f: Form) {
   const orNull = (s: string) => (s.trim() ? s.trim() : null)
   return {
-    name: f.name, description: f.description, therapeuticArea: f.therapeuticArea, productName: orNull(f.productName),
+    name: f.name, description: f.description, therapeuticArea: f.therapeuticArea, knowledgePackId: orNull(f.knowledgePackId), productName: orNull(f.productName),
     physician: { specialty: f.specialty, seniority: f.seniority, style: f.style, relationshipStage: f.relationshipStage, adoptionAttitude: f.adoptionAttitude },
     mainConcerns: lines(f.mainConcerns), hiddenConcern: orNull(f.hiddenConcern), competitorSituation: orNull(f.competitorSituation),
     patientPopulation: orNull(f.patientPopulation), visitPurpose: f.visitPurpose, learningObjectives: lines(f.learningObjectives),
@@ -74,7 +74,7 @@ function toForm(s: SimScenario): Form {
     expectedCompetencies: s.expectedCompetencies, difficulty: s.difficulty, language: s.language,
     availableTimeMin: String(s.availableTimeMin), desiredNextStep: s.desiredNextStep ?? '',
     required: s.requiredObjections.map(o => o.type), optional: s.optionalObjections.map(o => o.type),
-    focus: s.scoringCriteria.filter(c => c.emphasis === 'focus').map(c => c.behavior), coachInstructions: s.coachInstructions ?? '',
+    focus: s.scoringCriteria.filter(c => c.emphasis === 'focus').map(c => c.behavior), coachInstructions: s.coachInstructions ?? '', knowledgePackId: s.knowledgePackId ?? '',
   }
 }
 
@@ -105,6 +105,15 @@ export default function SimScenarioBuilderPanel({ reps }: { reps: Array<{ id: st
   const [testing, setTesting] = useState<SimScenarioRecord | null>(null)
   const [assigning, setAssigning] = useState<string | null>(null)
   const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [packs, setPacks] = useState<Array<{ id: string; name: string; productName: string }>>([])
+  const formOpen = form !== null
+  useEffect(() => {
+    if (!formOpen) return
+    fetch('/api/knowledge-packs')
+      .then(r => (r.ok ? r.json() : []))
+      .then((l: Array<{ id: string; name: string; productName: string; status: string }>) => setPacks(l.filter(p => p.status === 'approved')))
+      .catch(() => setPacks([]))
+  }, [formOpen])
   const [assignee, setAssignee] = useState('')
 
   const load = useCallback(async () => {
@@ -163,6 +172,14 @@ export default function SimScenarioBuilderPanel({ reps }: { reps: Array<{ id: st
         <input style={inputStyle} value={form.name} maxLength={120} onChange={e => set('name', e.target.value)} />
         <label style={labelStyle}>Therapeutic area</label>
         <input style={inputStyle} value={form.therapeuticArea} onChange={e => set('therapeuticArea', e.target.value)} />
+        {(packs.length > 0 || form.knowledgePackId) && <>
+          <label style={labelStyle}>Product knowledge pack</label>
+          <Select
+            value={form.knowledgePackId} onChange={v => set('knowledgePackId', v)}
+            options={[{ v: '', l: 'None (product claims stay generic)' }, ...packs.map(p => ({ v: p.id, l: `${p.name} (${p.productName})` })),
+              ...(form.knowledgePackId && !packs.some(p => p.id === form.knowledgePackId) ? [{ v: form.knowledgePackId, l: 'Linked pack (not approved or not found)' }] : [])]}
+          />
+        </>}
         <label style={labelStyle}>Doctor specialty</label>
         <Select value={form.specialty} onChange={v => set('specialty', v)} options={SPECIALTY_ORDER.map(s => ({ v: s, l: SPECIALTIES[s].name }))} />
         <label style={labelStyle}>Communication style</label>

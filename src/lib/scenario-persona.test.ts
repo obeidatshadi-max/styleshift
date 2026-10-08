@@ -72,11 +72,13 @@ describe('scenario -> persona', () => {
 })
 
 describe('preview and runnable checks', () => {
-  it('warns about missing hidden concern / required objection and about the unused pack link', () => {
+  it('warns about missing hidden concern / required objection and explains the pack link', () => {
     const p = previewScenario(scenario({ hiddenConcern: null, requiredObjections: [], knowledgePackId: 'pack-1' }))
     expect(p.warnings.join(' ')).toMatch(/No hidden concern/)
     expect(p.warnings.join(' ')).toMatch(/No required objection/)
-    expect(p.warnings.join(' ')).toMatch(/not yet used/)
+    expect(p.warnings.join(' ')).toMatch(/Knowledge pack linked/)
+    expect(p.warnings.join(' ')).not.toMatch(/not yet used/)
+    expect(previewScenario(scenario({ knowledgePackId: null })).warnings.join(' ')).not.toMatch(/Knowledge pack/)
     expect(previewScenario(scenario()).headline).toMatch(/analytical · skeptical · 5 min/)
   })
 

@@ -114,7 +114,7 @@ export function previewScenario(s: SimScenario): ScenarioPreview {
   if (!s.hiddenConcern) warnings.push('No hidden concern: the doctor will have nothing to hold back until earned.')
   if (!s.requiredObjections.length) warnings.push('No required objection: the engine will pick one at random.')
   if (s.language === 'ar') warnings.push('Arabic doctor speech uses the Iraqi dialect setting; text written here is not translated for you.')
-  if (s.knowledgePackId) warnings.push('Knowledge pack is linked but not yet used by the doctor: product claims stay generic until that integration ships.')
+  if (s.knowledgePackId) warnings.push('Knowledge pack linked: the doctor, coach and report use its approved items. Product claims outside them stay unavailable. If the pack is not approved when a rep starts, the session runs without it.')
   if (setup.skepticismBias > 0) warnings.push('"Skeptical" runs as Normal with a higher starting skepticism.')
   return {
     headline: `${doc.name} · ${s.physician.style} · ${s.difficulty.replace('_', ' ')} · ${s.availableTimeMin} min`,

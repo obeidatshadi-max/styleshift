@@ -88,7 +88,7 @@ export function buildVoiceMeasurements(deterministicMetrics: ReportContext['dete
 
 export function groundReport(
   raw: unknown, segments: TranscriptSegment[], context: ReportContext,
-  opts: { sessionType: ReportSessionType; transcriptVersion: number },
+  opts: { sessionType: ReportSessionType; transcriptVersion: number; lang?: 'en' | 'ar' },
 ): ConversationReport | null {
   if (!raw || typeof raw !== 'object') return null
   const r = raw as Record<string, unknown>
@@ -101,7 +101,7 @@ export function groundReport(
     objective: context.objective, // NEVER taken from the model — only the app-supplied context can set this
     summary: str(vs.summary),
     objectiveStatus: context.objective ? objectiveStatus : ('insufficient_evidence' as const),
-    objectiveStatusReason: context.objective ? str(vs.objectiveStatusReason) : 'No objective was supplied for this session.',
+    objectiveStatusReason: context.objective ? str(vs.objectiveStatusReason) : (opts.lang === 'ar' ? 'لم يُحدَّد هدف لهذه الجلسة.' : 'No objective was supplied for this session.'),
     evidence: groundEvidenceList(vs.evidence, segments),
   }
   if (!visitSummary.summary) return null // an unusable response has no summary at all

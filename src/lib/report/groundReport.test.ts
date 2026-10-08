@@ -124,6 +124,11 @@ describe('groundReport', () => {
     const raw = minimalRaw()
     const report = groundReport(raw, segments, noObjectiveContext, base)!
     expect(report.visitSummary.objective).toBeNull()
+    expect(report.visitSummary.objectiveStatusReason).toBe('No objective was supplied for this session.')
+  })
+  it('writes the no-objective reason in Arabic for an Arabic report', () => {
+    const report = groundReport(minimalRaw(), segments, { ...context, objective: null }, { ...base, lang: 'ar' })!
+    expect(report.visitSummary.objectiveStatusReason).toMatch(/[؀-ۿ]/)
   })
   it('labels a simulation persona style as isSimulationSetting, never as a discovered customer style', () => {
     const simContext: ReportContext = { ...context, isSimulation: true, simulationPersona: { style: 'driver', hiddenConcern: 'cost' } }

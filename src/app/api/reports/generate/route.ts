@@ -105,7 +105,7 @@ export async function POST(request: Request) {
       catch { console.error(`${tag} [${part}]: JSON parse failed (${raw.length} chars)`) }
     }))
     if (!parts.every(part => parsedParts[part])) continue
-    report = groundReport(mergeReportParts(parsedParts), segments, context, { sessionType: body.sessionType, transcriptVersion })
+    report = groundReport(mergeReportParts(parsedParts), segments, context, { sessionType: body.sessionType, transcriptVersion, lang: body.lang === 'ar' ? 'ar' : 'en' })
     if (report) break
     console.error(`${tag}: grounding rejected report (missing summary or ungrounded coaching priority)`)
     // Grounding failed on content, not transport — ask for both halves again.

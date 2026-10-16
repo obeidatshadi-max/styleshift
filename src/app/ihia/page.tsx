@@ -13,7 +13,7 @@ export default async function IhiaPage() {
   return <main style={{ position: 'relative', maxWidth: 850, margin: 'auto', padding: 24 }}>
     <a href="/play">← StyleShift</a>
     <h1>Iraqi Healthcare Intelligence</h1>
-    <p>Interpret communication using reviewed expressions. Use synthetic text only. Clinical decisions remain outside this tool.</p>
+    <p>Describe a situation to discover Iraqi expressions, or interpret a phrase using reviewed knowledge. Clinical decisions remain outside this tool.</p>
     <IhiaPanel reviewer={await isReviewer(db, user.id)} />
   </main>
 }

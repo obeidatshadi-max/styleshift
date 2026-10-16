@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, type FormEvent } from 'react'
 import { REGIONS, type Knowledge } from '@/lib/ihia/core'
+import type { SuggestedExpression } from '@/lib/ihia/suggestions'
 
 type Entry = Knowledge & { review_note: string }
 const field = { display: 'block', width: '100%', padding: 10, margin: '6px 0 14px', background: 'var(--panel)', color: 'var(--ink)', border: '1px solid var(--line)', borderRadius: 8 }
@@ -14,6 +15,11 @@ export default function IhiaPanel({ reviewer }: { reviewer: boolean }) {
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
   const [history, setHistory] = useState<unknown>(null)
   const [busy, setBusy] = useState(false)
+  const [situation, setSituation] = useState('')
+  const [suggestionRegion, setSuggestionRegion] = useState('baghdad')
+  const [suggestions, setSuggestions] = useState<SuggestedExpression[]>([])
+  const [savedSuggestions, setSavedSuggestions] = useState<Set<string>>(new Set())
+  const [suggesting, setSuggesting] = useState(false)
   async function request(path: string, init?: RequestInit) {
     const res = await fetch(path, { ...init, cache: 'no-store' })
     const data = await res.json()
@@ -48,7 +54,50 @@ export default function IhiaPanel({ reviewer }: { reviewer: boolean }) {
       await refresh(); setMessage('Review saved. Start a new voice session to load the new vocabulary.')
     } catch (e) { setMessage(String(e)) } finally { setBusy(false) }
   }
+  async function suggest(context = situation) {
+    setBusy(true); setSuggesting(true); setMessage(''); setSuggestions([]); setSavedSuggestions(new Set())
+    try {
+      const data = await request('/api/ihia/suggest', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ situation: context, region: suggestionRegion }) })
+      setSuggestions(data.suggestions)
+    } catch (e) { setMessage(String(e)) } finally { setBusy(false); setSuggesting(false) }
+  }
+  async function saveSuggestion(suggestion: SuggestedExpression) {
+    setBusy(true); setMessage('')
+    try {
+      await request('/api/ihia/knowledge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(suggestion) })
+      setSavedSuggestions(previous => new Set([...previous, suggestion.expression]))
+      await refresh(); setMessage('Saved as an unapproved draft. Verify the expression before approving it.')
+    } catch (e) { setMessage(String(e)) } finally { setBusy(false) }
+  }
   return <>
+    <section style={box} aria-label="AI expression discovery">
+      <h2>Let the AI suggest expressions</h2>
+      <p>You do not need to remember a phrase. Choose a situation or describe one in Arabic or English.</p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, margin: '14px 0' }}>
+        {['Busy doctor', 'Asking for evidence', 'Pharmacy stock', 'Using a new app'].map(topic =>
+          <button key={topic} type="button" disabled={busy} onClick={() => { setSituation(topic); void suggest(topic) }}>{topic}</button>)}
+      </div>
+      <form onSubmit={event => { event.preventDefault(); void suggest() }}>
+        <label>Describe the situation (optional)<textarea dir="auto" maxLength={1000} style={field} value={situation}
+          placeholder="For example: I want to ask a busy doctor for a short meeting."
+          onChange={event => setSituation(event.target.value)} /></label>
+        <label>Suggested region<select style={field} value={suggestionRegion} onChange={event => setSuggestionRegion(event.target.value)}>
+          {REGIONS.map(region => <option key={region}>{region}</option>)}
+        </select></label>
+        <button disabled={busy}>{suggesting ? 'Finding Iraqi expressions…' : 'Suggest Iraqi expressions'}</button>
+      </form>
+      <p style={{ marginTop: 12 }}>Use general or synthetic situations; do not include patient details. AI suggestions are unverified and do not enter the voice agent until reviewed and approved.</p>
+      <div aria-live="polite">{suggestions.map((suggestion, index) => <article key={index} style={box}>
+        <p style={{ color: 'var(--amber)' }}>AI suggestion · unverified</p>
+        <h3 lang="ar" dir="rtl">{suggestion.expression}</h3>
+        <p>Literal meaning: {suggestion.literal_meaning}</p><p>Possible meaning: {suggestion.contextual_meaning}</p>
+        <p lang="ar" dir="rtl">{suggestion.example}</p><p>Uncertainty: {suggestion.uncertainty}</p>
+        <p>{suggestion.source_reference}</p>
+        {reviewer && <button type="button" disabled={busy || savedSuggestions.has(suggestion.expression)}
+          onClick={() => void saveSuggestion(suggestion)}>{savedSuggestions.has(suggestion.expression) ? 'Saved as draft' : 'Save as draft for review'}</button>}
+      </article>)}</div>
+    </section>
     <section style={box} aria-label="Interpret expression">
       <h2>Try an expression</h2>
       <form onSubmit={submit}>

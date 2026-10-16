@@ -79,7 +79,7 @@ export default async function DashboardPage() {
           </h1>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {process.env.IHIA_ENABLED === 'true' && <a href="/ihia" style={{ color: 'var(--cyan)', padding: '10px 16px' }}>Iraqi knowledge</a>}
+          {process.env.IHIA_ENABLED === 'true' && <a href="/ihia" style={{ color: 'var(--cyan)', padding: '10px 16px' }}>Iraqi Healthcare Intelligence</a>}
           <a href="/dashboard/recognition" style={{ background: '#e8c060', color: '#1a1402', border: '1px solid #e8c060', borderRadius: 10, padding: '10px 16px', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', fontWeight: 700 }}>
             🏆 Recognize #1
           </a>

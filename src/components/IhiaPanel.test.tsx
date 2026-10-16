@@ -7,6 +7,33 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 const approved = { id: 'e', expression: 'ما عندي وكت', literal_meaning: 'No time', contextual_meaning: 'ضيق الوقت',
   region: 'baghdad', specialty: 'general', kind: 'workflow', uncertainty: 'Confirm context', source_reference: 'Synthetic review', status: 'draft', version: 1, review_note: '' }
 describe('Iraqi knowledge interface', () => {
+  it('discovers expressions from one starter click and saves only a draft', async () => {
+    const suggestion = { ...approved, review_status: 'unverified', example: 'ما عندي وكت هسه.', source_reference: 'AI-generated suggestion; needs review' }
+    const fetch = vi.fn().mockImplementation(async (url, init) => {
+      if (url === '/api/ihia/suggest') return Response.json({ suggestions: [suggestion], status: 'unverified' })
+      if (init?.method === 'POST') return Response.json({ ...approved, status: 'draft' })
+      return Response.json([])
+    })
+    vi.stubGlobal('fetch', fetch)
+    render(<IhiaPanel reviewer />)
+    fireEvent.click(screen.getByText('Busy doctor', { selector: 'button' }))
+    await screen.findByText('AI suggestion · unverified')
+    expect(fetch.mock.calls.some(c => c[1]?.method === 'POST' && c[0] === '/api/ihia/knowledge')).toBe(false)
+    const call = fetch.mock.calls.find(c => c[0] === '/api/ihia/suggest')!
+    expect(JSON.parse(call[1].body)).toEqual({ situation: 'Busy doctor', region: 'baghdad' })
+    fireEvent.click(screen.getByText('Save as draft for review'))
+    await screen.findByText('Saved as draft')
+    const save = fetch.mock.calls.find(c => c[0] === '/api/ihia/knowledge' && c[1]?.method === 'POST')!
+    expect(JSON.parse(save[1].body).source_reference).toContain('AI-generated')
+    expect(fetch.mock.calls.some(c => c[1]?.method === 'PATCH')).toBe(false)
+  })
+  it('shows generation failure without making up expressions', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ error: 'AI unavailable' }, { status: 502 })))
+    render(<IhiaPanel reviewer={false} />)
+    fireEvent.click(screen.getByText('Suggest Iraqi expressions'))
+    await screen.findByText('Error: AI unavailable')
+    expect(screen.queryByText('AI suggestion · unverified')).toBeNull()
+  })
   it('lets ordinary users interpret text without exposing reviewer controls', async () => {
     const fetch = vi.fn().mockResolvedValue(Response.json({ original: approved.expression, response: 'هذا قصدك؟', uncertainty: 'Clarify context' }))
     vi.stubGlobal('fetch', fetch)

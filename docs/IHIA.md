@@ -14,6 +14,29 @@ Inspected checkout: `6b50ed894e77e2fbe3e2fd64784891867db184ba`. The generic READ
 
 ## Implemented scope
 
+### AI-assisted discovery
+
+At `/ihia`, start with **Let the AI suggest expressions**. No remembered phrase is needed: select **Busy doctor**, **Asking for evidence**, **Pharmacy stock** or **Using a new app**, or describe a general situation in Arabic/English. Leaving the situation blank requests starter expressions.
+
+`POST /api/ihia/suggest` reuses the existing `OPENAI_API_KEY` with GPT-4.1 mini structured output (`store:false`); Gemini remains the Pipecat live-voice provider. The production Anthropic credential failed a real authentication check, so it was not selected for discovery. No new key, dependency or database migration is needed. Requests require a signed-in session and the IHIA flag, are limited to ten per user per hour, and accept at most 1,000 context characters. Use synthetic/general situations without patient details. Existing provider usage is billed normally. Optional server-only `IHIA_SUGGESTION_PROVIDER=anthropic` selects the existing Anthropic adapter explicitly; no silent cross-provider retry is performed.
+
+Suggestions include Arabic wording, literal and possible contextual meanings, a synthetic usage example and uncertainty. All are marked **unverified AI suggestions**. The server ignores model-supplied approval status, source claims and region overrides, validates/deduplicates the proposals and supplies an explicit AI-generated provenance marker. Malformed responses fail with a retry message; no invented fallback corpus is returned.
+
+Any signed-in user may discover expressions. Explicit reviewers can click **Save as draft for review**. Generation never writes to the database automatically, and saving never approves an expression. Suggestions only enter production interpretation/voice vocabulary after the existing human approval flow. An Iraqi speaker should verify wording, regional use and meanings; AI-generated text is not independent evidence.
+
+The added files are `src/lib/ihia/suggestions.ts`, its unit and opt-in live tests, and `src/app/api/ihia/suggest/route.ts` with route tests. `IhiaPanel` has generation and draft-save interaction coverage. The optional live check is:
+
+The provider adapter is `src/lib/ihia/provider.ts`, with tests for refused/incomplete outputs, missing configuration, no silent provider retry and provider error containment. A real synthetic generation using the existing production OpenAI configuration passed before rollout. This verifies provider connectivity and validated output, not regional linguistic accuracy. The initial proposed Anthropic path was rejected because the existing credential returned 401; no existing key was overwritten.
+
+Implementation reference: [official OpenAI structured-output documentation](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses).
+
+```powershell
+$env:IHIA_LIVE_SMOKE='true'
+npm test -- src/lib/ihia/suggestions.live.test.ts
+```
+
+It makes one real synthetic request using an existing server-side key in the test environment. Normal test runs skip it. Never place the key in a command argument, source file or browser bundle.
+
 Approved expression → authenticated knowledge retrieval → region-aware contextual interpretation → response at `/ihia`.
 
 The interpreter uses **normalized phrase matching**, not general semantic Arabic understanding. It handles Arabic diacritics/alef variants, mixed English terms and phrase boundaries. Original text is preserved. Unknown expressions request clarification; competing meanings remain visible.

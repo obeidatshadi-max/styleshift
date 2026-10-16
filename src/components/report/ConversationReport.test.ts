@@ -46,7 +46,7 @@ describe('ConversationReport', () => {
       repReply: { segmentIndex: 1, speakerRole: 'rep', quote: 'Our product is very well tolerated.' },
     }] }) })
     expect(screen.getByRole('region', { name: 'Vague statements to pin down' })).toBeTruthy()
-    expect(screen.getByText('No one specific')).toBeTruthy()
+    expect(screen.getByText('No specific person or thing')).toBeTruthy()
     expect(screen.getByText('Which patients have you seen stop?')).toBeTruthy()
     expect(screen.getByText(/Our product is very well tolerated/)).toBeTruthy()
   })

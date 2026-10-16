@@ -35,7 +35,7 @@ describe('PastSimulation', () => {
   it('generates a report, with a note, when none was saved for the simulation', () => {
     saved.state = { status: 'missing' }
     view()
-    expect(screen.getByText(/No saved report for this simulation/)).toBeTruthy()
+    expect(screen.getByText(/There is no saved report for this simulation/)).toBeTruthy()
     expect(screen.getByText('Generating ai_doctor_text sim-1')).toBeTruthy()
   })
 

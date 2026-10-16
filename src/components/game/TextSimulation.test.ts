@@ -81,7 +81,7 @@ describe('TextSimulation flow', () => {
     await screen.findByText('Hello.')
     await act(async () => { fireEvent.click(screen.getByText('End Simulation')) })
     await screen.findByText('Simulation Report')
-    await screen.findByText('Your coaching report could not be generated. Retry without repeating the conversation.')
+    await screen.findByText('We could not create your coaching report. Retry without repeating the conversation.')
 
     reportOk = true
     await act(async () => { fireEvent.click(screen.getByText('Retry coaching report')) })
@@ -98,7 +98,7 @@ describe('TextSimulation flow', () => {
     const box = screen.getByLabelText('Your reply') as HTMLTextAreaElement
     fireEvent.change(box, { target: { value: 'My answer' } })
     await act(async () => { fireEvent.click(screen.getByText('Send')) })
-    await screen.findByText('The AI service didn’t respond. Try again.')
+    await screen.findByText('The AI service did not reply. Please try again.')
     expect(box.value).toBe('My answer')
     expect(screen.getByText('Hello.')).toBeTruthy()
   })
@@ -106,7 +106,7 @@ describe('TextSimulation flow', () => {
   it('shows a clear message when the feature is not configured', async () => {
     mockApi({ '/api/simulation/start': () => ({ status: 503, body: { error: 'not_configured' } }) })
     render(wrap(createElement(TextSimulation, { doctor, onDone: vi.fn() })))
-    await screen.findByText('Text simulation isn’t available right now.')
+    await screen.findByText('Text simulation is not available right now.')
   })
 
   it('a failed End keeps the conversation and can be pressed again', async () => {
@@ -118,7 +118,7 @@ describe('TextSimulation flow', () => {
     render(wrap(createElement(TextSimulation, { doctor, onDone: vi.fn() })))
     await screen.findByText('Hello.')
     await act(async () => { fireEvent.click(screen.getByText('End Simulation')) })
-    await screen.findByText('The AI service didn’t respond. Try again.')
+    await screen.findByText('The AI service did not reply. Please try again.')
     ok = true
     await act(async () => { fireEvent.click(screen.getByText('End Simulation')) })
     await screen.findByText('Simulation Report')

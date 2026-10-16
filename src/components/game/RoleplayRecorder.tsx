@@ -5,6 +5,7 @@ import { useRoleplayRecorder } from '@/hooks/useRoleplayRecorder'
 import { buildRoleplayInsight } from '@/lib/roleplay-insight'
 import { isLowSampleSession } from '@/lib/roleplay-core'
 import type { RepAssignment } from '@/types/game'
+import RecordedConversationAnalysis from './RecordedConversationAnalysis'
 
 interface Props { doctorId: string | null; colleagueId: string | null; onDone: () => void }
 
@@ -193,6 +194,7 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
         {eyebrow(t('roleplay.resultEyebrow'))}
         <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 16 }}>{t('roleplay.resultTitle')}</h2>
         {saveError && <p role="alert" style={{ color: 'var(--amber)', marginBottom: 16 }}>{t('roleplay.errorSave')}</p>}
+        {sessionId && <RecordedConversationAnalysis key={sessionId} sessionId={sessionId} />}
 
         {/* Whole-interaction framing before the "You vs. partner" breakdown
             below — surfaced here because reps found the per-metric cards

@@ -71,6 +71,20 @@ Database security follows [Supabase's RLS and grant guidance](https://supabase.c
 
 ## Existing voice integration
 
+### Two-person recording analysis
+
+When IHIA is enabled, reports for existing `human_partner` and `customer_visit` recordings now receive Iraqi-language analysis guidance and per-segment matches from the approved Baghdad/Iraq-wide catalog. The original transcript, speaker assignment, timestamps, evidence references and deterministic measurements are preserved. A separate bounded reference section supplies possible literal/contextual meanings, uncertainty, knowledge version and provenance; it never rewrites the transcript or becomes evidence for speaker intent.
+
+Explanations in the report use the requested clear Arabic or English. Ambiguous dialect is to remain inferred/uncertain, with a clarifying question. Unknown expressions have no verified dictionary gloss; the model may cautiously interpret ordinary language from the original context, without claiming an approved translation. Draft/rejected AI suggestions are never used as dictionary references.
+
+This runs during the existing **post-recording report generation**, after recording stops and speakers are confirmed. It does not stream live translations, alter microphone behavior, create a new transcript store or introduce background monitoring. Existing ownership, consent and retention flows remain; customer-visit analysis additionally requires the recorded consent confirmation. No actual participant audio was used in verification.
+
+In the existing two-person recorder: confirm consent → record → stop → identify your speaker → on the result screen choose **AI conversation analysis** (Arabic: **تحليل المحادثة بالذكاء الاصطناعي**). The original voice measurements remain visible below. Analysis is user-triggered and reuses an existing saved report when one exists. Older saved reports are shown as originally generated; this change does not silently regenerate them. `RecordedConversationAnalysis.tsx` connects the existing recorder to the shared report renderer; `PracticeReport` now also accepts human recording session types.
+
+This path uses the same verified existing OpenAI connection as discovery (GPT-4.1 mini, JSON output, `store:false`), with four existing small report parts and existing grounding/persistence. Other session types retain their previous provider path. No Anthropic credential was overwritten; the IHIA recording path returns a configuration error if the existing OpenAI key is unavailable instead of silently trying another provider. Report grounding always resolves evidence quotes from the original transcript, not model paraphrases.
+
+New reusable code: `src/agents/openai-complete.ts` and `src/lib/ihia/recording.ts`. The suggestion provider reuses the extracted completion adapter without changing its structured-output schema. Tests cover recording/report integration, speaker/evidence preservation, unapproved-reference exclusion, consent/ownership, unavailable knowledge and bounded prompt data. `recording.live.test.ts` is an opt-in synthetic provider/grounding check, not an accuracy evaluation on real Iraqi recordings.
+
 With `IHIA_ENABLED=true`, `/api/pipecat/session` loads approved vocabulary server-side and supplies `ihiaContext`; client-supplied context is ignored. `scenario.py` treats it as reference data, preserves mixed terms, asks for clarification and prohibits dialect-based personality/treatment inference. The same instructions reach Gemini or OpenAI. Models, credentials, transport and audio settings are unchanged.
 
 The legacy `/api/voice-partner/turn` also appends approved vocabulary to its existing judge instructions. IHIA retrieval failures omit optional voice grounding, preserving the existing flow. The interpretation API instead returns 503, never an unapproved fallback.
@@ -175,3 +189,5 @@ Updated:
 - `src/app/api/pipecat/session/route.ts`, `route.test.ts`
 - `src/app/api/voice-partner/turn/route.ts`
 - `pipecat-agent/scenario.py`, `pipecat-agent/tests/test_scenario.py`
+
+Recording analysis requires a separate checkbox confirming both participants consent to OpenAI transcript processing and report storage. The API requires `analysisConsent: true` for IHIA recording requests. Original recording consent now accurately describes existing transcript storage.

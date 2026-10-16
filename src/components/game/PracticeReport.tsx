@@ -6,7 +6,8 @@ import type { ConversationReport as Report } from '@/schemas/conversationReport'
 
 interface Props {
   sessionId: string
-  sessionType?: 'ai_doctor_text' | 'ai_doctor_voice'
+  sessionType?: 'ai_doctor_text' | 'ai_doctor_voice' | 'human_partner' | 'customer_visit'
+  analysisConsent?: boolean
   children?: (report: Report) => React.ReactNode
 }
 
@@ -16,7 +17,7 @@ interface Props {
 const AUTO_ATTEMPTS = 2
 const TRANSIENT_STATUSES = new Set([502, 503, 504])
 
-export default function PracticeReport({ sessionId, sessionType = 'ai_doctor_voice', children }: Props) {
+export default function PracticeReport({ sessionId, sessionType = 'ai_doctor_voice', analysisConsent, children }: Props) {
   const t = useT()
   const { lang } = useLang()
   // Read at request time, not a dependency: toggling the language must not regenerate a report.
@@ -36,7 +37,7 @@ export default function PracticeReport({ sessionId, sessionType = 'ai_doctor_voi
         try {
           const res = await fetch('/api/reports/generate', {
             method: 'POST', headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ sessionType, sessionId, lang: langRef.current }), signal: controller.signal,
+            body: JSON.stringify({ sessionType, sessionId, lang: langRef.current, ...(analysisConsent === undefined ? {} : { analysisConsent }) }), signal: controller.signal,
           })
           if (res.ok) {
             const data = await res.json()
@@ -52,7 +53,7 @@ export default function PracticeReport({ sessionId, sessionType = 'ai_doctor_voi
       if (active) setFailed(true)
     })().finally(() => clearTimeout(timeout))
     return () => { active = false; clearTimeout(timeout); controller.abort() }
-  }, [sessionId, sessionType, attempt])
+  }, [sessionId, sessionType, analysisConsent, attempt])
   if (report) return <><ConversationReport report={report} outdated={false} />{children?.(report)}</>
   return <div role={failed ? 'alert' : 'status'} style={{ padding: 16, lineHeight: 1.6 }}>
     {t(failed ? 'practice.reportFailed' : 'practice.reportLoading')}

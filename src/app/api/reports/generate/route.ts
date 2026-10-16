@@ -12,6 +12,11 @@ import { adaptRoleplaySession } from '@/lib/report/adapters/fromRoleplaySession'
 import { adaptConversationTurns } from '@/lib/report/adapters/fromConversationTurns'
 import { adaptAgentSession } from '@/lib/report/adapters/fromAgentSession'
 import { adaptCustomerVisit } from '@/lib/report/adapters/fromCustomerVisit'
+import { createOpenAiJsonComplete } from '@/agents/openai-complete'
+import { approvedKnowledge, ihiaEnabled } from '@/lib/ihia/server'
+import { recordingDialectContext, RECORDING_LANGUAGE_RULES } from '@/lib/ihia/recording'
+
+export const maxDuration = 60
 
 const RETRY_NOTE = '\n\nYour previous response was not valid JSON in the exact shape requested, or had no usable evidence. Return ONLY the JSON object, with every evidence reference a real segmentIndex from the transcript above.'
 
@@ -26,6 +31,7 @@ async function loadSessionData(
     const table = sessionType === 'human_partner' ? 'roleplay_sessions' : 'customer_visits'
     const { data: session } = await supabase.from(table).select('*').eq('id', sessionId).eq('rep_id', repId).single()
     if (!session) return null
+    if (sessionType === 'customer_visit' && !session.consent_confirmed_at) return null
     // transcript_segments spans every transcript version ever written for
     // this session (033_conversation_reports.sql), so the latest version
     // has to be picked out client-side. Ordering purely by segment_index
@@ -69,12 +75,20 @@ export async function POST(request: Request) {
   if (!(await checkRateLimit('report-generate', user.id, 20, 3600)))
     return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 })
 
-  const body = await request.json().catch(() => null) as { sessionType?: string; sessionId?: string; lang?: string } | null
+  const body = await request.json().catch(() => null) as { sessionType?: string; sessionId?: string; lang?: string; analysisConsent?: boolean } | null
   if (!body || !isReportSessionType(body.sessionType) || typeof body.sessionId !== 'string')
     return NextResponse.json({ error: 'Invalid sessionType or sessionId' }, { status: 400 })
 
   const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return NextResponse.json({ error: 'Report generation is not configured' }, { status: 503 })
+  const ihiaRecording = ihiaEnabled() && (body.sessionType === 'human_partner' || body.sessionType === 'customer_visit')
+  if (ihiaRecording && body.analysisConsent !== true)
+    return NextResponse.json({ error: 'Both participants must consent to transcript AI analysis and report storage' }, { status: 400 })
+  // Use the same verified OpenAI connection as discovery for the IHIA recording path.
+  // Keep all other existing report/provider behavior unchanged; do not silently retry providers.
+  const complete = ihiaRecording
+    ? (process.env.OPENAI_API_KEY ? createOpenAiJsonComplete(process.env.OPENAI_API_KEY) : null)
+    : (apiKey ? createAnthropicComplete(apiKey) : null)
+  if (!complete) return NextResponse.json({ error: 'Report generation is not configured' }, { status: 503 })
 
   const loaded = await loadSessionData(supabase, body.sessionType, body.sessionId, user.id)
   if (!loaded) return NextResponse.json({ error: 'Session not found or has no transcript yet' }, { status: 404 })
@@ -82,12 +96,23 @@ export async function POST(request: Request) {
 
   const counterpartSignals = extractSocialSignals(segments, 'counterpart')
   const repSignals = extractSocialSignals(segments, 'rep')
-  const complete = createAnthropicComplete(apiKey)
+  let languageContext = ''
+  if (ihiaRecording) {
+    // Optional dictionary lookup. Failure never promotes drafts or turns a guess into verified knowledge.
+    const knowledge = await approvedKnowledge(supabase).catch(() => [])
+    languageContext = recordingDialectContext(segments, knowledge)
+  }
   // Four small completions in parallel: a single full-report completion took
   // 23-27s and hit the host's synchronous function limit (504).
   const parts: readonly ReportPart[] = REPORT_PARTS
   const built = Object.fromEntries(parts.map(part =>
     [part, buildReportPrompt(segments, context, counterpartSignals, repSignals, part, body.lang === 'ar' ? 'ar' : 'en')])) as Record<ReportPart, ReturnType<typeof buildReportPrompt>>
+  if (ihiaRecording) {
+    for (const part of parts) {
+      built[part].system += `\n\n${RECORDING_LANGUAGE_RULES}`
+      built[part].prompt += `\n\n${languageContext}`
+    }
+  }
   const parsedParts: Partial<Record<ReportPart, Record<string, unknown>>> = {}
   let report = null
   const attempts = ['', RETRY_NOTE]

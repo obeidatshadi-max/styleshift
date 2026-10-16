@@ -52,7 +52,7 @@ describe('live practice feedback', () => {
       ? Response.json({ outcome: 'won', objectionType: 'doubt', clearSteps: [], turnCount: 1 }) : new Response('', { status: 500 }))
     await begin()
     await act(async () => fireEvent.click(screen.getByText('End Call')))
-    await screen.findByText('Your call was scored, but the session could not be saved.')
+    await screen.findByText('Your call was scored, but we could not save the session.')
     expect(screen.getByText('Concern resolved')).toBeTruthy()
   })
   it('distinguishes an interrupted call from a scored result', async () => {

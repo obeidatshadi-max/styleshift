@@ -28,7 +28,7 @@ try {
     grant usage on schema auth to anon, authenticated;
     grant execute on function auth.uid() to anon, authenticated;`)
   await db.query('insert into auth.users values ($1), ($2)', [reviewer, ordinary])
-  await db.exec(await readFile(new URL('../supabase/migrations/20261016074203_ihia_knowledge.sql', import.meta.url), 'utf8'))
+  await db.exec(await readFile(new URL('../supabase/migrations/20261016091923_ihia_knowledge.sql', import.meta.url), 'utf8'))
   await db.query('insert into public.ihia_reviewers values ($1)', [reviewer])
   await as('authenticated', reviewer)
   const entry = (await db.query(`insert into public.ihia_entries

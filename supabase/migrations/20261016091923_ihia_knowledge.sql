@@ -1,4 +1,5 @@
 -- Global, explicitly reviewed linguistic knowledge. No patient data or transcripts.
+-- Filename matches the version recorded by the authorized hosted migration.
 create table public.ihia_reviewers (
   user_id uuid primary key references auth.users(id) on delete cascade
 );

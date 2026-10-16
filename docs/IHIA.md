@@ -32,7 +32,7 @@ Baghdad is the default. Basra, Mosul, Najaf and Iraq-wide tags provide an extens
 
 ## Review and database security
 
-Migration `20261016074203_ihia_knowledge.sql` adds `ihia_reviewers`, `ihia_entries`, `ihia_history` and private audit trigger functions.
+Migration `20261016091923_ihia_knowledge.sql` adds `ihia_reviewers`, `ihia_entries`, `ihia_history` and private audit trigger functions. Its filename matches the recorded hosted migration version; no remote migration history was rewritten.
 
 - Only a database administrator provisions reviewer grants. Users cannot grant themselves access; editable profile metadata is not an authorization source.
 - Signed-in users read approved entries only. Reviewers can inspect drafts/rejections/history, create drafts and review/correct entries. Anonymous clients have no table privileges.
@@ -70,7 +70,7 @@ No STT boosting parameters were added. The realtime providers receive vocabulary
    npx supabase migration up --local
    ```
 
-   This applies **all pending local migrations**. Review the pending list first. Existing filenames mix numeric/timestamp conventions; do not repair remote history for this feature. Alternatively execute only `supabase/migrations/20261016074203_ihia_knowledge.sql` in the nonproduction SQL editor. This task did not apply a migration to any hosted database.
+   This applies **all pending local migrations**. Review the pending list first. Existing filenames mix numeric/timestamp conventions; do not repair remote history for this feature. Alternatively execute only `supabase/migrations/20261016091923_ihia_knowledge.sql` in the nonproduction SQL editor. The subsequent authorized production rollout already applied this migration to StyleShift; do not reapply it there.
 
 3. In that same nonproduction database, provision your test user's UUID:
 
@@ -130,6 +130,8 @@ Still needed: Iraqi expert curation, regional evaluation corpus, live recognitio
 
 The initial implementation was validated without production changes. The user subsequently authorized push and deployment. During rollout, the additive IHIA migration was applied to the existing StyleShift Supabase project and `IHIA_ENABLED=true` was configured for Netlify production. No reviewer was provisioned and no expressions were automatically approved. Deployment status should be checked against the published commit in Netlify.
 
+The production web build and GitHub CI/smoke workflows passed for the feature commit. The Pipecat agent was rebuilt and reached ready status using build `bab58034-2a2e-4860-a056-7b84a948fd0b`, preserving `us-west`, `arm64`, `agent-1x`, min/max replicas 0/2, the existing secret set and the 600-second session limit. Anonymous HTTP checks confirmed `/login` returns 200 and `/ihia`, `/play`, `/dashboard` and the knowledge API redirect to login. Authenticated expert review and live audio evaluation still require a designated reviewer and approved vocabulary.
+
 ## All modified files
 
 New:
@@ -139,7 +141,7 @@ New:
 - `src/app/api/ihia/interpret/route.ts`, `knowledge/route.ts`, `ihia.test.ts`
 - `src/app/ihia/page.tsx`
 - `src/components/IhiaPanel.tsx`, `IhiaPanel.test.tsx`
-- `supabase/migrations/20261016074203_ihia_knowledge.sql`
+- `supabase/migrations/20261016091923_ihia_knowledge.sql`
 - `tools/verify-ihia-db.mjs`
 - `docs/IHIA.md`
 

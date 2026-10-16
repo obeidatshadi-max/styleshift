@@ -1,13 +1,15 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { POST } from './route'
 
-const mocks = vi.hoisted(() => ({ createClient: vi.fn(), checkRateLimit: vi.fn() }))
+const mocks = vi.hoisted(() => ({ createClient: vi.fn(), checkRateLimit: vi.fn(), vocabulary: vi.fn() }))
+vi.mock('@/lib/ihia/server', () => ({ voiceVocabulary: mocks.vocabulary }))
 vi.mock('@/lib/supabase-server', () => ({ createClient: mocks.createClient }))
 vi.mock('@/lib/rate-limit', () => ({ checkRateLimit: mocks.checkRateLimit }))
 
 let fetchMock: ReturnType<typeof vi.fn>
 let query: Record<string, ReturnType<typeof vi.fn>>
 beforeEach(() => {
+  mocks.vocabulary.mockResolvedValue(undefined)
   vi.stubEnv('PIPECAT_CLOUD_PUBLIC_KEY', 'test-key')
   vi.stubEnv('AI_VOICE_PARTNER_LIVE_ENABLED', 'true')
   mocks.checkRateLimit.mockResolvedValue(true)
@@ -28,6 +30,13 @@ const request = (body: unknown) => new Request('http://localhost/api/pipecat/ses
 })
 
 describe('shared Pipecat session endpoint', () => {
+  it('loads IHIA vocabulary server-side and ignores client-supplied vocabulary', async () => {
+    mocks.vocabulary.mockResolvedValue('Approved Iraqi vocabulary snapshot')
+    await POST(request({ doctorId: 'doctor', ihiaContext: 'unapproved client commands' }))
+    const payload = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(payload.body.ihiaContext).toBe('Approved Iraqi vocabulary snapshot')
+    expect(JSON.stringify(payload)).not.toContain('unapproved client commands')
+  })
   it.each(['gemini', 'openai'])('forwards %s through the same Cloud interface', async provider => {
     const response = await POST(request({ doctorId: 'doctor', provider, lang: 'en' }))
     expect(response.status).toBe(200)

@@ -2,6 +2,8 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+Optional [Iraqi Healthcare Intelligence (IHIA)](docs/IHIA.md) adds approved expression review, contextual interpretation and existing-agent vocabulary grounding. Disabled by default; see the guide for migration/reviewer setup, testing and limitations. No new AI key is required for interpretation.
+
 First, run the development server:
 
 ```bash

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { isLiveDifficulty, type LiveDifficulty } from '@/lib/voice-live-core'
 import type { Doctor } from '@/types/game'
+import { voiceVocabulary } from '@/lib/ihia/server'
 
 const AGENT_NAME = process.env.PIPECAT_AGENT_NAME ?? 'styleshift-voice-partner'
 
@@ -33,7 +34,8 @@ export async function POST(req: Request) {
   const { data: doctor } = await supabase.from('doctors').select('*').eq('id', body.doctorId).eq('rep_id', user.id).single()
   if (!doctor) return NextResponse.json({ error: 'doctor_not_found' }, { status: 404 })
   const d = doctor as Doctor
-  const sessionBody = { ...(body.provider ? { provider: body.provider } : {}), lang: body.lang === 'en' ? 'en' : 'ar', difficulty: body.difficulty ?? 'realistic', doctor: {
+  const ihiaContext = await voiceVocabulary(supabase)
+  const sessionBody = { ...(ihiaContext ? { ihiaContext } : {}), ...(body.provider ? { provider: body.provider } : {}), lang: body.lang === 'en' ? 'en' : 'ar', difficulty: body.difficulty ?? 'realistic', doctor: {
     name: d.name, specialty: d.specialty, style: d.style ?? 'analytical', key_phrases: d.key_phrases,
     objections: d.objections, objection_notes: d.objection_notes, hidden_concern: d.hidden_concern,
     product_context: d.product_context, meeting_stage: d.meeting_stage,

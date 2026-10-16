@@ -12,6 +12,7 @@ import { validateAudioUpload } from '@/lib/audio-upload'
 import { analyzeVocalDelivery } from '@/lib/oruk'
 import { transcribeWithDeepgram } from '@/lib/deepgram'
 import type { Doctor, DoctorVisit } from '@/types/game'
+import { voiceVocabulary } from '@/lib/ihia/server'
 
 // A full conversation is at most TURN_CAP rep lines plus TURN_CAP doctor lines.
 const MAX_HISTORY_ENTRIES = 2 * TURN_CAP
@@ -138,6 +139,7 @@ export async function POST(req: Request) {
   if (!repText) return NextResponse.json({ error: 'upstream' }, { status: 502 })
 
   const turnCount = history.filter(h => h.role === 'rep').length + 1
+  const ihiaContext = await voiceVocabulary(supabase)
   const prompt = buildJudgePrompt(
     doctor as Doctor, style, lang, historyContext, history, repText, turnCount, objectionTypeRaw, state, clarifyUnlocked,
   )
@@ -150,7 +152,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 400,
-        system: SYSTEM,
+        system: ihiaContext ? `${SYSTEM}\n${ihiaContext}` : SYSTEM,
         messages: [{ role: 'user', content: prompt }],
       }),
     })

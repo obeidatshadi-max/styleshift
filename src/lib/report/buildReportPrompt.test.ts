@@ -80,6 +80,7 @@ describe('buildReportPrompt', () => {
     expect(ar).toContain('Write every free-text field in Arabic')
     expect(ar).toMatch(/enumerated values .* stay in English/)
     expect(en).toContain('Write every free-text field in English.')
+    expect(en).toContain('plain, simple English')
     expect(en).not.toContain('in Arabic')
     expect(buildReportPrompt(segments, context, []).prompt).toContain('in English')
   })

@@ -66,7 +66,11 @@ const SHAPES = Object.fromEntries((Object.keys(PART_KEYS) as ReportPart[]).map(p
   [part, '{\n' + PART_KEYS[part].map(key => SHAPE_FIELDS[key]).join(',\n') + '\n}'])) as Record<ReportPart, string>
 
 const LANGUAGE_RULE: Record<ReportLang, string> = {
-  en: 'Write every free-text field in English.',
+  en: 'Write every free-text field in English. The reader is a sales rep who is NOT a native English speaker, so use plain, simple English: ' +
+    'short sentences (about 15 words or fewer), one idea per sentence, common everyday words, and active voice ("you asked", not "a question was asked"). ' +
+    'No idioms, metaphors, slang or phrasal verbs (write "find out", not "uncover"; "ask", not "probe"; "show", not "demonstrate"; "use", not "leverage"; "next step", not "way forward"). ' +
+    'Avoid psychology or sales jargon such as "rapport", "objection handling", "value proposition" or "pain point"; say what happened in simple words instead. ' +
+    'Talk to the rep as "you". Keep product names, medical terms, numbers and units exactly as given.',
   ar: 'Write every free-text field in Arabic (clear Modern Standard Arabic, natural for a pharmaceutical sales rep in Iraq). ' +
     'Keep drug and product names, numbers and units as given. JSON keys and enumerated values (such as "partial" or "inferred") stay in English exactly as listed below. ' +
     'Every field typed "string" is free text and MUST be Arabic, including "behavior", "whatHappened", "whyItMattered", "improvement", "interpretation", ' +

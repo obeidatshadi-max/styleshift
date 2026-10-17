@@ -3,7 +3,7 @@ import { retrieve, type Knowledge } from './core'
 
 export const RECORDING_LANGUAGE_RULES = `IHIA Iraqi-language support for an existing recorded conversation:
 Understand Iraqi colloquial Arabic and mixed Arabic-English medical/workplace terms in context.
-Use clear Arabic or English (the report's requested language) for explanations, without rewriting the transcript.
+Use clear Arabic or plain, simple English (the report's requested language) for explanations, without rewriting the transcript. English readers are not native speakers: short sentences, common words, no idioms.
 The original words, speaker roles, segment indices and timings remain the only evidence. Never replace a quote with a translation.
 Distinguish literal words from possible contextual meaning. Mark ambiguous interpretations inferred/uncertain and ask for clarification.
 Do not assume that a colloquial phrase is a firm agreement, rejection, diagnosis or clinical claim.

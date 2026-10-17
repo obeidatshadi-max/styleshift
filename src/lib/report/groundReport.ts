@@ -68,7 +68,7 @@ export function buildVoiceMeasurements(deterministicMetrics: ReportContext['dete
     ),
     rapid_turn_switches: fromRatioOrCount(
       'rapid_turn_switches', 'rapidTurnSwitches', 'count',
-      'Number of quick back-and-forth exchanges — not confirmed interruptions, just fast turn-taking.',
+      'How many times the speakers changed very quickly. This does not mean someone interrupted.',
     ),
     question_frequency: fromRatioOrCount(
       'question_frequency', 'questionRatio', 'ratio',

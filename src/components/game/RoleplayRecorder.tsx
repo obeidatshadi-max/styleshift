@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useT } from '@/lib/i18n'
+import RoleplayLanguageCards from './RoleplayLanguageCards'
 import { useRoleplayRecorder } from '@/hooks/useRoleplayRecorder'
 import { buildRoleplayInsight } from '@/lib/roleplay-insight'
 import { isLowSampleSession } from '@/lib/roleplay-core'
@@ -258,6 +259,8 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
           </div>
           <p style={{ fontSize: 11.5, color: 'var(--ink-dim)', lineHeight: 1.5, marginTop: 5 }}>{t('roleplay.paraphraseHint')}</p>
         </div>
+
+        {r.language && <RoleplayLanguageCards signals={r.language} />}
 
         <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5 }}>

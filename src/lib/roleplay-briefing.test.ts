@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RoleplaySessionSummary } from '@/types/game'
-import { buildRoleplayBriefing, meetsGoal, displayValue } from './roleplay-briefing'
+import { buildRoleplayBriefing, meetsGoal, displayValue, missedLanguageSkills } from './roleplay-briefing'
 
 function session(over: Partial<RoleplaySessionSummary> = {}): RoleplaySessionSummary {
   return {
@@ -45,5 +45,28 @@ describe('meetsGoal / displayValue', () => {
   it('scales ratios to percent and leaves scores alone', () => {
     expect(displayValue(session({ talk_ratio: 0.624 }), 'talkRatio')).toBe(62)
     expect(displayValue(session({ active_listening_score: 55 }), 'activeListening')).toBe(55)
+  })
+})
+
+describe('missedLanguageSkills', () => {
+  const lang = (over: Partial<NonNullable<RoleplaySessionSummary['language']>> = {}) => ({
+    empathy: { count: 1 }, paraphrasing: { count: 1 }, andBut: { and: 4, but: 1 }, buildOnPositive: { positives: 2, builtOn: 2 }, ...over,
+  })
+
+  it('is empty for sessions saved before skills were tracked', () => {
+    expect(missedLanguageSkills(session())).toEqual([])
+  })
+
+  it('lists every skill the rep did not show', () => {
+    const missed = missedLanguageSkills(session({ language: lang({ empathy: { count: 0 }, paraphrasing: { count: 0 }, andBut: { and: 1, but: 3 }, buildOnPositive: { positives: 2, builtOn: 1 } }) }))
+    expect(missed).toEqual(['empathy', 'paraphrasing', 'andBut', 'buildOnPositive'])
+  })
+
+  it('does not call build-on-positive missed when there was no positive remark', () => {
+    expect(missedLanguageSkills(session({ language: lang({ buildOnPositive: { positives: 0, builtOn: 0 } }) }))).toEqual([])
+  })
+
+  it('feeds the briefing', () => {
+    expect(buildRoleplayBriefing([session({ language: lang({ empathy: { count: 0 } }) })])!.missedSkills).toEqual(['empathy'])
   })
 })

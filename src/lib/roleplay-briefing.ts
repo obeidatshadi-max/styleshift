@@ -1,5 +1,6 @@
 import type { RoleplaySessionSummary } from '@/types/game'
 import { metricValue, SCALE, type RoleplayMetricKey } from './roleplay-aggregate'
+import { andButOnGoal } from './roleplay-language'
 import {
   TALK_RATIO_THRESHOLD, ADAPTATION_THRESHOLD, QUESTION_RATIO_THRESHOLD,
   OPEN_QUESTION_RATIO_THRESHOLD, PARAPHRASE_THRESHOLD, ACTIVE_LISTENING_THRESHOLD,
@@ -33,6 +34,25 @@ export function meetsGoal(key: RoleplayMetricKey, shown: number): boolean {
   }
 }
 
+export type LanguageSkill = 'empathy' | 'paraphrasing' | 'andBut' | 'buildOnPositive'
+
+/**
+ * Word-level skills the rep did not show in a session. Empty when the session
+ * predates tracking (no `language`) — absence of data is not a miss. "and/but"
+ * and "build on the positive" only count as missed when there was something
+ * to judge (some "but" said, or a positive remark made).
+ */
+export function missedLanguageSkills(s: RoleplaySessionSummary): LanguageSkill[] {
+  const l = s.language
+  if (!l) return []
+  const missed: LanguageSkill[] = []
+  if (l.empathy.count === 0) missed.push('empathy')
+  if (l.paraphrasing.count === 0) missed.push('paraphrasing')
+  if (!andButOnGoal(l.andBut)) missed.push('andBut')
+  if (l.buildOnPositive.positives > 0 && l.buildOnPositive.builtOn < l.buildOnPositive.positives) missed.push('buildOnPositive')
+  return missed
+}
+
 export interface RoleplayBriefing {
   count: number
   lastAt: string
@@ -40,6 +60,8 @@ export interface RoleplayBriefing {
   focus: { metric: RoleplayMetricKey; value: number } | null
   /** A point the rep did well in the most recent session, if any. */
   strength: { metric: RoleplayMetricKey; value: number } | null
+  /** Word-level skills not shown last time (empathy, paraphrasing, and/but, build on positive). */
+  missedSkills: LanguageSkill[]
 }
 
 /**
@@ -64,5 +86,5 @@ export function buildRoleplayBriefing(sessions: RoleplaySessionSummary[]): Rolep
     if (value != null && meetsGoal(metric, value)) { strength = { metric, value }; break }
   }
 
-  return { count: sessions.length, lastAt: last.created_at, focus, strength }
+  return { count: sessions.length, lastAt: last.created_at, focus, strength, missedSkills: missedLanguageSkills(last) }
 }

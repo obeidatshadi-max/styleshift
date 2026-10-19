@@ -1,5 +1,6 @@
 import type { SpsKey, SpsResult } from '@/lib/sps-core'
 import type { ObjectionCategory } from '@/lib/social-style'
+import type { LanguageSignals } from '@/lib/roleplay-language'
 
 export type StyleKey = 'driver' | 'expressive' | 'amiable' | 'analytical'
 
@@ -182,6 +183,8 @@ export interface RoleplaySessionSummary {
   rep_style: StyleKey | null
   rep_confidence: number | null
   adaptation_score: number | null
+  /** Word-level skill counts; null on sessions saved before they were tracked. */
+  language?: LanguageSignals | null
 }
 
 // A coaching assignment: the manager targets one objection category or one

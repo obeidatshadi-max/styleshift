@@ -17,7 +17,7 @@ const HIGHER_IS_BETTER: Record<RoleplayMetricKey, boolean> = {
 // Ratios (talk/question/openQuestion/paraphrase) are stored 0-1 and compared
 // in percentage points; active listening and adaptation score are already
 // stored 0-100.
-const SCALE: Record<RoleplayMetricKey, number> = {
+export const SCALE: Record<RoleplayMetricKey, number> = {
   talkRatio: 100,
   questionRatio: 100,
   openQuestionRatio: 100,
@@ -26,7 +26,7 @@ const SCALE: Record<RoleplayMetricKey, number> = {
   adaptationScore: 1,
 }
 
-function metricValue(s: RoleplaySessionSummary, key: RoleplayMetricKey): number | null {
+export function metricValue(s: RoleplaySessionSummary, key: RoleplayMetricKey): number | null {
   switch (key) {
     case 'talkRatio': return s.talk_ratio
     case 'questionRatio': return s.question_ratio

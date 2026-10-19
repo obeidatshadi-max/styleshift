@@ -26,6 +26,12 @@ describe('empathy and paraphrasing', () => {
     expect(s.empathy.count).toBe(2)
   })
 
+  it('does not count a paraphrase lead-in as empathy', () => {
+    const s = signals([['A', 'If I understand correctly, the price is high?'], ['B', 'yes'], ['A', 'I can understand what you are saying.']])
+    expect(s.paraphrasing.count).toBe(1)
+    expect(s.empathy.count).toBe(1)
+  })
+
   it('counts restating lead-ins as paraphrasing', () => {
     const s = signals([['A', 'So you are saying the price is high?'], ['B', 'yes'], ['A', 'Hello there']])
     expect(s.paraphrasing.count).toBe(1)

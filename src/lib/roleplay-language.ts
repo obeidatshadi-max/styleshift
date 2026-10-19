@@ -130,6 +130,17 @@ function sharedLongWords(a: string, b: string): number {
   return n
 }
 
+/**
+ * Empathy and paraphrasing are separate skills, so a restating lead-in
+ * ("if I understand correctly") must not also count as empathy through the
+ * "i understand" inside it. Paraphrase phrases are blanked out first.
+ */
+function hasEmpathy(normalizedText: string): boolean {
+  let rest = ` ${normalizedText} `
+  for (const p of PARAPHRASE_PHRASES) rest = rest.split(` ${p} `).join(' ')
+  return hasPhrase(rest.trim(), EMPATHY_PHRASES)
+}
+
 export function computeLanguageSignals(turns: Turn[], repSpeaker: string): LanguageSignals {
   let empathy = 0, paraphrasing = 0, and = 0, but = 0, positives = 0, builtOn = 0
   let empathyNeeded = 0, empathyMet = 0, paraNeeded = 0, paraMet = 0
@@ -137,7 +148,7 @@ export function computeLanguageSignals(turns: Turn[], repSpeaker: string): Langu
   turns.forEach((turn, i) => {
     const n = normalizeForMatch(turn.text)
     if (turn.speaker === repSpeaker) {
-      if (hasPhrase(n, EMPATHY_PHRASES)) empathy++
+      if (hasEmpathy(n)) empathy++
       if (hasPhrase(n, PARAPHRASE_PHRASES)) paraphrasing++
       for (const w of tokens(turn.text)) {
         if (AND_WORDS.includes(w)) and++
@@ -151,7 +162,7 @@ export function computeLanguageSignals(turns: Turn[], repSpeaker: string): Langu
 
     if (hasPhrase(n, FEELING_TERMS)) {
       empathyNeeded++
-      if (reply && hasPhrase(reply, EMPATHY_PHRASES)) empathyMet++
+      if (reply && hasEmpathy(reply)) empathyMet++
     }
     if (hasPhrase(n, CONCERN_TERMS) || tokens(turn.text).length >= LONG_TURN_WORDS) {
       paraNeeded++

@@ -8,10 +8,19 @@ import type { Turn } from './roleplay-core'
  * missed phrase may still be said another way.
  */
 export interface LanguageSignals {
-  /** Rep turns that voiced understanding of the partner's feeling. */
-  empathy: { count: number }
-  /** Rep turns that restated the partner's point ("so you are saying..."). */
-  paraphrasing: { count: number }
+  /**
+   * Rep turns that voiced understanding of the partner's feeling. `needed` =
+   * partner turns that voiced a feeling or difficulty; `met` = how many of
+   * those the rep's very next reply answered with empathy. Both absent on
+   * sessions saved before "when needed" tracking.
+   */
+  empathy: { count: number; needed?: number; met?: number }
+  /**
+   * Rep turns that restated the partner's point ("so you are saying...").
+   * `needed` = partner turns with a concern or a long explanation; `met` = how
+   * many the rep's next reply restated. Both absent on older sessions.
+   */
+  paraphrasing: { count: number; needed?: number; met?: number }
   /** Whole-word "and" versus "but"/"however" in the rep's speech. */
   andBut: { and: number; but: number }
   /** Positive remarks by the partner, and how many the rep's next reply built on. */
@@ -61,6 +70,25 @@ export const PARAPHRASE_PHRASES = norm([
   'خلني اتاكد', 'خليني اتاكد',
 ])
 
+/** Partner words that signal a feeling or difficulty the rep should acknowledge. */
+const FEELING_TERMS = norm([
+  'worried', 'worry', 'concerned', 'concern', 'frustrated', 'frustrating', 'disappointed', 'stressed', 'afraid', 'nervous',
+  'upset', 'unhappy', 'difficult', 'hard for me', 'struggling', 'struggle', 'tired', 'overwhelmed', 'annoyed', 'unfortunately',
+  'problem', 'complaint', 'not happy', 'not satisfied', 'worried about',
+  'قلق', 'قلقان', 'قلقه', 'خايف', 'متضايق', 'زعلان', 'محبط', 'تعبان', 'مشكله', 'صعب', 'صعبه', 'مو راضي', 'غير راضي',
+  'منزعج', 'مستاء', 'مشكلتي', 'شكوي', 'للاسف', 'ضغط',
+])
+
+/** Words that mark a partner turn as a concern or objection worth restating. */
+const CONCERN_TERMS = norm([
+  'expensive', 'too high', 'too much', 'cannot', "can't", 'not sure', "don't think", 'doubt', 'no time', 'already use',
+  'side effect', 'side effects', 'why', 'i prefer', 'happy with my', 'not interested',
+  'غالي', 'غاليه', 'ما اقدر', 'مو متاكد', 'مش متاكد', 'ما عندي وقت', 'اعراض جانبيه', 'اشك', 'لماذا', 'ليش', 'افضل', 'مو مهتم', 'غير مهتم',
+])
+
+/** A partner turn at least this many words long explains something worth restating. */
+const LONG_TURN_WORDS = 25
+
 const BUT_EN = ['but', 'however']
 const BUT_AR = norm(['لكن', 'ولكن', 'لاكن', 'ولاكن'])
 // Arabic "و" is normally written attached to the next word, so only the
@@ -104,6 +132,7 @@ function sharedLongWords(a: string, b: string): number {
 
 export function computeLanguageSignals(turns: Turn[], repSpeaker: string): LanguageSignals {
   let empathy = 0, paraphrasing = 0, and = 0, but = 0, positives = 0, builtOn = 0
+  let empathyNeeded = 0, empathyMet = 0, paraNeeded = 0, paraMet = 0
 
   turns.forEach((turn, i) => {
     const n = normalizeForMatch(turn.text)
@@ -116,20 +145,46 @@ export function computeLanguageSignals(turns: Turn[], repSpeaker: string): Langu
       }
       return
     }
-    // Partner turn: a positive remark counts once, judged against the rep's very next reply.
+    // Partner turn: judged against the rep's very next reply.
+    const next = turns[i + 1]
+    const reply = next && next.speaker === repSpeaker ? normalizeForMatch(next.text) : null
+
+    if (hasPhrase(n, FEELING_TERMS)) {
+      empathyNeeded++
+      if (reply && hasPhrase(reply, EMPATHY_PHRASES)) empathyMet++
+    }
+    if (hasPhrase(n, CONCERN_TERMS) || tokens(turn.text).length >= LONG_TURN_WORDS) {
+      paraNeeded++
+      if (reply && hasPhrase(reply, PARAPHRASE_PHRASES)) paraMet++
+    }
+
+    // A positive remark counts once.
     const positive = matchedPositive(n)
     if (!positive) return
     positives++
-    const next = turns[i + 1]
-    if (!next || next.speaker !== repSpeaker) return
-    const reply = normalizeForMatch(next.text)
+    if (reply === null) return
     if (hasPhrase(reply, BUILD_ON_PHRASES) || hasPhrase(reply, [positive]) || sharedLongWords(n, reply) >= 2) builtOn++
   })
 
-  return { empathy: { count: empathy }, paraphrasing: { count: paraphrasing }, andBut: { and, but }, buildOnPositive: { positives, builtOn } }
+  return {
+    empathy: { count: empathy, needed: empathyNeeded, met: empathyMet },
+    paraphrasing: { count: paraphrasing, needed: paraNeeded, met: paraMet },
+    andBut: { and, but }, buildOnPositive: { positives, builtOn },
+  }
 }
 
 /** "and" should clearly outweigh "but": at least twice as often, or no "but" at all. */
 export function andButOnGoal(s: LanguageSignals['andBut']): boolean {
   return s.but === 0 || s.and >= s.but * 2
+}
+
+/**
+ * How well a skill was applied when the moment called for it: 'none' = no such
+ * moment arose (or older session without the data), 'missed' = 0, 'partly' =
+ * some, 'done' = all.
+ */
+export function neededVerdict(needed: number | undefined, met: number | undefined): 'none' | 'done' | 'partly' | 'missed' {
+  if (!needed) return 'none'
+  const m = met ?? 0
+  return m >= needed ? 'done' : m > 0 ? 'partly' : 'missed'
 }

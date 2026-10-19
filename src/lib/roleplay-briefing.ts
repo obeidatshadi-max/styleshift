@@ -46,8 +46,10 @@ export function missedLanguageSkills(s: RoleplaySessionSummary): LanguageSkill[]
   const l = s.language
   if (!l) return []
   const missed: LanguageSkill[] = []
-  if (l.empathy.count === 0) missed.push('empathy')
-  if (l.paraphrasing.count === 0) missed.push('paraphrasing')
+  // With "when needed" data, a skill is missed only if a moment called for it and the rep skipped some.
+  const skipped = (k: { count: number; needed?: number; met?: number }) => (k.needed === undefined ? k.count === 0 : (k.met ?? 0) < k.needed)
+  if (skipped(l.empathy)) missed.push('empathy')
+  if (skipped(l.paraphrasing)) missed.push('paraphrasing')
   if (!andButOnGoal(l.andBut)) missed.push('andBut')
   if (l.buildOnPositive.positives > 0 && l.buildOnPositive.builtOn < l.buildOnPositive.positives) missed.push('buildOnPositive')
   return missed

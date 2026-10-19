@@ -395,7 +395,9 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
           // warmth/predicates ride alongside repRead's own proof (pace/pitch
           // range/hesitation) so the tonality report can be rebuilt from
           // history later without re-running acoustic analysis.
-          rep_metrics: built.repRead ? { ...built.repRead, warmth: built.warmth, predicates: built.predicates } : null,
+          // language (empathy/paraphrasing/and-but/build-on-positive counts) is stored
+          // even when no style read exists, so history can show it for every session.
+          rep_metrics: { ...(built.repRead ?? {}), warmth: built.warmth, predicates: built.predicates, language: built.language ?? null },
           partner_style: built.partnerRead?.style ?? null,
           partner_confidence: built.partnerRead?.confidence ?? null,
           adaptation_score: built.adaptationScore?.score ?? null,

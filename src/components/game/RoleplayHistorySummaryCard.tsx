@@ -1,7 +1,7 @@
 'use client'
 import { useT, useLang } from '@/lib/i18n'
 import { summarizeRoleplayHistory, type RoleplayMetricKey } from '@/lib/roleplay-aggregate'
-import { buildRoleplayBriefing, displayValue, meetsGoal, metricUnit } from '@/lib/roleplay-briefing'
+import { buildRoleplayBriefing, displayValue, meetsGoal, metricUnit, missedLanguageSkills } from '@/lib/roleplay-briefing'
 import type { RoleplaySessionSummary } from '@/types/game'
 
 const METRIC_LABEL_KEY: Record<RoleplayMetricKey, string> = {
@@ -23,6 +23,8 @@ const TREND_TIP_KEY: Record<RoleplayMetricKey, string> = {
   activeListening: 'roleplay.trendTip.activeListening',
   adaptationScore: 'roleplay.trendTip.adaptationScore',
 }
+
+type LanguageSkillKey = ReturnType<typeof missedLanguageSkills>[number]
 
 const row: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 2 }
 const label: React.CSSProperties = { color: 'var(--ink-dim)' }
@@ -61,6 +63,11 @@ export default function RoleplayHistorySummaryCard({ sessions, name }: { session
           </p>
         ) : (
           <p style={{ margin: '0 0 6px', color: 'var(--green)' }}>{t('roleplay.brief.allGood')}</p>
+        )}
+        {brief.missedSkills.length > 0 && (
+          <p style={{ margin: '0 0 6px', color: 'var(--amber)' }}>
+            <strong>{t('roleplay.brief.skills')}</strong> {brief.missedSkills.map(k => t(`roleplay.brief.skill.${k}`)).join('; ')}.
+          </p>
         )}
         {brief.strength && (
           <p style={{ margin: 0, color: 'var(--green)' }}>
@@ -133,6 +140,30 @@ export function RoleplaySessionCard({ session, dateText }: { session: RoleplaySe
           </div>
         )
       })}
+      {session.language && <SkillRows session={session} />}
+    </div>
+  )
+}
+
+/** Word-level skills for one session; amber when the rep did not show the skill. */
+function SkillRows({ session }: { session: RoleplaySessionSummary }) {
+  const t = useT()
+  const l = session.language!
+  const missed = new Set(missedLanguageSkills(session))
+  const rows: { key: LanguageSkillKey; title: string; value: string }[] = [
+    { key: 'empathy', title: t('lang.empathy.title'), value: String(l.empathy.count) },
+    { key: 'paraphrasing', title: t('lang.paraphrasing.title'), value: String(l.paraphrasing.count) },
+    { key: 'andBut', title: t('lang.andBut.title'), value: t('roleplay.skillAndBut', { and: l.andBut.and, but: l.andBut.but }) },
+    { key: 'buildOnPositive', title: t('lang.build.title'), value: l.buildOnPositive.positives === 0 ? '—' : `${l.buildOnPositive.builtOn}/${l.buildOnPositive.positives}` },
+  ]
+  return (
+    <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--line)' }}>
+      {rows.map(r => (
+        <div key={r.key} style={{ ...row, fontSize: 13, marginBottom: 3 }}>
+          <span style={{ ...label, fontWeight: 600 }}>{r.title}</span>
+          <span style={{ ...mono, color: missed.has(r.key) ? 'var(--amber)' : 'var(--green)' }}>{r.value}</span>
+        </div>
+      ))}
     </div>
   )
 }

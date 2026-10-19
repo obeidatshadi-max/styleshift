@@ -5,7 +5,7 @@ import { useColleagues } from '@/hooks/useColleagues'
 import { useColleagueSessions } from '@/hooks/useColleagueSessions'
 import type { Colleague } from '@/types/game'
 import RoleplayRecorder from './RoleplayRecorder'
-import RoleplayHistorySummaryCard from './RoleplayHistorySummaryCard'
+import RoleplayHistorySummaryCard, { RoleplaySessionCard } from './RoleplayHistorySummaryCard'
 
 interface Props { onExit: () => void }
 
@@ -91,7 +91,7 @@ export default function Colleagues({ onExit }: Props) {
             )}
           </>
         )}
-        {panel(t('perform.historyTitle'), <ColleagueHistory colleagueId={c.id} />)}
+        {panel(t('perform.historyTitle'), <ColleagueHistory colleagueId={c.id} name={c.name} />)}
       </>
     )
   }
@@ -146,7 +146,7 @@ function ColleagueForm({ onSave, onCancel }: { onSave: (name: string) => void; o
 const historyRow: React.CSSProperties = { fontSize:13, lineHeight:1.5, marginBottom:3 }
 const historyLabel: React.CSSProperties = { color:'var(--ink-dim)', fontWeight:600 }
 
-function ColleagueHistory({ colleagueId }: { colleagueId: string }) {
+function ColleagueHistory({ colleagueId, name }: { colleagueId: string; name: string }) {
   const t = useT()
   const { lang } = useLang()
   const { sessions, loading } = useColleagueSessions(colleagueId)
@@ -156,18 +156,9 @@ function ColleagueHistory({ colleagueId }: { colleagueId: string }) {
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-      <RoleplayHistorySummaryCard sessions={sessions} />
+      <RoleplayHistorySummaryCard sessions={sessions} name={name} />
       {sessions.map(s => (
-        <div key={s.id} style={{ border:'1px solid var(--line)', borderRadius:10, padding:'10px 12px', background:'rgba(0,0,0,.18)' }}>
-          <div style={{ fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-dim)', marginBottom:6 }}>
-            {new Date(s.created_at).toLocaleDateString(lang === 'ar' ? 'ar' : 'en')}
-          </div>
-          <div style={historyRow}><span style={historyLabel}>{t('roleplay.talkRatio')}:</span> {Math.round(s.talk_ratio * 100)}%</div>
-          <div style={historyRow}><span style={historyLabel}>{t('roleplay.questionRatio')}:</span> {Math.round(s.question_ratio * 100)}%</div>
-          {s.open_question_ratio != null && <div style={historyRow}><span style={historyLabel}>{t('roleplay.openQuestionRatio')}:</span> {Math.round(s.open_question_ratio * 100)}%</div>}
-          {s.paraphrase_score != null && <div style={historyRow}><span style={historyLabel}>{t('roleplay.paraphraseScore')}:</span> {Math.round(s.paraphrase_score * 100)}%</div>}
-          {s.active_listening_score != null && <div style={{ ...historyRow, marginBottom:0 }}><span style={historyLabel}>{t('roleplay.activeListeningTitle')}:</span> {s.active_listening_score}</div>}
-        </div>
+        <RoleplaySessionCard key={s.id} session={s} dateText={new Date(s.created_at).toLocaleString(lang === 'ar' ? 'ar' : 'en', { dateStyle: 'short', timeStyle: 'short' })} />
       ))}
     </div>
   )

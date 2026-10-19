@@ -10,7 +10,7 @@ import { useDoctorTextSimulations } from '@/hooks/useDoctorTextSimulations'
 import { useDoctorCoachDebriefs } from '@/hooks/useDoctorCoachDebriefs'
 import { quoted } from '@/lib/quote'
 import PastSimulation from './PastSimulation'
-import RoleplayHistorySummaryCard from './RoleplayHistorySummaryCard'
+import RoleplayHistorySummaryCard, { RoleplaySessionCard } from './RoleplayHistorySummaryCard'
 import { deriveStyle, OBJECTION_CATEGORIES } from '@/lib/social-style'
 import type { Assertiveness, Responsiveness } from '@/lib/social-style'
 import { L2_OBJECTION } from '@/lib/scenario-meta'
@@ -291,7 +291,7 @@ export default function VisitPrep({ onExit, initialDoctorId = '' }: Props) {
           <button onClick={() => setView({ mode: 'logVisit', doctor: d })} style={{ ...ghostBtn, fontSize:11, padding:'6px 12px' }}>{t('visit.logVisit')}</button>
         )}
 
-        {panel(t('visit.roleplayHistoryTitle'), <DoctorRoleplayHistory doctorId={d.id} />)}
+        {panel(t('visit.roleplayHistoryTitle'), <DoctorRoleplayHistory doctorId={d.id} name={d.name} />)}
       </>
     )
   }
@@ -943,7 +943,7 @@ function DoctorHistory({ doctorId }: { doctorId: string }) {
   )
 }
 
-function DoctorRoleplayHistory({ doctorId }: { doctorId: string }) {
+function DoctorRoleplayHistory({ doctorId, name }: { doctorId: string; name: string }) {
   const t = useT()
   const { lang } = useLang()
   const { sessions, loading } = useDoctorRoleplaySessions(doctorId)
@@ -966,7 +966,7 @@ function DoctorRoleplayHistory({ doctorId }: { doctorId: string }) {
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-      {sessions.length > 0 && <RoleplayHistorySummaryCard sessions={sessions} />}
+      {sessions.length > 0 && <RoleplayHistorySummaryCard sessions={sessions} name={name} />}
       {entries.map(entry => entry.kind === 'text' ? (
         <button key={entry.sim.id} type="button" onClick={() => setOpenSimId(entry.sim.id)}
           style={{ ...card, display:'block', width:'100%', textAlign:'start', cursor:'pointer', font:'inherit', color:'inherit' }}>
@@ -976,14 +976,7 @@ function DoctorRoleplayHistory({ doctorId }: { doctorId: string }) {
           <div style={{ ...historyRow, marginBottom:0, color:'var(--cyan, var(--ink))' }}>{t('visit.viewReport')} ›</div>
         </button>
       ) : (
-        <div key={entry.session.id} style={card}>
-          <div style={dateStyle}>{date(entry.created_at)}</div>
-          <div style={historyRow}><span style={historyLabel}>{t('roleplay.talkRatio')}:</span> {Math.round(entry.session.talk_ratio * 100)}%</div>
-          <div style={historyRow}><span style={historyLabel}>{t('roleplay.questionRatio')}:</span> {Math.round(entry.session.question_ratio * 100)}%</div>
-          {entry.session.open_question_ratio != null && <div style={historyRow}><span style={historyLabel}>{t('roleplay.openQuestionRatio')}:</span> {Math.round(entry.session.open_question_ratio * 100)}%</div>}
-          {entry.session.paraphrase_score != null && <div style={historyRow}><span style={historyLabel}>{t('roleplay.paraphraseScore')}:</span> {Math.round(entry.session.paraphrase_score * 100)}%</div>}
-          {entry.session.active_listening_score != null && <div style={{ ...historyRow, marginBottom:0 }}><span style={historyLabel}>{t('roleplay.activeListeningTitle')}:</span> {entry.session.active_listening_score}</div>}
-        </div>
+        <RoleplaySessionCard key={entry.session.id} session={entry.session} dateText={date(entry.created_at)} />
       ))}
     </div>
   )

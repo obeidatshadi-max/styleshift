@@ -151,8 +151,8 @@ function SkillRows({ session }: { session: RoleplaySessionSummary }) {
   const l = session.language!
   const missed = new Set(missedLanguageSkills(session))
   const rows: { key: LanguageSkillKey; title: string; value: string }[] = [
-    { key: 'empathy', title: t('lang.empathy.title'), value: String(l.empathy.count) },
-    { key: 'paraphrasing', title: t('lang.paraphrasing.title'), value: String(l.paraphrasing.count) },
+    { key: 'empathy', title: t('lang.empathy.title'), value: l.empathy.needed === undefined ? String(l.empathy.count) : l.empathy.needed === 0 ? '—' : `${l.empathy.met ?? 0}/${l.empathy.needed}` },
+    { key: 'paraphrasing', title: t('lang.paraphrasing.title'), value: l.paraphrasing.needed === undefined ? String(l.paraphrasing.count) : l.paraphrasing.needed === 0 ? '—' : `${l.paraphrasing.met ?? 0}/${l.paraphrasing.needed}` },
     { key: 'andBut', title: t('lang.andBut.title'), value: t('roleplay.skillAndBut', { and: l.andBut.and, but: l.andBut.but }) },
     { key: 'buildOnPositive', title: t('lang.build.title'), value: l.buildOnPositive.positives === 0 ? '—' : `${l.buildOnPositive.builtOn}/${l.buildOnPositive.positives}` },
   ]

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildTurns, type Utterance } from './roleplay-core'
-import { computeLanguageSignals, andButOnGoal } from './roleplay-language'
+import { computeLanguageSignals, andButOnGoal, neededVerdict } from './roleplay-language'
 
 function signals(lines: [string, string][]) {
   const utterances: Utterance[] = lines.map(([speaker, text], i) => ({ speaker, text, start: i * 5000, end: i * 5000 + 4000 }))
@@ -64,5 +64,47 @@ describe('build on the positive', () => {
   it('works in Arabic', () => {
     const s = signals([['B', 'الدواء كلش زين'], ['A', 'يسعدني هذا دكتور']])
     expect(s.buildOnPositive).toEqual({ positives: 1, builtOn: 1 })
+  })
+})
+
+describe('applied when needed', () => {
+  it('counts partner feeling moments and whether the rep answered with empathy', () => {
+    const s = signals([
+      ['B', 'I am worried about the side effects.'],
+      ['A', 'I understand, that must be hard.'],
+      ['B', 'I am frustrated with the delivery delays.'],
+      ['A', 'We can ship on Monday.'],
+      ['B', 'The weather is nice.'],
+      ['A', 'I hear you.'],
+    ])
+    expect(s.empathy.needed).toBe(2)
+    expect(s.empathy.met).toBe(1)
+    expect(s.empathy.count).toBe(2)
+  })
+
+  it('counts concerns as paraphrase moments and judges the next reply', () => {
+    const s = signals([
+      ['B', 'It is too expensive for my clinic.'],
+      ['A', 'So you are saying the price is the main issue?'],
+      ['B', 'Not sure it works for my patients.'],
+      ['A', 'Let me show the data.'],
+    ])
+    expect(s.paraphrasing.needed).toBe(2)
+    expect(s.paraphrasing.met).toBe(1)
+  })
+
+  it('works in Arabic', () => {
+    const s = signals([['B', 'أنا قلق من الأعراض'], ['A', 'أتفهم قلقك دكتور']])
+    expect(s.empathy).toMatchObject({ needed: 1, met: 1 })
+  })
+
+  it('reports no moment when nothing called for the skill', () => {
+    const s = signals([['B', 'Hello'], ['A', 'Hi']])
+    expect(s.empathy).toMatchObject({ needed: 0, met: 0 })
+    expect(neededVerdict(s.empathy.needed, s.empathy.met)).toBe('none')
+    expect(neededVerdict(undefined, undefined)).toBe('none')
+    expect(neededVerdict(3, 3)).toBe('done')
+    expect(neededVerdict(3, 1)).toBe('partly')
+    expect(neededVerdict(3, 0)).toBe('missed')
   })
 })

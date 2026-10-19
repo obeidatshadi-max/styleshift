@@ -4,7 +4,9 @@ import type { Turn } from './roleplay-core'
  * Word-level skills in a live roleplay recording, read from the REP's own
  * words (plus the partner's turn just before, for "build on the positive").
  * Counts only: the transcript is discarded after scoring, so no quotes from
- * either speaker are stored. Phrase lists are indicators, not verdicts — a
+ * either speaker are stored. `paraphrasing.confirmed` counts partner turns that
+ * said "that's right" straight after a rep paraphrase (never "you're right",
+ * which usually means "stop talking"). Phrase lists are indicators, not verdicts — a
  * missed phrase may still be said another way.
  */
 export interface LanguageSignals {
@@ -20,7 +22,7 @@ export interface LanguageSignals {
    * `needed` = partner turns with a concern or a long explanation; `met` = how
    * many the rep's next reply restated. Both absent on older sessions.
    */
-  paraphrasing: { count: number; needed?: number; met?: number }
+  paraphrasing: { count: number; needed?: number; met?: number; confirmed?: number }
   /** Whole-word "and" versus "but"/"however" in the rep's speech. */
   andBut: { and: number; but: number }
   /** Positive remarks by the partner, and how many the rep's next reply built on. */
@@ -69,6 +71,23 @@ export const PARAPHRASE_PHRASES = norm([
   'يعني تقصد', 'يعني حضرتك تقصد', 'تقصد ان', 'اذا فهمت', 'اذا فهمتك صح', 'يعني تقول', 'يعني انت تقول', 'بمعني', 'اذن انت تقول',
   'خلني اتاكد', 'خليني اتاكد',
 ])
+
+/** Partner words that confirm a restatement landed ("that's right"). */
+const CONFIRM_PHRASES = norm([
+  "that's right", 'that is right', "that's correct", 'that is correct', 'exactly', 'precisely',
+  'هذا صحيح', 'ذلك صحيح', 'صحيح', 'بالضبط', 'بالظبط', 'بالتحديد', 'تماما', 'مضبوط',
+])
+
+function confirms(normalizedText: string): boolean {
+  const padded = ` ${normalizedText} `
+  return CONFIRM_PHRASES.some(p => {
+    const at = padded.indexOf(` ${p} `)
+    if (at === -1) return false
+    const before = padded.slice(0, at).trim()
+    const prev = before ? before.split(' ').slice(-2) : []
+    return !prev.some(w => NEGATORS.has(w))
+  })
+}
 
 /** Partner words that signal a feeling or difficulty the rep should acknowledge. */
 const FEELING_TERMS = norm([
@@ -130,14 +149,25 @@ function sharedLongWords(a: string, b: string): number {
   return n
 }
 
+/**
+ * Empathy and paraphrasing are separate skills, so a restating lead-in
+ * ("if I understand correctly") must not also count as empathy through the
+ * "i understand" inside it. Paraphrase phrases are blanked out first.
+ */
+function hasEmpathy(normalizedText: string): boolean {
+  let rest = ` ${normalizedText} `
+  for (const p of PARAPHRASE_PHRASES) rest = rest.split(` ${p} `).join(' ')
+  return hasPhrase(rest.trim(), EMPATHY_PHRASES)
+}
+
 export function computeLanguageSignals(turns: Turn[], repSpeaker: string): LanguageSignals {
   let empathy = 0, paraphrasing = 0, and = 0, but = 0, positives = 0, builtOn = 0
-  let empathyNeeded = 0, empathyMet = 0, paraNeeded = 0, paraMet = 0
+  let empathyNeeded = 0, empathyMet = 0, paraNeeded = 0, paraMet = 0, confirmed = 0
 
   turns.forEach((turn, i) => {
     const n = normalizeForMatch(turn.text)
     if (turn.speaker === repSpeaker) {
-      if (hasPhrase(n, EMPATHY_PHRASES)) empathy++
+      if (hasEmpathy(n)) empathy++
       if (hasPhrase(n, PARAPHRASE_PHRASES)) paraphrasing++
       for (const w of tokens(turn.text)) {
         if (AND_WORDS.includes(w)) and++
@@ -145,13 +175,17 @@ export function computeLanguageSignals(turns: Turn[], repSpeaker: string): Langu
       }
       return
     }
+    // Partner turn: did it confirm a paraphrase the rep just made?
+    const prev = turns[i - 1]
+    if (prev && prev.speaker === repSpeaker && hasPhrase(normalizeForMatch(prev.text), PARAPHRASE_PHRASES) && confirms(n)) confirmed++
+
     // Partner turn: judged against the rep's very next reply.
     const next = turns[i + 1]
     const reply = next && next.speaker === repSpeaker ? normalizeForMatch(next.text) : null
 
     if (hasPhrase(n, FEELING_TERMS)) {
       empathyNeeded++
-      if (reply && hasPhrase(reply, EMPATHY_PHRASES)) empathyMet++
+      if (reply && hasEmpathy(reply)) empathyMet++
     }
     if (hasPhrase(n, CONCERN_TERMS) || tokens(turn.text).length >= LONG_TURN_WORDS) {
       paraNeeded++
@@ -168,7 +202,7 @@ export function computeLanguageSignals(turns: Turn[], repSpeaker: string): Langu
 
   return {
     empathy: { count: empathy, needed: empathyNeeded, met: empathyMet },
-    paraphrasing: { count: paraphrasing, needed: paraNeeded, met: paraMet },
+    paraphrasing: { count: paraphrasing, needed: paraNeeded, met: paraMet, confirmed },
     andBut: { and, but }, buildOnPositive: { positives, builtOn },
   }
 }

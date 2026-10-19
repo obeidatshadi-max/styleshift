@@ -38,7 +38,8 @@ export default function RoleplayLanguageCards({ signals }: { signals: LanguageSi
 
   const cards: { key: string; title: string; verdict: Verdict; result: string; hint: string; extra?: string; extent?: { met: number; needed: number } }[] = [
     { key: 'empathy', title: t('lang.empathy.title'), verdict: emp.verdict, result: emp.result, extent: emp.extent, hint: t('lang.empathy.hint') },
-    { key: 'paraphrasing', title: t('lang.paraphrasing.title'), verdict: para.verdict, result: para.result, extent: para.extent, hint: t('lang.paraphrasing.hint') },
+    { key: 'paraphrasing', title: t('lang.paraphrasing.title'), verdict: para.verdict, result: para.result, extent: para.extent, hint: t('lang.paraphrasing.hint'),
+      extra: paraphrasing.confirmed === undefined || paraphrasing.count === 0 ? undefined : t('lang.paraphrasing.confirmed', { times: times(paraphrasing.confirmed) }) },
     {
       key: 'andBut', title: t('lang.andBut.title'),
       verdict: noAndBut || andButOnGoal(andBut) ? 'done' : 'missed',

@@ -37,7 +37,7 @@ describe('ConversationReport', () => {
     expect(screen.getByRole('region', { name: 'Understand this moment' })).toBeTruthy()
     expect(screen.getByText('Which difference matters most?')).toBeTruthy()
     expect(screen.getByText('The comparison criteria are unknown.')).toBeTruthy()
-    expect(screen.getByText('No subsequent doctor response was recorded.')).toBeTruthy()
+    expect(screen.getByText('The doctor did not say anything after this.')).toBeTruthy()
   })
   it('shows vague doctor statements with the rep reply and a precision question', () => {
     renderReport({ outdated: false, report: minimalReport({ vagueStatements: [{
@@ -45,7 +45,7 @@ describe('ConversationReport', () => {
       pattern: 'unspecified_referent', precisionQuestion: 'Which patients have you seen stop?',
       repReply: { segmentIndex: 1, speakerRole: 'rep', quote: 'Our product is very well tolerated.' },
     }] }) })
-    expect(screen.getByRole('region', { name: 'Vague statements to pin down' })).toBeTruthy()
+    expect(screen.getByRole('region', { name: 'Unclear statements to ask about' })).toBeTruthy()
     expect(screen.getByText('No specific person or thing')).toBeTruthy()
     expect(screen.getByText('Which patients have you seen stop?')).toBeTruthy()
     expect(screen.getByText(/Our product is very well tolerated/)).toBeTruthy()
@@ -53,7 +53,7 @@ describe('ConversationReport', () => {
   it('keeps older saved reports readable without the optional card', () => {
     renderReport({ report: minimalReport(), outdated: false })
     expect(screen.queryByRole('region', { name: 'Understand this moment' })).toBeNull()
-    expect(screen.queryByRole('region', { name: 'Vague statements to pin down' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Unclear statements to ask about' })).toBeNull()
   })
   it('renders the visit summary without inventing an objective when none was supplied', () => {
     renderReport({ report: minimalReport(), outdated: false })

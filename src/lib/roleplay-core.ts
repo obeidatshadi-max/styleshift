@@ -6,6 +6,8 @@
 // The turn-taking section below (from "Roleplay turn-taking analysis" on)
 // is new — StyleShift-specific, not present in ssm-app.
 
+import { computeLanguageSignals, type LanguageSignals } from './roleplay-language'
+
 export interface PitchSample { f0: number; vol: number; t: number }
 export interface SilencePeriod { start: number; end: number }
 
@@ -365,6 +367,8 @@ export interface RoleplayResult {
   durationSec: number
   warmth: number
   predicates: PredicateCounts
+  /** Absent on reports restored from before this existed. */
+  language?: LanguageSignals
 }
 
 /** Builds the complete, storable roleplay result from diarized utterances plus the rep's captured acoustic samples for the whole recording (they get scoped to the rep's turns internally). */
@@ -408,5 +412,6 @@ export function buildRoleplayResult(
     talkRatio, rapidTurnSwitches, turnCount: turns.length, questionRatio, questionCount: questionBreakdown.total, openQuestionRatio,
     paraphraseScore, termOverlap, activeListening, repRead, partnerRead, adaptationScore,
     durationSec: talkRatio.totalMs / 1000, warmth: delivery.warmth, predicates: delivery.predicates,
+    language: computeLanguageSignals(turns, repSpeaker),
   }
 }

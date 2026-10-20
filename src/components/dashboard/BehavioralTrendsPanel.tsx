@@ -27,7 +27,7 @@ interface Props {
 }
 
 const cardStyle: React.CSSProperties = {
-  border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', background: 'rgba(0,0,0,.18)',
+  border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', background: 'var(--surface-subtle)',
 }
 const repNameStyle: React.CSSProperties = { fontSize: 13.5, fontWeight: 700 }
 const metaStyle: React.CSSProperties = { fontSize: 12, color: 'var(--ink-dim)', marginTop: 4, lineHeight: 1.5 }

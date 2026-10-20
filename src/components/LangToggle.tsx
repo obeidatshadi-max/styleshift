@@ -10,12 +10,12 @@ export default function LangToggle() {
       onClick={toggle}
       aria-label="Switch language"
       style={{
-        fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase',
-        color: 'var(--cyan)', background: 'rgba(56,214,255,.08)', border: '1px solid var(--cyan)',
+        fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none',
+        color: 'var(--cyan)', background: 'var(--accent-soft)', border: '1px solid var(--cyan)',
         borderRadius: 20, padding: '6px 14px', cursor: 'pointer', touchAction: 'manipulation',
       }}
     >
-      🌐 {t('toggle.switchTo')}
+      {t('toggle.switchTo')}
     </button>
   )
 }

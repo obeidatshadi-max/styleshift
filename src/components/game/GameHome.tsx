@@ -8,8 +8,9 @@ import KpiPanel from './KpiPanel'
 import type { BadgeName, RepAssignment } from '@/types/game'
 import { createClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
-import { useGameData, useT, useBadgeLabel } from '@/lib/i18n'
+import { useGameData, useT, useBadgeLabel, useLang } from '@/lib/i18n'
 import LangToggle from '@/components/LangToggle'
+import ThemeToggle from '@/components/ThemeToggle'
 import AvatarUploader from './AvatarUploader'
 import PrivacyPanel from './PrivacyPanel'
 import ChampionBanner from './ChampionBanner'
@@ -73,6 +74,7 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
   const unlocked = [1, ...earnedLevels.map(n => n + 1)].filter(n => n <= 4)
   const router = useRouter()
   const t = useT()
+  const { lang } = useLang()
   const badgeLabel = useBadgeLabel()
   const { STYLES, STYLE_ORDER, LEVELS, RANKS } = useGameData()
 
@@ -87,11 +89,11 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
     router.refresh()
   }
 
-  const navLinkStyle = { fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase' as const, color: 'var(--ink-dim)', textDecoration: 'none', cursor: 'pointer', background: 'none', border: 'none' }
+  const navLinkStyle = { fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none' as const, color: 'var(--ink-dim)', textDecoration: 'none', cursor: 'pointer', background: 'none', border: 'none' }
 
   const panel = (title: string, children: React.ReactNode) => (
-    <section style={{ background:'linear-gradient(180deg,var(--panel),#0a1430)', border:'1px solid var(--line)', borderRadius:16, padding:16, boxShadow:'0 12px 40px rgba(0,0,0,.45)' }}>
-      <div style={{ fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.3em', textTransform:'uppercase', color:'var(--cyan)', display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
+    <section style={{ background:'var(--panel)', border:'1px solid var(--line)', borderRadius:16, padding:16, boxShadow:'var(--shadow)' }}>
+      <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--cyan)', display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
         <span style={{ width:9, height:9, borderRadius:'50%', background:'var(--cyan)', boxShadow:'var(--glow-cyan)', display:'inline-block' }} />
         {title}
       </div>
@@ -101,30 +103,19 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
   return (
     <div style={{ position:'relative', zIndex:1, maxWidth:1040, margin:'0 auto', padding:14 }}>
-      <div style={{ display:'flex', justifyContent:'flex-end', paddingTop:6 }}>
-        <LangToggle />
+      <div className="home-appbar">
+        <div className="wordmark"><span aria-hidden="true">↗</span>StyleShift</div>
+        <div className="appearance-tools"><ThemeToggle /><LangToggle /></div>
       </div>
-      <header style={{ textAlign:'center', padding:'4px 8px 18px' }}>
-        <div style={{ fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.45em', color:'var(--cyan)', textTransform:'uppercase', opacity:.85 }}>{t('eyebrow')}</div>
-        <h1 style={{ fontSize:'clamp(22px,5.4vw,40px)', lineHeight:1.05, marginTop:6, letterSpacing:'.02em', fontWeight:800, textShadow:'0 0 24px rgba(56,214,255,.35)' }}>
-          STYLE<span style={{ color:'var(--cyan)' }}>SHIFT</span>
-        </h1>
-        <div style={{ color:'var(--ink-dim)', fontSize:13, marginTop:8, letterSpacing:'.18em', textTransform:'uppercase' }}>{t('tagline')}</div>
+      <header className="home-intro">
+        <p className="visual-eyebrow">{lang === 'ar' ? 'خطوتك لمحادثة أفضل' : 'Your next good conversation'}</p>
+        <h1>{lang === 'ar' ? 'تدريب بسيط. ثقة أكبر.' : 'Small practice. Big confidence.'}</h1>
+        <p>{lang === 'ar' ? 'دقائق قليلة لتدخل زيارتك القادمة بثقة.' : 'A few minutes to feel ready for your next visit.'}</p>
       </header>
 
       <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
 
         {tab === 'train' && <>
-
-        {spsPending && panel(t('sps.title'),
-          <>
-            <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.55, marginBottom:12 }}>{t('sps.intro')}</div>
-            <button onClick={onTakeSps} style={{ cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent', borderRadius:10, padding:'10px 16px', touchAction:'manipulation' }}>{t('sps.start')}</button>
-          </>
-        )}
-
-        <CoachNudgeCard onOpenCoach={onOpenCoach} onOpenDoctor={onOpenDoctor} />
-        <PushOptIn />
 
         <NextActionCard
           assignment={assignment} onStartAssignment={onStartAssignment} onAssignmentShared={onAssignmentShared}
@@ -132,6 +123,16 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
           unlocked={unlocked} earnedLevels={earnedLevels} onStartLevel={onStartLevel}
           onShowPrep={onShowPrep}
         />
+
+        {spsPending && panel(t('sps.title'),
+          <>
+            <div style={{ color:'var(--ink-dim)', fontSize:16, lineHeight:1.55, marginBottom:12 }}>{t('sps.intro')}</div>
+            <button onClick={onTakeSps} style={{ cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent', borderRadius:10, padding:'10px 16px', touchAction:'manipulation' }}>{t('sps.start')}</button>
+          </>
+        )}
+
+        <CoachNudgeCard onOpenCoach={onOpenCoach} onOpenDoctor={onOpenDoctor} />
+        <PushOptIn />
 
         <PracticePatternLine />
 
@@ -143,6 +144,13 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
         <PracticeMyDoctor />
 
+        <button onClick={() => setMoreOpen(o => !o)} aria-expanded={moreOpen}
+          style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--line)', color:'var(--ink-dim)', background:'transparent', borderRadius:10, padding:'10px 16px', touchAction:'manipulation' }}>
+          {moreOpen ? t('home.less') : t('home.more')} {moreOpen ? '▲' : '▼'}
+        </button>
+
+        {moreOpen && <>
+
         <NextChallengeCard />
 
         <PatternMemoryCard />
@@ -150,13 +158,6 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
         <CapabilityCard />
 
         <MethodologyCard />
-
-        <button onClick={() => setMoreOpen(o => !o)}
-          style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', cursor:'pointer', fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.15em', textTransform:'uppercase', border:'1px solid var(--line)', color:'var(--ink-dim)', background:'transparent', borderRadius:10, padding:'10px 16px', touchAction:'manipulation' }}>
-          {moreOpen ? t('home.less') : t('home.more')} {moreOpen ? '▲' : '▼'}
-        </button>
-
-        {moreOpen && <>
 
         <ChampionBanner
           companyName={t('eyebrow')}
@@ -169,7 +170,7 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
         {standings && standings.standings.length > 0 && panel(t('rank.title'),
           <>
-            <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5, marginBottom:12 }}>
+            <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.5, marginBottom:12 }}>
               {standings.selfRank
                 ? t('rank.yourPosition', { n: standings.selfRank, total: standings.teamSize })
                 : t('rank.subtitle')}
@@ -178,15 +179,15 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
               {standings.standings.map((s, i) => {
                 const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null
                 return (
-                  <div key={s.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:10, border:'1px solid var(--line)', background: s.isSelf ? 'rgba(56,214,255,.07)' : 'rgba(0,0,0,.18)' }}>
-                    <span style={{ fontFamily:'var(--mono)', fontSize:13, width:24, textAlign:'center' }}>{medal ?? <span style={{ color:'var(--ink-dim)' }}>{i + 1}</span>}</span>
+                  <div key={s.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:10, border:'1px solid var(--line)', background: s.isSelf ? 'var(--accent-soft)' : 'var(--surface-subtle)' }}>
+                    <span style={{ fontFamily:'var(--mono)', fontSize:16, width:24, textAlign:'center' }}>{medal ?? <span style={{ color:'var(--ink-dim)' }}>{i + 1}</span>}</span>
                     <span style={{ flex:1, minWidth:0 }}>
-                      <span style={{ display:'block', fontSize:13, color: s.isSelf ? 'var(--cyan)' : 'var(--ink)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      <span style={{ display:'block', fontSize:16, color: s.isSelf ? 'var(--cyan)' : 'var(--ink)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                         {s.isSelf ? t('rank.you') : (s.name || '—')}
                       </span>
-                      <span style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.06em', color:'var(--ink-dim)', textTransform:'uppercase' }}>{rankTitle(s.xp)}</span>
+                      <span style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', color:'var(--ink-dim)', textTransform:'none' }}>{rankTitle(s.xp)}</span>
                     </span>
-                    <span style={{ fontFamily:'var(--mono)', fontSize:13, color: s.isSelf ? 'var(--cyan)' : 'var(--ink-dim)' }}>{s.xp.toLocaleString()} XP</span>
+                    <span style={{ fontFamily:'var(--mono)', fontSize:16, color: s.isSelf ? 'var(--cyan)' : 'var(--ink-dim)' }}>{s.xp.toLocaleString()} XP</span>
                   </div>
                 )
               })}
@@ -198,41 +199,41 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
         {daily && panel(t('daily.title'),
           <>
-            <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5, marginBottom:12 }}>{t('daily.subtitle')}</div>
+            <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.5, marginBottom:12 }}>{t('daily.subtitle')}</div>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap', marginBottom:14 }}>
-              <div style={{ fontFamily:'var(--mono)', fontSize:13, letterSpacing:'.05em', color:(daily.self?.streak ?? 0) > 0 ? 'var(--amber)' : 'var(--ink-dim)' }}>
+              <div style={{ fontFamily:'var(--mono)', fontSize:16, letterSpacing: 'normal', color:(daily.self?.streak ?? 0) > 0 ? 'var(--amber)' : 'var(--ink-dim)' }}>
                 {(daily.self?.streak ?? 0) > 0 ? t('daily.streakActive', { n: daily.self!.streak }) : t('daily.streakNone')}
               </div>
               {daily.todayLevelsDone.length >= daily.picks.length ? (
-                <div style={{ fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.05em', color:'var(--green)' }}>{t('daily.doneToday')}</div>
+                <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', color:'var(--green)' }}>{t('daily.doneToday')}</div>
               ) : (
                 <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                  <span style={{ fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.05em', color:'var(--ink-dim)' }}>
+                  <span style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', color:'var(--ink-dim)' }}>
                     {t('daily.todayProgress', { done: daily.todayLevelsDone.length, total: daily.picks.length })}
                   </span>
                   <button onClick={onStartDaily}
-                    style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--amber)', color:'#1a1402', background:'var(--amber)', borderRadius:10, padding:'11px 16px', boxShadow:'0 0 18px rgba(255,206,77,.45)', touchAction:'manipulation' }}>
+                    style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--amber)', color:'var(--on-accent)', background:'var(--amber)', borderRadius:10, padding:'11px 16px', boxShadow:'none', touchAction:'manipulation' }}>
                     {daily.todayLevelsDone.length > 0 ? t('daily.continue') : t('daily.play')}
                   </button>
                 </div>
               )}
             </div>
             {(daily.self?.streak ?? 0) >= 2 && daily.todayLevelsDone.length < daily.picks.length && (
-              <div style={{ border:'1px solid var(--red)', borderRadius:10, padding:'9px 12px', marginBottom:12, background:'rgba(255,93,108,.08)', color:'#ffd2d6', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.04em' }}>
+              <div style={{ border:'1px solid var(--red)', borderRadius:10, padding:'9px 12px', marginBottom:12, background:'rgba(255,93,108,.08)', color:'var(--red)', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal' }}>
                 {t('daily.streakRisk', { n: daily.self!.streak })}
               </div>
             )}
-            <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.2em', textTransform:'uppercase', color:'var(--ink-dim)', marginBottom:8 }}>{t('daily.leaderboard')}</div>
+            <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--ink-dim)', marginBottom:8 }}>{t('daily.leaderboard')}</div>
             {daily.standings.length === 0 ? (
-              <div style={{ color:'var(--ink-dim)', fontSize:12 }}>{t('daily.empty')}</div>
+              <div style={{ color:'var(--ink-dim)', fontSize:14 }}>{t('daily.empty')}</div>
             ) : (
               <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                 {daily.standings.slice(0, 6).map((st, i) => (
-                  <div key={st.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:10, border:'1px solid var(--line)', background: st.isSelf ? 'rgba(56,214,255,.07)' : 'rgba(0,0,0,.18)' }}>
-                    <span style={{ fontFamily:'var(--mono)', fontSize:12, color:'var(--ink-dim)', width:18, textAlign:'center' }}>{i + 1}</span>
-                    <span style={{ flex:1, fontSize:13, color: st.isSelf ? 'var(--cyan)' : 'var(--ink)' }}>{st.isSelf ? t('daily.you') : (st.name || '—')}</span>
-                    {st.doneToday && <span style={{ color:'var(--green)', fontSize:12 }}>✓</span>}
-                    <span style={{ fontFamily:'var(--mono)', fontSize:12, color: st.streak > 0 ? 'var(--amber)' : 'var(--ink-dim)' }}>🔥 {st.streak}</span>
+                  <div key={st.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:10, border:'1px solid var(--line)', background: st.isSelf ? 'var(--accent-soft)' : 'var(--surface-subtle)' }}>
+                    <span style={{ fontFamily:'var(--mono)', fontSize:14, color:'var(--ink-dim)', width:18, textAlign:'center' }}>{i + 1}</span>
+                    <span style={{ flex:1, fontSize:16, color: st.isSelf ? 'var(--cyan)' : 'var(--ink)' }}>{st.isSelf ? t('daily.you') : (st.name || '—')}</span>
+                    {st.doneToday && <span style={{ color:'var(--green)', fontSize:14 }}>✓</span>}
+                    <span style={{ fontFamily:'var(--mono)', fontSize:14, color: st.streak > 0 ? 'var(--amber)' : 'var(--ink-dim)' }}>🔥 {st.streak}</span>
                   </div>
                 ))}
               </div>
@@ -245,13 +246,13 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
             {STYLE_ORDER.map(k => {
               const s = STYLES[k]; const c = COLOR[k]
               return (
-                <div key={k} style={{ border:'1px solid var(--line)', borderRadius:14, padding:14, background:'linear-gradient(180deg,rgba(255,255,255,.025),rgba(0,0,0,.18))' }}>
-                  <div style={{ width:54, height:54, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, marginBottom:10, border:`2px solid ${c}`, boxShadow:`0 0 16px ${c}`, color:c }}>{s.icon}</div>
-                  <h3 style={{ fontSize:16, letterSpacing:'.04em', marginBottom:2, color:c }}>{s.name}</h3>
-                  <div style={{ fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.18em', color:'var(--ink-dim)', textTransform:'uppercase', marginBottom:8 }}>{t('style.socialStyle')}</div>
-                  <p style={{ fontSize:12.5, color:'var(--ink-dim)', lineHeight:1.45 }}>{s.blurb}</p>
-                  <div style={{ marginTop:10, fontSize:11, fontFamily:'var(--mono)', letterSpacing:'.05em' }}>
-                    <b style={{ color:c, display:'block', fontSize:10, letterSpacing:'.22em', textTransform:'uppercase', opacity:.8, marginBottom:2 }}>{t('style.coreDrive')}</b>
+                <div key={k} style={{ border:'1px solid var(--line)', borderRadius:14, padding:14, background:'linear-gradient(180deg,rgba(255,255,255,.025),var(--surface-subtle))' }}>
+                  <div style={{ width:54, height:54, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, marginBottom:10, border:`2px solid ${c}`, boxShadow: 'none', color:c }}>{s.icon}</div>
+                  <h3 style={{ fontSize:16, letterSpacing: 'normal', marginBottom:2, color:c }}>{s.name}</h3>
+                  <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', color:'var(--ink-dim)', textTransform:'none', marginBottom:8 }}>{t('style.socialStyle')}</div>
+                  <p style={{ fontSize:14, color:'var(--ink-dim)', lineHeight:1.45 }}>{s.blurb}</p>
+                  <div style={{ marginTop:10, fontSize:14, fontFamily:'var(--mono)', letterSpacing: 'normal' }}>
+                    <b style={{ color:c, display:'block', fontSize:14, letterSpacing: 'normal', textTransform:'none', opacity:.8, marginBottom:2 }}>{t('style.coreDrive')}</b>
                     {s.drive}
                   </div>
                 </div>
@@ -267,13 +268,13 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
               const isDone = earnedLevels.includes(l.n)
               return (
                 <button key={l.n} disabled={!isUnlocked} onClick={() => onStartLevel(l.n)}
-                  style={{ display:'flex', alignItems:'center', gap:14, textAlign:'start', width:'100%', cursor: isUnlocked ? 'pointer' : 'not-allowed', background:'linear-gradient(90deg,rgba(56,214,255,.06),rgba(0,0,0,.15))', border:'1px solid var(--line)', borderRadius:12, padding:14, color:'var(--ink)', fontFamily:'var(--sans)', opacity: isUnlocked ? 1 : .4, touchAction:'manipulation' }}>
-                  <span style={{ fontFamily:'var(--mono)', fontSize:18, fontWeight:700, width:42, height:42, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:10, border:'1px solid var(--line)', background:'rgba(0,0,0,.25)', color:'var(--cyan)' }}>{l.n}</span>
+                  style={{ display:'flex', alignItems:'center', gap:14, textAlign:'start', width:'100%', cursor: isUnlocked ? 'pointer' : 'not-allowed', background:'linear-gradient(90deg,var(--accent-soft),var(--surface-subtle))', border:'1px solid var(--line)', borderRadius:12, padding:14, color:'var(--ink)', fontFamily:'var(--sans)', opacity: isUnlocked ? 1 : .4, touchAction:'manipulation' }}>
+                  <span style={{ fontFamily:'var(--mono)', fontSize:18, fontWeight:700, width:42, height:42, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:10, border:'1px solid var(--line)', background:'var(--surface-subtle)', color:'var(--cyan)' }}>{l.n}</span>
                   <span style={{ flex:1 }}>
-                    <b style={{ display:'block', fontSize:15, letterSpacing:'.02em' }}>{l.title}</b>
-                    <span style={{ fontSize:12, color:'var(--ink-dim)' }}>{l.sub}</span>
+                    <b style={{ display:'block', fontSize:16, letterSpacing: 'normal' }}>{l.title}</b>
+                    <span style={{ fontSize:14, color:'var(--ink-dim)' }}>{l.sub}</span>
                   </span>
-                  <span style={{ fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.15em', textTransform:'uppercase', color: isDone ? 'var(--green)' : isUnlocked ? 'var(--cyan)' : 'var(--ink-dim)', marginLeft:'auto' }}>
+                  <span style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color: isDone ? 'var(--green)' : isUnlocked ? 'var(--cyan)' : 'var(--ink-dim)', marginInlineStart:'auto' }}>
                     {isDone ? t('status.cleared') : isUnlocked ? t('status.ready') : t('status.locked')}
                   </span>
                 </button>
@@ -288,7 +289,7 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
             <KpiPanel decisions={decisions} correct={correct} totalReactionMs={totalReactionMs} reactionCount={reactionCount} confidence={confidence} />
             <div style={{ marginTop:14 }}>
               {ALL_BADGES.map(name => (
-                <span key={name} style={{ display:'inline-flex', alignItems:'center', gap:7, fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.12em', textTransform:'uppercase', border:`1px solid ${badges.includes(name) ? 'var(--green)' : 'var(--line)'}`, color: badges.includes(name) ? 'var(--green)' : 'var(--ink-dim)', borderRadius:20, padding:'5px 11px', background: badges.includes(name) ? 'rgba(62,224,143,.08)' : 'transparent', margin:'4px 4px 0 0' }}>
+                <span key={name} style={{ display:'inline-flex', alignItems:'center', gap:7, fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:`1px solid ${badges.includes(name) ? 'var(--green)' : 'var(--line)'}`, color: badges.includes(name) ? 'var(--green)' : 'var(--ink-dim)', borderRadius:20, padding:'5px 11px', background: badges.includes(name) ? 'rgba(62,224,143,.08)' : 'transparent', margin:'4px 4px 0 0' }}>
                   {badges.includes(name) ? '★' : '☆'} {badgeLabel(name)}
                 </span>
               ))}
@@ -307,9 +308,9 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
         {panel(t('prep.title'),
           <>
-            <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5, marginBottom:14 }}>{t('prep.subtitle')}</div>
+            <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.5, marginBottom:14 }}>{t('prep.subtitle')}</div>
             <button onClick={onShowPrep}
-              style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'rgba(56,214,255,.06)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'var(--accent-soft)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               🩺 {t('prep.reopen')}
             </button>
           </>
@@ -319,9 +320,9 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
         {tab === 'perform' && panel(t('perform.title'),
           <>
-            <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5, marginBottom:14 }}>{t('perform.subtitle')}</div>
+            <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.5, marginBottom:14 }}>{t('perform.subtitle')}</div>
             <button onClick={onShowPerform}
-              style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'rgba(56,214,255,.06)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'var(--accent-soft)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               🤝 {t('perform.reopen')}
             </button>
           </>
@@ -329,7 +330,7 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 8 }}>
+      <div className="home-utility-links">
         {role === 'manager' ? (
           <a href="/dashboard" style={navLinkStyle}>{t('nav.managerDashboard')}</a>
         ) : (
@@ -340,7 +341,7 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
         <button onClick={signOut} style={navLinkStyle}>{t('nav.signOut')}</button>
       </div>
 
-      <footer style={{ textAlign:'center', color:'var(--ink-dim)', fontSize:12, letterSpacing:'.05em', padding:'18px 8px 6px', lineHeight:1.6 }}>
+      <footer style={{ textAlign:'center', color:'var(--ink-dim)', fontSize:14, letterSpacing: 'normal', padding:'18px 8px 6px', lineHeight:1.6 }}>
         {t('footer.tagline')}<br />
         {t('footer.by')} <a href="https://madarlead.com" style={{ color:'var(--cyan)', textDecoration:'none' }}>madarlead.com</a>
       </footer>

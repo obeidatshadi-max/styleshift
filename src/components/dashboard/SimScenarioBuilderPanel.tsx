@@ -21,9 +21,9 @@ const chip = (active: boolean): React.CSSProperties => ({
   border: `1px solid ${active ? 'var(--cyan)' : 'var(--line)'}`, borderRadius: 18, padding: '6px 12px',
   color: active ? 'var(--cyan)' : 'var(--ink-dim)', background: active ? 'rgba(0,229,255,.1)' : 'transparent', touchAction: 'manipulation',
 })
-const inputStyle: React.CSSProperties = { background: 'rgba(0,0,0,.3)', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', color: 'var(--ink)', fontFamily: 'var(--sans)', fontSize: 13.5, outline: 'none', width: '100%' }
+const inputStyle: React.CSSProperties = { background: 'var(--surface-subtle)', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', color: 'var(--ink)', fontFamily: 'var(--sans)', fontSize: 13.5, outline: 'none', width: '100%' }
 const labelStyle: React.CSSProperties = { fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--ink-dim)', margin: '12px 0 6px', display: 'block' }
-const primaryBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', background: 'var(--cyan)', color: '#04121f', borderRadius: 10, padding: '10px 14px', fontWeight: 700 }
+const primaryBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', background: 'var(--cyan)', color: 'var(--on-accent)', borderRadius: 10, padding: '10px 14px', fontWeight: 700 }
 const ghostBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', border: '1px solid var(--line)', background: 'none', color: 'var(--ink-dim)', borderRadius: 10, padding: '8px 12px' }
 
 interface Form {

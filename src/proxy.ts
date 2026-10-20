@@ -80,5 +80,5 @@ export const config = {
   // reachable unauthenticated — the service worker registers (and the
   // offline fallback renders) before there's necessarily any session, and
   // precisely when a session check might itself be unreachable.
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|opengraph-image|twitter-image|icon|apple-icon|robots.txt|sitemap.xml|manifest.webmanifest|sw.js|offline).*)'],
+  matcher: ['/((?!_next/static|_next/image|fonts/|favicon.ico|opengraph-image|twitter-image|icon|apple-icon|robots.txt|sitemap.xml|manifest.webmanifest|sw.js|offline).*)'],
 }

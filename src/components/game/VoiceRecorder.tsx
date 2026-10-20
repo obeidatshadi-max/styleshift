@@ -48,7 +48,7 @@ export default function VoiceRecorder({ onTranscript }: { onTranscript: (text: s
     <button type="button" disabled={busy} title={label} aria-label={label}
       onClick={() => void (state === 'recording' ? stop() : recorder.previewUrl ? upload() : start())}
       style={{ cursor: busy ? 'not-allowed' : 'pointer', border: '1px solid var(--line)', color: state === 'error' ? 'var(--red)' : 'var(--ink-dim)', background: 'transparent', borderRadius: 8, padding: '8px 10px' }}>{label}</button>
-    {state === 'error' && <span role="alert" style={{ fontSize: 12 }}>{t('visit.transcribeError')}</span>}
+    {state === 'error' && <span role="alert" style={{ fontSize: 14 }}>{t('visit.transcribeError')}</span>}
     {recorder.previewUrl && !busy && <button type="button" onClick={() => { recorder.discard(); setState('idle') }}>{ar ? 'إلغاء التسجيل' : 'Discard recording'}</button>}
   </span>
 }

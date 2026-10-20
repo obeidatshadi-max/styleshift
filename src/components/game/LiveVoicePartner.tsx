@@ -15,10 +15,10 @@ interface Props {
 
 const COLOR: Record<string, string> = { driver: 'var(--purple)', expressive: 'var(--green)', amiable: 'var(--pink)', analytical: 'var(--cyan)' }
 
-const primaryBtn: React.CSSProperties = { width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 12, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', color: '#04121c', background: 'var(--cyan)', borderRadius: 10, padding: '12px 18px', boxShadow: 'var(--glow-cyan)', touchAction: 'manipulation' }
-const ghostBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 12, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', color: 'var(--cyan)', background: 'transparent', borderRadius: 10, padding: '12px 18px', touchAction: 'manipulation' }
+const primaryBtn: React.CSSProperties = { width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', border: '1px solid var(--cyan)', color: 'var(--on-accent)', background: 'var(--cyan)', borderRadius: 10, padding: '12px 18px', boxShadow: 'var(--glow-cyan)', touchAction: 'manipulation' }
+const ghostBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', border: '1px solid var(--cyan)', color: 'var(--cyan)', background: 'transparent', borderRadius: 10, padding: '12px 18px', touchAction: 'manipulation' }
 const difficultyChip = (active: boolean): React.CSSProperties => ({
-  cursor: 'pointer', textAlign: 'start', fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: 1.4, borderRadius: 10, padding: '9px 12px',
+  cursor: 'pointer', textAlign: 'start', fontFamily: 'var(--sans)', fontSize: 14, lineHeight: 1.4, borderRadius: 10, padding: '9px 12px',
   border: `1px solid ${active ? 'var(--cyan)' : 'var(--line)'}`, color: active ? 'var(--cyan)' : 'var(--ink-dim)',
   background: active ? 'rgba(56,214,255,.1)' : 'transparent', touchAction: 'manipulation', width: '100%',
 })
@@ -45,15 +45,15 @@ export default function LiveVoicePartner({ doctor, onDone }: Props) {
   if (!consented) {
     return (
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14 }}>
-        <div style={{ background: 'linear-gradient(180deg,var(--panel),#0a1430)', border: '1px solid var(--line)', borderRadius: 16, padding: 16, boxShadow: '0 12px 40px rgba(0,0,0,.45)' }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.4em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 10 }}>{t('voice.consentTitle')}</div>
-          <p style={{ color: 'var(--ink-dim)', fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>{t('voice.consentBody')}</p>
-          <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 13.5, lineHeight: 1.5, marginBottom: 18, cursor: 'pointer' }}>
+        <div style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 16, padding: 16, boxShadow: 'var(--shadow)' }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--cyan)', marginBottom: 10 }}>{t('voice.consentTitle')}</div>
+          <p style={{ color: 'var(--ink-dim)', fontSize: 16, lineHeight: 1.6, marginBottom: 16 }}>{t('voice.consentBody')}</p>
+          <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 16, lineHeight: 1.5, marginBottom: 18, cursor: 'pointer' }}>
             <input type="checkbox" checked={consentChecked} onChange={e => setConsentChecked(e.target.checked)} style={{ marginTop: 3, accentColor: 'var(--cyan)' }} />
             {t('voice.consentCheckbox')}
           </label>
           <div style={{ marginBottom: 18 }}>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('voice.difficultyTitle')}</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('voice.difficultyTitle')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {DIFFICULTY_LEVELS.map(level => (
                 <button key={level} onClick={() => setDifficulty(level)} style={difficultyChip(difficulty === level)}>
@@ -80,9 +80,9 @@ export default function LiveVoicePartner({ doctor, onDone }: Props) {
   if (phase === 'notconfigured') {
     return (
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14 }}>
-        <div style={{ display: 'inline-block', fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--purple)', border: '1px solid var(--purple)', borderRadius: 20, padding: '4px 11px', marginBottom: 14, background: 'rgba(176,108,255,.08)' }}>{t('voice.premium')}</div>
-        <div style={{ fontSize: 14.5, lineHeight: 1.6, color: 'var(--ink)', marginBottom: 10 }}>{t('voice.teaser', { name: doctor.name })}</div>
-        <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--ink-dim)', marginBottom: 14 }}>{t('voice.notConfigured')}</div>
+        <div style={{ display: 'inline-block', fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--purple)', border: '1px solid var(--purple)', borderRadius: 20, padding: '4px 11px', marginBottom: 14, background: 'rgba(176,108,255,.08)' }}>{t('voice.premium')}</div>
+        <div style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--ink)', marginBottom: 10 }}>{t('voice.teaser', { name: doctor.name })}</div>
+        <div style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--ink-dim)', marginBottom: 14 }}>{t('voice.notConfigured')}</div>
         <button onClick={() => onDone(false, { turns: 0, openingCrisis: '' })} style={ghostBtn}>{t('voice.back')}</button>
       </div>
     )
@@ -112,12 +112,12 @@ export default function LiveVoicePartner({ doctor, onDone }: Props) {
 
   return (
     <div style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14 }}>
-      <div style={{ background: 'linear-gradient(180deg,var(--panel),#0a1430)', border: '1px solid var(--line)', borderRadius: 16, padding: 16, boxShadow: '0 12px 40px rgba(0,0,0,.45)' }}>
+      <div style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 16, padding: 16, boxShadow: 'var(--shadow)' }}>
         <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 14 }}>
-          {s && <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, border: `2px solid ${c}`, boxShadow: `0 0 14px ${c}`, color: c }}>{s.icon}</div>}
+          {s && <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, border: `2px solid ${c}`, boxShadow: 'none', color: c }}>{s.icon}</div>}
           <div>
             <div style={{ fontSize: 16, fontWeight: 700 }}>{doctor.name}</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.1em', color: 'var(--ink-dim)' }}>{t('voice.turnCounter', { n: turnCount, max: TURN_CAP })}</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', color: 'var(--ink-dim)' }}>{t('voice.turnCounter', { n: turnCount, max: TURN_CAP })}</div>
           </div>
         </div>
 
@@ -125,11 +125,11 @@ export default function LiveVoicePartner({ doctor, onDone }: Props) {
           {transcript.map((turn, i) => (
             <div key={i} aria-label={`${turn.role === 'doctor' ? t('voice.speakerDoctor') : t('voice.speakerYou')}: ${turn.text}`} style={{
               alignSelf: turn.role === 'doctor' ? 'flex-start' : 'flex-end',
-              maxWidth: '85%', borderRadius: 12, padding: '9px 12px', fontSize: 13.5, lineHeight: 1.5,
-              background: turn.role === 'doctor' ? 'rgba(0,0,0,.25)' : 'rgba(62,224,143,.1)',
+              maxWidth: '85%', borderRadius: 12, padding: '9px 12px', fontSize: 16, lineHeight: 1.5,
+              background: turn.role === 'doctor' ? 'var(--surface-subtle)' : 'rgba(62,224,143,.1)',
               border: `1px solid ${turn.role === 'doctor' ? 'var(--line)' : 'var(--green)'}`,
             }}>
-              <span aria-hidden="true" style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 2 }}>
+              <span aria-hidden="true" style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)', marginBottom: 2 }}>
                 {turn.role === 'doctor' ? t('voice.speakerDoctor') : t('voice.speakerYou')}
               </span>
               {turn.text}
@@ -141,8 +141,8 @@ export default function LiveVoicePartner({ doctor, onDone }: Props) {
           <>
             <VoiceStatusAnnouncer text={label} />
             <div style={{
-              width: '100%', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 13,
-              letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--cyan)',
+              width: '100%', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 16,
+              letterSpacing: 'normal', textTransform: 'none', color: 'var(--cyan)',
               border: '1px solid var(--cyan)', borderRadius: 10, padding: '14px 18px',
             }}>
               🎙️ {label}
@@ -170,21 +170,21 @@ export default function LiveVoicePartner({ doctor, onDone }: Props) {
               </button>
             )}
             {analysisStatus === 'loading' && (
-              <div style={{ marginTop: 10, fontSize: 12.5, color: 'var(--ink-dim)', fontFamily: 'var(--mono)' }}>{t('voice.deepAnalysis.loading')}</div>
+              <div style={{ marginTop: 10, fontSize: 14, color: 'var(--ink-dim)', fontFamily: 'var(--mono)' }}>{t('voice.deepAnalysis.loading')}</div>
             )}
             {(analysisStatus === 'error' || analysisStatus === 'ratelimited' || analysisStatus === 'notconfigured') && (
-              <div style={{ marginTop: 10, fontSize: 12.5, color: 'var(--ink-dim)' }}>{t('voice.deepAnalysis.error')}</div>
+              <div style={{ marginTop: 10, fontSize: 14, color: 'var(--ink-dim)' }}>{t('voice.deepAnalysis.error')}</div>
             )}
             {analysisStatus === 'ready' && analysis && (
               <div style={{ marginTop: 14, borderTop: '1px solid var(--line)', paddingTop: 14 }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 8 }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--cyan)', marginBottom: 8 }}>
                   {t('voice.deepAnalysis.scorecardTitle')}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
                   {COMPETENCY_DIMENSIONS.map(dim => {
                     const c = analysis.competencies[dim]
                     return (
-                      <div key={dim} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                      <div key={dim} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 16 }}>
                         <span style={{ color: 'var(--ink-dim)' }}>{t(`voice.competency.${dim}`)}</span>
                         <span style={{ fontFamily: 'var(--mono)', color: c.score == null ? 'var(--ink-dim)' : 'var(--cyan)' }}>
                           {c.score == null ? t('voice.deepAnalysis.insufficientData') : `${c.score}`}
@@ -194,10 +194,10 @@ export default function LiveVoicePartner({ doctor, onDone }: Props) {
                   })}
                 </div>
 
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 8 }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--cyan)', marginBottom: 8 }}>
                   {t('voice.deepAnalysis.adaptationTitle')}
                 </div>
-                <div style={{ marginBottom: 8, fontSize: 12.5, color: 'var(--ink-dim)' }}>
+                <div style={{ marginBottom: 8, fontSize: 14, color: 'var(--ink-dim)' }}>
                   {analysis.doctorStyleProfile.dominant
                     ? t('voice.deepAnalysis.adaptationWhy', {
                         name: doctor.name,
@@ -207,7 +207,7 @@ export default function LiveVoicePartner({ doctor, onDone }: Props) {
                       })
                     : t('voice.deepAnalysis.adaptationUnknownStyle')}
                 </div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--cyan)', marginBottom: 8 }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 16, color: 'var(--cyan)', marginBottom: 8 }}>
                   {t('voice.deepAnalysis.adaptationOverall', {
                     score: analysis.adaptationScore == null ? t('voice.deepAnalysis.insufficientData') : `${analysis.adaptationScore}`,
                   })}
@@ -216,7 +216,7 @@ export default function LiveVoicePartner({ doctor, onDone }: Props) {
                   {ADAPTATION_DIMENSIONS.map(dim => {
                     const a = analysis.adaptation[dim]
                     return (
-                      <div key={dim} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                      <div key={dim} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 16 }}>
                         <span style={{ color: 'var(--ink-dim)' }}>{t(`voice.adaptation.${dim}`)}</span>
                         <span style={{ fontFamily: 'var(--mono)', color: a.score == null ? 'var(--ink-dim)' : 'var(--cyan)' }}>
                           {a.score == null ? t('voice.deepAnalysis.insufficientData') : `${a.score}`}
@@ -226,8 +226,8 @@ export default function LiveVoicePartner({ doctor, onDone }: Props) {
                   })}
                 </div>
                 {analysis.adaptationRecommendation && (
-                  <div style={{ marginBottom: 16, fontSize: 12.5, lineHeight: 1.5 }}>
-                    <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 4 }}>
+                  <div style={{ marginBottom: 16, fontSize: 14, lineHeight: 1.5 }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)', marginBottom: 4 }}>
                       {t('voice.deepAnalysis.adaptationRecommendationTitle')}
                     </div>
                     {analysis.adaptationRecommendation}
@@ -236,12 +236,12 @@ export default function LiveVoicePartner({ doctor, onDone }: Props) {
 
                 {analysis.criticalMoments.length > 0 && (
                   <>
-                    <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 8 }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--cyan)', marginBottom: 8 }}>
                       {t('voice.deepAnalysis.momentsTitle')}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {analysis.criticalMoments.map(m => (
-                        <div key={m.turnIndex} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, lineHeight: 1.5 }}>
+                        <div key={m.turnIndex} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', fontSize: 14, lineHeight: 1.5 }}>
                           <div style={{ fontStyle: 'italic', color: 'var(--ink)', marginBottom: 4 }}>
                             {m.role === 'doctor' ? t('voice.speakerDoctor') : t('voice.speakerYou')}: &ldquo;{m.quote}&rdquo;
                           </div>
@@ -254,7 +254,7 @@ export default function LiveVoicePartner({ doctor, onDone }: Props) {
                                 sourceSessionId: sessionId,
                                 turnIndex: m.role === 'doctor' ? m.turnIndex : m.turnIndex - 1,
                               })}
-                              style={{ ...ghostBtn, marginTop: 8, padding: '6px 10px', fontSize: 10 }}
+                              style={{ ...ghostBtn, marginTop: 8, padding: '6px 10px', fontSize: 14 }}
                             >
                               {t('voice.deepAnalysis.retryMoment')}
                             </button>
@@ -270,7 +270,7 @@ export default function LiveVoicePartner({ doctor, onDone }: Props) {
             <div style={{ marginTop: 14 }}>
               <button
                 onClick={() => onDone(outcome === 'won', { turns: turnCount, openingCrisis: openingText })}
-                style={{ cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 12, letterSpacing: '.15em', textTransform: 'uppercase', border: '1px solid var(--cyan)', color: '#04121c', background: 'var(--cyan)', borderRadius: 10, padding: '12px 18px', boxShadow: 'var(--glow-cyan)', touchAction: 'manipulation' }}
+                style={{ cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', border: '1px solid var(--cyan)', color: 'var(--on-accent)', background: 'var(--cyan)', borderRadius: 10, padding: '12px 18px', boxShadow: 'var(--glow-cyan)', touchAction: 'manipulation' }}
               >
                 {t('result.logContinue')}
               </button>

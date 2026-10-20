@@ -28,7 +28,7 @@ import { buildWeeklyDigest, getRecentSessions } from '@/lib/weekly-digest'
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section style={{ background: 'linear-gradient(180deg,var(--panel),#0a1430)', border: '1px solid var(--line)', borderRadius: 16, padding: 16, boxShadow: '0 12px 40px rgba(0,0,0,.45)' }}>
+    <section style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 16, padding: 16, boxShadow: 'var(--shadow)' }}>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 12, letterSpacing: '.3em', textTransform: 'uppercase', color: 'var(--cyan)', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
         <span style={{ width: 9, height: 9, borderRadius: '50%', background: 'var(--cyan)', boxShadow: 'var(--glow-cyan)', display: 'inline-block' }} />
         {title}
@@ -83,7 +83,7 @@ export default async function DashboardPage() {
           <a href="/dashboard/recognition" style={{ background: '#e8c060', color: '#1a1402', border: '1px solid #e8c060', borderRadius: 10, padding: '10px 16px', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', fontWeight: 700 }}>
             🏆 Recognize #1
           </a>
-          <a href="/dashboard/report" style={{ background: 'var(--cyan)', color: '#04121f', border: '1px solid var(--cyan)', borderRadius: 10, padding: '10px 16px', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', fontWeight: 700 }}>
+          <a href="/dashboard/report" style={{ background: 'var(--cyan)', color: 'var(--on-accent)', border: '1px solid var(--cyan)', borderRadius: 10, padding: '10px 16px', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', fontWeight: 700 }}>
             🖨 Report
           </a>
           <a href="/play" style={{ background: 'transparent', color: 'var(--cyan)', border: '1px solid var(--cyan)', borderRadius: 10, padding: '10px 16px', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>

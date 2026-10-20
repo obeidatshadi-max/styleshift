@@ -75,7 +75,7 @@ export default function TeamPulsePanel({ pulse, siteUrl }: Props) {
 
   const listRow: React.CSSProperties = {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-    padding: '8px 10px', borderRadius: 10, border: '1px solid var(--line)', background: 'rgba(0,0,0,.18)',
+    padding: '8px 10px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface-subtle)',
   }
   const shareBtn = (active: boolean): React.CSSProperties => ({
     flex: 1, cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.1em',

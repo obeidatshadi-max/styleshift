@@ -177,18 +177,18 @@ export default function GameShell() {
   const [confidence, setConfidence] = useState(0)
 
   function withNav(el: React.ReactNode) {
-    if (NO_NAV_SCREENS.includes(screen)) return <>{el}</>
+    if (NO_NAV_SCREENS.includes(screen)) return <div className="field-ui">{el}</div>
     return (
-      <>
+      <div className="field-ui game-shell">
         <AppNav activeSection={section} onSelectSection={goToSection} showBack={screen !== 'home'} onBack={() => setScreen('home')} />
         {el}
-      </>
+      </div>
     )
   }
 
   if (loading) {
     return (
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh', fontFamily:'var(--mono)', fontSize:13, color:'var(--ink-dim)', letterSpacing:'.1em' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh', fontFamily:'var(--mono)', fontSize:16, color:'var(--ink-dim)', letterSpacing: 'normal' }}>
         Loading…
       </div>
     )

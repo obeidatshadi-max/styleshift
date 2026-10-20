@@ -5,18 +5,18 @@ import type { ConversationReport as ReportType, EvidenceRef, Certainty, Objectiv
 import { SocialStyleCard } from './SocialStyleCard'
 
 const card: React.CSSProperties = {
-  background: 'linear-gradient(180deg,var(--panel),#0a1430)', border: '1px solid var(--line)',
-  borderRadius: 18, padding: '18px 20px 20px', boxShadow: '0 16px 50px rgba(0,0,0,.55)',
+  background: 'var(--panel)', border: '1px solid var(--line)',
+  borderRadius: 18, padding: '18px 20px 20px', boxShadow: 'var(--shadow)',
 }
 const eyebrow = (text: string) => (
-  <div style={{ fontFamily: 'var(--mono)', fontSize: 'max(11px, var(--voice-min-font, 0px))', letterSpacing: '.3em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 10 }}>{text}</div>
+  <div style={{ fontFamily: 'var(--mono)', fontSize: 'max(11px, var(--voice-min-font, 0px))', letterSpacing: 'normal', textTransform: 'none', color: 'var(--cyan)', marginBottom: 10 }}>{text}</div>
 )
 const bodyText: React.CSSProperties = { fontSize: 'max(13.5px, var(--voice-min-font, 0px))', lineHeight: 1.6, color: 'var(--ink)', margin: 0 }
-const fieldLabel: React.CSSProperties = { fontFamily: 'var(--mono)', fontSize: 'max(10.5px, var(--voice-min-font, 0px))', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-dim)' }
+const fieldLabel: React.CSSProperties = { fontFamily: 'var(--mono)', fontSize: 'max(10.5px, var(--voice-min-font, 0px))', letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)' }
 
 function Badge({ text, color }: { text: string; color: string }) {
   return (
-    <span style={{ display: 'inline-block', fontFamily: 'var(--mono)', fontSize: 'max(10.5px, var(--voice-min-font, 0px))', letterSpacing: '.03em', border: `1px solid ${color}`, color, borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>
+    <span style={{ display: 'inline-block', fontFamily: 'var(--mono)', fontSize: 'max(10.5px, var(--voice-min-font, 0px))', letterSpacing: 'normal', border: `1px solid ${color}`, color, borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>
       {text}
     </span>
   )
@@ -36,7 +36,7 @@ function Accordion({ title, defaultOpen = false, children }: { title: string; de
   return (
     <div style={{ border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
       <button aria-expanded={open} onClick={() => setOpen(o => !o)}
-        style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: 10, cursor: 'pointer', background: 'transparent', border: 'none', padding: '13px 14px', textAlign: 'start', color: 'var(--cyan)', fontFamily: 'var(--mono)', fontSize: 'max(11px, var(--voice-min-font, 0px))', letterSpacing: '.15em', textTransform: 'uppercase' }}>
+        style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: 10, cursor: 'pointer', background: 'transparent', border: 'none', padding: '13px 14px', textAlign: 'start', color: 'var(--cyan)', fontFamily: 'var(--mono)', fontSize: 'max(11px, var(--voice-min-font, 0px))', letterSpacing: 'normal', textTransform: 'none' }}>
         <span>{title}</span>
         <span style={{ flex: '0 0 auto' }}>{open ? '−' : '+'}</span>
       </button>
@@ -51,7 +51,7 @@ function Evidence({ evidence, audioAvailable }: { evidence: EvidenceRef; audioAv
     <div dir="auto" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, margin: '6px 0', paddingInlineStart: 12, borderInlineStart: '2px solid var(--line)' }}>
       <p style={{ flex: 1, fontSize: 'max(12.5px, var(--voice-min-font, 0px))', lineHeight: 1.55, color: 'var(--ink-dim)', fontStyle: 'italic', margin: 0 }}>
         &ldquo;{evidence.quote}&rdquo;{' '}
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 'max(10px, var(--voice-min-font, 0px))', textTransform: 'uppercase', letterSpacing: '.05em', fontStyle: 'normal', opacity: .75 }}>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 'max(10px, var(--voice-min-font, 0px))', textTransform: 'none', letterSpacing: 'normal', fontStyle: 'normal', opacity: .75 }}>
           &mdash; {evidence.speakerRole}
         </span>
       </p>

@@ -23,8 +23,8 @@ export default function PracticePatternLine() {
     ? t('pattern.repeated', { label: t(`sim.beh.${pattern.behavior}`), count: pattern.count, of: pattern.of })
     : t('pattern.weak', { label: t(`sim.comp.${pattern.competency}`), avg: pattern.average, of: pattern.of })
   return (
-    <div role="note" style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '10px 14px', fontSize: 13, lineHeight: 1.55, color: 'var(--ink-dim)' }}>
-      <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--purple)', marginInlineEnd: 8 }}>{t('pattern.label')}</span>
+    <div role="note" style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '10px 14px', fontSize: 16, lineHeight: 1.55, color: 'var(--ink-dim)' }}>
+      <span style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--purple)', marginInlineEnd: 8 }}>{t('pattern.label')}</span>
       {line}
     </div>
   )

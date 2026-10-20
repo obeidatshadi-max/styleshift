@@ -1,8 +1,18 @@
-import { describe, expect, it, vi } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { proxy } from './proxy'
+import { config } from './proxy'
+import { unstable_doesMiddlewareMatch } from 'next/experimental/testing/server'
 const mocks = vi.hoisted(() => ({ createServerClient: vi.fn() }))
 vi.mock('@supabase/ssr', () => ({ createServerClient: mocks.createServerClient }))
+it('serves public fonts without authentication while protecting app and API routes', () => {
+  for (const url of ['/fonts/plus-jakarta-sans-latin.woff2', '/fonts/ibm-plex-sans-arabic-400.woff2']) {
+    expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url })).toBe(false)
+  }
+  for (const url of ['/play', '/dashboard', '/api/reports/private-id']) {
+    expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url })).toBe(true)
+  }
+})
 it('allows the bearer-authenticated report function to handle its own authentication', async () => {
   const res = await proxy(new NextRequest('https://style-shift.netlify.app/.netlify/functions/assemblyai-proxy'))
   expect(res.headers.get('location')).toBeNull()

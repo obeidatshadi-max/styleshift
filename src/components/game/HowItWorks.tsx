@@ -18,20 +18,20 @@ export default function HowItWorks({ onDone }: Props) {
   const verbs = [t('how.verb1'), t('how.verb2'), t('how.verb3'), t('how.verb4')]
 
   const eyebrow = (text: string) => (
-    <div style={{ fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.4em', textTransform:'uppercase', color:'var(--cyan)', marginBottom:10 }}>{text}</div>
+    <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--cyan)', marginBottom:10 }}>{text}</div>
   )
   const heading = (text: string) => (
-    <h2 style={{ fontSize:'clamp(20px,5vw,28px)', fontWeight:800, letterSpacing:'.01em', marginBottom:12, lineHeight:1.15 }}>{text}</h2>
+    <h2 style={{ fontSize:'clamp(20px,5vw,28px)', fontWeight:800, letterSpacing: 'normal', marginBottom:12, lineHeight:1.15 }}>{text}</h2>
   )
   const body = (text: string) => (
-    <p style={{ color:'var(--ink-dim)', fontSize:14.5, lineHeight:1.6, marginBottom:18 }}>{text}</p>
+    <p style={{ color:'var(--ink-dim)', fontSize:16, lineHeight:1.6, marginBottom:18 }}>{text}</p>
   )
 
   // ── Slide 1: welcome ──
   const slide1 = (
     <>
       {eyebrow(t('how.s1.eyebrow'))}
-      <div style={{ fontSize:'clamp(26px,7vw,44px)', fontWeight:800, letterSpacing:'.02em', textShadow:'0 0 24px rgba(56,214,255,.35)', marginBottom:10 }}>
+      <div style={{ fontSize:'clamp(26px,7vw,44px)', fontWeight:800, letterSpacing: 'normal', textShadow:'none', marginBottom:10 }}>
         STYLE<span style={{ color:'var(--cyan)' }}>SHIFT</span>
       </div>
       {heading(t('how.s1.title'))}
@@ -49,12 +49,12 @@ export default function HowItWorks({ onDone }: Props) {
         {STYLE_ORDER.map(k => {
           const s = STYLES[k]; const c = COLOR[k]
           return (
-            <div key={k} style={{ border:`1px solid ${c}`, borderRadius:12, padding:'12px 12px', background:'rgba(0,0,0,.2)', textAlign:'start' }}>
+            <div key={k} style={{ border:`1px solid ${c}`, borderRadius:12, padding:'12px 12px', background:'var(--surface-subtle)', textAlign:'start' }}>
               <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
                 <span style={{ color:c, fontSize:18 }}>{s.icon}</span>
-                <b style={{ color:c, fontSize:15 }}>{s.name}</b>
+                <b style={{ color:c, fontSize:16 }}>{s.name}</b>
               </div>
-              <div style={{ fontFamily:'var(--mono)', fontSize:10.5, letterSpacing:'.05em', color:'var(--ink-dim)' }}>{s.drive}</div>
+              <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', color:'var(--ink-dim)' }}>{s.drive}</div>
             </div>
           )
         })}
@@ -72,11 +72,11 @@ export default function HowItWorks({ onDone }: Props) {
         {LEVELS.map((l, idx) => {
           const c = LEVEL_COLORS[idx]
           return (
-            <div key={l.n} style={{ display:'flex', alignItems:'center', gap:12, border:'1px solid var(--line)', borderRadius:12, padding:'11px 13px', background:'rgba(0,0,0,.18)' }}>
-              <span style={{ fontFamily:'var(--mono)', fontWeight:700, fontSize:16, width:34, height:34, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:9, border:`1px solid ${c}`, color:c, background:'rgba(0,0,0,.25)' }}>{l.n}</span>
+            <div key={l.n} style={{ display:'flex', alignItems:'center', gap:12, border:'1px solid var(--line)', borderRadius:12, padding:'11px 13px', background:'var(--surface-subtle)' }}>
+              <span style={{ fontFamily:'var(--mono)', fontWeight:700, fontSize:16, width:34, height:34, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:9, border:`1px solid ${c}`, color:c, background:'var(--surface-subtle)' }}>{l.n}</span>
               <div style={{ flex:1, minWidth:0, textAlign:'start' }}>
-                <b style={{ fontSize:14.5, display:'block' }}>{verbs[idx]} · <span style={{ color:c }}>{l.title}</span></b>
-                <span style={{ fontSize:12, color:'var(--ink-dim)' }}>{l.sub}</span>
+                <b style={{ fontSize:16, display:'block' }}>{verbs[idx]} · <span style={{ color:c }}>{l.title}</span></b>
+                <span style={{ fontSize:14, color:'var(--ink-dim)' }}>{l.sub}</span>
               </div>
             </div>
           )
@@ -90,7 +90,7 @@ export default function HowItWorks({ onDone }: Props) {
     <>
       {eyebrow('03 / 04')}
       {heading(t('how.s4.title'))}
-      <div style={{ display:'flex', alignItems:'center', gap:10, fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.06em', color:'var(--ink-dim)', flexWrap:'wrap', marginBottom:16 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:10, fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', color:'var(--ink-dim)', flexWrap:'wrap', marginBottom:16 }}>
         <span style={{ color:'var(--ink-dim)' }}>Rookie</span><span>{fwd}</span>
         <span>Field Rep</span><span>{fwd}</span>
         <span>Style Reader</span><span>{fwd}</span>
@@ -99,7 +99,7 @@ export default function HowItWorks({ onDone }: Props) {
       </div>
       {body(t('how.s4.xp'))}
       <div style={{ border:'1px solid var(--amber)', borderRadius:12, padding:'13px 14px', background:'rgba(255,206,77,.07)' }}>
-        <div style={{ fontSize:14, lineHeight:1.55, color:'var(--ink)' }}>{t('how.s4.daily')}</div>
+        <div style={{ fontSize:16, lineHeight:1.55, color:'var(--ink)' }}>{t('how.s4.daily')}</div>
       </div>
     </>
   )
@@ -109,12 +109,12 @@ export default function HowItWorks({ onDone }: Props) {
 
   return (
     <div style={{ position:'relative', zIndex:1, minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-      <div style={{ width:'100%', maxWidth:460, background:'linear-gradient(180deg,var(--panel),#0a1430)', border:'1px solid var(--line)', borderRadius:18, padding:'18px 20px 20px', boxShadow:'0 16px 50px rgba(0,0,0,.55)' }}>
+      <div style={{ width:'100%', maxWidth:460, background:'var(--panel)', border:'1px solid var(--line)', borderRadius:18, padding:'18px 20px 20px', boxShadow:'var(--shadow)' }}>
 
         {/* Language toggle + Skip */}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
           <LangToggle />
-          <button onClick={onDone} style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.12em', textTransform:'uppercase', color:'var(--ink-dim)' }}>{t('how.skip')}</button>
+          <button onClick={onDone} style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--ink-dim)' }}>{t('how.skip')}</button>
         </div>
 
         {/* Slide body */}
@@ -130,9 +130,9 @@ export default function HowItWorks({ onDone }: Props) {
         {/* Nav */}
         <div style={{ display:'flex', gap:10 }}>
           {i > 0 && (
-            <button onClick={() => setI(n => n - 1)} style={{ flex:'0 0 auto', cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>{back} {t('how.back')}</button>
+            <button onClick={() => setI(n => n - 1)} style={{ flex:'0 0 auto', cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>{back} {t('how.back')}</button>
           )}
-          <button onClick={() => (last ? onDone() : setI(n => n + 1))} style={{ flex:1, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'#04121c', background:'var(--cyan)', borderRadius:10, padding:'12px 18px', boxShadow:'var(--glow-cyan)', touchAction:'manipulation' }}>
+          <button onClick={() => (last ? onDone() : setI(n => n + 1))} style={{ flex:1, cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--cyan)', color:'var(--on-accent)', background:'var(--cyan)', borderRadius:10, padding:'12px 18px', boxShadow:'var(--glow-cyan)', touchAction:'manipulation' }}>
             {last ? t('how.start') : `${t('how.next')} ${fwd}`}
           </button>
         </div>

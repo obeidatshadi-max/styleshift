@@ -56,7 +56,7 @@ export default function VoicePracticePanel({ stats, reps }: Props) {
               const total = l.sessionsCompleted + l.errorEvents
               const errorRate = total ? Math.round((l.errorEvents / total) * 100) : 0
               return (
-                <div key={l.lang} style={{ flex: '1 1 140px', border: '1px solid var(--line)', borderRadius: 10, padding: '9px 12px', background: 'rgba(0,0,0,.18)' }}>
+                <div key={l.lang} style={{ flex: '1 1 140px', border: '1px solid var(--line)', borderRadius: 10, padding: '9px 12px', background: 'var(--surface-subtle)' }}>
                   <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 4 }}>{l.lang === 'ar' ? 'Arabic' : 'English'}</div>
                   <div style={{ fontSize: 13 }}>
                     {l.sessionsCompleted} completed · <span style={{ color: errorRate > 20 ? 'var(--red)' : 'var(--ink-dim)' }}>{errorRate}% error rate</span>
@@ -73,7 +73,7 @@ export default function VoicePracticePanel({ stats, reps }: Props) {
           <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 8 }}>By rep</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {practicedReps.map(r => (
-              <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '8px 10px', borderRadius: 10, border: '1px solid var(--line)', background: 'rgba(0,0,0,.18)' }}>
+              <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '8px 10px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface-subtle)' }}>
                 <span style={{ fontSize: 13 }}>{r.name ?? 'Rep'}</span>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-dim)' }}>
                   {r.sessionsCompleted} session{r.sessionsCompleted === 1 ? '' : 's'} · last {new Date(r.lastPracticed).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}

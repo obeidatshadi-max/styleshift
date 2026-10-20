@@ -63,14 +63,14 @@ export default function LevelFour({ onComplete, onBack }: Props) {
 
   return (
     <div style={{ position:'relative', zIndex:1, maxWidth:1040, margin:'0 auto', padding:14 }}>
-      <div style={{ background:'linear-gradient(180deg,var(--panel),#0a1430)', border:'1px solid var(--line)', borderRadius:16, padding:16, boxShadow:'0 12px 40px rgba(0,0,0,.45)' }}>
+      <div style={{ background:'var(--panel)', border:'1px solid var(--line)', borderRadius:16, padding:16, boxShadow:'var(--shadow)' }}>
         <Topline level={4} title={`${t('level.label')} 4 · ${t('l4.title')}`} total={scenarios.length} idx={idx} results={results} />
         <div style={{ marginBottom:14 }}>
           <Meter label={t('l4.globalQuota')} type="quota" val={meters.quota} />
           <Meter label={t('l4.teamMorale')} type="morale" val={meters.morale} />
           <Meter label={t('l4.riskAssessment')} type="risk" val={meters.risk} />
         </div>
-        <div style={{ fontFamily:'var(--mono)', fontSize:13, color:'var(--ink-dim)', letterSpacing:'.04em', marginBottom:10 }}>{item.q}</div>
+        <div style={{ fontFamily:'var(--mono)', fontSize:16, color:'var(--ink-dim)', letterSpacing: 'normal', marginBottom:10 }}>{item.q}</div>
         {item.opts.map((opt, i) => {
           const state = chosen===null ? 'default' : i===best ? 'correct' : i===chosen ? 'wrong' : 'muted'
           return <OptBtn key={i} text={opt.t} state={state} disabled={chosen!==null} onClick={() => choose(i)} />

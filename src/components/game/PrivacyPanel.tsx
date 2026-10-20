@@ -27,24 +27,24 @@ export default function PrivacyPanel() {
     }
   }
 
-  const ghostBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', border: '1px solid var(--line)', color: 'var(--ink-dim)', background: 'transparent', borderRadius: 8, padding: '9px 14px', touchAction: 'manipulation' }
-  const dangerBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', border: '1px solid var(--red)', color: 'var(--red)', background: 'rgba(255,93,108,.08)', borderRadius: 8, padding: '9px 14px', touchAction: 'manipulation' }
+  const ghostBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', border: '1px solid var(--line)', color: 'var(--ink-dim)', background: 'transparent', borderRadius: 8, padding: '9px 14px', touchAction: 'manipulation' }
+  const dangerBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', border: '1px solid var(--red)', color: 'var(--red)', background: 'rgba(255,93,108,.08)', borderRadius: 8, padding: '9px 14px', touchAction: 'manipulation' }
 
   return (
     <div>
-      <p style={{ color: 'var(--ink-dim)', fontSize: 12.5, lineHeight: 1.55, marginBottom: 12 }}>{t('privacy.body')}</p>
+      <p style={{ color: 'var(--ink-dim)', fontSize: 14, lineHeight: 1.55, marginBottom: 12 }}>{t('privacy.body')}</p>
 
       {counts && (
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-dim)', marginBottom: 12 }}>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 14, color: 'var(--ink-dim)', marginBottom: 12 }}>
           {t('privacy.count', { n: counts.total })}
         </div>
       )}
 
       {state === 'done' && (
-        <div style={{ fontSize: 13, color: 'var(--green)', marginBottom: 10 }}>{t('privacy.deleted')}</div>
+        <div style={{ fontSize: 16, color: 'var(--green)', marginBottom: 10 }}>{t('privacy.deleted')}</div>
       )}
       {state === 'error' && (
-        <div style={{ fontSize: 13, color: 'var(--red)', marginBottom: 10 }}>{t('privacy.deleteError')}</div>
+        <div style={{ fontSize: 16, color: 'var(--red)', marginBottom: 10 }}>{t('privacy.deleteError')}</div>
       )}
 
       {!confirming ? (
@@ -53,7 +53,7 @@ export default function PrivacyPanel() {
         </button>
       ) : (
         <div style={{ border: '1px solid var(--red)', borderRadius: 10, padding: '11px 13px', background: 'rgba(255,93,108,.06)' }}>
-          <div style={{ fontSize: 12.5, color: 'var(--ink)', lineHeight: 1.5, marginBottom: 10 }}>{t('privacy.confirmBody')}</div>
+          <div style={{ fontSize: 14, color: 'var(--ink)', lineHeight: 1.5, marginBottom: 10 }}>{t('privacy.confirmBody')}</div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={confirmDelete} disabled={state === 'deleting'} style={{ ...dangerBtn, opacity: state === 'deleting' ? 0.6 : 1 }}>
               {state === 'deleting' ? '…' : t('privacy.confirmYes')}

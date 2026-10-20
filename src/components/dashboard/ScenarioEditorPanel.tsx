@@ -31,11 +31,11 @@ const chip = (active: boolean, color = 'var(--cyan)'): React.CSSProperties => ({
   background: active ? `${color}1a` : 'transparent', touchAction: 'manipulation',
 })
 const inputStyle: React.CSSProperties = {
-  background: 'rgba(0,0,0,.3)', border: '1px solid var(--line)', borderRadius: 10,
+  background: 'var(--surface-subtle)', border: '1px solid var(--line)', borderRadius: 10,
   padding: '10px 12px', color: 'var(--ink)', fontFamily: 'var(--sans)', fontSize: 13.5, outline: 'none', width: '100%',
 }
 const labelStyle: React.CSSProperties = { fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 6, display: 'block' }
-const primaryBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', background: 'var(--cyan)', color: '#04121f', borderRadius: 10, padding: '11px 14px', fontWeight: 700 }
+const primaryBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', background: 'var(--cyan)', color: 'var(--on-accent)', borderRadius: 10, padding: '11px 14px', fontWeight: 700 }
 const ghostBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--line)', background: 'none', color: 'var(--ink-dim)', borderRadius: 10, padding: '11px 14px' }
 
 /**
@@ -104,7 +104,7 @@ export default function ScenarioEditorPanel() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {scenarios.map(s => (
-            <div key={s.id} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', background: 'rgba(0,0,0,.18)' }}>
+            <div key={s.id} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', background: 'var(--surface-subtle)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <div>
                   <span style={{ fontSize: 13.5, fontWeight: 700 }}>{s.name}</span>
@@ -136,7 +136,7 @@ export default function ScenarioEditorPanel() {
       )}
 
       {open ? (
-        <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 14, background: 'rgba(0,0,0,.18)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 14, background: 'var(--surface-subtle)', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
             <span style={labelStyle}>Doctor style this drill targets</span>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -190,7 +190,7 @@ export default function ScenarioEditorPanel() {
           </div>
         </div>
       ) : (
-        <button onClick={() => setOpen(true)} style={{ cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', color: 'var(--cyan)', background: 'rgba(56,214,255,.06)', borderRadius: 10, padding: '12px 16px', touchAction: 'manipulation' }}>
+        <button onClick={() => setOpen(true)} style={{ cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', color: 'var(--cyan)', background: 'var(--accent-soft)', borderRadius: 10, padding: '12px 16px', touchAction: 'manipulation' }}>
           ＋ New scenario
         </button>
       )}

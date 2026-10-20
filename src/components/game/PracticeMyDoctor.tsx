@@ -81,7 +81,7 @@ export default function PracticeMyDoctor() {
       <label style={{ display: 'grid', gap: 6, margin: '10px 0' }}>
         <span style={smallLabel}>{t('pmd.doctor')}</span>
         <select value={preview?.doctor?.id ?? ''} onChange={e => void load(e.target.value)}
-          style={{ background: 'rgba(0,0,0,.3)', border: '1px solid var(--line)', borderRadius: 10, padding: 10, color: 'var(--ink)' }}>
+          style={{ background: 'var(--surface-subtle)', border: '1px solid var(--line)', borderRadius: 10, padding: 10, color: 'var(--ink)' }}>
           {preview?.doctors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
       </label>

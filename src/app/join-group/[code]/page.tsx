@@ -37,7 +37,7 @@ export default function JoinGroupPage() {
 
   const btnStyle: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-    background: 'var(--cyan)', color: '#04121c', border: '1px solid var(--cyan)',
+    background: 'var(--cyan)', color: 'var(--on-accent)', border: '1px solid var(--cyan)',
     borderRadius: 10, padding: '12px 18px', fontFamily: 'var(--mono)', fontSize: 12,
     letterSpacing: '.15em', textTransform: 'uppercase', cursor: 'pointer',
     boxShadow: 'var(--glow-cyan)', touchAction: 'manipulation', textDecoration: 'none',
@@ -54,7 +54,7 @@ export default function JoinGroupPage() {
         STYLE<span style={{ color: 'var(--cyan)' }}>SHIFT</span>
       </h1>
 
-      <div style={{ background: 'linear-gradient(180deg,var(--panel),#0a1430)', border: '1px solid var(--line)', borderRadius: 16, padding: 24, boxShadow: '0 12px 40px rgba(0,0,0,.45)', width: '100%', maxWidth: 380, textAlign: 'center' }}>
+      <div style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 16, padding: 24, boxShadow: 'var(--shadow)', width: '100%', maxWidth: 380, textAlign: 'center' }}>
         {status === 'checking' && <p style={{ color: 'var(--ink-dim)' }}>{t('group.checking')}</p>}
         {status === 'joining' && <p style={{ color: 'var(--ink-dim)' }}>{t('group.joining')}</p>}
         {status === 'loggedOut' && (

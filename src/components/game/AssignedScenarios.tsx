@@ -43,7 +43,7 @@ export default function AssignedScenarios() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {list.map(s => (
           <div key={s.id} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 12 }}>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>{s.name}</div>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>{s.name}</div>
             <div style={{ ...bodyText, color: 'var(--ink-dim)', margin: '4px 0 8px' }}>{s.visitPurpose}</div>
             <div style={smallLabel}>{t('scn.minutes', { n: s.availableTimeMin })}</div>
             <button onClick={() => setRunning(s)} style={{ ...ghostBtn, marginTop: 8 }}>{t('scn.start')}</button>

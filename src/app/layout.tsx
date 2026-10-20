@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import './field.css'
 import { LanguageProvider } from '@/lib/i18n'
 import OfflineSync from '@/components/OfflineSync'
 
@@ -29,6 +30,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `try{document.documentElement.dataset.theme=localStorage.getItem('styleshift_theme')==='dark'?'dark':'light'}catch{}` }} />
+      </head>
       <body>
         <OfflineSync />
         <LanguageProvider>{children}</LanguageProvider>

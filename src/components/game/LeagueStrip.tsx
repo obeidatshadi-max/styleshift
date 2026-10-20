@@ -7,7 +7,7 @@ export default function LeagueStrip() {
   const t = useT()
   const [board, setBoard] = useState<LeagueBoard | null>(null)
   const [open, setOpen] = useState(false)
-  const gold = '#e8c060'
+  const gold = 'var(--amber)'
 
   useEffect(() => {
     let alive = true
@@ -24,9 +24,9 @@ export default function LeagueStrip() {
     <>
       <button onClick={() => setOpen(true)}
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, width: '100%', textAlign: 'start', cursor: 'pointer',
-          background: 'linear-gradient(180deg,var(--panel),#0a1430)', border: '1px solid var(--line)', borderRadius: 16, padding: '14px 18px', color: 'var(--ink)' }}>
-        <span style={{ fontSize: 13, fontWeight: 700 }}>🏅 {board.leagueName}</span>
-        <span style={{ fontSize: 13, color: gold, fontWeight: 800 }}>
+          background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 16, padding: '14px 18px', color: 'var(--ink)' }}>
+        <span style={{ fontSize: 16, fontWeight: 700 }}>🏅 {board.leagueName}</span>
+        <span style={{ fontSize: 16, color: gold, fontWeight: 800 }}>
           {board.selfRank ? t('league.yourRank', { n: board.selfRank, total: board.teams.length }) : ''}
         </span>
       </button>
@@ -36,7 +36,7 @@ export default function LeagueStrip() {
           style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,18,.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 20 }}>
           <div onClick={e => e.stopPropagation()}
             style={{ width: 'min(440px,92vw)', background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 16, padding: 18 }}>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 12, letterSpacing: '.3em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 14 }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--cyan)', marginBottom: 14 }}>
               🏅 {board.leagueName}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -44,14 +44,14 @@ export default function LeagueStrip() {
                 <div key={team.companyId}
                   style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10,
                     background: team.isSelf ? 'rgba(232,192,96,.12)' : 'transparent',
-                    border: team.isSelf ? '1px solid #e8c06066' : '1px solid var(--line)' }}>
-                  <span style={{ fontSize: 14, fontWeight: 800, width: 26, color: team.rank === 1 ? '#e8c060' : 'var(--ink-dim)' }}>#{team.rank}</span>
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: team.isSelf ? 800 : 600 }}>{team.name}</span>
-                  <span style={{ fontSize: 14, fontWeight: 800 }}>{team.avgXp.toLocaleString()}</span>
+                    border: team.isSelf ? '1px solid var(--amber)' : '1px solid var(--line)' }}>
+                  <span style={{ fontSize: 16, fontWeight: 800, width: 26, color: team.rank === 1 ? 'var(--amber)' : 'var(--ink-dim)' }}>#{team.rank}</span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: team.isSelf ? 800 : 600 }}>{team.name}</span>
+                  <span style={{ fontSize: 16, fontWeight: 800 }}>{team.avgXp.toLocaleString()}</span>
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 12, fontSize: 11, color: 'var(--ink-dim)', textAlign: 'center' }}>{t('league.avgPerRep')}</div>
+            <div style={{ marginTop: 12, fontSize: 14, color: 'var(--ink-dim)', textAlign: 'center' }}>{t('league.avgPerRep')}</div>
           </div>
         </div>
       )}

@@ -16,7 +16,7 @@ export default function SkillHeatmap({ levelAccuracy }: Props) {
               {l.avg > 0 ? `${l.avg}%` : 'No data'}
             </span>
           </div>
-          <div style={{ height: 10, borderRadius: 6, background: 'rgba(0,0,0,.4)', border: '1px solid var(--line)', overflow: 'hidden' }}>
+          <div style={{ height: 10, borderRadius: 6, background: 'var(--surface-subtle)', border: '1px solid var(--line)', overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${l.avg}%`, borderRadius: 6, background: l.avg >= 90 ? 'var(--green)' : l.avg >= 70 ? 'var(--amber)' : 'var(--red)', transition: 'width .6s ease' }} />
           </div>
           {l.avg > 0 && l.avg < 70 && (

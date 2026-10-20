@@ -17,12 +17,12 @@ export default function KpiPanel({ decisions, correct, totalReactionMs, reaction
   const rtCls  = rt  !== null ? (rt  <= 2.1 ? 'var(--green)' : 'var(--amber)') : 'var(--cyan)'
 
   const kpi = (label: string, val: string | null, unit: string, target: string, color: string) => (
-    <div style={{ border:'1px solid var(--line)', borderRadius:12, padding:14, background:'rgba(0,0,0,.2)', textAlign:'center' as const }}>
-      <div style={{ fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.18em', textTransform:'uppercase', color:'var(--ink-dim)' }}>{label}</div>
+    <div style={{ border:'1px solid var(--line)', borderRadius:12, padding:14, background:'var(--surface-subtle)', textAlign:'center' as const }}>
+      <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--ink-dim)' }}>{label}</div>
       <div style={{ fontFamily:'var(--mono)', fontSize:26, fontWeight:700, margin:'6px 0 2px', color }}>
-        {val ?? '—'}<span style={{ fontSize:13 }}>{val ? unit : ''}</span>
+        {val ?? '—'}<span style={{ fontSize:16 }}>{val ? unit : ''}</span>
       </div>
-      <div style={{ fontSize:11, color:'var(--ink-dim)' }}>{target}</div>
+      <div style={{ fontSize:14, color:'var(--ink-dim)' }}>{target}</div>
     </div>
   )
 

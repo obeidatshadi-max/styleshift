@@ -9,9 +9,9 @@ const BEHAVIORS = Object.values(defaultScoringConfig.competencies).flatMap(c => 
 const label = (v: string) => v.replace(/_/g, ' ')
 const STATUS_COLOR = { draft: 'var(--ink-dim)', active: 'var(--green)', archived: 'var(--red)' } as const
 
-const inputStyle: React.CSSProperties = { background: 'rgba(0,0,0,.3)', border: '1px solid var(--line)', borderRadius: 10, padding: '9px 11px', color: 'var(--ink)', fontFamily: 'var(--sans)', fontSize: 13.5, outline: 'none', width: '100%' }
+const inputStyle: React.CSSProperties = { background: 'var(--surface-subtle)', border: '1px solid var(--line)', borderRadius: 10, padding: '9px 11px', color: 'var(--ink)', fontFamily: 'var(--sans)', fontSize: 13.5, outline: 'none', width: '100%' }
 const labelStyle: React.CSSProperties = { fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--ink-dim)', margin: '10px 0 5px', display: 'block' }
-const primaryBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', background: 'var(--cyan)', color: '#04121f', borderRadius: 10, padding: '10px 14px', fontWeight: 700 }
+const primaryBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', background: 'var(--cyan)', color: 'var(--on-accent)', borderRadius: 10, padding: '10px 14px', fontWeight: 700 }
 const ghostBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', border: '1px solid var(--line)', background: 'none', color: 'var(--ink-dim)', borderRadius: 10, padding: '8px 12px' }
 const chip = (active: boolean, color = 'var(--cyan)'): React.CSSProperties => ({ cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 10.5, border: `1px solid ${active ? color : 'var(--line)'}`, borderRadius: 16, padding: '5px 10px', color: active ? color : 'var(--ink-dim)', background: active ? 'rgba(255,255,255,.04)' : 'transparent' })
 

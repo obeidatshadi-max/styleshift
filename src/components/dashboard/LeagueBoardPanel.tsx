@@ -3,7 +3,7 @@ import type { LeagueBoard } from '@/lib/leagues'
 // Presentational full league table for managers. English copy to match the
 // rest of the dashboard. Team name + avg score only — no cross-team rep detail.
 export default function LeagueBoardPanel({ board }: { board: LeagueBoard }) {
-  const gold = '#e8c060'
+  const gold = 'var(--amber)'
   return (
     <div>
       <div style={{ fontSize: 13, color: 'var(--ink-dim)', marginBottom: 12 }}>{board.leagueName}</div>

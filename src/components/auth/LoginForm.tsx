@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase-browser'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useT, useGameData } from '@/lib/i18n'
 import LangToggle from '@/components/LangToggle'
+import ThemeToggle from '@/components/ThemeToggle'
 
 const STYLE_COLOR: Record<string, string> = { driver:'var(--purple)', expressive:'var(--green)', amiable:'var(--pink)', analytical:'var(--cyan)' }
 
@@ -140,42 +141,42 @@ export default function LoginForm() {
   }
 
   const inputStyle: React.CSSProperties = {
-    background: 'rgba(0,0,0,.3)', border: '1px solid var(--line)', borderRadius: 10,
-    padding: '12px 14px', color: 'var(--ink)', fontFamily: 'var(--sans)', fontSize: 14,
+    background: 'var(--surface-subtle)', border: '1px solid var(--line)', borderRadius: 10,
+    padding: '12px 14px', color: 'var(--ink)', fontFamily: 'var(--sans)', fontSize: 16,
     outline: 'none', width: '100%',
   }
   const btnPrimary: React.CSSProperties = {
-    background: 'var(--cyan)', color: '#04121c', border: '1px solid var(--cyan)',
-    borderRadius: 10, padding: '12px 18px', fontFamily: 'var(--mono)', fontSize: 12,
-    letterSpacing: '.15em', textTransform: 'uppercase', cursor: 'pointer',
+    background: 'var(--cyan)', color: 'var(--on-accent)', border: '1px solid var(--cyan)',
+    borderRadius: 10, padding: '12px 18px', fontFamily: 'var(--mono)', fontSize: 14,
+    letterSpacing: 'normal', textTransform: 'none', cursor: 'pointer',
     boxShadow: 'var(--glow-cyan)', touchAction: 'manipulation', width: '100%',
   }
 
   return (
-    <div style={{ position: 'relative', zIndex: 1, maxWidth: 400, margin: '0 auto', padding: '40px 20px 80px' }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 20 }}>
-        <LangToggle />
+    <div className="field-ui login-screen" style={{ position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto', padding: '40px 20px 80px' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 20 }}>
+        <ThemeToggle /><LangToggle />
       </div>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.45em', color: 'var(--cyan)', textTransform: 'uppercase', marginBottom: 12 }}>{t('eyebrow')}</div>
-        <h1 style={{ fontSize: 'clamp(28px,6vw,40px)', fontWeight: 800, letterSpacing: '.02em' }}>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', color: 'var(--cyan)', textTransform: 'none', marginBottom: 12 }}>{t('eyebrow')}</div>
+        <h1 style={{ fontSize: 'clamp(28px,6vw,40px)', fontWeight: 800, letterSpacing: 'normal' }}>
           STYLE<span style={{ color: 'var(--cyan)' }}>SHIFT</span>
         </h1>
-        <p style={{ color: 'var(--ink-dim)', fontSize: 13, marginTop: 8, letterSpacing: '.18em', textTransform: 'uppercase' }}>{t('tagline')}</p>
+        <p style={{ color: 'var(--ink-dim)', fontSize: 16, marginTop: 8, letterSpacing: 'normal', textTransform: 'none' }}>{t('tagline')}</p>
       </div>
 
       {/* Tab switcher */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 14, background: 'rgba(0,0,0,.25)', borderRadius: 10, padding: 4 }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 14, background: 'var(--surface-subtle)', borderRadius: 10, padding: 4 }}>
         {(['rep', 'manager'] as const).map(t2 => (
           <button
             key={t2}
             onClick={() => { setTab(t2); resetTransientState() }}
             style={{
               flex: 1, padding: '9px 0', border: 'none', borderRadius: 8,
-              fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase',
+              fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none',
               cursor: 'pointer', transition: 'all .15s',
               background: tab === t2 ? 'var(--cyan)' : 'transparent',
-              color: tab === t2 ? '#04121c' : 'var(--ink-dim)',
+              color: tab === t2 ? 'var(--on-accent)' : 'var(--ink-dim)',
               fontWeight: tab === t2 ? 700 : 400,
             }}
           >
@@ -184,7 +185,7 @@ export default function LoginForm() {
         ))}
       </div>
 
-      <div style={{ background: 'linear-gradient(180deg,var(--panel),#0a1430)', border: '1px solid var(--line)', borderRadius: 16, padding: 24, boxShadow: '0 12px 40px rgba(0,0,0,.45)' }}>
+      <div style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 16, padding: 24, boxShadow: 'var(--shadow)' }}>
         {tab === 'rep' ? (
           <>
             <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
@@ -195,7 +196,7 @@ export default function LoginForm() {
                   onClick={() => { setRepMode(m); resetTransientState() }}
                   style={{
                     background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
-                    fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase',
+                    fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none',
                     color: repMode === m ? 'var(--cyan)' : 'var(--ink-dim)',
                     borderBottom: repMode === m ? '2px solid var(--cyan)' : '2px solid transparent',
                     paddingBottom: 4,
@@ -207,7 +208,7 @@ export default function LoginForm() {
             </div>
             {repMode === 'mobile' ? (
               <form onSubmit={handleRepLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--ink-dim)' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)' }}>
                   {t('login.mobileLabel')}
                 </div>
                 <input
@@ -218,7 +219,7 @@ export default function LoginForm() {
                   required
                   style={inputStyle}
                 />
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--ink-dim)' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)' }}>
                   {t('login.pinLabel')}
                 </div>
                 <input
@@ -233,12 +234,12 @@ export default function LoginForm() {
                   style={inputStyle}
                 />
                 {error && (
-                  <p style={{ color: 'var(--red)', fontSize: 13, fontFamily: 'var(--mono)' }}>{error}</p>
+                  <p style={{ color: 'var(--red)', fontSize: 16, fontFamily: 'var(--mono)' }}>{error}</p>
                 )}
                 <button type="submit" disabled={loading} style={btnPrimary}>
                   {loading ? '…' : t('login.mobileSignIn')}
                 </button>
-                <p style={{ color: 'var(--ink-dim)', fontSize: 12, lineHeight: 1.5, margin: 0 }}>
+                <p style={{ color: 'var(--ink-dim)', fontSize: 14, lineHeight: 1.5, margin: 0 }}>
                   {t('login.mobileHint')}
                 </p>
               </form>
@@ -246,15 +247,15 @@ export default function LoginForm() {
               <form onSubmit={handleRepIndividualAuth} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('login.email')} aria-label={t('login.email')} required style={inputStyle} />
                 <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('login.password')} aria-label={t('login.password')} required style={inputStyle} />
-                {error && <p style={{ color: 'var(--red)', fontSize: 13, fontFamily: 'var(--mono)' }}>{error}</p>}
+                {error && <p style={{ color: 'var(--red)', fontSize: 16, fontFamily: 'var(--mono)' }}>{error}</p>}
                 <button type="submit" disabled={loading} style={btnPrimary}>
                   {loading ? '...' : mode === 'login' ? t('login.signIn') : t('login.createAccount')}
                 </button>
                 <button type="button" onClick={() => { setMode(m => m === 'login' ? 'signup' : 'login'); setError(null) }}
-                  style={{ background: 'transparent', border: 'none', color: 'var(--ink-dim)', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--sans)' }}>
+                  style={{ background: 'transparent', border: 'none', color: 'var(--ink-dim)', fontSize: 16, cursor: 'pointer', fontFamily: 'var(--sans)' }}>
                   {mode === 'login' ? t('login.toSignup') : t('login.toLogin')}
                 </button>
-                <p style={{ color: 'var(--ink-dim)', fontSize: 12, lineHeight: 1.5, margin: 0 }}>
+                <p style={{ color: 'var(--ink-dim)', fontSize: 14, lineHeight: 1.5, margin: 0 }}>
                   {t('login.repIndividualHint')}
                 </p>
               </form>
@@ -264,12 +265,12 @@ export default function LoginForm() {
           <form onSubmit={handleManagerLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('login.email')} aria-label={t('login.email')} required style={inputStyle} />
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('login.password')} aria-label={t('login.password')} required style={inputStyle} />
-            {error && <p style={{ color: error === t('login.checkEmail') ? 'var(--green)' : 'var(--red)', fontSize: 13, fontFamily: 'var(--mono)' }}>{error}</p>}
+            {error && <p style={{ color: error === t('login.checkEmail') ? 'var(--green)' : 'var(--red)', fontSize: 16, fontFamily: 'var(--mono)' }}>{error}</p>}
             <button type="submit" disabled={loading} style={btnPrimary}>
               {loading ? '...' : mode === 'login' ? t('login.signIn') : t('login.createAccount')}
             </button>
             <button type="button" onClick={() => { setMode(m => m === 'login' ? 'signup' : 'login'); setError(null) }}
-              style={{ background: 'transparent', border: 'none', color: 'var(--ink-dim)', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--sans)' }}>
+              style={{ background: 'transparent', border: 'none', color: 'var(--ink-dim)', fontSize: 16, cursor: 'pointer', fontFamily: 'var(--sans)' }}>
               {mode === 'login' ? t('login.toSignup') : t('login.toLogin')}
             </button>
           </form>
@@ -285,9 +286,9 @@ export default function LoginForm() {
           aria-expanded={howOpen}
           style={{
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-            background: 'rgba(0,0,0,.25)', border: '1px solid var(--line)', borderRadius: 10,
+            background: 'var(--surface-subtle)', border: '1px solid var(--line)', borderRadius: 10,
             padding: '12px 16px', cursor: 'pointer',
-            fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--ink-dim)',
+            fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)',
           }}
         >
           <span>{t('how.reopen')}</span>
@@ -295,9 +296,9 @@ export default function LoginForm() {
         </button>
 
         {howOpen && (
-          <div style={{ background: 'linear-gradient(180deg,var(--panel),#0a1430)', border: '1px solid var(--line)', borderTop: 'none', borderRadius: '0 0 16px 16px', padding: 20, boxShadow: '0 12px 40px rgba(0,0,0,.45)' }}>
-            <h2 style={{ fontSize: 18, fontWeight: 800, letterSpacing: '.01em', marginBottom: 8, lineHeight: 1.25 }}>{t('login.hookHeadline')}</h2>
-            <p style={{ color: 'var(--ink-dim)', fontSize: 13, lineHeight: 1.55, marginBottom: 16 }}>{t('login.hookBody')}</p>
+          <div style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderTop: 'none', borderRadius: '0 0 16px 16px', padding: 20, boxShadow: 'var(--shadow)' }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, letterSpacing: 'normal', marginBottom: 8, lineHeight: 1.25 }}>{t('login.hookHeadline')}</h2>
+            <p style={{ color: 'var(--ink-dim)', fontSize: 16, lineHeight: 1.55, marginBottom: 16 }}>{t('login.hookBody')}</p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
               {([
@@ -307,8 +308,8 @@ export default function LoginForm() {
                 { label: t('nav.tabPerform'), body: t('login.hookPerform') },
               ]).map(step => (
                 <div key={step.label} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <span style={{ flexShrink: 0, fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--cyan)', border: '1px solid var(--cyan)', borderRadius: 20, padding: '4px 10px', marginTop: 1 }}>{step.label}</span>
-                  <span style={{ fontSize: 12.5, color: 'var(--ink-dim)', lineHeight: 1.5 }}>{step.body}</span>
+                  <span style={{ flexShrink: 0, fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--cyan)', border: '1px solid var(--cyan)', borderRadius: 20, padding: '4px 10px', marginTop: 1 }}>{step.label}</span>
+                  <span style={{ fontSize: 14, color: 'var(--ink-dim)', lineHeight: 1.5 }}>{step.body}</span>
                 </div>
               ))}
             </div>
@@ -317,7 +318,7 @@ export default function LoginForm() {
               {STYLE_ORDER.map(k => {
                 const s = STYLES[k]; const c = STYLE_COLOR[k]
                 return (
-                  <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.05em', border: `1px solid ${c}`, color: c, borderRadius: 20, padding: '5px 10px', background: 'rgba(0,0,0,.2)' }}>
+                  <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', border: `1px solid ${c}`, color: c, borderRadius: 20, padding: '5px 10px', background: 'var(--surface-subtle)' }}>
                     {s.icon} {s.name}
                   </span>
                 )

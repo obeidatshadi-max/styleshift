@@ -1,5 +1,5 @@
 'use client'
-import { useT } from '@/lib/i18n'
+import { useLang, useT } from '@/lib/i18n'
 
 export type Section = 'train' | 'rehearse' | 'perform' | 'coach'
 const SECTIONS: Section[] = ['train', 'rehearse', 'perform', 'coach']
@@ -19,27 +19,24 @@ interface Props {
  */
 export default function AppNav({ activeSection, onSelectSection, showBack, onBack }: Props) {
   const t = useT()
-  const tabStyle = (active: boolean) => ({
-    flex: 1, cursor: 'pointer' as const, fontFamily: 'var(--mono)', fontSize: 11,
-    letterSpacing: '.12em', textTransform: 'uppercase' as const, padding: '10px 6px',
-    background: 'none', border: 'none',
-    borderBottom: active ? '2px solid var(--cyan)' : '2px solid transparent',
-    color: active ? 'var(--cyan)' : 'var(--ink-dim)',
-  })
+  const { lang } = useLang()
+  const labels: Record<Section, string> = lang === 'ar'
+    ? { train: 'التدريب', rehearse: 'الطبيب الذكي', perform: 'تمثيل الأدوار', coach: 'المدرب الذكي' }
+    : { train: 'Train', rehearse: 'AI Doctor', perform: 'Roleplay', coach: 'AI Coach' }
 
   return (
-    <div style={{ position: 'relative', zIndex: 1, maxWidth: 1040, margin: '0 auto', padding: '10px 14px 0' }}>
+    <div className="app-nav">
       {showBack && (
-        <div style={{ display: 'flex', gap: 16, marginBottom: 8 }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.1em', color: 'var(--ink-dim)' }}>
+        <div className="app-nav-context">
+          <button onClick={onBack}>
             {t('nav.back')}
           </button>
-          <button onClick={() => onSelectSection('train')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.1em', color: 'var(--ink-dim)' }}>
+          <button onClick={() => onSelectSection('train')}>
             {t('nav.home')}
           </button>
         </div>
       )}
-      <div role="tablist" aria-label={t('nav.tabsLabel')} style={{ display: 'flex', gap: 6, borderBottom: '1px solid var(--line)' }}>
+      <div role="tablist" aria-label={t('nav.tabsLabel')} className="app-nav-tabs">
         {SECTIONS.map(s => (
           <button key={s} role="tab" aria-selected={activeSection === s} tabIndex={activeSection === s ? 0 : -1}
             onKeyDown={e => {
@@ -55,8 +52,14 @@ export default function AppNav({ activeSection, onSelectSection, showBack, onBac
               onSelectSection(SECTIONS[next])
               e.currentTarget.parentElement?.querySelectorAll('button')[next]?.focus()
             }}
-            onClick={() => onSelectSection(s)} style={tabStyle(activeSection === s)}>
-            {t(`nav.tab${s[0].toUpperCase()}${s.slice(1)}`)}
+            onClick={() => onSelectSection(s)} className="app-nav-tab">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              {s === 'train' && <><path d="m3 10 9-7 9 7v10H3Z" /><path d="M9 20v-7h6v7" /></>}
+              {s === 'rehearse' && <><circle cx="12" cy="12" r="9" /><path d="m10 8 6 4-6 4Z" /></>}
+              {s === 'perform' && <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.87" /><circle cx="9" cy="7" r="4" /><path d="M16 3a4 4 0 0 1 0 8" /></>}
+              {s === 'coach' && <><path d="M21 11a8 8 0 0 1-8 8H7l-5 3 2-6a8 8 0 1 1 17-5Z" /><path d="M8 10h8m-8 4h5" /></>}
+            </svg>
+            <span>{labels[s]}</span>
           </button>
         ))}
       </div>

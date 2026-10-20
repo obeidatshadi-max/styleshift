@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import type { WeeklyDigest } from '@/lib/weekly-digest'
 
-const stat: React.CSSProperties = { border: '1px solid var(--line)', borderRadius: 12, padding: 12, background: 'rgba(0,0,0,.2)', textAlign: 'center' }
+const stat: React.CSSProperties = { border: '1px solid var(--line)', borderRadius: 12, padding: 12, background: 'var(--surface-subtle)', textAlign: 'center' }
 const statLabel: React.CSSProperties = { fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--ink-dim)' }
 
 /** The team's week in one glance, with a plain-text summary a manager can paste into WhatsApp or email. */

@@ -58,7 +58,7 @@ export default function OnboardingPage() {
     outline: 'none', width: '100%',
   }
   const btnPrimary: React.CSSProperties = {
-    background: 'var(--cyan)', color: '#04121c', border: '1px solid var(--cyan)',
+    background: 'var(--cyan)', color: 'var(--on-accent)', border: '1px solid var(--cyan)',
     borderRadius: 10, padding: '12px 18px', fontFamily: 'var(--mono)', fontSize: 12,
     letterSpacing: '.15em', textTransform: 'uppercase', cursor: 'pointer',
     boxShadow: 'var(--glow-cyan)', touchAction: 'manipulation', width: '100%',
@@ -80,7 +80,7 @@ export default function OnboardingPage() {
         <p style={{ color: 'var(--ink-dim)', fontSize: 13, marginTop: 8 }}>Create your team to get started</p>
       </div>
 
-      <div style={{ background: 'linear-gradient(180deg,var(--panel),#0a1430)', border: '1px solid var(--line)', borderRadius: 16, padding: 24, boxShadow: '0 12px 40px rgba(0,0,0,.45)' }}>
+      <div style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 16, padding: 24, boxShadow: 'var(--shadow)' }}>
         {!inviteLink ? (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <label htmlFor="company-name" style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--ink-dim)' }}>Company / Team Name</label>

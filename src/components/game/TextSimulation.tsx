@@ -6,11 +6,11 @@ import { useTextSimulation, type HcpStart } from '@/hooks/useTextSimulation'
 import PracticeReport from './PracticeReport'
 
 export const fs = (px: number) => `max(${px}px, var(--voice-min-font, 0px))`
-export const card: React.CSSProperties = { background: 'linear-gradient(180deg,var(--panel),#0a1430)', border: '1px solid var(--line)', borderRadius: 16, padding: 16, boxShadow: '0 12px 40px rgba(0,0,0,.45)' }
-export const primaryBtn: React.CSSProperties = { width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: fs(12), letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', color: '#04121c', background: 'var(--cyan)', borderRadius: 10, padding: '12px 18px', boxShadow: 'var(--glow-cyan)', touchAction: 'manipulation' }
-export const ghostBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: fs(12), letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', color: 'var(--cyan)', background: 'transparent', borderRadius: 10, padding: '12px 18px', touchAction: 'manipulation' }
-export const sectionLabel: React.CSSProperties = { fontFamily: 'var(--mono)', fontSize: fs(11), letterSpacing: '.3em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 10 }
-export const smallLabel: React.CSSProperties = { fontFamily: 'var(--mono)', fontSize: fs(10), letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 4 }
+export const card: React.CSSProperties = { background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 16, padding: 16, boxShadow: 'var(--shadow)' }
+export const primaryBtn: React.CSSProperties = { width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: fs(12), letterSpacing: 'normal', textTransform: 'none', border: '1px solid var(--cyan)', color: 'var(--on-accent)', background: 'var(--cyan)', borderRadius: 10, padding: '12px 18px', boxShadow: 'var(--glow-cyan)', touchAction: 'manipulation' }
+export const ghostBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: fs(12), letterSpacing: 'normal', textTransform: 'none', border: '1px solid var(--cyan)', color: 'var(--cyan)', background: 'transparent', borderRadius: 10, padding: '12px 18px', touchAction: 'manipulation' }
+export const sectionLabel: React.CSSProperties = { fontFamily: 'var(--mono)', fontSize: fs(11), letterSpacing: 'normal', textTransform: 'none', color: 'var(--cyan)', marginBottom: 10 }
+export const smallLabel: React.CSSProperties = { fontFamily: 'var(--mono)', fontSize: fs(10), letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)', marginBottom: 4 }
 export const bodyText: React.CSSProperties = { fontSize: fs(13.5), lineHeight: 1.55, color: 'var(--ink)' }
 
 interface Props {
@@ -117,10 +117,10 @@ export default function TextSimulation({ doctor, scenarioId, challenge, hcp, onD
   return shell(
     <div style={card}>
       <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 14 }}>
-        {s && <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, border: `2px solid ${c}`, boxShadow: `0 0 14px ${c}`, color: c }}>{s.icon}</div>}
+        {s && <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, border: `2px solid ${c}`, boxShadow: 'none', color: c }}>{s.icon}</div>}
         <div>
           <div style={{ fontSize: 16, fontWeight: 700 }}>{doctor.name}</div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: fs(11), letterSpacing: '.1em', color: 'var(--ink-dim)' }}>{repTurns === 1 ? t('sim.repTurnsOne') : t('sim.repTurns', { n: repTurns })}</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: fs(11), letterSpacing: 'normal', color: 'var(--ink-dim)' }}>{repTurns === 1 ? t('sim.repTurnsOne') : t('sim.repTurns', { n: repTurns })}</div>
         </div>
       </div>
 
@@ -130,10 +130,10 @@ export default function TextSimulation({ doctor, scenarioId, challenge, hcp, onD
           <div key={i} dir="auto" aria-label={`${speaker(m.role)}: ${m.text}`} style={{
             alignSelf: m.role === 'doctor' ? 'flex-start' : 'flex-end', maxWidth: '85%', borderRadius: 12, padding: '9px 12px',
             fontSize: fs(13.5), lineHeight: 1.5,
-            background: m.role === 'doctor' ? 'rgba(0,0,0,.25)' : 'rgba(62,224,143,.1)',
+            background: m.role === 'doctor' ? 'var(--surface-subtle)' : 'rgba(62,224,143,.1)',
             border: `1px solid ${m.role === 'doctor' ? 'var(--line)' : 'var(--green)'}`,
           }}>
-            <span aria-hidden="true" style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: fs(9.5), letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 2 }}>{speaker(m.role)}</span>
+            <span aria-hidden="true" style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: fs(9.5), letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)', marginBottom: 2 }}>{speaker(m.role)}</span>
             {m.text}
           </div>
         ))}
@@ -148,7 +148,7 @@ export default function TextSimulation({ doctor, scenarioId, challenge, hcp, onD
         onChange={e => setDraft(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void submit() } }}
         placeholder={t('sim.inputPlaceholder')}
-        style={{ width: '100%', background: 'rgba(0,0,0,.3)', border: '1px solid var(--line)', borderRadius: 10, padding: '11px 13px', color: 'var(--ink)', fontFamily: 'var(--sans)', fontSize: fs(14), outline: 'none', resize: 'vertical', marginBottom: 10 }}
+        style={{ width: '100%', background: 'var(--surface-subtle)', border: '1px solid var(--line)', borderRadius: 10, padding: '11px 13px', color: 'var(--ink)', fontFamily: 'var(--sans)', fontSize: fs(14), outline: 'none', resize: 'vertical', marginBottom: 10 }}
       />
       <button onClick={() => void submit()} disabled={inputDisabled || !draft.trim()} style={{ ...primaryBtn, opacity: inputDisabled || !draft.trim() ? 0.6 : 1 }}>{t('sim.send')}</button>
       <button onClick={() => void end()} disabled={busy} style={{ ...ghostBtn, width: '100%', marginTop: 10, opacity: busy ? 0.6 : 1 }}>{t('sim.end')}</button>

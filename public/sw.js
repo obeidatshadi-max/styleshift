@@ -3,8 +3,8 @@
 // loses signal mid-visit still gets a usable screen instead of a browser
 // error, and Log a Visit / offline-queue.ts (app-layer) handles the actual
 // write resilience.
-const CACHE = 'styleshift-shell-v1'
-const SHELL_URLS = ['/offline', '/icon.svg']
+const CACHE = 'styleshift-shell-v2'
+const SHELL_URLS = ['/offline', '/icon.svg', '/fonts/plus-jakarta-sans-latin.woff2', '/fonts/ibm-plex-sans-arabic-400.woff2', '/fonts/ibm-plex-sans-arabic-700.woff2']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -27,7 +27,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url)
 
   // Next's hashed static assets are immutable — safe to cache-first.
-  if (url.pathname.startsWith('/_next/static/')) {
+  if (url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/fonts/')) {
     event.respondWith(
       caches.match(request).then((cached) => cached || fetch(request).then((res) => {
         const copy = res.clone()

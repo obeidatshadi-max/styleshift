@@ -64,16 +64,16 @@ type View =
   | { mode: 'textSim'; doctor: Doctor; practiceFocus?: string }
 
 const inputStyle: React.CSSProperties = {
-  background:'rgba(0,0,0,.3)', border:'1px solid var(--line)', borderRadius:10,
-  padding:'11px 13px', color:'var(--ink)', fontFamily:'var(--sans)', fontSize:14, outline:'none', width:'100%',
+  background:'var(--surface-subtle)', border:'1px solid var(--line)', borderRadius:10,
+  padding:'11px 13px', color:'var(--ink)', fontFamily:'var(--sans)', fontSize:16, outline:'none', width:'100%',
 }
-const labelStyle: React.CSSProperties = { fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.15em', textTransform:'uppercase', color:'var(--ink-dim)', marginBottom:6, display:'block' }
+const labelStyle: React.CSSProperties = { fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--ink-dim)', marginBottom:6, display:'block' }
 
 function panel(title: string, children: React.ReactNode, right?: React.ReactNode) {
   return (
-    <section style={{ background:'linear-gradient(180deg,var(--panel),#0a1430)', border:'1px solid var(--line)', borderRadius:16, padding:16, boxShadow:'0 12px 40px rgba(0,0,0,.45)' }}>
+    <section style={{ background:'var(--panel)', border:'1px solid var(--line)', borderRadius:16, padding:16, boxShadow:'var(--shadow)' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginBottom:14 }}>
-        <div style={{ fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.3em', textTransform:'uppercase', color:'var(--cyan)', display:'flex', alignItems:'center', gap:8 }}>
+        <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--cyan)', display:'flex', alignItems:'center', gap:8 }}>
           <span style={{ width:9, height:9, borderRadius:'50%', background:'var(--cyan)', boxShadow:'var(--glow-cyan)', display:'inline-block' }} />
           {title}
         </div>
@@ -84,8 +84,8 @@ function panel(title: string, children: React.ReactNode, right?: React.ReactNode
   )
 }
 
-const primaryBtn: React.CSSProperties = { cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'#04121c', background:'var(--cyan)', borderRadius:10, padding:'12px 18px', boxShadow:'var(--glow-cyan)', touchAction:'manipulation' }
-const ghostBtn: React.CSSProperties = { cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent', borderRadius:10, padding:'12px 18px', touchAction:'manipulation' }
+const primaryBtn: React.CSSProperties = { cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--cyan)', color:'var(--on-accent)', background:'var(--cyan)', borderRadius:10, padding:'12px 18px', boxShadow:'var(--glow-cyan)', touchAction:'manipulation' }
+const ghostBtn: React.CSSProperties = { cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent', borderRadius:10, padding:'12px 18px', touchAction:'manipulation' }
 
 export default function VisitPrep({ onExit, initialDoctorId = '' }: Props) {
   const t = useT()
@@ -186,15 +186,15 @@ export default function VisitPrep({ onExit, initialDoctorId = '' }: Props) {
         {panel(t('prep.prepFor', { name: d.name }),
           <>
             <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
-              {s && <div style={{ width:46, height:46, borderRadius:'50%', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, border:`2px solid ${c}`, color:c, boxShadow:`0 0 14px ${c}` }}>{s.icon}</div>}
+              {s && <div style={{ width:46, height:46, borderRadius:'50%', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, border:`2px solid ${c}`, color:c, boxShadow: 'none' }}>{s.icon}</div>}
               <div>
                 <div style={{ fontSize:16, fontWeight:700 }}>{d.name}</div>
-                <div style={{ fontSize:12.5, color:'var(--ink-dim)' }}>{[d.specialty ? (SPECIALTIES[d.specialty as Specialty]?.name ?? d.specialty) : null, d.workplace].filter(Boolean).join(' · ')}</div>
-                {s && <div style={{ fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.05em', color:c, marginTop:2 }}>{s.name} · {s.drive}</div>}
+                <div style={{ fontSize:14, color:'var(--ink-dim)' }}>{[d.specialty ? (SPECIALTIES[d.specialty as Specialty]?.name ?? d.specialty) : null, d.workplace].filter(Boolean).join(' · ')}</div>
+                {s && <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', color:c, marginTop:2 }}>{s.name} · {s.drive}</div>}
               </div>
             </div>
-            {d.key_phrases && <div style={{ fontSize:13, color:'var(--ink-dim)', borderInlineStart:`2px solid ${c}`, paddingInlineStart:10, marginBottom:6, lineHeight:1.5 }}>{quoted(d.key_phrases, lang)}</div>}
-            <button onClick={() => setView({ mode: 'form', doctor: d })} style={{ ...ghostBtn, fontSize:11, padding:'6px 12px' }}>{t('prep.edit')}</button>
+            {d.key_phrases && <div style={{ fontSize:16, color:'var(--ink-dim)', borderInlineStart:`2px solid ${c}`, paddingInlineStart:10, marginBottom:6, lineHeight:1.5 }}>{quoted(d.key_phrases, lang)}</div>}
+            <button onClick={() => setView({ mode: 'form', doctor: d })} style={{ ...ghostBtn, fontSize:14, padding:'6px 12px' }}>{t('prep.edit')}</button>
           </>
         )}
 
@@ -211,9 +211,9 @@ export default function VisitPrep({ onExit, initialDoctorId = '' }: Props) {
         {style && panel(t('practice.title'), <>            <div style={{ borderTop: '1px solid var(--line)', paddingTop: 16 }}>
               <p style={{ color: 'var(--ink-dim)', margin: '0 0 14px', lineHeight: 1.6 }}>{t('practice.intro')}</p>
               <button onClick={() => setView({ mode: 'voiceLive', doctor: d })} style={primaryBtn}>{t('practice.voice')}</button>
-              <p style={{ fontSize: 13, color: 'var(--ink-dim)', lineHeight: 1.6 }}>{t('practice.voiceHint')}</p>
+              <p style={{ fontSize: 16, color: 'var(--ink-dim)', lineHeight: 1.6 }}>{t('practice.voiceHint')}</p>
               <button onClick={() => setView({ mode: 'textSim', doctor: d })} style={{ ...ghostBtn, width: '100%' }}>{t('practice.text')}</button>
-              <p style={{ fontSize: 13, color: 'var(--ink-dim)', lineHeight: 1.6 }}>{t('practice.textHint')}</p>
+              <p style={{ fontSize: 16, color: 'var(--ink-dim)', lineHeight: 1.6 }}>{t('practice.textHint')}</p>
               <IraqiVisitPractice onPractice={practiceFocus => setView({ mode: 'textSim', doctor: d, practiceFocus })} />
             </div></>)}
 
@@ -222,7 +222,7 @@ export default function VisitPrep({ onExit, initialDoctorId = '' }: Props) {
             <div>
               <span style={labelStyle}>{t('prep.dos')}</span>
               {[1, 2, 3].map(i => (
-                <div key={i} style={{ fontSize:13.5, lineHeight:1.5, paddingInlineStart:18, position:'relative', marginBottom:4 }}>
+                <div key={i} style={{ fontSize:16, lineHeight:1.5, paddingInlineStart:18, position:'relative', marginBottom:4 }}>
                   <span style={{ position:'absolute', insetInlineStart:0, color:'var(--green)' }}>✓</span>{t(`prep.cheat.${style}.do${i}`)}
                 </div>
               ))}
@@ -230,51 +230,51 @@ export default function VisitPrep({ onExit, initialDoctorId = '' }: Props) {
             <div>
               <span style={labelStyle}>{t('prep.donts')}</span>
               {[1, 2].map(i => (
-                <div key={i} style={{ fontSize:13.5, lineHeight:1.5, paddingInlineStart:18, position:'relative', marginBottom:4 }}>
+                <div key={i} style={{ fontSize:16, lineHeight:1.5, paddingInlineStart:18, position:'relative', marginBottom:4 }}>
                   <span style={{ position:'absolute', insetInlineStart:0, color:'var(--red)' }}>✗</span>{t(`prep.cheat.${style}.dont${i}`)}
                 </div>
               ))}
             </div>
-            <div style={{ border:`1px solid ${c}`, borderRadius:10, padding:'11px 13px', background:'rgba(0,0,0,.2)' }}>
+            <div style={{ border:`1px solid ${c}`, borderRadius:10, padding:'11px 13px', background:'var(--surface-subtle)' }}>
               <span style={labelStyle}>{t('prep.opener')}</span>
-              <div style={{ fontSize:14, lineHeight:1.55, color:'var(--ink)' }}>{quoted(t(`prep.cheat.${style}.opener`), lang)}</div>
+              <div style={{ fontSize:16, lineHeight:1.55, color:'var(--ink)' }}>{quoted(t(`prep.cheat.${style}.opener`), lang)}</div>
             </div>
 
             <details>
               <summary style={{ cursor: 'pointer', padding: '14px 0', color: 'var(--cyan)' }}>{t('practice.skills')}</summary>
-              <p style={{ fontSize: 13, color: 'var(--ink-dim)', lineHeight: 1.6 }}>{t('practice.skillsHint')}</p>
+              <p style={{ fontSize: 16, color: 'var(--ink-dim)', lineHeight: 1.6 }}>{t('practice.skillsHint')}</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <button onClick={() => setView({ mode: 'warmup', doctor: d })} style={{ ...primaryBtn, marginTop:2 }}>{t('prep.start')}</button>
             <button onClick={() => setView({ mode: 'ai', doctor: d })}
-              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               {t('prep.aiDrill')} · {t('prep.aiPremium')}
             </button>
             <button onClick={() => setView({ mode: 'roleplay', doctor: d })}
-              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--green)', color:'var(--green)', background:'rgba(62,224,143,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--green)', color:'var(--green)', background:'rgba(62,224,143,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               🎙 {t('roleplay.entryButton')}
             </button>
             <button onClick={() => setView({ mode: 'voice', doctor: d })}
-              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               {t('voice.entryButton')} · {t('voice.premium')}
             </button>
             <button onClick={() => setView({ mode: 'voiceOpening', doctor: d })}
-              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               {t('voiceOpening.entryButton')} · {t('voice.premium')}
             </button>
             <button onClick={() => setView({ mode: 'questionDrill', doctor: d })}
-              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               {t('voiceQuestion.entryButton')} · {t('voice.premium')}
             </button>
             <button onClick={() => setView({ mode: 'precisionDrill', doctor: d })}
-              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               {t('precision.entryButton')} · {t('voice.premium')}
             </button>
             <button onClick={() => setView({ mode: 'voiceFab', doctor: d })}
-              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               {t('voiceFab.entryButton')} · {t('voice.premium')}
             </button>
             <button onClick={() => setView({ mode: 'voiceClosing', doctor: d })}
-              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.1em', textTransform:'uppercase', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--purple)', color:'var(--purple)', background:'rgba(176,108,255,.08)', borderRadius:10, padding:'12px 16px', touchAction:'manipulation' }}>
               {t('voiceClosing.entryButton')} · {t('voice.premium')}
             </button>
 
@@ -288,7 +288,7 @@ export default function VisitPrep({ onExit, initialDoctorId = '' }: Props) {
 
         {panel(t('visit.historyTitle'),
           <DoctorHistory doctorId={d.id} />,
-          <button onClick={() => setView({ mode: 'logVisit', doctor: d })} style={{ ...ghostBtn, fontSize:11, padding:'6px 12px' }}>{t('visit.logVisit')}</button>
+          <button onClick={() => setView({ mode: 'logVisit', doctor: d })} style={{ ...ghostBtn, fontSize:14, padding:'6px 12px' }}>{t('visit.logVisit')}</button>
         )}
 
         {panel(t('visit.roleplayHistoryTitle'), <DoctorRoleplayHistory doctorId={d.id} name={d.name} />)}
@@ -335,26 +335,26 @@ export default function VisitPrep({ onExit, initialDoctorId = '' }: Props) {
       </div>
       {panel(t('prep.title'),
         <>
-          <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5, marginBottom:14 }}>{t('prep.subtitle')}</div>
+          <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.5, marginBottom:14 }}>{t('prep.subtitle')}</div>
           <button onClick={() => setView({ mode: 'form' })} style={{ ...primaryBtn, width:'100%' }}>{t('prep.addDoctor')}</button>
           <button onClick={() => setView({ mode: 'quickPractice' })} style={{ ...ghostBtn, width:'100%', marginTop:8 }}>{t('prep.quickPractice')}</button>
           <button onClick={() => setView({ mode: 'company' })} style={{ ...ghostBtn, width:'100%', marginTop:8, borderColor:'var(--purple)', color:'var(--purple)' }}>{t('prep.companyScenarios')}</button>
         </>,
       )}
       {panel(t('prep.myDoctors'),
-        loading ? <div style={{ color:'var(--ink-dim)', fontSize:13 }}>…</div>
-        : doctors.length === 0 ? <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.5 }}>{t('prep.empty')}</div>
+        loading ? <div style={{ color:'var(--ink-dim)', fontSize:16 }}>…</div>
+        : doctors.length === 0 ? <div style={{ color:'var(--ink-dim)', fontSize:16, lineHeight:1.5 }}>{t('prep.empty')}</div>
         : <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
             {doctors.map(d => {
               const c = d.style ? COLOR[d.style] : 'var(--ink-dim)'
               const s = d.style ? STYLES[d.style] : null
               return (
                 <button key={d.id} onClick={() => setView({ mode: 'detail', doctor: d })}
-                  style={{ display:'flex', alignItems:'center', gap:12, textAlign:'start', cursor:'pointer', border:'1px solid var(--line)', borderRadius:12, padding:'11px 13px', background:'rgba(0,0,0,.18)', color:'var(--ink)' }}>
+                  style={{ display:'flex', alignItems:'center', gap:12, textAlign:'start', cursor:'pointer', border:'1px solid var(--line)', borderRadius:12, padding:'11px 13px', background:'var(--surface-subtle)', color:'var(--ink)' }}>
                   <span style={{ width:38, height:38, flexShrink:0, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:17, border:`1px solid ${c}`, color:c }}>{s ? s.icon : '?'}</span>
                   <span style={{ flex:1, minWidth:0 }}>
-                    <b style={{ fontSize:14.5, display:'block' }}>{d.name}</b>
-                    <span style={{ fontSize:12, color:'var(--ink-dim)' }}>{[s?.name, d.specialty ? (SPECIALTIES[d.specialty as Specialty]?.name ?? d.specialty) : null].filter(Boolean).join(' · ') || '—'}</span>
+                    <b style={{ fontSize:16, display:'block' }}>{d.name}</b>
+                    <span style={{ fontSize:14, color:'var(--ink-dim)' }}>{[s?.name, d.specialty ? (SPECIALTIES[d.specialty as Specialty]?.name ?? d.specialty) : null].filter(Boolean).join(' · ') || '—'}</span>
                   </span>
                   <span style={{ color:'var(--ink-dim)' }}>›</span>
                 </button>
@@ -394,7 +394,7 @@ function DoctorForm({ doctor, styles, specialties, onSave, onCancel, onDelete }:
   const effectiveStyle = styleMode === 'help' ? derived : style
 
   const chip = (active: boolean): React.CSSProperties => ({
-    cursor:'pointer', fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.05em', borderRadius:20, padding:'8px 12px',
+    cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', borderRadius:20, padding:'8px 12px',
     border:`1px solid ${active ? 'var(--cyan)' : 'var(--line)'}`, color: active ? 'var(--cyan)' : 'var(--ink-dim)',
     background: active ? 'rgba(56,214,255,.1)' : 'transparent', touchAction:'manipulation',
   })
@@ -458,7 +458,7 @@ function DoctorForm({ doctor, styles, specialties, onSave, onCancel, onDelete }:
                   </div>
                 </div>
                 {derived && (
-                  <div style={{ fontFamily:'var(--mono)', fontSize:13, color:COLOR[derived], letterSpacing:'.04em' }}>
+                  <div style={{ fontFamily:'var(--mono)', fontSize:16, color:COLOR[derived], letterSpacing: 'normal' }}>
                     {t('prep.derived')} {styles[derived].icon} {styles[derived].name}
                   </div>
                 )}
@@ -525,7 +525,7 @@ function QuickPractice({ specialties, styles, existingNames, onStart, onCancel }
   const [busy, setBusy] = useState(false)
 
   const chip = (active: boolean): React.CSSProperties => ({
-    cursor:'pointer', fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.05em', borderRadius:20, padding:'8px 12px',
+    cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', borderRadius:20, padding:'8px 12px',
     border:`1px solid ${active ? 'var(--cyan)' : 'var(--line)'}`, color: active ? 'var(--cyan)' : 'var(--ink-dim)',
     background: active ? 'rgba(56,214,255,.1)' : 'transparent', touchAction:'manipulation',
   })
@@ -548,7 +548,7 @@ function QuickPractice({ specialties, styles, existingNames, onStart, onCancel }
     <div style={{ position:'relative', zIndex:1, maxWidth:560, margin:'0 auto', padding:14 }}>
       {panel(t('prep.quickPracticeTitle'),
         <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-          <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5 }}>{t('prep.quickPracticeSubtitle')}</div>
+          <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.5 }}>{t('prep.quickPracticeSubtitle')}</div>
           <div>
             <span style={labelStyle}>{t('prep.specialty')}</span>
             <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
@@ -615,7 +615,7 @@ function WarmUp({ doctor, L1, L2, L3, onDone }: {
       <div style={{ position:'relative', zIndex:1, maxWidth:560, margin:'0 auto', padding:14 }}>
         {panel(t('prep.prepFor', { name: doctor.name }),
           <>
-            <div style={{ fontSize:15, lineHeight:1.6, marginBottom:16 }}>{t('prep.warmUpDone')}</div>
+            <div style={{ fontSize:16, lineHeight:1.6, marginBottom:16 }}>{t('prep.warmUpDone')}</div>
             <button onClick={onDone} style={primaryBtn}>{t('prep.backToList')}</button>
           </>
         )}
@@ -679,17 +679,17 @@ function AiDrill({ doctor, onDone }: { doctor: Doctor; onDone: () => void }) {
       {panel(t('prep.aiDrill'),
         <>
           {state === 'loading' && (
-            <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.6 }}>
+            <div style={{ color:'var(--ink-dim)', fontSize:16, lineHeight:1.6 }}>
               <div style={{ marginBottom:6 }}>{t('prep.aiIntro', { name: doctor.name })}</div>
               <div style={{ color:'var(--purple)' }}>{t('prep.aiGenerating', { name: doctor.name })}</div>
             </div>
           )}
-          {state === 'error' && <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.6, marginBottom:14 }}>{t('prep.aiError')}</div>}
+          {state === 'error' && <div style={{ color:'var(--ink-dim)', fontSize:16, lineHeight:1.6, marginBottom:14 }}>{t('prep.aiError')}</div>}
           {state === 'notconfigured' && (
             <div style={{ marginBottom:14 }}>
-              <div style={{ display:'inline-block', fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.15em', textTransform:'uppercase', color:'var(--purple)', border:'1px solid var(--purple)', borderRadius:20, padding:'4px 11px', marginBottom:14, background:'rgba(176,108,255,.08)' }}>{t('prep.aiSoon')}</div>
-              <div style={{ fontSize:14.5, lineHeight:1.6, color:'var(--ink)', marginBottom:10 }}>{t('prep.aiTeaser', { name: doctor.name })}</div>
-              <div style={{ fontSize:13, lineHeight:1.6, color:'var(--ink-dim)' }}>{t('prep.aiNotConfigured')}</div>
+              <div style={{ display:'inline-block', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--purple)', border:'1px solid var(--purple)', borderRadius:20, padding:'4px 11px', marginBottom:14, background:'rgba(176,108,255,.08)' }}>{t('prep.aiSoon')}</div>
+              <div style={{ fontSize:16, lineHeight:1.6, color:'var(--ink)', marginBottom:10 }}>{t('prep.aiTeaser', { name: doctor.name })}</div>
+              <div style={{ fontSize:16, lineHeight:1.6, color:'var(--ink-dim)' }}>{t('prep.aiNotConfigured')}</div>
             </div>
           )}
           {state !== 'loading' && <button onClick={onDone} style={ghostBtn}>{t('prep.aiBack')}</button>}
@@ -725,17 +725,17 @@ function CompanyScenarios({ onExit }: { onExit: () => void }) {
       </div>
       {panel(t('prep.companyScenarios'),
         scenarios === null
-          ? <div style={{ color:'var(--ink-dim)', fontSize:13 }}>…</div>
+          ? <div style={{ color:'var(--ink-dim)', fontSize:16 }}>…</div>
           : scenarios.length === 0
-          ? <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.5 }}>{t('prep.companyScenariosEmpty')}</div>
+          ? <div style={{ color:'var(--ink-dim)', fontSize:16, lineHeight:1.5 }}>{t('prep.companyScenariosEmpty')}</div>
           : <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              <div style={{ color:'var(--ink-dim)', fontSize:12.5, lineHeight:1.5, marginBottom:6 }}>{t('prep.companyScenariosSubtitle')}</div>
+              <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.5, marginBottom:6 }}>{t('prep.companyScenariosSubtitle')}</div>
               {scenarios.map(s => (
                 <button key={s.id} onClick={() => setPlaying(s)}
                   style={{ display:'flex', alignItems:'center', gap:12, textAlign:'start', cursor:'pointer', border:'1px solid var(--purple)', borderRadius:12, padding:'11px 13px', background:'rgba(176,108,255,.06)', color:'var(--ink)' }}>
                   <span style={{ flex:1, minWidth:0 }}>
-                    <b style={{ fontSize:14.5, display:'block' }}>{s.name}</b>
-                    <span style={{ fontSize:12, color:'var(--ink-dim)' }}>{s.crisis}</span>
+                    <b style={{ fontSize:16, display:'block' }}>{s.name}</b>
+                    <span style={{ fontSize:14, color:'var(--ink-dim)' }}>{s.crisis}</span>
                   </span>
                   <span style={{ color:'var(--purple)' }}>›</span>
                 </button>
@@ -883,7 +883,7 @@ const SOURCE_LABEL_KEY: Record<DoctorVisit['source'], string> = {
   manual: 'visit.sourceManual', warmup: 'visit.sourceWarmup', ai_drill: 'visit.sourceAiDrill', voice_partner: 'visit.sourceVoicePartner', voice_partner_opening: 'visit.sourceVoicePartnerOpening', voice_partner_question: 'visit.sourceVoicePartnerQuestion', voice_partner_fab: 'visit.sourceVoicePartnerFab', voice_partner_closing: 'visit.sourceVoicePartnerClosing', voice_partner_live: 'visit.sourceVoicePartnerLive',
 }
 
-const historyRow: React.CSSProperties = { fontSize:13, lineHeight:1.5, marginBottom:3 }
+const historyRow: React.CSSProperties = { fontSize:16, lineHeight:1.5, marginBottom:3 }
 const historyLabel: React.CSSProperties = { color:'var(--ink-dim)', fontWeight:600 }
 
 function DoctorHistory({ doctorId }: { doctorId: string }) {
@@ -892,12 +892,12 @@ function DoctorHistory({ doctorId }: { doctorId: string }) {
   const { visits, loading } = useDoctorVisits(doctorId)
   const { debriefs, loading: debriefsLoading } = useDoctorCoachDebriefs(doctorId)
 
-  if (loading || debriefsLoading) return <div style={{ color:'var(--ink-dim)', fontSize:13 }}>…</div>
-  if (visits.length === 0 && debriefs.length === 0) return <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.5 }}>{t('visit.empty')}</div>
+  if (loading || debriefsLoading) return <div style={{ color:'var(--ink-dim)', fontSize:16 }}>…</div>
+  if (visits.length === 0 && debriefs.length === 0) return <div style={{ color:'var(--ink-dim)', fontSize:16, lineHeight:1.5 }}>{t('visit.empty')}</div>
 
-  const card: React.CSSProperties = { border:'1px solid var(--line)', borderRadius:10, padding:'10px 12px', background:'rgba(0,0,0,.18)' }
-  const kindStyle: React.CSSProperties = { fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.1em', textTransform:'uppercase', color:'var(--cyan)' }
-  const dateStyle: React.CSSProperties = { fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-dim)' }
+  const card: React.CSSProperties = { border:'1px solid var(--line)', borderRadius:10, padding:'10px 12px', background:'var(--surface-subtle)' }
+  const kindStyle: React.CSSProperties = { fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--cyan)' }
+  const dateStyle: React.CSSProperties = { fontFamily:'var(--mono)', fontSize:14, color:'var(--ink-dim)' }
   // Real visits, practice sessions and Coach debriefs share one timeline, newest first.
   const entries = [
     ...visits.map(visit => ({ kind: 'visit' as const, created_at: visit.created_at, visit })),
@@ -927,7 +927,7 @@ function DoctorHistory({ doctorId }: { doctorId: string }) {
               <span style={kindStyle}>{t(SOURCE_LABEL_KEY[v.source])}</span>
               <span style={{ display:'flex', alignItems:'center', gap:8 }}>
                 {v.id.startsWith('offline-') && (
-                  <span style={{ fontFamily:'var(--mono)', fontSize:9, letterSpacing:'.08em', textTransform:'uppercase', color:'var(--amber)', border:'1px solid var(--amber)', borderRadius:8, padding:'1px 6px' }}>{t('visit.pendingSync')}</span>
+                  <span style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--amber)', border:'1px solid var(--amber)', borderRadius:8, padding:'1px 6px' }}>{t('visit.pendingSync')}</span>
                 )}
                 <span style={dateStyle}>{new Date(v.created_at).toLocaleDateString(lang === 'ar' ? 'ar' : 'en')}</span>
               </span>
@@ -951,13 +951,13 @@ function DoctorRoleplayHistory({ doctorId, name }: { doctorId: string; name: str
   const [openSimId, setOpenSimId] = useState<string | null>(null)
 
   if (openSimId) return <PastSimulation sessionId={openSimId} onBack={() => setOpenSimId(null)} />
-  if (loading || simsLoading) return <div style={{ color:'var(--ink-dim)', fontSize:13 }}>…</div>
-  if (sessions.length === 0 && sims.length === 0) return <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.5 }}>{t('perform.historyEmpty')}</div>
+  if (loading || simsLoading) return <div style={{ color:'var(--ink-dim)', fontSize:16 }}>…</div>
+  if (sessions.length === 0 && sims.length === 0) return <div style={{ color:'var(--ink-dim)', fontSize:16, lineHeight:1.5 }}>{t('perform.historyEmpty')}</div>
 
   // Date and time: several practice sessions on one day must be tellable apart.
   const date = (iso: string) => new Date(iso).toLocaleString(lang === 'ar' ? 'ar' : 'en', { dateStyle: 'short', timeStyle: 'short' })
-  const card: React.CSSProperties = { border:'1px solid var(--line)', borderRadius:10, padding:'10px 12px', background:'rgba(0,0,0,.18)' }
-  const dateStyle: React.CSSProperties = { fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-dim)', marginBottom:6 }
+  const card: React.CSSProperties = { border:'1px solid var(--line)', borderRadius:10, padding:'10px 12px', background:'var(--surface-subtle)' }
+  const dateStyle: React.CSSProperties = { fontFamily:'var(--mono)', fontSize:14, color:'var(--ink-dim)', marginBottom:6 }
   // Live roleplay and text simulations share one list, newest first.
   const entries = [
     ...sims.map(sim => ({ kind: 'text' as const, created_at: sim.created_at, sim })),
@@ -1031,7 +1031,7 @@ function LogVisitForm({ doctor, onDone, onCancel }: { doctor: Doctor; onDone: ()
           {field(t('visit.promiseMade'), promise, setPromise)}
           {field(t('visit.whatWorked'), worked, setWorked)}
           {field(t('visit.generalNote'), note, setNote)}
-          {saveError && <p style={{ color:'var(--red)', fontSize:13 }}>{t('visit.saveFailed')}</p>}
+          {saveError && <p style={{ color:'var(--red)', fontSize:16 }}>{t('visit.saveFailed')}</p>}
           <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
             <button onClick={submit} disabled={saving} style={{ ...primaryBtn, flex:1, opacity: saving ? .6 : 1 }}>{t('visit.save')}</button>
             <button onClick={onCancel} style={ghostBtn}>{t('visit.cancel')}</button>

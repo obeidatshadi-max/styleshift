@@ -60,9 +60,9 @@ export default function OfflineSync() {
       display: 'flex', justifyContent: 'center', pointerEvents: 'none',
     }}>
       <div style={{
-        marginTop: 8, fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.05em',
-        color, border: `1px solid ${color}`, background: 'rgba(5,6,15,.9)', borderRadius: 20,
-        padding: '6px 14px', boxShadow: '0 8px 24px rgba(0,0,0,.4)',
+        marginTop: 8, fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: '.05em',
+        color, border: `1px solid ${color}`, background: 'var(--panel)', borderRadius: 20,
+        padding: '6px 14px', boxShadow: '0 8px 24px var(--surface-subtle)',
       }}>
         {label}
         {status === 'failed' && <button type="button" style={{ pointerEvents: 'auto', marginInlineStart: 8 }} onClick={() => setRetry(n => n + 1)}>Retry sync</button>}

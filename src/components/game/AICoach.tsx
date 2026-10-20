@@ -242,7 +242,7 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
   const selectedDoctor = doctors.find(d => d.id === doctorId)
   return <main dir={ar ? 'rtl' : 'ltr'} style={{ position: 'relative', zIndex: 1, maxWidth: 680, margin: '0 auto', padding: '24px 14px', color: 'var(--ink)', display: 'grid', gap: 18 }}>
     <header>
-      <p style={{ color: 'var(--cyan)', fontFamily: 'var(--mono)', fontSize: 12 }}>{copy('REFLECT · LEARN · TRY AGAIN', 'راجِع · تعلّم · جرّب مجدداً')}</p>
+      <p style={{ color: 'var(--cyan)', fontFamily: 'var(--mono)', fontSize: 14 }}>{copy('REFLECT · LEARN · TRY AGAIN', 'راجِع · تعلّم · جرّب مجدداً')}</p>
       <h1 style={{ margin: '8px 0', fontSize: 32 }}>{copy('AI Coach', 'المدرب الذكي')}</h1>
       <p style={{ color: 'var(--ink-dim)', lineHeight: 1.6 }}>{copy('Reflect on a call with a specific doctor, then practice one improvement with the same AI Doctor.', 'راجع مكالمتك مع طبيب محدد، ثم تدرب على تحسين واحد مع الطبيب الذكي نفسه.')}</p>
     </header>
@@ -257,7 +257,7 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
       </label>
       <label style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{copy('Visit date (optional)', 'تاريخ الزيارة (اختياري)')}<input type="date" value={visitDate} disabled={locked || !!result} onChange={e => setVisitDate(e.target.value)} style={inputStyle} /></label>
       {!result && previousAction && <div role="group" aria-label={copy('Last planned action', 'الإجراء المخطط له سابقاً')} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 12, marginBottom: 18, display: 'grid', gap: 10 }}>
-        <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-dim)' }}>{copy('Last time you planned:', 'خطتك في المرة السابقة:')}</p>
+        <p style={{ margin: 0, fontSize: 16, color: 'var(--ink-dim)' }}>{copy('Last time you planned:', 'خطتك في المرة السابقة:')}</p>
         <p style={{ margin: 0, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{previousAction}</p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {([['done', copy('Done', 'تم'), ], ['partly', copy('Partly', 'جزئياً')], ['not_done', copy('Not yet', 'لم يتم بعد')]] as const).map(([value, label]) =>
@@ -280,7 +280,7 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
       <label style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{copy('How would you measure success? (optional)', 'كيف ستقيس النجاح؟ (اختياري)')}
         <input value={successMeasure} maxLength={500} disabled={locked || !!result} onChange={e => setSuccessMeasure(e.target.value)} style={inputStyle} placeholder={copy('e.g. a specific next step is agreed', 'مثل: الاتفاق على خطوة تالية محددة')} />
       </label>
-      <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--ink-dim)' }}>{copy('Record your own recollection after the call, up to 3 minutes. Audio is sent for transcription; review the text before coaching. Unsaved drafts stay in this browser tab on this device. Saved debriefs are private to your account.', 'سجّل ما تتذكره بعد المكالمة لمدة تصل إلى ٣ دقائق. يُرسل الصوت للتفريغ؛ راجع النص قبل التدريب. تبقى المسودات غير المحفوظة في علامة التبويب على هذا الجهاز. المراجعات المحفوظة خاصة بحسابك.')}</p>
+      <p style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--ink-dim)' }}>{copy('Record your own recollection after the call, up to 3 minutes. Audio is sent for transcription; review the text before coaching. Unsaved drafts stay in this browser tab on this device. Saved debriefs are private to your account.', 'سجّل ما تتذكره بعد المكالمة لمدة تصل إلى ٣ دقائق. يُرسل الصوت للتفريغ؛ راجع النص قبل التدريب. تبقى المسودات غير المحفوظة في علامة التبويب على هذا الجهاز. المراجعات المحفوظة خاصة بحسابك.')}</p>
       {!result && <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
         <button style={ghostBtn} disabled={busy || micStarting || !!recorder.previewUrl || (recording && micTarget !== 'account')} onClick={recording ? () => void stopRecording() : () => void startRecording('account')}>
           {recording && micTarget === 'account' ? copy('Stop recording', 'إيقاف التسجيل') : micStarting && micTarget === 'account' ? copy('Opening microphone…', 'جارٍ فتح الميكروفون…') : copy('Record my recollection', 'سجّل ما تتذكره')}
@@ -322,7 +322,7 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
       {fields.map(([key, title]) => <article key={key} style={card}><h2 style={{ fontSize: 17, color: key === 'priority' ? 'var(--cyan)' : 'var(--ink)' }}>{title}</h2><p style={{ lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{(result.report as unknown as Record<string, string>)[key] ?? copy('Not included in this older saved debrief.', 'لم تُسجّل في هذه المراجعة القديمة.')}</p></article>)}
       {!!result.promises?.length && <article style={card} aria-label={copy('Promises I spotted', 'وعود لاحظتُها')}>
         <h2 style={{ fontSize: 17 }}>{copy('Promises I spotted', 'وعود لاحظتُها')}</h2>
-        <p style={{ lineHeight: 1.6, color: 'var(--ink-dim)', fontSize: 13 }}>{copy('Add the ones you really made, so you do not forget them.', 'أضف ما وعدت به فعلاً حتى لا تنساه.')}</p>
+        <p style={{ lineHeight: 1.6, color: 'var(--ink-dim)', fontSize: 16 }}>{copy('Add the ones you really made, so you do not forget them.', 'أضف ما وعدت به فعلاً حتى لا تنساه.')}</p>
         {result.promises.map(text => {
           const added = addedPromises.includes(`${doctorId}:${text}`)
           return <div key={text} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', borderTop: '1px solid var(--line)', padding: '10px 0' }}>

@@ -43,27 +43,27 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
 
   const card: React.CSSProperties = {
     width: '100%', maxWidth: 480,
-    background: 'linear-gradient(180deg,var(--panel),#0a1430)',
+    background: 'var(--panel)',
     border: '1px solid var(--line)', borderRadius: 18,
-    padding: '18px 20px 20px', boxShadow: '0 16px 50px rgba(0,0,0,.55)',
+    padding: '18px 20px 20px', boxShadow: 'var(--shadow)',
   }
   const wrap: React.CSSProperties = { position: 'relative', zIndex: 1, minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }
   const eyebrow = (text: string) => (
-    <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.4em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 10 }}>{text}</div>
+    <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--cyan)', marginBottom: 10 }}>{text}</div>
   )
   const btnPrimary: React.CSSProperties = {
-    width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 12,
-    letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)',
-    color: '#04121c', background: 'var(--cyan)', borderRadius: 10, padding: '12px 18px',
+    width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 14,
+    letterSpacing: 'normal', textTransform: 'none', border: '1px solid var(--cyan)',
+    color: 'var(--on-accent)', background: 'var(--cyan)', borderRadius: 10, padding: '12px 18px',
     boxShadow: 'var(--glow-cyan)', touchAction: 'manipulation',
   }
   const chipStyle: React.CSSProperties = {
-    fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.05em',
+    fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal',
     border: '1px solid var(--line)', borderRadius: 20, padding: '4px 10px', color: 'var(--ink)',
   }
   const btnGhost: React.CSSProperties = {
-    width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 12,
-    letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--line)',
+    width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 14,
+    letterSpacing: 'normal', textTransform: 'none', border: '1px solid var(--line)',
     color: 'var(--ink-dim)', background: 'transparent', borderRadius: 10, padding: '12px 18px',
     touchAction: 'manipulation', marginTop: 10,
   }
@@ -77,8 +77,8 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
       <div style={wrap}>
         <div style={card}>
           {eyebrow(t('roleplay.consentTitle'))}
-          <p style={{ color: 'var(--ink-dim)', fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>{t('roleplay.consentBody')}</p>
-          <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 13.5, lineHeight: 1.5, marginBottom: 18, cursor: 'pointer' }}>
+          <p style={{ color: 'var(--ink-dim)', fontSize: 16, lineHeight: 1.6, marginBottom: 16 }}>{t('roleplay.consentBody')}</p>
+          <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 16, lineHeight: 1.5, marginBottom: 18, cursor: 'pointer' }}>
             <input type="checkbox" checked={consentChecked} onChange={e => setConsentChecked(e.target.checked)} style={{ marginTop: 3, accentColor: 'var(--cyan)' }} />
             {t('roleplay.consentCheckbox')}
           </label>
@@ -98,7 +98,7 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
       <div style={wrap}>
         <div style={card}>
           {eyebrow(t('roleplay.title'))}
-          <p style={{ color: 'var(--red)', fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
+          <p style={{ color: 'var(--red)', fontSize: 16, lineHeight: 1.6, marginBottom: 16 }}>
             {error === 'mic' ? t('roleplay.errorMic')
               : error === 'session' ? t('roleplay.errorSession')
               : error === 'speakers' ? t('roleplay.errorSpeakers')
@@ -141,7 +141,7 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
       <div style={wrap}>
         <div style={card}>
           {eyebrow(t('roleplay.processing'))}
-          <p style={{ color: 'var(--ink-dim)', fontSize: 13.5 }}>…</p>
+          <p style={{ color: 'var(--ink-dim)', fontSize: 16 }}>…</p>
         </div>
       </div>
     )
@@ -152,11 +152,11 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
       <div style={wrap}>
         <div style={card}>
           {eyebrow(t('roleplay.pickSpeakerTitle'))}
-          <p style={{ color: 'var(--ink-dim)', fontSize: 13.5, marginBottom: 14 }}>{t('roleplay.pickSpeakerHint')}</p>
+          <p style={{ color: 'var(--ink-dim)', fontSize: 16, marginBottom: 14 }}>{t('roleplay.pickSpeakerHint')}</p>
           {speakerPreviews.map(p => (
             <button key={p.speaker} onClick={() => pickSpeaker(p.speaker)}
-              style={{ display: 'block', width: '100%', textAlign: 'start', cursor: 'pointer', color: 'var(--ink)', fontFamily: 'var(--sans)', fontSize: 13.5, lineHeight: 1.4, border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', background: 'rgba(0,0,0,.18)', marginBottom: 10, touchAction: 'manipulation' }}>
-              <b style={{ color: 'var(--cyan)', display: 'block', fontFamily: 'var(--mono)', fontSize: 11, marginBottom: 4 }}>
+              style={{ display: 'block', width: '100%', textAlign: 'start', cursor: 'pointer', color: 'var(--ink)', fontFamily: 'var(--sans)', fontSize: 16, lineHeight: 1.4, border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', background: 'var(--surface-subtle)', marginBottom: 10, touchAction: 'manipulation' }}>
+              <b style={{ color: 'var(--cyan)', display: 'block', fontFamily: 'var(--mono)', fontSize: 14, marginBottom: 4 }}>
                 {t('roleplay.speakerLabel', { letter: p.speaker })}
               </b>
               &ldquo;{p.sample}&rdquo;
@@ -177,7 +177,7 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
       <div style={wrap}>
         <div style={card}>
           {eyebrow(t('roleplay.title'))}
-          <p style={{ color: 'var(--ink-dim)', fontSize: 13.5 }}>…</p>
+          <p style={{ color: 'var(--ink-dim)', fontSize: 16 }}>…</p>
         </div>
       </div>
     )
@@ -201,15 +201,15 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
             below — surfaced here because reps found the per-metric cards
             confusing without first knowing what the numbers are about. */}
         <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 16, background: 'rgba(0,0,0,.12)' }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('roleplay.interactionSummaryTitle')}</div>
-          <p style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--ink)' }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('roleplay.interactionSummaryTitle')}</div>
+          <p style={{ fontSize: 16, lineHeight: 1.7, color: 'var(--ink)' }}>
             {t('roleplay.interactionSummaryDuration', { mmss: `${String(Math.floor(r.durationSec / 60)).padStart(2, '0')}:${String(Math.round(r.durationSec) % 60).padStart(2, '0')}` })}
             {' '}{t('roleplay.interactionSummaryQuestions', { count: r.questionCount })}
             {r.adaptationScore && <> {t('roleplay.interactionSummaryToneMatch', { pct: r.adaptationScore.score })}</>}
             {' '}{t('roleplay.interactionSummaryTermOverlap', { pct: Math.round(r.termOverlap * 100) })}
           </p>
           {isLowSampleSession(r.turnCount) && (
-            <p style={{ fontSize: 11.5, color: 'var(--amber)', lineHeight: 1.5, marginTop: 8 }}>
+            <p style={{ fontSize: 14, color: 'var(--amber)', lineHeight: 1.5, marginTop: 8 }}>
               ⚠ {t('roleplay.lowSampleWarning')}
             </p>
           )}
@@ -217,13 +217,13 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
 
         {insight && (
           <div style={{ border: '1px solid var(--amber)', borderRadius: 12, padding: '13px 14px', marginBottom: 16, background: 'rgba(255,190,80,.06)' }}>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--amber)', marginBottom: 6 }}>{t('roleplay.insightTitle')}</div>
-            <p style={{ fontSize: 13.5, lineHeight: 1.5 }}>{t(`roleplay.insight.${insight.metric}`, { value: insight.value })}</p>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--amber)', marginBottom: 6 }}>{t('roleplay.insightTitle')}</div>
+            <p style={{ fontSize: 16, lineHeight: 1.5 }}>{t(`roleplay.insight.${insight.metric}`, { value: insight.value })}</p>
           </div>
         )}
 
         <div style={{ marginBottom: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 4 }}>
             <span>{t('roleplay.talkRatio')}</span><span style={{ fontFamily: 'var(--mono)' }}>{talkPct}%</span>
           </div>
           <div style={{ height: 6, borderRadius: 3, background: 'var(--line)', overflow: 'hidden' }}>
@@ -232,7 +232,7 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
         </div>
 
         <div style={{ marginBottom: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 4 }}>
             <span>{t('roleplay.questionRatio')}</span><span style={{ fontFamily: 'var(--mono)' }}>{questionPct}%</span>
           </div>
           <div style={{ height: 6, borderRadius: 3, background: 'var(--line)', overflow: 'hidden' }}>
@@ -241,29 +241,29 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
         </div>
 
         <div style={{ marginBottom: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 4 }}>
             <span>{t('roleplay.openQuestionRatio')}</span><span style={{ fontFamily: 'var(--mono)' }}>{openQuestionPct}%</span>
           </div>
           <div style={{ height: 6, borderRadius: 3, background: 'var(--line)', overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${openQuestionPct}%`, background: 'var(--purple)' }} />
           </div>
-          <p style={{ fontSize: 11.5, color: 'var(--ink-dim)', lineHeight: 1.5, marginTop: 5 }}>{t('roleplay.openQuestionHint')}</p>
+          <p style={{ fontSize: 14, color: 'var(--ink-dim)', lineHeight: 1.5, marginTop: 5 }}>{t('roleplay.openQuestionHint')}</p>
         </div>
 
         <div style={{ marginBottom: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 4 }}>
             <span>{t('roleplay.paraphraseScore')}</span><span style={{ fontFamily: 'var(--mono)' }}>{paraphrasePct}%</span>
           </div>
           <div style={{ height: 6, borderRadius: 3, background: 'var(--line)', overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${paraphrasePct}%`, background: 'var(--amber)' }} />
           </div>
-          <p style={{ fontSize: 11.5, color: 'var(--ink-dim)', lineHeight: 1.5, marginTop: 5 }}>{t('roleplay.paraphraseHint')}</p>
+          <p style={{ fontSize: 14, color: 'var(--ink-dim)', lineHeight: 1.5, marginTop: 5 }}>{t('roleplay.paraphraseHint')}</p>
         </div>
 
         {r.language && <RoleplayLanguageCards signals={r.language} />}
 
         <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16 }}>
             <span>{t('roleplay.activeListeningTitle')}</span>
             <span style={{ fontFamily: 'var(--mono)', fontWeight: 700 }}>
               {r.activeListening.score} · {t(`roleplay.activeListening.${r.activeListening.label}`)}
@@ -272,23 +272,23 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
         </div>
 
         <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16 }}>
             <span>{t('roleplay.rapidSwitches')}</span>
             <span style={{ fontFamily: 'var(--mono)', fontWeight: 700 }}>{r.rapidTurnSwitches}</span>
           </div>
-          <p style={{ fontSize: 12, color: 'var(--ink-dim)', lineHeight: 1.5, marginTop: 6 }}>{t('roleplay.rapidSwitchesHint')}</p>
+          <p style={{ fontSize: 14, color: 'var(--ink-dim)', lineHeight: 1.5, marginTop: 6 }}>{t('roleplay.rapidSwitchesHint')}</p>
         </div>
 
         <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 16 }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 6 }}>{t('roleplay.styleReadTitle')}</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)', marginBottom: 6 }}>{t('roleplay.styleReadTitle')}</div>
           {r.repRead
-            ? <div style={{ fontSize: 14 }}>{r.repRead.style} · {r.repRead.confidence}%</div>
-            : <p style={{ fontSize: 13, color: 'var(--ink-dim)', lineHeight: 1.5 }}>{t('roleplay.noStyleRead')}</p>}
+            ? <div style={{ fontSize: 16 }}>{r.repRead.style} · {r.repRead.confidence}%</div>
+            : <p style={{ fontSize: 16, color: 'var(--ink-dim)', lineHeight: 1.5 }}>{t('roleplay.noStyleRead')}</p>}
         </div>
 
         {r.repRead && (
           <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 16 }}>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('roleplay.tonalityTitle')}</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('roleplay.tonalityTitle')}</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
               {/* Separate namespaces per dimension — hesitationLabel and
                   rangeLabel can both be 'moderate' but mean different things. */}
@@ -296,37 +296,37 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
               <span style={chipStyle}>{t(`roleplay.hesitation.${r.repRead.proof.hesitationLabel}`)}</span>
               <span style={chipStyle}>{t(`roleplay.range.${r.repRead.proof.rangeLabel}`)}</span>
             </div>
-            <p style={{ fontSize: 11.5, color: 'var(--ink-dim)', lineHeight: 1.5 }}>
+            <p style={{ fontSize: 14, color: 'var(--ink-dim)', lineHeight: 1.5 }}>
               {t('roleplay.tonalityDetail', { wpm: r.repRead.proof.wpm, hesitations: r.repRead.proof.totalHesitations })}
             </p>
           </div>
         )}
 
         <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 16 }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('roleplay.adaptationTitle')}</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('roleplay.adaptationTitle')}</div>
           {r.adaptationScore && r.repRead && r.partnerRead ? (
             <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, marginBottom: 6 }}>
                 <span>{t('roleplay.adaptationYouVsPartner', { you: r.repRead.style, partner: r.partnerRead.style })}</span>
                 <span style={{ fontFamily: 'var(--mono)', fontWeight: 700 }}>{r.adaptationScore.score}%</span>
               </div>
-              <p style={{ fontSize: 11.5, color: 'var(--ink-dim)', lineHeight: 1.5 }}>
+              <p style={{ fontSize: 14, color: 'var(--ink-dim)', lineHeight: 1.5 }}>
                 {t(`roleplay.adaptationLabel.${r.adaptationScore.label}`)}
               </p>
             </>
           ) : (
-            <p style={{ fontSize: 13, color: 'var(--ink-dim)', lineHeight: 1.5 }}>{t('roleplay.noAdaptationRead')}</p>
+            <p style={{ fontSize: 16, color: 'var(--ink-dim)', lineHeight: 1.5 }}>{t('roleplay.noAdaptationRead')}</p>
           )}
         </div>
 
         <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, marginBottom: 6 }}>
             <span>{t('roleplay.rapportTitle')}</span>
             <span style={{ fontFamily: 'var(--mono)', fontWeight: 700 }}>{Math.round(r.warmth * 100)}%</span>
           </div>
-          <p style={{ fontSize: 11.5, color: 'var(--ink-dim)', lineHeight: 1.5, marginBottom: r.predicates.dominant ? 8 : 0 }}>{t('roleplay.rapportHint')}</p>
+          <p style={{ fontSize: 14, color: 'var(--ink-dim)', lineHeight: 1.5, marginBottom: r.predicates.dominant ? 8 : 0 }}>{t('roleplay.rapportHint')}</p>
           {r.predicates.dominant && (
-            <div style={{ fontSize: 12.5 }}>
+            <div style={{ fontSize: 14 }}>
               {t('roleplay.dominantWording')} <b>{t(`roleplay.predicate.${r.predicates.dominant}`)}</b>
             </div>
           )}
@@ -334,7 +334,7 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
 
         {assignment && !assignment.completed && (
           shareState === 'shared' ? (
-            <div style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--green)', marginBottom: 10 }}>
+            <div style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 14, color: 'var(--green)', marginBottom: 10 }}>
               ✓ {t('roleplay.shared')}
             </div>
           ) : (

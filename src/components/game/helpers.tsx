@@ -6,7 +6,7 @@ import type { BiasKey } from '@/lib/cognitive-biases'
 export function Topline({ level, title, total, idx, results }: { level: number; title: string; total: number; idx: number; results: boolean[] }) {
   return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14, gap:6, flexWrap:'wrap' }}>
-      <div style={{ fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.3em', textTransform:'uppercase', color:'var(--cyan)', display:'flex', alignItems:'center', gap:8 }}>
+      <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--cyan)', display:'flex', alignItems:'center', gap:8 }}>
         <span style={{ width:9, height:9, borderRadius:'50%', background:'var(--cyan)', boxShadow:'var(--glow-cyan)', display:'inline-block' }} />
         {title}
       </div>
@@ -24,17 +24,17 @@ export function Topline({ level, title, total, idx, results }: { level: number; 
 
 export function OptBtn({ text, state, disabled, onClick }: { text: string; state: 'default'|'correct'|'wrong'|'muted'; disabled: boolean; onClick: ()=>void }) {
   const border = state==='correct' ? 'var(--green)' : state==='wrong' ? 'var(--red)' : 'var(--line)'
-  const bg = state==='correct' ? 'rgba(62,224,143,.12)' : state==='wrong' ? 'rgba(255,93,108,.12)' : 'rgba(0,0,0,.18)'
+  const bg = state==='correct' ? 'rgba(62,224,143,.12)' : state==='wrong' ? 'rgba(255,93,108,.12)' : 'var(--surface-subtle)'
   return (
     <button disabled={disabled} onClick={onClick}
-      style={{ textAlign:'start', width:'100%', cursor:disabled?'default':'pointer', color:'var(--ink)', fontFamily:'var(--sans)', fontSize:14, lineHeight:1.4, border:`1px solid ${border}`, borderRadius:12, padding:'13px 14px', background:bg, opacity:state==='muted'?.45:1, marginBottom:10, touchAction:'manipulation', display:'block' }}>
+      style={{ textAlign:'start', width:'100%', cursor:disabled?'default':'pointer', color:'var(--ink)', fontFamily:'var(--sans)', fontSize:16, lineHeight:1.4, border:`1px solid ${border}`, borderRadius:12, padding:'13px 14px', background:bg, opacity:state==='muted'?.45:1, marginBottom:10, touchAction:'manipulation', display:'block' }}>
       {text}
     </button>
   )
 }
 
-const voiceReviewPrimaryBtn: React.CSSProperties = { width:'100%', cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'#04121c', background:'var(--cyan)', borderRadius:10, padding:'12px 18px', boxShadow:'var(--glow-cyan)', touchAction:'manipulation' }
-const voiceReviewGhostBtn: React.CSSProperties = { cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.12em', textTransform:'uppercase', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent', borderRadius:10, padding:'12px 18px', touchAction:'manipulation' }
+const voiceReviewPrimaryBtn: React.CSSProperties = { width:'100%', cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--cyan)', color:'var(--on-accent)', background:'var(--cyan)', borderRadius:10, padding:'12px 18px', boxShadow:'var(--glow-cyan)', touchAction:'manipulation' }
+const voiceReviewGhostBtn: React.CSSProperties = { cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent', borderRadius:10, padding:'12px 18px', touchAction:'manipulation' }
 
 /** The listen-back checkpoint shared by every AI-voice-partner mode: hear
     the raw take, then confirm (upload) or re-record — nothing uploads until
@@ -43,7 +43,7 @@ export function RecordReviewControls({ previewUrl, onConfirm, onRerecord }: { pr
   const t = useT()
   return (
     <>
-      <div style={{ fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.1em', textTransform:'uppercase', color:'var(--ink-dim)', marginBottom:8 }}>{t('voice.reviewLabel')}</div>
+      <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--ink-dim)', marginBottom:8 }}>{t('voice.reviewLabel')}</div>
       {/* eslint-disable-next-line jsx-a11y/media-has-caption -- live mic recording, no captions available */}
       <audio controls src={previewUrl} style={{ width:'100%', marginBottom:12 }} />
       <button onClick={onConfirm} style={voiceReviewPrimaryBtn}>{t('voice.sendRecording')}</button>
@@ -65,8 +65,8 @@ export function escapeHtml(s: string): string {
 
 export function Feedback({ ok, title, body }: { ok: boolean; title: string; body: string }) {
   return (
-    <div style={{ marginTop:14, borderRadius:12, padding:'13px 14px', fontSize:13.5, lineHeight:1.5, border:`1px solid ${ok?'var(--green)':'var(--red)'}`, background:ok?'rgba(62,224,143,.1)':'rgba(255,93,108,.1)' }}>
-      <b style={{ display:'block', fontFamily:'var(--mono)', letterSpacing:'.1em', textTransform:'uppercase', fontSize:11, marginBottom:5, color:ok?'var(--green)':'var(--red)' }}>{title}</b>
+    <div style={{ marginTop:14, borderRadius:12, padding:'13px 14px', fontSize:16, lineHeight:1.5, border:`1px solid ${ok?'var(--green)':'var(--red)'}`, background:ok?'rgba(62,224,143,.1)':'rgba(255,93,108,.1)' }}>
+      <b style={{ display:'block', fontFamily:'var(--mono)', letterSpacing: 'normal', textTransform:'none', fontSize:14, marginBottom:5, color:ok?'var(--green)':'var(--red)' }}>{title}</b>
       <span dangerouslySetInnerHTML={{ __html: body }} />
     </div>
   )
@@ -81,10 +81,10 @@ export function Feedback({ ok, title, body }: { ok: boolean; title: string; body
 export function BiasCallout({ bias }: { bias: BiasKey }) {
   const t = useT()
   return (
-    <div style={{ marginTop:10, borderRadius:12, padding:'13px 14px', fontSize:13, lineHeight:1.5, border:'1px solid var(--purple)', background:'rgba(176,108,255,.07)' }}>
+    <div style={{ marginTop:10, borderRadius:12, padding:'13px 14px', fontSize:16, lineHeight:1.5, border:'1px solid var(--purple)', background:'rgba(176,108,255,.07)' }}>
       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-        <span style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'.15em', textTransform:'uppercase', color:'var(--purple)' }}>{t('bias.title')}</span>
-        <span style={{ fontSize:13, fontWeight:700, color:'var(--purple)' }}>{t(`bias.${bias}.name`)}</span>
+        <span style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--purple)' }}>{t('bias.title')}</span>
+        <span style={{ fontSize:16, fontWeight:700, color:'var(--purple)' }}>{t(`bias.${bias}.name`)}</span>
       </div>
       <div style={{ marginBottom:6 }}><b style={{ color:'var(--ink-dim)', fontWeight:600 }}>{t('bias.cueLabel')}:</b> {t(`bias.${bias}.cue`)}</div>
       <div><b style={{ color:'var(--ink-dim)', fontWeight:600 }}>{t('bias.tacticLabel')}:</b> {t(`bias.${bias}.tactic`)}</div>
@@ -94,10 +94,10 @@ export function BiasCallout({ bias }: { bias: BiasKey }) {
 
 export function NextRow({ onNext, onBack, isLast }: { onNext: ()=>void; onBack: ()=>void; isLast: boolean }) {
   const t = useT()
-  const btnBase: React.CSSProperties = { display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.15em', textTransform:'uppercase', borderRadius:10, padding:'12px 18px', touchAction:'manipulation' }
+  const btnBase: React.CSSProperties = { display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', borderRadius:10, padding:'12px 18px', touchAction:'manipulation' }
   return (
     <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginTop:14 }}>
-      <button onClick={onNext} style={{ ...btnBase, border:'1px solid var(--cyan)', color:'#04121c', background:'var(--cyan)', boxShadow:'var(--glow-cyan)' }}>{isLast ? t('seeResults') : t('next')}</button>
+      <button onClick={onNext} style={{ ...btnBase, border:'1px solid var(--cyan)', color:'var(--on-accent)', background:'var(--cyan)', boxShadow:'var(--glow-cyan)' }}>{isLast ? t('seeResults') : t('next')}</button>
       <button onClick={onBack} style={{ ...btnBase, border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent' }}>{t('home')}</button>
     </div>
   )
@@ -113,10 +113,10 @@ const METER_FILLS: Record<string,string> = {
 export function Meter({ label, type, val }: { label: string; type: string; val: number }) {
   return (
     <div style={{ marginBottom:12 }}>
-      <div style={{ display:'flex', justifyContent:'space-between', fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.14em', textTransform:'uppercase', color:'var(--ink-dim)', marginBottom:5 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--ink-dim)', marginBottom:5 }}>
         <span>{label}</span><span>{Math.round(val)}%</span>
       </div>
-      <div style={{ height:12, borderRadius:8, background:'rgba(0,0,0,.4)', border:'1px solid var(--line)', overflow:'hidden' }}>
+      <div style={{ height:12, borderRadius:8, background:'var(--surface-subtle)', border:'1px solid var(--line)', overflow:'hidden' }}>
         <div style={{ height:'100%', width:`${val}%`, borderRadius:8, background:METER_FILLS[type], transition:'width .6s cubic-bezier(.2,.8,.2,1)' }} />
       </div>
     </div>

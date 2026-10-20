@@ -7,7 +7,7 @@ import type { ManagerAssignmentView } from '@/lib/assignments'
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section style={{ background: 'linear-gradient(180deg,var(--panel),#0a1430)', border: '1px solid var(--line)', borderRadius: 16, padding: 16, boxShadow: '0 12px 40px rgba(0,0,0,.45)' }}>
+    <section style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 16, padding: 16, boxShadow: 'var(--shadow)' }}>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 12, letterSpacing: '.3em', textTransform: 'uppercase', color: 'var(--cyan)', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
         <span style={{ width: 9, height: 9, borderRadius: '50%', background: 'var(--cyan)', boxShadow: 'var(--glow-cyan)', display: 'inline-block' }} />
         {title}

@@ -59,23 +59,23 @@ export default function LevelThree({ onComplete, onBack }: Props) {
 
   return (
     <div style={{ position:'relative', zIndex:1, maxWidth:1040, margin:'0 auto', padding:14 }}>
-      <div style={{ background:'linear-gradient(180deg,var(--panel),#0a1430)', border:'1px solid var(--line)', borderRadius:16, padding:16, boxShadow:'0 12px 40px rgba(0,0,0,.45)' }}>
+      <div style={{ background:'var(--panel)', border:'1px solid var(--line)', borderRadius:16, padding:16, boxShadow:'var(--shadow)' }}>
         <Topline level={3} title={`${t('level.label')} 3 · ${t('l3.title')}`} total={scenarios.length} idx={idx} results={results} />
         {item.multi ? (
-          <div style={{ display:'flex', gap:14, alignItems:'flex-start', border:'1px solid var(--line)', borderRadius:14, padding:16, background:'linear-gradient(180deg,rgba(255,255,255,.025),rgba(0,0,0,.2))', marginBottom:14 }}>
-            <div style={{ width:58, height:58, flexShrink:0, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, border:'2px solid var(--green)', boxShadow:'0 0 16px var(--green)', color:'var(--green)' }}>{STYLES.expressive.icon}</div>
-            <div><div style={{ fontSize:16, fontWeight:700 }}>{item.name}</div><div style={{ fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.15em', textTransform:'uppercase', color:'var(--ink-dim)', marginBottom:8 }}>{item.persona}</div><div style={{ fontSize:14, lineHeight:1.5 }}>{item.situation}</div></div>
+          <div style={{ display:'flex', gap:14, alignItems:'flex-start', border:'1px solid var(--line)', borderRadius:14, padding:16, background:'linear-gradient(180deg,rgba(255,255,255,.025),var(--surface-subtle))', marginBottom:14 }}>
+            <div style={{ width:58, height:58, flexShrink:0, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, border:'2px solid var(--green)', boxShadow:'none', color:'var(--green)' }}>{STYLES.expressive.icon}</div>
+            <div><div style={{ fontSize:16, fontWeight:700 }}>{item.name}</div><div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--ink-dim)', marginBottom:8 }}>{item.persona}</div><div style={{ fontSize:16, lineHeight:1.5 }}>{item.situation}</div></div>
           </div>
         ) : (
           <>
-            <div style={{ display:'flex', gap:14, alignItems:'flex-start', border:'1px solid var(--line)', borderRadius:14, padding:16, background:'linear-gradient(180deg,rgba(255,255,255,.025),rgba(0,0,0,.2))', marginBottom:14 }}>
-              <div style={{ width:58, height:58, flexShrink:0, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, border:`2px solid ${COLOR[item.style!]}`, boxShadow:`0 0 16px ${COLOR[item.style!]}`, color:COLOR[item.style!] }}>{STYLES[item.style!].icon}</div>
-              <div><div style={{ fontSize:16, fontWeight:700 }}>{item.name}</div><div style={{ fontFamily:'var(--mono)', fontSize:11, letterSpacing:'.15em', textTransform:'uppercase', color:'var(--ink-dim)', marginBottom:8 }}>{item.persona}</div></div>
+            <div style={{ display:'flex', gap:14, alignItems:'flex-start', border:'1px solid var(--line)', borderRadius:14, padding:16, background:'linear-gradient(180deg,rgba(255,255,255,.025),var(--surface-subtle))', marginBottom:14 }}>
+              <div style={{ width:58, height:58, flexShrink:0, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, border:`2px solid ${COLOR[item.style!]}`, boxShadow: 'none', color:COLOR[item.style!] }}>{STYLES[item.style!].icon}</div>
+              <div><div style={{ fontSize:16, fontWeight:700 }}>{item.name}</div><div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--ink-dim)', marginBottom:8 }}>{item.persona}</div></div>
             </div>
-            <div style={{ fontSize:14, lineHeight:1.5, marginBottom:14 }}>{item.situation}</div>
+            <div style={{ fontSize:16, lineHeight:1.5, marginBottom:14 }}>{item.situation}</div>
           </>
         )}
-        <div style={{ fontFamily:'var(--mono)', fontSize:13, color:'var(--ink-dim)', letterSpacing:'.04em', marginBottom:10 }}>{item.q}</div>
+        <div style={{ fontFamily:'var(--mono)', fontSize:16, color:'var(--ink-dim)', letterSpacing: 'normal', marginBottom:10 }}>{item.q}</div>
         {item.opts.map((opt, i) => {
           const state = chosen===null ? 'default' : opt.correct ? 'correct' : i===chosen ? 'wrong' : 'muted'
           return <OptBtn key={i} text={opt.t} state={state} disabled={chosen!==null} onClick={() => choose(i)} />

@@ -7,9 +7,9 @@ import type { DoctorInput, StyleKey } from '@/types/game'
 interface Rep { id: string; name: string | null }
 interface SharedDoctor { id: string; name: string; source_notes: string; assignedReps: { id: string; name: string }[] }
 const STYLE_KEYS: StyleKey[] = ['driver', 'expressive', 'amiable', 'analytical']
-const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', background: 'rgba(0,0,0,.3)', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', color: 'var(--ink)', font: 'inherit' }
+const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', background: 'var(--surface-subtle)', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', color: 'var(--ink)', font: 'inherit' }
 const labelStyle: React.CSSProperties = { display: 'grid', gap: 6, fontSize: 12.5, color: 'var(--ink-dim)' }
-const primaryBtn: React.CSSProperties = { cursor: 'pointer', border: '1px solid var(--cyan)', background: 'var(--cyan)', color: '#04121f', borderRadius: 10, padding: '11px 14px', fontWeight: 700 }
+const primaryBtn: React.CSSProperties = { cursor: 'pointer', border: '1px solid var(--cyan)', background: 'var(--cyan)', color: 'var(--on-accent)', borderRadius: 10, padding: '11px 14px', fontWeight: 700 }
 const ghostBtn: React.CSSProperties = { cursor: 'pointer', border: '1px solid var(--line)', background: 'transparent', color: 'var(--ink-dim)', borderRadius: 10, padding: '10px 12px' }
 
 function emptyProfile(name = ''): DoctorInput {
@@ -89,7 +89,7 @@ export default function CompanyDoctorsPanel({ reps }: { reps: Rep[] }) {
       </div>
     ))}
     {!open ? <button onClick={() => { setError(''); setOpen(true) }} style={{ ...primaryBtn, justifySelf: 'start' }}>＋ Create and assign doctor</button> : (
-      <section style={{ display: 'grid', gap: 12, border: '1px solid var(--line)', borderRadius: 12, padding: 14, background: 'rgba(0,0,0,.18)' }}>
+      <section style={{ display: 'grid', gap: 12, border: '1px solid var(--line)', borderRadius: 12, padding: 14, background: 'var(--surface-subtle)' }}>
         <label style={labelStyle}>Doctor profile name
           <input aria-label="Doctor profile name" maxLength={120} value={profile.name} onChange={e => setProfile(p => ({ ...p, name: e.target.value }))} style={inputStyle} />
         </label>

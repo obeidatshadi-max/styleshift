@@ -57,27 +57,27 @@ export default function RoleplayLanguageCards({ signals }: { signals: LanguageSi
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('lang.title')}</div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('lang.title')}</div>
       {cards.map(c => (
         <div key={c.key} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 10 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 5, gap: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, marginBottom: 5, gap: 10 }}>
             <span>{c.title}</span>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, fontWeight: 700, color: COLOR[c.verdict], whiteSpace: 'nowrap' }}>{t(`lang.verdict.${c.verdict}`)}</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 700, color: COLOR[c.verdict], whiteSpace: 'nowrap' }}>{t(`lang.verdict.${c.verdict}`)}</span>
           </div>
-          <p style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 5 }}>{c.result}</p>
+          <p style={{ fontSize: 16, lineHeight: 1.5, marginBottom: 5 }}>{c.result}</p>
           {c.extent && (
             <div style={{ marginBottom: 6 }}>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: COLOR[c.verdict], marginBottom: 3 }}>{t('lang.extent', c.extent)}</div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 14, color: COLOR[c.verdict], marginBottom: 3 }}>{t('lang.extent', c.extent)}</div>
               <div style={{ height: 5, borderRadius: 3, background: 'var(--line)', overflow: 'hidden' }}>
                 <div style={{ width: `${Math.round((c.extent.met / c.extent.needed) * 100)}%`, height: '100%', background: COLOR[c.verdict] }} />
               </div>
             </div>
           )}
-          <p style={{ fontSize: 11.5, color: 'var(--ink-dim)', lineHeight: 1.5 }}>{c.hint}</p>
-          {c.extra && <p style={{ fontSize: 11, color: 'var(--ink-dim)', lineHeight: 1.5, marginTop: 4 }}>{c.extra}</p>}
+          <p style={{ fontSize: 14, color: 'var(--ink-dim)', lineHeight: 1.5 }}>{c.hint}</p>
+          {c.extra && <p style={{ fontSize: 14, color: 'var(--ink-dim)', lineHeight: 1.5, marginTop: 4 }}>{c.extra}</p>}
         </div>
       ))}
-      <p style={{ fontSize: 11, color: 'var(--ink-dim)', lineHeight: 1.5 }}>{t('lang.caveat')}</p>
+      <p style={{ fontSize: 14, color: 'var(--ink-dim)', lineHeight: 1.5 }}>{t('lang.caveat')}</p>
     </div>
   )
 }

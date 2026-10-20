@@ -119,7 +119,7 @@ export default function AssignPanel({ current, reps, prefill }: Props) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {current.reps.map(r => (
-              <div key={r.rep_id} style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid var(--line)', background: 'rgba(0,0,0,.18)' }}>
+              <div key={r.rep_id} style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface-subtle)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                   <span style={{ fontSize: 13 }}>{r.name ?? 'Rep'}</span>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: r.completed_at ? 'var(--green)' : 'var(--ink-dim)' }}>
@@ -139,7 +139,7 @@ export default function AssignPanel({ current, reps, prefill }: Props) {
 
       {/* Create form */}
       {open ? (
-        <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 14, background: 'rgba(0,0,0,.18)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 14, background: 'var(--surface-subtle)', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', gap: 8 }}>
             <button style={chip(targetType === 'category')} onClick={() => { setTargetType('category'); setTargetKey('price') }}>Objection drills</button>
             <button style={chip(targetType === 'level')} onClick={() => { setTargetType('level'); setTargetKey('2') }}>Level run</button>
@@ -170,7 +170,7 @@ export default function AssignPanel({ current, reps, prefill }: Props) {
           {error && <div style={{ color: 'var(--red)', fontSize: 12 }}>Couldn&apos;t create the assignment — try again.</div>}
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={create} disabled={saving || selected.length === 0}
-              style={{ flex: 1, cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', background: 'var(--cyan)', color: '#04121f', borderRadius: 10, padding: '11px 14px', fontWeight: 700, opacity: saving || selected.length === 0 ? .5 : 1 }}>
+              style={{ flex: 1, cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', background: 'var(--cyan)', color: 'var(--on-accent)', borderRadius: 10, padding: '11px 14px', fontWeight: 700, opacity: saving || selected.length === 0 ? .5 : 1 }}>
               {saving ? 'Assigning…' : 'Assign · due in 7 days'}
             </button>
             <button onClick={() => setOpen(false)}
@@ -181,7 +181,7 @@ export default function AssignPanel({ current, reps, prefill }: Props) {
         </div>
       ) : (
         <button onClick={() => setOpen(true)}
-          style={{ cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', color: 'var(--cyan)', background: 'rgba(56,214,255,.06)', borderRadius: 10, padding: '12px 16px', touchAction: 'manipulation' }}>
+          style={{ cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', color: 'var(--cyan)', background: 'var(--accent-soft)', borderRadius: 10, padding: '12px 16px', touchAction: 'manipulation' }}>
           {current ? '＋ New assignment (replaces current)' : '＋ Create assignment'}
         </button>
       )}

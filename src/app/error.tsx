@@ -31,7 +31,7 @@ export default function Error({
         <button
           onClick={() => unstable_retry()}
           style={{
-            cursor: 'pointer', background: 'var(--cyan)', color: '#04121c', border: '1px solid var(--cyan)',
+            cursor: 'pointer', background: 'var(--cyan)', color: 'var(--on-accent)', border: '1px solid var(--cyan)',
             borderRadius: 10, padding: '12px 20px', fontFamily: 'var(--mono)', fontSize: 12,
             letterSpacing: '.12em', textTransform: 'uppercase', fontWeight: 700,
           }}

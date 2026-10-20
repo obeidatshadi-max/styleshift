@@ -88,7 +88,7 @@ export default function MicroPractice({ focusDrillId, onClose }: { focusDrillId?
           <textarea
             dir="auto" value={reply} onChange={e => setReply(e.target.value)} maxLength={1200} rows={4} disabled={phase === 'checking'}
             placeholder={t('mp.placeholder')} aria-label={t('mp.placeholder')}
-            style={{ width: '100%', margin: '10px 0', background: 'rgba(0,0,0,.3)', border: '1px solid var(--line)', borderRadius: 10, padding: 12, color: 'var(--ink)', fontSize: 14, fontFamily: 'var(--sans)' }}
+            style={{ width: '100%', margin: '10px 0', background: 'var(--surface-subtle)', border: '1px solid var(--line)', borderRadius: 10, padding: 12, color: 'var(--ink)', fontSize: 16, fontFamily: 'var(--sans)' }}
           />
           {error && <div role="alert" style={{ ...bodyText, color: 'var(--red)', marginBottom: 8 }}>{error}</div>}
           <button onClick={submit} disabled={phase === 'checking' || !reply.trim()} style={primaryBtn}>{phase === 'checking' ? t('mp.checking') : t('mp.submit')}</button>
@@ -125,7 +125,7 @@ export default function MicroPractice({ focusDrillId, onClose }: { focusDrillId?
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {drills.map(d => (
           <button key={d.id} onClick={() => open(d)} style={{ ...ghostBtn, textAlign: 'start', textTransform: 'none', letterSpacing: 0, display: 'block', width: '100%' }}>
-            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--ink)' }}>{t(`mp.type.${d.type}`)}</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--ink)' }}>{t(`mp.type.${d.type}`)}</div>
             <div style={smallLabel}>
               {t('mp.minutes', { n: d.durationMin })}
               {d.history?.personalBest != null && ` · ${t('mp.best', { n: d.history.personalBest })}`}

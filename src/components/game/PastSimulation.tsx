@@ -19,7 +19,7 @@ export default function PastSimulation({ sessionId, onBack }: Props) {
       {saved.status === 'found' && <ConversationReport report={saved.report} outdated={false} />}
       {(saved.status === 'missing' || saved.status === 'error') && (
         <>
-          <div style={{ color:'var(--ink-dim)', fontSize:13, lineHeight:1.5 }}>{t('visit.reportNotSaved')}</div>
+          <div style={{ color:'var(--ink-dim)', fontSize:16, lineHeight:1.5 }}>{t('visit.reportNotSaved')}</div>
           <PracticeReport sessionId={sessionId} sessionType="ai_doctor_text" />
         </>
       )}

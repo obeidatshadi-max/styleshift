@@ -13,8 +13,8 @@ interface Props {
 
 const COLOR: Record<string, string> = { driver: 'var(--purple)', expressive: 'var(--green)', amiable: 'var(--pink)', analytical: 'var(--cyan)' }
 
-const primaryBtn: React.CSSProperties = { width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 12, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', color: '#04121c', background: 'var(--cyan)', borderRadius: 10, padding: '12px 18px', boxShadow: 'var(--glow-cyan)', touchAction: 'manipulation' }
-const ghostBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 12, letterSpacing: '.12em', textTransform: 'uppercase', border: '1px solid var(--cyan)', color: 'var(--cyan)', background: 'transparent', borderRadius: 10, padding: '12px 18px', touchAction: 'manipulation' }
+const primaryBtn: React.CSSProperties = { width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', border: '1px solid var(--cyan)', color: 'var(--on-accent)', background: 'var(--cyan)', borderRadius: 10, padding: '12px 18px', boxShadow: 'var(--glow-cyan)', touchAction: 'manipulation' }
+const ghostBtn: React.CSSProperties = { cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', border: '1px solid var(--cyan)', color: 'var(--cyan)', background: 'transparent', borderRadius: 10, padding: '12px 18px', touchAction: 'manipulation' }
 
 export default function VoicePartnerFab({ doctor, onDone }: Props) {
   const t = useT()
@@ -31,10 +31,10 @@ export default function VoicePartnerFab({ doctor, onDone }: Props) {
   if (!consented) {
     return (
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14 }}>
-        <div style={{ background: 'linear-gradient(180deg,var(--panel),#0a1430)', border: '1px solid var(--line)', borderRadius: 16, padding: 16, boxShadow: '0 12px 40px rgba(0,0,0,.45)' }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.4em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 10 }}>{t('voice.consentTitle')}</div>
-          <p style={{ color: 'var(--ink-dim)', fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>{t('voice.consentBody')}</p>
-          <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 13.5, lineHeight: 1.5, marginBottom: 18, cursor: 'pointer' }}>
+        <div style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 16, padding: 16, boxShadow: 'var(--shadow)' }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--cyan)', marginBottom: 10 }}>{t('voice.consentTitle')}</div>
+          <p style={{ color: 'var(--ink-dim)', fontSize: 16, lineHeight: 1.6, marginBottom: 16 }}>{t('voice.consentBody')}</p>
+          <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 16, lineHeight: 1.5, marginBottom: 18, cursor: 'pointer' }}>
             <input type="checkbox" checked={consentChecked} onChange={e => setConsentChecked(e.target.checked)} style={{ marginTop: 3, accentColor: 'var(--cyan)' }} />
             {t('voice.consentCheckbox')}
           </label>
@@ -56,9 +56,9 @@ export default function VoicePartnerFab({ doctor, onDone }: Props) {
   if (phase === 'notconfigured') {
     return (
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14 }}>
-        <div style={{ display: 'inline-block', fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--purple)', border: '1px solid var(--purple)', borderRadius: 20, padding: '4px 11px', marginBottom: 14, background: 'rgba(176,108,255,.08)' }}>{t('voice.premium')}</div>
-        <div style={{ fontSize: 14.5, lineHeight: 1.6, color: 'var(--ink)', marginBottom: 10 }}>{t('voiceFab.teaser', { name: doctor.name })}</div>
-        <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--ink-dim)', marginBottom: 14 }}>{t('voice.notConfigured')}</div>
+        <div style={{ display: 'inline-block', fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--purple)', border: '1px solid var(--purple)', borderRadius: 20, padding: '4px 11px', marginBottom: 14, background: 'rgba(176,108,255,.08)' }}>{t('voice.premium')}</div>
+        <div style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--ink)', marginBottom: 10 }}>{t('voiceFab.teaser', { name: doctor.name })}</div>
+        <div style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--ink-dim)', marginBottom: 14 }}>{t('voice.notConfigured')}</div>
         <button onClick={() => onDone({ completed: false, criteriaHit: [] })} style={ghostBtn}>{t('voice.back')}</button>
       </div>
     )
@@ -88,12 +88,12 @@ export default function VoicePartnerFab({ doctor, onDone }: Props) {
 
   return (
     <div style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14 }}>
-      <div style={{ background: 'linear-gradient(180deg,var(--panel),#0a1430)', border: '1px solid var(--line)', borderRadius: 16, padding: 16, boxShadow: '0 12px 40px rgba(0,0,0,.45)' }}>
+      <div style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 16, padding: 16, boxShadow: 'var(--shadow)' }}>
         <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 14 }}>
-          {s && <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, border: `2px solid ${c}`, boxShadow: `0 0 14px ${c}`, color: c }}>{s.icon}</div>}
+          {s && <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, border: `2px solid ${c}`, boxShadow: 'none', color: c }}>{s.icon}</div>}
           <div>
             <div style={{ fontSize: 16, fontWeight: 700 }}>{doctor.name}</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.1em', color: 'var(--ink-dim)' }}>{t('voiceFab.subtitle')}</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', color: 'var(--ink-dim)' }}>{t('voiceFab.subtitle')}</div>
           </div>
         </div>
 
@@ -110,9 +110,9 @@ export default function VoicePartnerFab({ doctor, onDone }: Props) {
               onClick={phase === 'recording' ? stopRecording : startRecording}
               disabled={phase === 'sending' || phase === 'playing'}
               style={{
-                width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 13, letterSpacing: '.1em', textTransform: 'uppercase',
+                width: '100%', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 16, letterSpacing: 'normal', textTransform: 'none',
                 border: `1px solid ${phase === 'recording' ? 'var(--red)' : 'var(--cyan)'}`,
-                color: phase === 'recording' ? 'var(--red)' : '#04121c',
+                color: phase === 'recording' ? 'var(--red)' : 'var(--on-accent)',
                 background: phase === 'recording' ? 'rgba(255,80,80,.08)' : 'var(--cyan)',
                 borderRadius: 10, padding: '14px 18px', touchAction: 'manipulation',
                 opacity: (phase === 'sending' || phase === 'playing') ? 0.6 : 1,
@@ -139,7 +139,7 @@ export default function VoicePartnerFab({ doctor, onDone }: Props) {
             <div style={{ marginTop: 14 }}>
               <button
                 onClick={() => onDone({ completed: true, criteriaHit: result.criteriaHit })}
-                style={{ cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 12, letterSpacing: '.15em', textTransform: 'uppercase', border: '1px solid var(--cyan)', color: '#04121c', background: 'var(--cyan)', borderRadius: 10, padding: '12px 18px', boxShadow: 'var(--glow-cyan)', touchAction: 'manipulation' }}
+                style={{ cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', border: '1px solid var(--cyan)', color: 'var(--on-accent)', background: 'var(--cyan)', borderRadius: 10, padding: '12px 18px', boxShadow: 'var(--glow-cyan)', touchAction: 'manipulation' }}
               >
                 {t('result.logContinue')}
               </button>

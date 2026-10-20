@@ -26,9 +26,9 @@ const TREND_TIP_KEY: Record<RoleplayMetricKey, string> = {
 
 type LanguageSkillKey = ReturnType<typeof missedLanguageSkills>[number]
 
-const row: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 2 }
+const row: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 2 }
 const label: React.CSSProperties = { color: 'var(--ink-dim)' }
-const note: React.CSSProperties = { fontSize: 11, color: 'var(--ink-dim)', lineHeight: 1.45, marginBottom: 9, opacity: .85 }
+const note: React.CSSProperties = { fontSize: 14, color: 'var(--ink-dim)', lineHeight: 1.45, marginBottom: 9, opacity: .85 }
 const mono: React.CSSProperties = { fontFamily: 'var(--mono)' }
 
 /**
@@ -50,10 +50,10 @@ export default function RoleplayHistorySummaryCard({ sessions, name }: { session
 
   return (
     <div style={{ border: '1px solid var(--cyan)', borderRadius: 12, padding: '13px 14px', marginBottom: 12, background: 'rgba(56,214,255,.05)' }}>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 8 }}>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--cyan)', marginBottom: 8 }}>
         {t('roleplay.brief.title')}
       </div>
-      <div style={{ fontSize: 13, lineHeight: 1.55, marginBottom: 12 }}>
+      <div style={{ fontSize: 16, lineHeight: 1.55, marginBottom: 12 }}>
         <p style={{ margin: '0 0 6px' }}>
           {brief.count === 1 ? t('roleplay.brief.introOne', { name: who, date: lastDate }) : t('roleplay.brief.intro', { name: who, n: brief.count, date: lastDate })}
         </p>
@@ -76,10 +76,10 @@ export default function RoleplayHistorySummaryCard({ sessions, name }: { session
         )}
       </div>
 
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--ink-dim)', marginBottom: 2 }}>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)', marginBottom: 2 }}>
         {t('roleplay.summaryTitle')}
       </div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-dim)', marginBottom: 10 }}>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 14, color: 'var(--ink-dim)', marginBottom: 10 }}>
         {t('roleplay.summarySessionCount', { n: summary.count })}
       </div>
       {METRIC_ORDER.filter(k => summary.averages[k] != null).map(k => {
@@ -95,7 +95,7 @@ export default function RoleplayHistorySummaryCard({ sessions, name }: { session
         )
       })}
       {summary.trend && (
-        <div style={{ marginTop: 8, fontSize: 12.5, color: summary.trend.direction === 'improving' ? 'var(--green)' : 'var(--amber)' }}>
+        <div style={{ marginTop: 8, fontSize: 14, color: summary.trend.direction === 'improving' ? 'var(--green)' : 'var(--amber)' }}>
           {t(summary.trend.direction === 'improving' ? 'roleplay.trendImproving' : 'roleplay.trendDeclining', {
             metric: t(METRIC_LABEL_KEY[summary.trend.metric]),
             delta: summary.trend.delta,
@@ -106,7 +106,7 @@ export default function RoleplayHistorySummaryCard({ sessions, name }: { session
           one here would repeat buildRoleplayInsight's same "don't invent a
           critique when things are fine" rule at the history level. */}
       {summary.trend?.direction === 'declining' && (
-        <div style={{ marginTop: 4, fontSize: 11.5, color: 'var(--ink-dim)', lineHeight: 1.5 }}>
+        <div style={{ marginTop: 4, fontSize: 14, color: 'var(--ink-dim)', lineHeight: 1.5 }}>
           {t(TREND_TIP_KEY[summary.trend.metric])}
         </div>
       )}
@@ -122,8 +122,8 @@ export function RoleplaySessionCard({ session, dateText }: { session: RoleplaySe
   const t = useT()
   const minutes = Math.max(1, Math.round(session.duration_sec / 60))
   return (
-    <div style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', background: 'rgba(0,0,0,.18)' }}>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-dim)', marginBottom: 6 }}>
+    <div style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', background: 'var(--surface-subtle)' }}>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 14, color: 'var(--ink-dim)', marginBottom: 6 }}>
         {dateText} · {t('roleplay.lengthMin', { n: minutes })}
       </div>
       {METRIC_ORDER.map(k => {
@@ -131,11 +131,11 @@ export function RoleplaySessionCard({ session, dateText }: { session: RoleplaySe
         if (v == null) return null
         const ok = meetsGoal(k, v)
         return (
-          <div key={k} style={{ ...row, fontSize: 13, marginBottom: 3 }}>
+          <div key={k} style={{ ...row, fontSize: 16, marginBottom: 3 }}>
             <span style={{ ...label, fontWeight: 600 }}>{t(METRIC_LABEL_KEY[k])}</span>
             <span>
               <span style={mono}>{v}{metricUnit(k)}</span>
-              <span style={{ marginInlineStart: 8, fontSize: 11, color: ok ? 'var(--green)' : 'var(--amber)' }}>{t(ok ? 'roleplay.status.good' : 'roleplay.status.work')}</span>
+              <span style={{ marginInlineStart: 8, fontSize: 14, color: ok ? 'var(--green)' : 'var(--amber)' }}>{t(ok ? 'roleplay.status.good' : 'roleplay.status.work')}</span>
             </span>
           </div>
         )
@@ -159,7 +159,7 @@ function SkillRows({ session }: { session: RoleplaySessionSummary }) {
   return (
     <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--line)' }}>
       {rows.map(r => (
-        <div key={r.key} style={{ ...row, fontSize: 13, marginBottom: 3 }}>
+        <div key={r.key} style={{ ...row, fontSize: 16, marginBottom: 3 }}>
           <span style={{ ...label, fontWeight: 600 }}>{r.title}</span>
           <span style={{ ...mono, color: missed.has(r.key) ? 'var(--amber)' : 'var(--green)' }}>{r.value}</span>
         </div>

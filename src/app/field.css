@@ -48,3 +48,22 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{box-shadow:none;
 .voice-practice:lang(ar){--sans:"IBM Plex Sans Arabic","Plus Jakarta Sans",Tahoma,sans-serif;--ink-dim:inherit}
 :lang(ar) *{letter-spacing:normal!important}
 @media(max-width:640px){.app-nav{position:fixed;top:auto;bottom:0;inset-inline:0;padding:8px 10px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--panel)}.app-nav-tabs{border:none;padding:0;gap:4px;border-radius:0}.app-nav-tab{flex-direction:column;gap:4px;font-size:13px;padding:9px 3px}.app-nav-context{margin-bottom:6px}.app-nav-context button{min-height:44px;padding-block:6px}.home-appbar{padding-top:max(14px,env(safe-area-inset-top))}}
+.landing{max-width:760px;margin:0 auto;padding:0 20px 72px}
+.landing-hero{padding-bottom:40px}
+.landing-cta-row{margin-top:24px}
+.landing-cta{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 32px;border-radius:16px;background:var(--cyan);color:var(--on-accent);font-weight:800;font-size:17px;text-decoration:none}
+.landing-note{margin-top:14px;color:var(--ink-dim);font-size:15px;max-width:470px}
+.landing-section{padding:8px 4px 36px}
+.landing-section h2{font-size:clamp(22px,4.5vw,28px);line-height:1.25;letter-spacing:-.6px;font-weight:800;margin-bottom:8px}
+.landing-sub{color:var(--ink-dim);margin-bottom:16px}
+.landing-steps,.landing-styles,.landing-expect{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:12px}
+.landing-card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow)}
+.landing-card h3{font-size:17px;font-weight:800;margin-bottom:4px}
+.landing-card p{color:var(--ink-dim);font-size:15px}
+.landing-steps .landing-card{display:flex;gap:14px;align-items:flex-start}
+.landing-step-n{flex-shrink:0;display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:var(--accent-soft);color:var(--cyan);font-weight:800}
+.landing-styles .landing-card{border-inline-start:4px solid var(--style-color)}
+.landing-styles .landing-card h3{color:var(--style-color)}
+.landing-expect li{display:flex;gap:10px;align-items:flex-start;padding:2px 0}
+.landing-expect li::before{content:"✓";color:var(--green);font-weight:800}
+@media(min-width:640px){.landing-styles{grid-template-columns:1fr 1fr}}

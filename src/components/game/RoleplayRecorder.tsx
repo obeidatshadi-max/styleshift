@@ -206,7 +206,7 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
             {t('roleplay.interactionSummaryDuration', { mmss: `${String(Math.floor(r.durationSec / 60)).padStart(2, '0')}:${String(Math.round(r.durationSec) % 60).padStart(2, '0')}` })}
             {' '}{t('roleplay.interactionSummaryQuestions', { count: r.questionCount })}
             {r.adaptationScore && <> {t('roleplay.interactionSummaryToneMatch', { pct: r.adaptationScore.score })}</>}
-            {' '}{t('roleplay.interactionSummaryTermOverlap', { pct: Math.round(r.termOverlap * 100) })}
+            {' '}{t(r.termOverlap < 0.2 ? 'roleplay.interactionSummaryTermOverlapLow' : 'roleplay.interactionSummaryTermOverlap', { pct: Math.round(r.termOverlap * 100) })}
           </p>
           {isLowSampleSession(r.turnCount) && (
             <p style={{ fontSize: 14, color: 'var(--amber)', lineHeight: 1.5, marginTop: 8 }}>

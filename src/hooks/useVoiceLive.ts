@@ -4,7 +4,7 @@ import { PipecatClient, type TranscriptData, type BotLLMTextData } from '@pipeca
 import { DailyTransport } from '@pipecat-ai/daily-transport'
 import type { LiveDifficulty, LiveTranscriptTurn } from '@/lib/voice-live-core'
 
-export type VoiceLiveState = 'idle' | 'connecting' | 'live' | 'ended' | 'error' | 'notconfigured'
+export type VoiceLiveState = 'idle' | 'connecting' | 'live' | 'dropped' | 'ended' | 'error' | 'notconfigured'
 export type VoiceLiveErrorKind = 'mic' | 'network' | null
 export type VoiceLiveActivity = 'listening' | 'speaking' | 'thinking' | 'youSpeaking'
 
@@ -69,7 +69,14 @@ export function useVoiceLive(doctorId: string, lang: 'en' | 'ar') {
       client.on('botStoppedSpeaking', () => { if (current()) setActivity('listening') })
       client.on('deviceError', () => fail('mic'))
       client.on('error', () => fail('network'))
-      client.on('disconnected', () => fail('network'))
+      // The bot or its speech provider can hang up mid-call. If the rep already
+      // spoke, keep the transcript and let the caller score it ('dropped');
+      // with nothing said there is nothing to score, so it stays an error.
+      client.on('disconnected', () => {
+        if (!current()) return
+        if (!transcriptRef.current.some(turn => turn.role === 'rep')) { fail('network'); return }
+        release(); setState('dropped')
+      })
       try {
         await client.connect({ url: room.dailyRoom, token: room.dailyToken })
         if (current()) setState('live')

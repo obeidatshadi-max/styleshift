@@ -133,3 +133,19 @@ it('shows speech activity, supports mute, and releases the microphone on an unex
   expect(result.current.errorKind).toBe('network')
   expect(mockClientInstance.disconnect).toHaveBeenCalled()
 })
+
+it('keeps the transcript and goes dropped when the call is cut after the rep spoke', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ dailyRoom: 'https://x.daily.co/r', dailyToken: 't' })))
+  mockClientInstance.connect.mockResolvedValue(undefined)
+  mockClientInstance.disconnect.mockResolvedValue(undefined)
+  const { result } = renderHook(() => useVoiceLive('d1', 'en'))
+  await act(async () => { await result.current.connect('realistic') })
+  const event = (name: string) => mockClientInstance.on.mock.calls.find(([n]) => n === name)![1]
+  act(() => event('userTranscript')({ text: 'Good morning doctor', final: true, timestamp: 't', user_id: 'u' }))
+  act(() => event('disconnected')())
+  expect(result.current.state).toBe('dropped')
+  let captured: unknown
+  await act(async () => { captured = await result.current.disconnect() })
+  expect(captured).toEqual([{ role: 'rep', text: 'Good morning doctor' }])
+  expect(result.current.state).toBe('ended')
+})

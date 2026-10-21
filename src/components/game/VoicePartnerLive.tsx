@@ -105,6 +105,9 @@ export default function VoicePartnerLive({ doctor, onDone }: Props) {
     finally { clearTimeout(timeout); setScoring(false) }
   }
 
+  // The call ended from the other side after the rep had spoken: score what was said.
+  useEffect(() => { if (state === 'dropped') void finishCall() })
+
   if (!consented) {
     return (
       <div className="voice-practice" style={{ position: 'relative', zIndex: 1, maxWidth: 560, margin: '0 auto', padding: 14 }}>

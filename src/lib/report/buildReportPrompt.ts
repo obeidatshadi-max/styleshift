@@ -141,8 +141,13 @@ export function buildReportPrompt(
     : ''
   const knowledgeBlock = [knowledgeSection, signalLines].filter(Boolean).join('\n\n')
 
+  const shortSessionLine = context.qualityFlags.includes('short_session')
+    ? 'This is a SHORT conversation. Do not return empty lists just because there is little material: give the one or two observations the transcript does support, mark each interpretation certainty "inferred" or "not_established", and say what could not be judged. Every claim still needs a real segmentIndex; never invent content to fill space.'
+    : ''
+
   const prompt = `${objectiveLine}
 ${simulationLine}
+${shortSessionLine}
 ${context.productContext ? `Product context: ${context.productContext}` : ''}
 ${knowledgeBlock}
 

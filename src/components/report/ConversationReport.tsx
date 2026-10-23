@@ -78,6 +78,13 @@ export function ConversationReport({ report, outdated, audioAvailable = false }:
         </div>
       )}
 
+      {report.qualityFlags.includes('short_session') && (
+        <div data-testid="report-short-session-banner" role="status"
+          style={{ border: '1px solid var(--amber)', borderRadius: 12, padding: '11px 14px', background: 'rgba(255,206,77,.08)', color: 'var(--amber)', fontSize: 'max(12.5px, var(--voice-min-font, 0px))', lineHeight: 1.5 }}>
+          {t('report.shortSession')}
+        </div>
+      )}
+
       <div style={card}>
         {eyebrow(t('report.visitSummary.title'))}
         <p style={{ ...bodyText, marginBottom: 10 }}>{report.visitSummary.summary}</p>

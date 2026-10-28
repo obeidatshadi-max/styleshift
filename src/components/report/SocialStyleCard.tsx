@@ -1,6 +1,8 @@
 'use client'
+import { useState } from 'react'
 import { useT } from '@/lib/i18n'
-import type { SocialStyleSection, SocialStyleRead, AdaptationFinding } from '@/schemas/conversationReport'
+import { SOCIAL_STYLES, type SocialStyle, type SocialStyleSection, type SocialStyleRead, type AdaptationFinding } from '@/schemas/conversationReport'
+import { compareSelfToObserved } from '@/lib/self-vs-observed'
 
 const fieldLabel: React.CSSProperties = { fontFamily: 'var(--mono)', fontSize: 'max(10.5px, var(--voice-min-font, 0px))', letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)' }
 const bodyText: React.CSSProperties = { fontSize: 'max(13px, var(--voice-min-font, 0px))', lineHeight: 1.55, color: 'var(--ink)', margin: 0 }
@@ -30,12 +32,56 @@ function StyleRead({ read }: { read: SocialStyleRead }) {
   )
 }
 
+/** Commit-before-reveal: the rep picks the style they think they used, then sees the transcript-based read. */
+function RepStyleRead({ read }: { read: SocialStyleRead }) {
+  const t = useT()
+  const [choice, setChoice] = useState<SocialStyle | 'skipped' | null>(null)
+  // Nothing observed means nothing to compare, so show the read as before.
+  if (read.possibleStyle === null) return <StyleRead read={read} />
+  if (choice === null) {
+    return (
+      <div data-testid="self-check-prompt">
+        <div style={fieldLabel}>{t('report.socialStyle.subject.rep')}</div>
+        <p style={{ ...bodyText, marginTop: 4 }}>{t('report.selfCheck.prompt')}</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+          {SOCIAL_STYLES.map(s => (
+            <button key={s} type="button" onClick={() => setChoice(s)}
+              style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '8px 12px', background: 'var(--panel)', color: 'var(--ink)', cursor: 'pointer', fontSize: 'max(13px, var(--voice-min-font, 0px))' }}>
+              {t(`report.socialStyle.style.${s}`)}
+            </button>
+          ))}
+        </div>
+        <button type="button" onClick={() => setChoice('skipped')}
+          style={{ ...note, marginTop: 8, background: 'none', border: 'none', padding: 0, textDecoration: 'underline', cursor: 'pointer' }}>
+          {t('report.selfCheck.skip')}
+        </button>
+      </div>
+    )
+  }
+  const outcome = choice === 'skipped' ? null : compareSelfToObserved(choice, read.possibleStyle)
+  return (
+    <div>
+      <StyleRead read={read} />
+      {choice !== 'skipped' && outcome !== null && outcome !== 'no_observation' && (
+        <div data-testid="self-check-result" style={{ marginTop: 8 }}>
+          <p style={bodyText}>
+            {outcome === 'match'
+              ? t('report.selfCheck.match')
+              : t('report.selfCheck.differs', { self: t(`report.socialStyle.style.${choice}`), observed: t(`report.socialStyle.style.${read.possibleStyle}`) })}
+          </p>
+          <p style={note}>{t('report.selfCheck.note')}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function SocialStyleCard({ section }: { section: SocialStyleSection }) {
   const t = useT()
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <StyleRead read={section.customer} />
-      <StyleRead read={section.rep} />
+      <RepStyleRead read={section.rep} />
 
       {section.adaptation.length > 0 && (
         <div>

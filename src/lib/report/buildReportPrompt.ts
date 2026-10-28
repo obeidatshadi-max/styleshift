@@ -4,6 +4,7 @@ import {
 } from '@/schemas/conversationReport'
 import { CONTEXT_COACHING_RULES } from '@/lib/context-coaching'
 import { VAGUE_PATTERNS, patternPromptList } from '@/lib/precision-language'
+import { QUESTION_KINDS } from '@/lib/question-kind'
 
 const oneOf = (values: readonly string[]) => values.map(v => `"${v}"`).join(' | ')
 
@@ -15,6 +16,7 @@ const EV = '{ "segmentIndex": <number>, "speakerRole": "rep"|"counterpart" }'
 const SHAPE_FIELDS = {
   momentUnderstanding: `  "momentUnderstanding": { "evidence": ${EV}, "possibleMeanings": [string], "missingContext": string, "clarifyingQuestion": string, "subsequentResponse": ${EV}|null }|null`,
   vagueStatements: `  "vagueStatements": [{ "evidence": ${EV}, "pattern": ${oneOf(VAGUE_PATTERNS)}, "precisionQuestion": string }]`,
+  answerFit: `  "answerFit": [{ "evidence": ${EV}, "kind": ${oneOf(QUESTION_KINDS)}, "suggestion": string }]`,
   visitSummary: `  "visitSummary": { "summary": string, "objectiveStatus": ${oneOf(OBJECTIVE_STATUSES)}, "objectiveStatusReason": string, "evidence": [${EV}] }`,
   customerUnderstanding: `  "customerUnderstanding": {
     "needs": [{ "text": string, "certainty": ${oneOf(CERTAINTIES)}, "evidence": [${EV}] }],
@@ -44,10 +46,10 @@ export type ReportLang = 'en' | 'ar'
 
 const PART_KEYS: Record<ReportPart, (keyof typeof SHAPE_FIELDS)[]> = {
   summary: ['visitSummary', 'customerUnderstanding', 'commitments'],
-  moments: ['performance', 'criticalMoments', 'momentUnderstanding', 'vagueStatements'],
+  moments: ['performance', 'criticalMoments', 'momentUnderstanding', 'vagueStatements', 'answerFit'],
   coaching: ['coachingPriority', 'strength'],
   style: ['socialStyle'],
-  all: ['visitSummary', 'customerUnderstanding', 'performance', 'criticalMoments', 'momentUnderstanding', 'vagueStatements', 'commitments', 'coachingPriority', 'strength', 'socialStyle'],
+  all: ['visitSummary', 'customerUnderstanding', 'performance', 'criticalMoments', 'momentUnderstanding', 'vagueStatements', 'answerFit', 'commitments', 'coachingPriority', 'strength', 'socialStyle'],
 }
 /** Merge the parts' parsed JSON, taking from each only the keys that part was asked for. A part
  * can echo another part's key (the objective line mentions visitSummary, so the coaching part
@@ -112,6 +114,13 @@ const VAGUE_RULE = `For vagueStatements, list at most 3 counterpart statements t
 ${patternPromptList()}
 For each, write one short, respectful precisionQuestion the rep could have asked, using the counterpart's own words. Return [] when the rep did follow up, or when nothing the counterpart said was meaningfully vague. Do not use hidden simulation configuration as evidence.`
 
+/** Miniature Guide to Critical Thinking p.16 (paraphrased): the kind of question decides the shape of a good answer. */
+const ANSWER_FIT_RULE = `For answerFit, list at most 2 counterpart questions where the rep's very next turn answered in the wrong form for the kind of question. Cite only the counterpart's actual segment. Choose one kind:
+- "knowledge": has one correct answer settled by evidence (a dose, a label fact, a study result). A good answer gives the fact with its source, or says it will be confirmed.
+- "preference": a personal taste with no right or wrong. A good answer asks what matters to them and does not argue.
+- "judgment": competing views with better and worse answers (switch, compare, worth it). A good answer names the criteria and the doctor's own view before recommending.
+Include a question only when the rep's reply clearly missed that form (for example a bare fact for a judgment question, or arguing a preference). Write one short suggestion for a better form of answer, in the rep's voice. Return [] when the replies fit, or when no counterpart question is clear. Do not use hidden simulation configuration as evidence.`
+
 const REQUIRED_NOTE: Record<ReportPart, string> = {
   all: 'coachingPriority and visitSummary.summary are required and coachingPriority needs at least one evidence reference.',
   summary: 'visitSummary.summary is required.',
@@ -170,7 +179,9 @@ ${SHAPES[part]}
 
 ${part === 'moments' || part === 'all' ? `For momentUnderstanding, choose ONE ambiguous counterpart statement worth clarifying. Cite the counterpart's actual segment; never a rep statement. Give one or two tentative possibleMeanings, explicitly framed as possibilities, not established motives. State the missingContext and suggest one short, respectful clarifyingQuestion. Set subsequentResponse only to the first actual counterpart response after an intervening rep turn, if present; it is historical evidence, NOT a predicted response to your suggested question. Return null when no useful supported moment exists. Do not use hidden simulation configuration as evidence. Keep each field to one short sentence.
 
-${VAGUE_RULE}` : ''}
+${VAGUE_RULE}
+
+${ANSWER_FIT_RULE}` : ''}
 
 For every piece of evidence, cite ONLY { "segmentIndex": <number>, "speakerRole": "rep"|"counterpart" } —
 do NOT include the quoted text yourself; the exact words will be looked up separately from the real
@@ -189,6 +200,6 @@ ${NO_CLAIMS_RULE}${knowledgeSection ? KNOWLEDGE_EXCEPTION : ''}
 
 Never claim one behavior caused a reaction merely because it came first in the transcript.`
 
-  // The moments part also lists vagueStatements, so it gets a little more room (Arabic runs long).
-  return { system: SYSTEM, prompt, maxTokens: part === 'all' ? 4000 : part === 'moments' ? 2600 : 2200 }
+  // The moments part also lists vagueStatements and answerFit, so it gets a little more room (Arabic runs long).
+  return { system: SYSTEM, prompt, maxTokens: part === 'all' ? 4000 : part === 'moments' ? 2900 : 2200 }
 }

@@ -1,4 +1,5 @@
 import { isVaguePattern } from '@/lib/precision-language'
+import { classifyDoctorQuestion, isQuestionKind } from '@/lib/question-kind'
 import {
   isCertainty, isCommitmentStatus, isObjectiveStatus, isPerformanceDimension, isSocialStyle, isSignalCategory,
   VOICE_METRICS,
@@ -181,6 +182,22 @@ export function groundReport(
     return { evidence, pattern: v.pattern, precisionQuestion, repReply: reply ? groundEvidence(reply, segments) : null }
   }).filter((x): x is NonNullable<typeof x> => x !== null).slice(0, 3)
 
+  // Answer-fit findings (Miniature Guide to Critical Thinking p.16). The quote and the rep's reply come from the
+  // transcript; the model only picks the segment, a kind and a suggestion. Where the doctor's own words show the
+  // kind unambiguously, that deterministic read wins over the model's label.
+  const seenFit = new Set<number>()
+  const answerFit = (Array.isArray(r.answerFit) ? r.answerFit : []).map(item => {
+    const a = (item && typeof item === 'object' ? item : {}) as Record<string, unknown>
+    const evidence = groundEvidence(a.evidence, segments)
+    const suggestion = str(a.suggestion)
+    if (!evidence || evidence.speakerRole !== 'counterpart' || !isQuestionKind(a.kind) || !suggestion) return null
+    if (seenFit.has(evidence.segmentIndex)) return null
+    seenFit.add(evidence.segmentIndex)
+    const reply = [...segments].sort((x, y) => x.segmentIndex - y.segmentIndex)
+      .find(seg => seg.segmentIndex > evidence.segmentIndex && seg.speakerRole === 'rep')
+    return { evidence, kind: classifyDoctorQuestion(evidence.quote) ?? a.kind, repReply: reply ? groundEvidence(reply, segments) : null, suggestion }
+  }).filter((x): x is NonNullable<typeof x> => x !== null).slice(0, 2)
+
   // ── Commitments — status must be exactly one of the three valid values ──
   const commitments = (Array.isArray(r.commitments) ? r.commitments : []).map(item => {
     const c = (item && typeof item === 'object' ? item : {}) as Record<string, unknown>
@@ -270,7 +287,7 @@ export function groundReport(
     transcriptVersion: opts.transcriptVersion,
     scoringConfigVersion: typeof context.deterministicMetrics.scoringConfigVersion === 'string' ? context.deterministicMetrics.scoringConfigVersion : null,
     generatedAt: new Date().toISOString(),
-    visitSummary, customerUnderstanding, performance, criticalMoments, momentUnderstanding, vagueStatements,
+    visitSummary, customerUnderstanding, performance, criticalMoments, momentUnderstanding, vagueStatements, answerFit,
     voiceMeasurements: buildVoiceMeasurements(context.deterministicMetrics),
     commitments, coachingPriority, strength,
     socialStyle: { customer: customerRead, rep: repRead, adaptation, signalChanges, coachingCard },

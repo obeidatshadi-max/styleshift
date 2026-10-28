@@ -39,6 +39,9 @@ describe('debrief evidence and contracts', () => {
     expect(parse('not a list')?.promises).toEqual([])
     expect(parseDebriefResult(JSON.stringify({ questions: [], report }))?.promises).toEqual([])
     expect(debriefPrompt(input, 'Dr X').system).toContain('"promises"')
+    // nextAction is an if-then plan with an observable trigger, not free-form advice.
+    expect(debriefPrompt(input, 'Dr X').system).toMatch(/"nextAction" as one if-then plan/)
+    expect(debriefPrompt(input, 'Dr X').system).toContain('observable moment')
   })
   it('accepts an optional coaching focus from the known list and rejects anything else', () => {
     expect(parseDebriefInput({ ...input, focus: 'closing' })?.focus).toBe('closing')

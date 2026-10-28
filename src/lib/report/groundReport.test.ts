@@ -77,6 +77,31 @@ describe('groundReport', () => {
     expect(report.vagueStatements![0].evidence.quote).toBe(segments[0].text)
     expect(report.vagueStatements![0].repReply?.quote).toBe(segments[1].text)
   })
+  it('grounds answer-fit to the counterpart, looks up the rep reply, and lets a clear question win over the model kind', () => {
+    const asked: TranscriptSegment[] = [
+      { ...segments[0], segmentIndex: 0, text: 'Why should I switch from what I use now?' },
+      { ...segments[1], segmentIndex: 1, text: 'It reduces events by twelve percent.' },
+    ]
+    const report = groundReport(minimalRaw({ answerFit: [
+      { evidence: { segmentIndex: 0, quote: 'invented' }, kind: 'knowledge', suggestion: 'Ask what matters in their choice first.' },
+    ] }), asked, context, base)!
+    expect(report.answerFit).toHaveLength(1)
+    expect(report.answerFit![0].evidence.quote).toBe(asked[0].text)
+    expect(report.answerFit![0].repReply?.quote).toBe(asked[1].text)
+    expect(report.answerFit![0].kind).toBe('judgment')
+  })
+  it('keeps the model kind when the question text is unclear, and drops rep anchors, bad kinds, empty suggestions, duplicates; caps at 2', () => {
+    const ok = { evidence: { segmentIndex: 0 }, kind: 'preference', suggestion: 'Ask what matters to them.' }
+    const report = groundReport(minimalRaw({ answerFit: [
+      { ...ok, evidence: { segmentIndex: 1 } }, { ...ok, kind: 'opinion' }, { ...ok, suggestion: '' }, ok, ok,
+    ] }), segments, context, base)!
+    expect(report.answerFit).toHaveLength(1)
+    expect(report.answerFit![0].kind).toBe('preference')
+    const many: TranscriptSegment[] = [0, 2, 4, 6].map(i => ({ ...segments[0], segmentIndex: i, text: `Doctor line ${i}.` }))
+    const capped = groundReport(minimalRaw({ answerFit: many.map(m => ({ ...ok, evidence: { segmentIndex: m.segmentIndex } })) }), [...segments.slice(1), ...many], context, base)!
+    expect(capped.answerFit).toHaveLength(2)
+    expect(groundReport(minimalRaw(), segments, context, base)?.answerFit).toEqual([])
+  })
   it('drops vague statements with a rep anchor, unknown pattern, empty question or duplicate segment, and caps at 3', () => {
     const ok = { evidence: { segmentIndex: 0 }, pattern: 'deletion', precisionQuestion: 'About what?' }
     const report = groundReport(minimalRaw({ vagueStatements: [

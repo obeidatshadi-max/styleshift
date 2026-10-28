@@ -155,6 +155,27 @@ export function ConversationReport({ report, outdated, audioAvailable = false }:
         <p style={{ ...bodyText, color: 'var(--ink-dim)', marginTop: 12 }}>{t('report.vague.note')}</p>
       </section>}
 
+      {report.answerFit && report.answerFit.length > 0 && <section style={card} aria-label={t('report.answerFit.title')}>
+        {eyebrow(t('report.answerFit.title'))}
+        <p style={{ ...bodyText, color: 'var(--ink-dim)', marginBottom: 6 }}>{t('report.answerFit.intro')}</p>
+        {report.answerFit.map((f, i) => (
+          <div key={i} style={{ borderTop: i > 0 ? '1px solid var(--line)' : 'none', paddingTop: i > 0 ? 12 : 0, marginTop: i > 0 ? 12 : 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={fieldLabel}>{t('report.answerFit.doctor')}</span>
+              <Badge text={t(`report.answerFit.kind.${f.kind}`)} color="var(--amber)" />
+            </div>
+            <Evidence evidence={f.evidence} audioAvailable={audioAvailable} />
+            <p style={{ ...bodyText, color: 'var(--ink-dim)', marginTop: 4 }}>{t(`report.answerFit.hint.${f.kind}`)}</p>
+            <div style={{ ...fieldLabel, marginTop: 8 }}>{t('report.answerFit.reply')}</div>
+            {f.repReply
+              ? <Evidence evidence={f.repReply} audioAvailable={audioAvailable} />
+              : <p style={bodyText}>{t('report.answerFit.noReply')}</p>}
+            <div style={{ marginTop: 8 }}><span style={fieldLabel}>{t('report.answerFit.suggestion')}: </span><span style={bodyText}>{f.suggestion}</span></div>
+          </div>
+        ))}
+        <p style={{ ...bodyText, color: 'var(--ink-dim)', marginTop: 12 }}>{t('report.answerFit.note')}</p>
+      </section>}
+
       <Accordion title={t('report.customerUnderstanding.title')}>
         {(['needs', 'concerns', 'decisionCriteria', 'openQuestions'] as const).map(key => (
           <div key={key}>

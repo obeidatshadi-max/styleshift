@@ -35,6 +35,17 @@ describe('classifyDoctorQuestion', () => {
     expect(classifyDoctorQuestion('Is it better than X at 10 mg dose data?')).toBe('judgment')
   })
 
+  it('does not read a statement that merely mentions evidence or data as a fact question', () => {
+    expect(classifyDoctorQuestion('I have five minutes only, and I need real evidence.')).toBeNull()
+    expect(classifyDoctorQuestion('I worry about side effects in elderly patients.')).toBeNull()
+    expect(classifyDoctorQuestion('عندي مخاوف من الأعراض الجانبية')).toBeNull()
+  })
+
+  it('detects explicit data requests as knowledge', () => {
+    expect(classifyDoctorQuestion('Do you have any data in elderly patients?')).toBe('knowledge')
+    expect(classifyDoctorQuestion('هل لديك دراسات على كبار السن؟')).toBe('knowledge')
+  })
+
   it('returns null rather than guessing', () => {
     expect(classifyDoctorQuestion('')).toBeNull()
     expect(classifyDoctorQuestion('   ')).toBeNull()

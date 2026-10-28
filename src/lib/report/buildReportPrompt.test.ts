@@ -41,7 +41,7 @@ describe('buildReportPrompt', () => {
       expect(prompt).toContain(field)
   })
   it('splits the shape across parts that each hold only their own keys and together cover the full report', () => {
-    const topKeys = ['visitSummary', 'customerUnderstanding', 'performance', 'criticalMoments', 'momentUnderstanding', 'vagueStatements', 'commitments', 'coachingPriority', 'strength', 'socialStyle']
+    const topKeys = ['visitSummary', 'customerUnderstanding', 'performance', 'criticalMoments', 'momentUnderstanding', 'vagueStatements', 'answerFit', 'commitments', 'coachingPriority', 'strength', 'socialStyle']
     const all = buildReportPrompt(segments, context, [], [], 'all')
     const covered = new Set<string>()
     for (const part of REPORT_PARTS) {
@@ -62,6 +62,13 @@ describe('buildReportPrompt', () => {
     expect(prompt).toContain('"missing_comparison"')
     expect(prompt).toMatch(/did not ask to make specific/)
     expect(buildReportPrompt(segments, context, [], [], 'coaching').prompt).not.toContain('vagueStatements')
+  })
+  it('asks the moments part for answer-fit findings with the three question kinds', () => {
+    const { prompt } = buildReportPrompt(segments, context, [], [], 'moments')
+    expect(prompt).toContain('"answerFit": [{ "evidence"')
+    expect(prompt).toContain('"knowledge" | "preference" | "judgment"')
+    expect(prompt).toMatch(/wrong form for the kind of question/)
+    expect(buildReportPrompt(segments, context, [], [], 'coaching').prompt).not.toContain('answerFit')
   })
   it('merges only the keys each part owns, so a stray key cannot overwrite another part', () => {
     const merged = mergeReportParts({

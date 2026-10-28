@@ -1,4 +1,5 @@
 import type { VaguePattern } from '@/lib/precision-language'
+import type { QuestionKind } from '@/lib/question-kind'
 export const REPORT_SESSION_TYPES = ['human_partner', 'ai_doctor_voice', 'ai_doctor_text', 'customer_visit'] as const
 export type ReportSessionType = typeof REPORT_SESSION_TYPES[number]
 export function isReportSessionType(v: unknown): v is ReportSessionType {
@@ -128,6 +129,16 @@ export interface VagueStatement {
   repReply: EvidenceRef | null
 }
 
+/** A counterpart question the rep answered in the wrong form for its kind (a judgment question answered with a
+ * bare fact, a preference question argued). Kinds: Paul & Elder, Miniature Guide to Critical Thinking, p.16. */
+export interface AnswerFitFinding {
+  evidence: EvidenceRef
+  kind: QuestionKind
+  /** The rep's actual next turn, looked up from the transcript — never written by the model. */
+  repReply: EvidenceRef | null
+  suggestion: string
+}
+
 export interface VoiceMeasurement {
   metric: VoiceMetric
   value: number
@@ -211,6 +222,8 @@ export interface ConversationReport {
   momentUnderstanding?: MomentUnderstanding | null
   /** Additive field: older saved reports remain readable. */
   vagueStatements?: VagueStatement[]
+  /** Additive field: older saved reports remain readable. */
+  answerFit?: AnswerFitFinding[]
   voiceMeasurements: VoiceMeasurement[]
   commitments: Commitment[]
   coachingPriority: CoachingPriority

@@ -12,7 +12,9 @@ import type { ObjectionType } from '@/lib/voice-partner-core'
 //
 // The heuristic is deliberately conservative: it returns null instead of
 // guessing, because a wrong "you answered the wrong kind" coaching line is
-// worse than no line.
+// worse than no line. Knowledge cues therefore need a question form
+// ("what is the dose", "do you have data"); a bare word such as "evidence"
+// also appears in statements ("I need real evidence") and is not a cue.
 
 export type QuestionKind = 'knowledge' | 'preference' | 'judgment'
 export const QUESTION_KINDS: readonly QuestionKind[] = ['knowledge', 'preference', 'judgment']
@@ -41,8 +43,8 @@ const CUES: ReadonlyArray<{ kind: QuestionKind; patterns: RegExp[] }> = [
   {
     kind: 'knowledge',
     patterns: [
-      /\b(what('s| is) the (dose|dosage|price|half-?life|indication|contraindication)|how (many|much|long)|is it (approved|registered|available|safe|indicated)|side effects?|adverse|study|trial|data|evidence|mechanism|label)\b/i,
-      /(كم (هي|هو)?|ما هي الجرعة|الجرعة|الأعراض الجانبية|دراسة|دراسات|هل هو معتمد|هل هو مسجل|هل هو متوفر|دليل|بيانات|آلية)/,
+      /\b(what('s| is| are) the (dose|dosage|price|half-?life|indication|contraindications?|side effects?)|how (many|much|long)|is it (approved|registered|available|safe|indicated)|do you have (any )?(data|studies|evidence)|what (does|do) the (study|studies|trial|data) (show|say))\b/i,
+      /(ما هي الجرعة|ما هي الأعراض الجانبية|كم (هي|هو|تبلغ)|هل هو (معتمد|مسجل|متوفر|آمن)|هل لديك (دراسات|بيانات|دليل)|ماذا تقول الدراسة)/,
     ],
   },
 ]

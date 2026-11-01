@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="StyleShift Arena: pre- and post-training assessment competition for the StyleShift pharma field workshop.">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>StyleShift Arena</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap">
+<style>
+/* Layout: a scoreboard-style top bar with the 4-stage stepper, one working column below; big-screen mode turns the column into a projector wall. */
+:root{
+  --ink:#14213a; --ink-2:#4a5674; --line:#d7dce8; --ground:#f3f5fa; --panel:#ffffff; --panel-2:#e9edf6;
+  --accent:#1f4fd8; --accent-ink:#ffffff; --gold:#c98a00;
+  --driver:#d6452f; --expressive:#d98a00; --analytical:#2f6fd6; --amiable:#1f9a74;
+  --good:#1f8a5b; --warn:#b26a00; --bad:#c23b2b;
+  --f-display:"Archivo","Arial Narrow",Arial,sans-serif;
+  --f-body:"IBM Plex Sans","IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ink:#e8ecf6; --ink-2:#a3adc6; --line:#2c3652; --ground:#0d1424; --panel:#151e33; --panel-2:#1d2842;
+  --accent:#7d9cff; --accent-ink:#0d1424; --gold:#f2b632;
+  --driver:#ff7a63; --expressive:#ffb340; --analytical:#6fa1ff; --amiable:#45c99c;
+  --good:#4fcf8f; --warn:#f0a23b; --bad:#ff7a63; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --ink:#e8ecf6; --ink-2:#a3adc6; --line:#2c3652; --ground:#0d1424; --panel:#151e33; --panel-2:#1d2842;
+  --accent:#7d9cff; --accent-ink:#0d1424; --gold:#f2b632;
+  --driver:#ff7a63; --expressive:#ffb340; --analytical:#6fa1ff; --amiable:#45c99c;
+  --good:#4fcf8f; --warn:#f0a23b; --bad:#ff7a63; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--panel)}
+.wrap{max-width:860px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wide .wrap{max-width:1280px}
+h1,h2,h3{font-family:var(--f-display);font-stretch:112%;text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:1.6rem;font-weight:850}
+h2{font-size:1.3rem;font-weight:800}
+h3{font-size:1.05rem;font-weight:750}
+p{margin:0}
+.muted{color:var(--ink-2)}
+.eyebrow{font-family:var(--f-display);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--ink-2)}
+.num{font-variant-numeric:tabular-nums}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--panel);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding-block:10px}
+.brand{display:flex;align-items:baseline;gap:8px;margin-right:auto}
+.brand b{font-family:var(--f-display);font-stretch:125%;font-weight:900;font-size:1.15rem;letter-spacing:-.01em}
+.brand .quad{display:inline-grid;grid-template-columns:7px 7px;gap:2px;align-self:center}
+.brand .quad i{width:7px;height:7px;border-radius:2px;display:block}
+.steps{display:flex;gap:4px;flex-wrap:wrap}
+.step{font-family:var(--f-display);font-size:.74rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 9px;border-radius:999px;color:var(--ink-2);border:1px solid var(--line);white-space:nowrap}
+.step.on{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+.step.done{color:var(--good);border-color:var(--good)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;padding:4px 10px;border-radius:999px;background:var(--panel-2);color:var(--ink)}
+.chip .dot{width:8px;height:8px;border-radius:50%;background:var(--good)}
+.chip.local .dot{background:var(--warn)}
+
+main{padding-block:22px 60px}
+.stack{display:flex;flex-direction:column;gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.notice{border-radius:var(--r);padding:12px 14px;background:var(--panel-2);font-size:.9rem}
+.notice.warn{border-left:4px solid var(--warn)}
+.notice.bad{border-left:4px solid var(--bad)}
+.notice.good{border-left:4px solid var(--good)}
+
+button,.btn{font:inherit;font-weight:600;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:9px 14px;min-height:40px}
+button:hover{border-color:var(--ink-2)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.danger{color:var(--bad);border-color:var(--bad)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,textarea:focus-visible,label.opt:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.spread{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+input[type=text],input[type=number],textarea{font:inherit;color:var(--ink);background:var(--ground);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
+textarea{min-height:84px;resize:vertical;font-family:var(--f-body)}
+label.field{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.9rem}
+
+/* quiz */
+.round-head{display:flex;gap:14px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;padding-top:8px;border-top:3px solid var(--ink)}
+.round-head .pts{font-family:var(--f-display);font-weight:800;font-size:.85rem;color:var(--ink-2)}
+.q{display:flex;flex-direction:column;gap:12px}
+.q .qn{font-family:var(--f-display);font-weight:800;color:var(--accent);font-size:.85rem;letter-spacing:.05em}
+.q .prompt{font-weight:600;font-size:1.02rem}
+.scenario{background:var(--panel-2);border-radius:8px;padding:12px 14px;font-size:.95rem}
+.case{border-left:4px solid var(--gold);background:var(--panel-2);border-radius:0 8px 8px 0;padding:14px 16px}
+.opts{display:grid;gap:8px}
+label.opt{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;background:var(--ground)}
+label.opt input{margin-top:4px;accent-color:var(--accent)}
+label.opt:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--panel))}
+label.opt.right{border-color:var(--good);background:color-mix(in srgb,var(--good) 12%,var(--panel))}
+label.opt.wrong{border-color:var(--bad)}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.sf{display:flex;flex-direction:column;gap:6px;min-width:0}
+.sf b{font-family:var(--f-display);font-size:.8rem;letter-spacing:.08em;text-transform:uppercase}
+.style-driver{color:var(--driver)}.style-expressive{color:var(--expressive)}.style-analytical{color:var(--analytical)}.style-amiable{color:var(--amiable)}
+.dialect-tag{display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);border:1px solid var(--gold);border-radius:999px;padding:2px 8px}
+.timer{font-family:var(--f-display);font-weight:850;font-size:1.3rem;font-variant-numeric:tabular-nums}
+.timer.low{color:var(--bad)}
+.progress{height:6px;background:var(--panel-2);border-radius:999px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent);transition:width .3s}
+.dock{position:sticky;bottom:0;z-index:4;background:var(--panel);border-top:1px solid var(--line);padding-block:10px calc(10px + env(safe-area-inset-bottom,0px));margin-top:8px}
+
+/* teams */
+.teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.team{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column}
+.team.mine{border:2px solid var(--accent)}
+.team .ph{aspect-ratio:4/3;background:var(--panel-2);display:grid;place-items:center;font-family:var(--f-display);font-weight:900;font-size:2.4rem;color:var(--ink-2);max-width:100%}
+.team .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.team .body{padding:12px;display:flex;flex-direction:column;gap:6px;flex:1}
+.team .nick{font-family:var(--f-display);font-stretch:118%;font-weight:850;font-size:1.1rem;overflow-wrap:anywhere}
+.team .members{font-size:.85rem;color:var(--ink-2);overflow-wrap:anywhere}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--panel-2);color:var(--ink-2)}
+.badge.ok{color:var(--good);background:color-mix(in srgb,var(--good) 14%,var(--panel))}
+.badge.pend{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,var(--panel))}
+.photo-pick{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.photo-pick .prev{width:96px;height:72px;border-radius:8px;background:var(--panel-2);overflow:hidden;display:grid;place-items:center;color:var(--ink-2);font-size:.75rem}
+.photo-pick .prev img{width:100%;height:100%;object-fit:cover}
+
+/* results */
+.big{font-family:var(--f-display);font-weight:900;font-stretch:118%;font-size:clamp(2.2rem,7vw,4.6rem);line-height:1;font-variant-numeric:tabular-nums}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.stat .v{font-family:var(--f-display);font-weight:900;font-size:2rem;font-variant-numeric:tabular-nums}
+.board{display:flex;flex-direction:column;gap:10px}
+.lrow{display:grid;grid-template-columns:52px 64px minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px}
+.lrow .rk{font-family:var(--f-display);font-weight:900;font-size:1.7rem;text-align:center;font-variant-numeric:tabular-nums}
+.lrow.r1{border:2px solid var(--gold)}
+.lrow.r1 .rk{color:var(--gold)}
+.lrow .av{width:64px;height:48px;border-radius:6px;overflow:hidden;background:var(--panel-2);display:grid;place-items:center;font-family:var(--f-display);font-weight:900;color:var(--ink-2)}
+.lrow .av img{width:100%;height:100%;object-fit:cover}
+.lrow .score{font-family:var(--f-display);font-weight:900;font-size:1.6rem;text-align:right;font-variant-numeric:tabular-nums}
+.bars{display:flex;flex-direction:column;gap:3px;font-size:.78rem;color:var(--ink-2);min-width:0}
+.bar{display:grid;grid-template-columns:34px minmax(0,1fr) 40px;gap:6px;align-items:center}
+.bar .t{height:7px;background:var(--panel-2);border-radius:999px;overflow:hidden}
+.bar .t i{display:block;height:100%;border-radius:999px}
+.bar.pre .t i{background:var(--ink-2)}
+.bar.post .t i{background:var(--accent)}
+.gain{font-weight:700}
+.gain.up{color:var(--good)}.gain.down{color:var(--bad)}
+@media (max-width:560px){.lrow{grid-template-columns:36px 48px minmax(0,1fr);}.lrow .score{grid-column:1/-1;text-align:left;font-size:1.2rem}.lrow .av{width:48px;height:40px}}
+
+/* trainer */
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{border-radius:999px;padding:6px 14px;min-height:36px;font-size:.88rem}
+.tab.on{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+.phase-btns{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.phase-btns button{text-align:left;display:flex;flex-direction:column;gap:2px;padding:12px}
+.phase-btns button small{font-weight:400;color:var(--ink-2);font-size:.8rem}
+.phase-btns button.on{border:2px solid var(--accent)}
+.sub{border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
+.sub>summary{cursor:pointer;padding:12px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;list-style:none}
+.sub>summary::-webkit-details-marker{display:none}
+.sub .inner{padding:0 14px 14px;display:flex;flex-direction:column;gap:12px}
+.ans{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:12px;align-items:start;border-top:1px solid var(--line);padding-top:12px}
+.ans .txt{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--ground);border-radius:8px;padding:10px;font-size:.95rem;unicode-bidi:plaintext}
+.ans .mk{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--ink-2)}
+@media (max-width:560px){.ans{grid-template-columns:1fr}}
+.rubric{font-size:.85rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.rubric div{background:var(--panel-2);border-radius:8px;padding:8px 10px}
+.tbl{overflow-x:auto}
+.tbl table{border-collapse:collapse;width:100%;font-size:.88rem}
+.tbl th,.tbl td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td.n{text-align:right;font-variant-numeric:tabular-nums}
+
+/* big screen */
+.wall-title{font-family:var(--f-display);font-weight:900;font-stretch:125%;font-size:clamp(1.8rem,5vw,3.4rem);line-height:1.02}
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:20}
+@media (prefers-reduced-motion: reduce){.progress i{transition:none}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <span class="quad" aria-hidden="true"><i style="background:var(--analytical)"></i><i style="background:var(--driver)"></i><i style="background:var(--amiable)"></i><i style="background:var(--expressive)"></i></span>
+      <b>StyleShift Arena</b>
+    </div>
+    <nav class="steps" id="steps" aria-label="Competition stages"></nav>
+    <span class="chip" id="who"><span class="dot"></span><span id="whoText">Connecting…</span></span>
+  </div>
+</header>
+<div class="wrap"><main id="main" class="stack"><div class="card"><p class="muted">Loading the arena…</p></div></main></div>
+
+<script>
+(function(){
+"use strict";
+/* ============================== QUESTION BANK ============================== */
+const STYLES=[["driver","Driver"],["expressive","Expressive"],["analytical","Analytical"],["amiable","Amiable"]];
+const PRE_MINUTES=15, POST_MINUTES=35;
+const PRE=[
+ {round:"Part A · Core concepts",note:"1 point each",items:[
+  {id:"p1",type:"mc",pts:1,prompt:"In this workshop, what do SPS and Social Style each describe?",options:["SPS describes the doctor's personality; Social Style describes the rep's","SPS describes the rep's common sales approach; Social Style is a lens for the doctor's visible communication preference","Both describe the doctor's fixed personality type","SPS measures product knowledge; Social Style measures clinical knowledge"],answer:1},
+  {id:"p2",type:"mc",pts:1,prompt:"Which two dimensions create the four Social Styles?",options:["Process vs Results, and Business vs People","Introvert vs Extrovert, and Thinking vs Feeling","Specialty vs General practice, and Hospital vs Clinic","Asks vs Tells, and Controls emotion vs Shows emotion"],answer:3},
+  {id:"p3",type:"mc",pts:1,prompt:"A doctor tells more than asks and keeps emotion controlled. Which style hypothesis fits best?",options:["Driver","Expressive","Analytical","Amiable"],answer:0},
+  {id:"p4",type:"mc",pts:1,prompt:"A doctor asks more than tells and shows emotion openly. Which style hypothesis fits best?",options:["Driver","Analytical","Amiable","Expressive"],answer:2},
+  {id:"p5",type:"mc",pts:1,prompt:"Which rep style (SPS) is closest to the Analytical social style?",options:["Go-Getter","Planner","Connector","Supporter"],answer:1},
+  {id:"p6",type:"mc",pts:1,prompt:"Reliable style recognition comes from…",options:["One strong clue and a quick label","The doctor's specialty, age and years in practice","A cluster of clues + context + confirmation","Your first impression in the first 10 seconds"],answer:2},
+  {id:"p7",type:"mc",pts:1,prompt:"Which statement matches the trait–state idea?",options:["Personality is random and changes every day","A trait is a usual pattern; a state is behavior right now, shaped by context","Once you label a doctor's style, it stays the same in every visit","States matter only for reps, not for doctors"],answer:1}
+ ]},
+ {round:"Part B · Short scenarios",note:"1 point each",items:[
+  {id:"p8",type:"mc",pts:1,scenario:"Wednesday, clinic overload. The doctor interrupts: “Give me the bottom line. I have patients waiting.”",prompt:"What is the best move?",options:["Start with the full study design so the doctor trusts the data","Build rapport first with a few minutes of small talk","Lead with the conclusion in one or two sentences, then offer a choice","Leave the materials and come back next month without asking anything"],answer:2},
+  {id:"p9",type:"mc",pts:1,prompt:"What is the correct order of the adoption-signal ladder?",options:["Interest → Attention → Commitment → Evaluation → Application","Attention → Interest → Evaluation → Application → Commitment","Attention → Evaluation → Interest → Commitment → Application","Evaluation → Interest → Attention → Application → Commitment"],answer:1},
+  {id:"p10",type:"mc",pts:1,scenario:"Mid-visit, the doctor asks: “Which patients fit?”",prompt:"Which step of the ladder is this?",options:["Attention","Interest","Application","Evaluation"],answer:2},
+  {id:"p11",type:"mc",pts:1,scenario:"An Amiable-like doctor is warm, smiles and nods through the whole visit.",prompt:"What might that warmth and nodding be?",options:["A firm commitment","Politeness","A sign of impatience","A request for more data"],answer:1},
+  {id:"p12",type:"mc",pts:1,prompt:"Under stress, an Analytical doctor tends to become…",options:["Controlling, impatient, attacking","Scattered, dramatic, impulsive","Compliant, hesitant, quietly resistant","Critical, withdrawn, delaying"],answer:3},
+  {id:"p13",type:"mc",pts:1,prompt:"A Connector rep visits an Analytical doctor. Which overused behavior creates friction?",options:["Substituting stories for evidence","Competing for control","Hiding the recommendation","Ignoring emotional security"],answer:0},
+  {id:"p14",type:"mc",pts:1,prompt:"When you flex your style, what must stay stable?",options:["Your pace and tone","The amount of detail","The clinical claim, the evidence, ethics and purpose","The length of the visit"],answer:2},
+  {id:"p15",type:"mc",pts:1,prompt:"Which order is the five-step StyleShift field process?",options:["Notice → Hypothesize → Test → Shift → Confirm","Hypothesize → Notice → Shift → Test → Confirm","Test → Notice → Confirm → Shift → Hypothesize","Notice → Shift → Hypothesize → Confirm → Test"],answer:0}
+ ]},
+ {round:"Part C · Local language check",note:"Scored by the trainer, up to 3 points each",dialect:true,items:[
+  {id:"pd1",type:"text",max:3,prompt:"How do doctors in your area tell a rep “keep it short, I'm busy”? Write up to 3 phrases exactly as they say them in your local dialect."},
+  {id:"pd2",type:"text",max:3,prompt:"Write one or two local phrases that sound like “yes” but often mean “not now” or a polite no."},
+  {id:"pd3",type:"text",max:3,prompt:"Which local phrase would you use to ask a doctor for a clear next step without sounding pushy?"}
+ ]}
+];
+const MSG="This treatment option may help appropriate patients achieve the desired clinical outcome with a manageable treatment experience.";
+const POST=[
+ {round:"Round 1 · Rapid fire",note:"1 point each",items:[
+  {id:"r1",type:"mc",pts:1,prompt:"Which sentence follows the guardrail “style is a hypothesis, not a verdict”?",options:["“He is a Driver, so skip the data.”","“She's Amiable — she will never decide.”","“I see Driver-like behavior now; let me test it with a question.”","“All surgeons are Drivers.”"],answer:2},
+  {id:"r2",type:"mc",pts:1,prompt:"Which one is adaptive flexibility, not inconsistency?",options:["Friendly one day, harsh the next","The doctor asks for proof, so I show the evidence","A strong close, then no follow-up","A different message each visit without a reason"],answer:1},
+  {id:"r3",type:"mc",pts:1,prompt:"Which six factors can change a person's state in pharma field work?",options:["Age, gender, specialty, nationality, seniority, income","Time, goal, pressure, person, topic, emotion","Weather, traffic, season, weekday, location, hospital size","Brand, price, dose, packaging, competitor, supply"],answer:1},
+  {id:"r4",type:"mc",pts:1,prompt:"What is the order of the Trait–State Replay?",options:["Usual → Moment → Trigger → Shift → Replay","Trigger → Usual → Replay → Moment → Shift","Moment → Shift → Usual → Trigger → Replay","Usual → Shift → Trigger → Replay → Moment"],answer:0},
+  {id:"r5",type:"mc",pts:1,prompt:"What is the observer's key question in the Trait–State Replay?",options:["Did the doctor like the rep?","How many slides were shown?","Did the rep choose the shift, or did pressure choose it for them?","Was the visit longer than five minutes?"],answer:2},
+  {id:"r6",type:"mc",pts:1,prompt:"Which decision language fits an Expressive doctor?",options:["Outcome, speed, choice","Logic, accuracy, proof","Trust, safety, continuity","Possibility, story, recognition"],answer:3},
+  {id:"r7",type:"mc",pts:1,prompt:"Stop Matrix: Go-Getter rep × Amiable doctor. What is the risk?",options:["Forcing change","Over-talking","Over-explaining","Becoming a passive audience"],answer:0},
+  {id:"r8",type:"mc",pts:1,prompt:"Stop Matrix: Supporter rep × Driver doctor. What is the risk?",options:["Amplifying distraction","Hiding the recommendation","Pressuring the decision","Flattening the interaction"],answer:1},
+  {id:"r9",type:"mc",pts:1,prompt:"Stop Matrix: Planner rep × Analytical doctor. What is the risk?",options:["Rushing their expression","Mistaking warmth for commitment","Extending analysis indefinitely","Competing for control"],answer:2},
+  {id:"r10",type:"mc",pts:1,prompt:"An Expressive doctor under stress becomes scattered and impulsive. What is the rep response?",options:["Slow down, prove, define next step","Acknowledge, focus, anchor","Reassure, reduce risk, support","Shorten, clarify, offer choice"],answer:1},
+  {id:"r11",type:"mc",pts:1,prompt:"An Analytical doctor asks many technical questions. What false-positive might this be?",options:["Defensive delay","Politeness","Ending the visit","Enthusiasm that won't become action"],answer:0},
+  {id:"r12",type:"mc",pts:1,prompt:"What is the difference between interest and intent?",options:["Interest asks about price; intent asks about side effects","There is no difference; both mean the doctor will prescribe","Interest asks about the product; intent asks how, when and for whom","Interest comes after commitment"],answer:2}
+ ]},
+ {round:"Round 2 · Scenario sprint",note:"2 points each",items:[
+  {id:"s1",type:"mc",pts:2,scenario:"After 90 seconds, a consultant stands up, glances at the clock and says: “Fine, understood.”",prompt:"What is the smartest reading and next move?",options:["It's a yes. Thank the doctor and leave.","It may mean “end the visit”. Confirm with one concrete action: “Which patient this week would you consider it for?”","The doctor is angry. Apologize and go.","Restart the full presentation so nothing is missed."],answer:1},
+  {id:"s2",type:"mc",pts:2,scenario:"A GP laughs, tells you a long story about a patient and says: “This is great, really interesting!” The visit is almost over.",prompt:"What should you do?",options:["Enjoy the rapport; commitment will come by itself.","Interrupt the story and read the safety data.","Use the energy: give one memorable patient example, then secure one concrete next action.","Ask the doctor to fill in a feedback form."],answer:2},
+  {id:"s3",type:"mc",pts:2,scenario:"A specialist asks a fifth detailed question about subgroup data and says: “I need to look at this more.”",prompt:"What should you do?",options:["Admit the evidence limits honestly, agree exactly what information is needed, and set a follow-up date.","Promise results the study did not show, to end the discussion.","Push for a decision today — analysis is just delay.","Change the topic to a different product."],answer:0},
+  {id:"s4",type:"mc",pts:2,scenario:"A caring physician smiles and says: “I worry about my elderly patients. Let me think about it.”",prompt:"What should you do?",options:["Accept the soft no and come back in three months.","Repeat the efficacy numbers more firmly.","Tell the doctor that other doctors are already prescribing it.","Validate the concern, reduce the perceived risk, and propose a supported first step with one suitable patient and a follow-up."],answer:3},
+  {id:"s5",type:"mc",pts:2,scenario:"End of quarter. A Go-Getter rep interrupts the doctor three times and pushes for a close.",prompt:"What is happening, and what is the better choice?",options:["Normal Go-Getter behavior; keep pushing.","A strength overused under target pressure; pause, ask one useful question and offer a choice.","The doctor is the problem; switch to another doctor.","The rep should become a Supporter permanently."],answer:1},
+  {id:"s6",type:"mc",pts:2,scenario:"On Monday a doctor asked about endpoints and safety. On Friday, after a difficult patient case, the same doctor asks about tolerability, adherence and family concerns.",prompt:"What is the right reading?",options:["The doctor's personality changed; relabel them as Amiable.","Use Monday's evidence-heavy approach again — consistency is key.","Same person, different state: shift to reassurance and patient focus while keeping the same evidence.","Avoid the doctor until the state passes."],answer:2},
+  {id:"s7",type:"mc",pts:2,scenario:"A fast, direct doctor asks: “How is it different?”",prompt:"Which ladder step is this, and what moves it up?",options:["Interest — give the outcome difference in one line, then ask which patients they would consider.","Commitment — book the order.","Attention — start again from the disease basics.","Evaluation — send the full study PDF and wait."],answer:0}
+ ]},
+ {round:"Round 3 · Business cases",note:"2 points per choice question, written answers up to 5 points",items:[
+  {id:"ca1",type:"mc",pts:2,caseTitle:"Case A · The 3-minute window",caseText:"Dr. K. is a hospital consultant with a full waiting room. Lina, a Planner rep, has prepared a 12-slide evidence deck. Dr. K. checks the phone, does not sit down, and says: “Just tell me what's new.”",prompt:"Which visible state is most likely right now?",options:["Analytical-like: asks, controls emotion","Driver-like: tells, controls emotion, under time pressure","Expressive-like: tells, shows emotion","Amiable-like: asks, shows emotion"],answer:1},
+  {id:"ca2",type:"mc",pts:2,prompt:"Case A: which overused behavior should Lina stop?",options:["Over-explaining","Hiding the recommendation","Forcing change","Amplifying distraction"],answer:0},
+  {id:"ca3",type:"mc",pts:2,prompt:"Case A: which opening fits best?",options:["“Imagine the patient who…”","“The study shows… in patients who…”, followed by all 12 slides","“For patients concerned about…”","“The practical advantage is…” — the outcome and difference first"],answer:3},
+  {id:"ca4",type:"text",max:5,dialect:true,prompt:"Case A: write Lina's opening (2 sentences) and one closing question that asks for a concrete commitment. Write it as you would really say it in your local dialect, and keep the clinical claim unchanged."},
+  {id:"cb1",type:"mc",pts:2,caseTitle:"Case B · Coffee every visit",caseText:"Dr. M., a family physician, has known Omar (a Supporter rep) for years. Every visit is warm: coffee, family news, nodding. Dr. M. always ends with “Sure, sure, we'll see.” No new patients have started in three months.",prompt:"What is the warmth and nodding most likely telling Omar?",options:["Strong commitment","Possibly politeness — a soft no","Interest in more clinical data","Impatience"],answer:1},
+  {id:"cb2",type:"mc",pts:2,prompt:"Case B: which Stop Matrix cell describes Omar's risk?",options:["Competing for control","Substituting stories for evidence","Preserving harmony without progress","Extending analysis indefinitely"],answer:2},
+  {id:"cb3",type:"mc",pts:2,prompt:"Case B: what should Omar do on the next visit?",options:["Stop visiting; the doctor will never change.","Push hard for a prescription commitment today.","Bring more coffee and keep the relationship warm.","Keep the warmth, name the hesitation gently, and ask for one supported first patient with a follow-up date."],answer:3},
+  {id:"cb4",type:"text",max:5,dialect:true,prompt:"Case B: write how Omar keeps the warmth but asks for a clear decision. Use real phrases from your local dialect."}
+ ]},
+ {round:"Round 4 · Dialect lab",note:"Scored by the trainer",dialect:true,items:[
+  {id:"l0",type:"text",max:0,short:true,prompt:"Which local dialect or region is your team writing in?"},
+  {id:"l1",type:"styles",max:12,prompt:"Style decoder. For each style, write 2 phrases a local doctor might actually say that signal that style. (Up to 3 points per style.)"},
+  {id:"l2",type:"text",max:6,prompt:"Hidden “no”. Write local phrases that sound positive but may mean “not now”. For each one, add how you would confirm it (a patient, an action, timing or a follow-up)."},
+  {id:"l3",type:"styles",max:12,quote:MSG,prompt:"Same message, four routes. Deliver this approved message in your local dialect for each style, without changing the claim. (Up to 3 points per style.)"},
+  {id:"l4",type:"text",max:4,prompt:"Friction words. Write one local expression or habit that would create friction with a Driver or Analytical doctor, and what you would say instead."}
+ ]}
+];
+const RUBRIC=["Authentic local wording — sounds like real doctors and reps","Fits the style or situation it targets","Clinical claim and ethics unchanged","Includes a confirm question or concrete next step"];
+const flat=b=>b.flatMap(r=>r.items);
+const PRE_ITEMS=flat(PRE), POST_ITEMS=flat(POST);
+function autoScore(items,ans){let s=0;for(const q of items)if(q.type==="mc"&&ans&&ans[q.id]===q.answer)s+=q.pts;return s}
+const autoMax=items=>items.reduce((s,q)=>s+(q.type==="mc"?q.pts:0),0);
+const writtenMax=items=>items.reduce((s,q)=>s+(q.type!=="mc"?(q.max||0):0),0);
+const scoredWritten=items=>items.filter(q=>q.type!=="mc"&&q.max>0);
+
+/* ============================== HELPERS ============================== */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+const rid=()=>Math.random().toString(36).slice(2,10);
+const pct=(a,b)=>b>0?Math.round(a/b*100):0;
+const fmtTime=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")};
+const initials=t=>(String(t||"?").trim().split(/\s+/).map(w=>w[0]).join("").slice(0,2)||"?").toUpperCase();
+
+/* Local fallback store: same shape as the shared db, kept in this browser only. */
+function LocalDB(){
+  const KEY="ssa-localdb"; let mem=ls.get(KEY,{}); const subs=new Set();
+  const save=()=>{ls.set(KEY,mem);subs.forEach(f=>f())};
+  window.addEventListener("storage",e=>{if(e.key===KEY){mem=ls.get(KEY,{});subs.forEach(f=>f())}});
+  const snap=(id,data)=>({id,exists:data!==undefined,data:()=>data===undefined?undefined:JSON.parse(JSON.stringify(data)),metadata:{fromCache:false,hasPendingWrites:false}});
+  const docRef=path=>({id:path.split("/").pop(),path,
+    get:async()=>snap(path.split("/").pop(),mem[path]),
+    set:async d=>{mem[path]=JSON.parse(JSON.stringify(d));save()},
+    update:async d=>{mem[path]=Object.assign({},mem[path]||{},JSON.parse(JSON.stringify(d)));save()},
+    delete:async()=>{delete mem[path];save()},
+    onSnapshot(next){const f=()=>next(snap(path.split("/").pop(),mem[path]));subs.add(f);setTimeout(f,0);return()=>subs.delete(f)}});
+  const coll=path=>({path,doc:id=>docRef(path+"/"+(id||rid())),
+    onSnapshot(next){const f=()=>{const docs=Object.keys(mem).filter(k=>k.startsWith(path+"/")&&k.split("/").length===path.split("/").length+1).map(k=>snap(k.split("/").pop(),mem[k]));next({docs,size:docs.length,empty:!docs.length})};subs.add(f);setTimeout(f,0);return()=>subs.delete(f)}});
+  return {doc:docRef,collection:coll,local:true};
+}
+
+/* ============================== STATE ============================== */
+const S={mode:"connecting",db:null,user:null,downloads:null,uid:null,isTrainer:false,
+  session:{phase:"lobby",reveal:false},teams:{},members:{},board:null,myPre:null,
+  pre:{},post:{},marks:{},
+  name:ls.get("ssa-name",""),tab:ls.get("ssa-tab","control"),trainerView:true,
+  err:"",lastKey:"",timerId:null,confirmReset:false,showIndiv:false};
+const PHASES=[["pre","Pre-test"],["teams","Teams"],["post","Post-test"],["results","Results"]];
+
+function sub(ref,fn){try{return ref.onSnapshot(fn,e=>{S.err="Live data is unavailable right now ("+(e&&e.code||"error")+"). Refresh the page to retry.";render()})}catch(e){S.err="Live data is unavailable.";render()}}
+
+async function boot(){
+  let db=null,user=null,downloads=null;
+  if(window.claude&&typeof window.claude.use==="function"){
+    const t=p=>Promise.race([p.catch(()=>null),new Promise(r=>setTimeout(()=>r(null),10000))]);
+    [db,user,downloads]=await Promise.all([t(window.claude.use("db")),t(window.claude.use("user")),t(window.claude.use("downloads"))]);
+  }
+  S.downloads=downloads;
+  if(db&&user){
+    S.mode="live";S.db=db;S.user=user;
+    try{S.uid=await user.id()}catch(e){S.uid=null}
+    try{S.isTrainer=await user.canEdit()}catch(e){S.isTrainer=false}
+    if(!S.uid){S.mode="local"}
+  }
+  if(S.mode!=="live"){
+    S.mode="local";S.db=LocalDB();
+    S.uid=ls.get("ssa-localid",null);if(!S.uid){S.uid="local-"+rid();ls.set("ssa-localid",S.uid)}
+    S.isTrainer=ls.get("ssa-localtrainer",true);
+  }
+  const db_=S.db;
+  sub(db_.doc("session/state"),s=>{S.session=Object.assign({phase:"lobby",reveal:false},s.data()||{});render()});
+  sub(db_.collection("teams"),q=>{S.teams={};q.docs.forEach(d=>S.teams[d.id]=d.data());render()});
+  sub(db_.collection("members"),q=>{S.members={};q.docs.forEach(d=>S.members[d.id]=d.data());render()});
+  sub(db_.doc("board/current"),s=>{S.board=s.data()||null;render()});
+  watchMine();
+  if(S.isTrainer)watchTrainer();
+  render();
+}
+let unMine=null,trainerUns=[];
+function watchMine(){if(unMine)unMine();unMine=sub(S.db.doc("pre/"+S.uid),s=>{S.myPre=s.data()||null;render()})}
+function watchTrainer(){
+  trainerUns.forEach(u=>u&&u());
+  trainerUns=["pre","post","marks"].map(c=>sub(S.db.collection(c),q=>{const o={};q.docs.forEach(d=>o[d.id]=d.data());S[c]=o;render()}));
+}
+async function write(fn,okMsg){
+  try{await fn();S.err="";if(okMsg)toast(okMsg);return true}
+  catch(e){const c=e&&e.code;S.err=c==="not_granted"?"Your access to this page doesn't allow saving answers. Ask the trainer to share it with you as a Contributor (can interact).":"Couldn't save ("+(c||"error")+"). Check your connection and try again.";render();return false}
+}
+function toast(m){const n=document.createElement("div");n.className="notice good";n.setAttribute("role","status");n.textContent=m;n.style.cssText="position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:30;box-shadow:0 6px 24px rgba(0,0,0,.18);background:var(--panel)";document.body.appendChild(n);setTimeout(()=>n.remove(),2600)}
+
+/* ============================== DERIVED ============================== */
+const myTeamId=()=>{const m=S.members[S.uid];return m&&m.teamId&&S.teams[m.teamId]?m.teamId:null};
+const teamMembers=tid=>Object.entries(S.members).filter(([,m])=>m.teamId===tid).map(([id,m])=>({id,name:m.name}));
+function marksSum(key,items){const m=S.marks[key];if(!m||!m.items)return{sum:0,done:0,total:scoredWritten(items).length};let sum=0,done=0;for(const q of scoredWritten(items)){const v=m.items[q.id];if(typeof v==="number"){sum+=Math.min(v,q.max);done++}}return{sum,done,total:scoredWritten(items).length}}
+function preResult(uid){const p=S.pre[uid];if(!p)return null;const a=autoScore(PRE_ITEMS,p.answers),w=marksSum("pre_"+uid,PRE_ITEMS);const max=autoMax(PRE_ITEMS)+writtenMax(PRE_ITEMS);return{name:p.name,auto:a,written:w.sum,pending:w.done<w.total,total:a+w.sum,max,pct:pct(a+w.sum,max),secs:p.secs||0}}
+function postResult(tid){const p=S.post[tid];if(!p)return null;const a=autoScore(POST_ITEMS,p.answers),w=marksSum("post_"+tid,POST_ITEMS);const max=autoMax(POST_ITEMS)+writtenMax(POST_ITEMS);return{auto:a,written:w.sum,pending:w.done<w.total,total:a+w.sum,max,pct:pct(a+w.sum,max),secs:p.secs||0}}
+function computeBoard(){
+  const teams=Object.entries(S.teams).map(([id,t])=>{
+    const mem=teamMembers(id);const pres=mem.map(m=>preResult(m.id)).filter(Boolean);
+    const prePct=pres.length?Math.round(pres.reduce((s,r)=>s+r.pct,0)/pres.length):null;
+    const pr=postResult(id);
+    return{id,nickname:t.nickname,motto:t.motto||"",members:mem.length,prePct,postPct:pr?pr.pct:null,post:pr?pr.total:null,postMax:pr?pr.max:null,secs:pr?pr.secs:null,gain:(pr&&prePct!=null)?pr.pct-prePct:null};
+  }).sort((a,b)=>(b.post??-1)-(a.post??-1)||(a.secs??1e9)-(b.secs??1e9));
+  let rank=0;teams.forEach(t=>{t.rank=t.post==null?null:++rank});
+  const allPre=Object.keys(S.pre).map(preResult).filter(Boolean);
+  const indiv=allPre.slice().sort((a,b)=>b.total-a.total||a.secs-b.secs).slice(0,3).map(r=>({name:r.name,pct:r.pct}));
+  const done=teams.filter(t=>t.postPct!=null);
+  return{publishedAt:Date.now(),teams,classPre:allPre.length?Math.round(allPre.reduce((s,r)=>s+r.pct,0)/allPre.length):null,
+    classPost:done.length?Math.round(done.reduce((s,t)=>s+t.postPct,0)/done.length):null,individuals:S.showIndiv?indiv:[]};
+}
+
+/* ============================== RENDER ============================== */
+function renderTop(){
+  const ph=S.session.phase,idx=PHASES.findIndex(p=>p[0]===ph);
+  $("#steps").innerHTML=PHASES.map(([k,l],i)=>`<span class="step ${k===ph?"on":(idx>i?"done":"")}">${i+1} · ${l}</span>`).join("");
+  const chip=$("#who");chip.classList.toggle("local",S.mode!=="live");
+  $("#whoText").textContent=(S.isTrainer&&S.trainerView?"Trainer":(S.name||"Participant"))+(S.mode==="live"?" · live":" · this device only");
+}
+function viewKey(){
+  if(S.isTrainer&&S.trainerView)return "T:"+S.tab+":"+(S.tab==="screen"?S.session.phase:"");
+  const ph=S.session.phase;
+  if(ph==="pre")return "P:pre:"+(!S.name?"name":(S.myPre?"done":"quiz"));
+  if(ph==="post"){const t=myTeamId();return "P:post:"+(t?(S.teams[t].submitted?"done":"quiz:"+t):"noteam")}
+  return "P:"+ph;
+}
+function render(){
+  if(S.mode==="connecting")return;
+  renderTop();
+  document.body.classList.toggle("wide",S.isTrainer&&S.trainerView&&S.tab==="screen");
+  const key=viewKey()+"|"+(S.err?"e":"");
+  if(key!==S.lastKey){S.lastKey=key;clearInterval(S.timerId);$("#main").innerHTML=shell();bindStatic()}
+  refresh();
+}
+function shell(){
+  let h="";
+  if(S.err)h+=`<div class="notice bad" role="alert">${esc(S.err)}</div>`;
+  if(S.mode!=="live")h+=`<div class="notice warn"><b>Single-device mode.</b> This standalone copy keeps answers in this browser only. Run the class on one shared device (use “Next participant” between people), or use the claude.ai version for live play on every participant\'s phone.</div>`;
+  if(S.isTrainer)h+=`<div class="spread"><div class="tabs" role="tablist">${S.trainerView?[["control","Control room"],["score","Score answers"],["screen","Big screen"]].map(([k,l])=>`<button class="tab ${S.tab===k?"on":""}" data-tab="${k}">${l}</button>`).join(""):""}</div><div class="row">${S.mode!=="live"&&!S.trainerView?`<button id="newPart">Next participant on this device</button>`:""}<button id="swapView">${S.trainerView?"See participant view":"Back to trainer console"}</button></div></div>`;
+  if(S.isTrainer&&S.trainerView){h+=S.tab==="score"?scoreShell():S.tab==="screen"?`<div id="wall"></div>`:controlShell();return h}
+  const ph=S.session.phase;
+  if(ph==="lobby")h+=lobbyShell();
+  else if(ph==="pre")h+=!S.name?nameShell("Join the pre-test"):S.myPre?`<div id="preDone"></div>`:quizShell(PRE,"pre");
+  else if(ph==="teams")h+=teamsShell();
+  else if(ph==="post"){const t=myTeamId();h+=!t?`<div class="notice warn">You're not in a team yet. Join one below, then the team quiz opens.</div>`+teamsShell():S.teams[t].submitted?`<div id="postDone"></div>`:quizShell(POST,"post",t)}
+  else if(ph==="results")h+=`<div id="results"></div>`;
+  return h;
+}
+function lobbyShell(){return `<section class="card stack"><p class="eyebrow">StyleShift · Pharma field workshop</p><h1>Welcome to the Arena</h1><p>Two rounds of competition. First, an <b>individual pre-test</b> before the training. Later, you compete <b>as a team</b> with a nickname and a team photo in the post-test: business cases, scenarios, rapid-fire questions and a dialect lab where you write the real phrases doctors and reps use in your area.</p><p class="muted">The trainer will open the pre-test shortly. Enter your name now so you're ready.</p></section>${nameShell("Your name",true)}`}
+function nameShell(title,inLobby){return `<form class="card stack" id="nameForm"><h2>${esc(title)}</h2><label class="field" for="nm">Your name, as the trainer should see it<input type="text" id="nm" maxlength="40" autocomplete="name" value="${esc(S.name)}" required></label><div class="row"><button class="primary" type="submit">${S.name&&inLobby?"Update name":"Continue"}</button>${S.name&&inLobby?`<span class="badge ok">Ready as ${esc(S.name)}</span>`:""}</div></form>`}
+
+/* ---------- quiz ---------- */
+function draftKey(kind,tid){return "ssa-draft-"+kind+"-"+(kind==="pre"?S.uid:tid)}
+function quizShell(bank,kind,tid){
+  const items=flat(bank);let n=0;
+  const title=kind==="pre"?"Individual pre-test":"Team post-test · "+esc(S.teams[tid].nickname);
+  let h=`<div id="quiz" class="stack"><section class="card stack"><p class="eyebrow">${kind==="pre"?"Part 1 · Individual":"Part 2 · Team competition"}</p><h1>${title}</h1><p>${kind==="pre"?`${items.length} questions, about ${PRE_MINUTES} minutes. Answer on your own. Choice questions score instantly; the trainer scores your local-language answers. Faster submission breaks ties.`:`Agree on each answer as a team; one device submits for everyone. About ${POST_MINUTES} minutes. Highest total wins, faster submission breaks ties.`}</p></section>`;
+  for(const r of bank){
+    h+=`<section class="stack"><div class="round-head"><h2>${esc(r.round)}</h2><span class="pts">${esc(r.note)}</span></div>`;
+    for(const q of r.items){
+      n++;
+      if(q.caseTitle)h+=`<div class="case stack"><h3>${esc(q.caseTitle)}</h3><p>${esc(q.caseText)}</p></div>`;
+      h+=`<div class="card q" data-q="${q.id}"><span class="qn">Q${n}${q.type!=="mc"&&q.max?` · up to ${q.max} pts`:""}${(q.dialect||r.dialect)&&q.type!=="mc"?` <span class="dialect-tag">Local dialect</span>`:""}</span>`;
+      if(q.scenario)h+=`<div class="scenario">${esc(q.scenario)}</div>`;
+      h+=`<p class="prompt" id="lbl-${q.id}">${esc(q.prompt)}</p>`;
+      if(q.quote)h+=`<div class="scenario"><b>Approved message:</b> “${esc(q.quote)}”</div>`;
+      if(q.type==="mc")h+=`<div class="opts" role="radiogroup" aria-labelledby="lbl-${q.id}">${q.options.map((o,i)=>`<label class="opt"><input type="radio" name="${q.id}" id="${q.id}-${i}" value="${i}"><span>${String.fromCharCode(65+i)}. ${esc(o)}</span></label>`).join("")}</div>`;
+      else if(q.type==="text")h+=q.short?`<input type="text" id="${q.id}" dir="auto" maxlength="80" aria-labelledby="lbl-${q.id}">`:`<textarea id="${q.id}" dir="auto" maxlength="1500" aria-labelledby="lbl-${q.id}" placeholder="Write in your own local dialect, the way it is really said."></textarea>`;
+      else if(q.type==="styles")h+=`<div class="fields">${STYLES.map(([k,l])=>`<label class="sf" for="${q.id}-${k}"><b class="style-${k}">${l}</b><textarea id="${q.id}-${k}" dir="auto" maxlength="600"></textarea></label>`).join("")}</div>`;
+      h+=`</div>`;
+    }
+    h+=`</section>`;
+  }
+  h+=`<div class="dock"><div class="spread"><div class="row"><span class="timer num" id="timer">--:--</span><span class="muted num" id="answered"></span></div><div class="row" id="submitBox"><button class="primary" id="submitQuiz">Submit ${kind==="pre"?"my answers":"for the team"}</button></div></div><div class="progress" style="margin-top:8px"><i id="prog" style="width:0"></i></div></div></div>`;
+  return h;
+}
+function bindQuiz(kind,items,tid){
+  const dk=draftKey(kind,tid);const d=ls.get(dk,null)||{answers:{},startedAt:Date.now()};ls.set(dk,d);
+  for(const q of items){
+    const v=d.answers[q.id];
+    if(q.type==="mc"){if(typeof v==="number"){const el=document.getElementById(q.id+"-"+v);if(el)el.checked=true}}
+    else if(q.type==="text"){const el=document.getElementById(q.id);if(el&&v)el.value=v}
+    else STYLES.forEach(([k])=>{const el=document.getElementById(q.id+"-"+k);if(el&&v&&v[k])el.value=v[k]});
+  }
+  const count=()=>{let a=0;for(const q of items){const v=d.answers[q.id];if(q.type==="mc"?typeof v==="number":q.type==="text"?!!(v&&String(v).trim()):!!(v&&Object.values(v).some(x=>x&&x.trim())))a++}
+    $("#answered").textContent=a+" / "+items.length+" answered";$("#prog").style.width=pct(a,items.length)+"%"};
+  $("#quiz").addEventListener("input",e=>{const t=e.target;if(!t.id)return;
+    if(t.type==="radio"){d.answers[t.name]=+t.value}
+    else{const m=t.id.match(/^(.*)-(driver|expressive|analytical|amiable)$/);if(m){d.answers[m[1]]=Object.assign({},d.answers[m[1]]||{},{[m[2]]:t.value})}else if(items.some(q=>q.id===t.id))d.answers[t.id]=t.value}
+    ls.set(dk,d);count()});
+  count();
+  const limit=(kind==="pre"?PRE_MINUTES:POST_MINUTES)*60;
+  const tick=()=>{const left=limit-(Date.now()-d.startedAt)/1000;const el=$("#timer");if(!el)return;el.textContent=left>0?fmtTime(left):"Time's up";el.classList.toggle("low",left<120)};
+  tick();S.timerId=setInterval(tick,1000);
+  let armed=false;
+  $("#submitQuiz").addEventListener("click",async()=>{
+    const unanswered=items.filter(q=>q.type==="mc"&&typeof d.answers[q.id]!=="number").length;
+    if(unanswered&&!armed){armed=true;$("#submitQuiz").textContent=`${unanswered} choice question${unanswered>1?"s":""} unanswered — submit anyway`;return}
+    $("#submitQuiz").disabled=true;
+    const secs=Math.round((Date.now()-d.startedAt)/1000);
+    let ok;
+    if(kind==="pre")ok=await write(()=>S.db.doc("pre/"+S.uid).set({name:S.name,answers:d.answers,startedAt:d.startedAt,submittedAt:Date.now(),secs}),"Submitted. Good luck!");
+    else ok=await write(async()=>{await S.db.doc("post/"+tid).set({teamId:tid,answers:d.answers,submittedBy:S.name||"",startedAt:d.startedAt,submittedAt:Date.now(),secs});await S.db.doc("teams/"+tid).update({submitted:true,submittedBy:S.name||"",submittedAt:Date.now(),auto:autoScore(POST_ITEMS,d.answers)})},"Team answers submitted!");
+    if(!ok)$("#submitQuiz").disabled=false;
+  });
+}
+function reviewHtml(bank,answers){
+  let h="",n=0;
+  for(const r of bank){h+=`<div class="round-head"><h3>${esc(r.round)}</h3></div>`;
+    for(const q of r.items){n++;if(q.type!=="mc")continue;const a=answers&&answers[q.id];
+      h+=`<div class="q"><span class="qn">Q${n} ${a===q.answer?'<span class="badge ok">Correct</span>':'<span class="badge pend">Review</span>'}</span>${q.scenario?`<div class="scenario">${esc(q.scenario)}</div>`:""}<p class="prompt">${esc(q.prompt)}</p><div class="opts">${q.options.map((o,i)=>`<label class="opt ${i===q.answer?"right":(i===a?"wrong":"")}"><span>${String.fromCharCode(65+i)}. ${esc(o)}${i===q.answer?" ✓":(i===a?" (your answer)":"")}</span></label>`).join("")}</div></div>`}}
+  return h;
+}
+
+/* ---------- teams ---------- */
+function teamsShell(){
+  const mine=myTeamId();
+  return `<section class="card stack"><p class="eyebrow">Part 2 · Build your team</p><h1>Pick a nickname. Snap a team photo.</h1><p class="muted">One person creates the team; teammates join it from their own phones. ${S.myPre?"":"Tip: the pre-test score of each member counts toward your team's learning gain."}</p></section>
+  ${S.name?"":nameShell("First, your name")}
+  ${mine?"":`<form class="card stack" id="teamForm"><h2>Create a team</h2>
+    <label class="field" for="tnick">Team nickname<input type="text" id="tnick" maxlength="32" dir="auto" required placeholder="e.g. The Bottom Liners"></label>
+    <label class="field" for="tmotto">Team motto (optional)<input type="text" id="tmotto" maxlength="60" dir="auto"></label>
+    <div class="photo-pick"><div class="prev" id="tprev">No photo</div><label class="btn" for="tphoto" style="display:inline-flex;align-items:center">Upload or take team photo</label><input type="file" id="tphoto" accept="image/*" hidden></div>
+    <div class="row"><button class="primary" type="submit">Create team and join</button></div></form>`}
+  <section class="stack"><div class="spread"><h2>Teams</h2><span class="muted num" id="teamCount"></span></div><div class="teams" id="teamGrid"></div></section>`;
+}
+let pendingPhoto="";
+function bindTeams(){
+  const f=$("#teamForm");if(!f)return;
+  $("#tphoto").addEventListener("change",async e=>{const file=e.target.files&&e.target.files[0];if(!file)return;try{pendingPhoto=await shrink(file);$("#tprev").innerHTML=`<img alt="Team photo preview" src="${pendingPhoto}">`}catch(err){$("#tprev").textContent="Couldn't read photo"}});
+  f.addEventListener("submit",async e=>{e.preventDefault();if(!S.name){S.err="Enter your name first.";render();return}
+    const nick=$("#tnick").value.trim();if(!nick)return;const id="t"+rid();
+    const ok=await write(()=>S.db.doc("teams/"+id).set({nickname:nick,motto:$("#tmotto").value.trim(),photo:pendingPhoto,createdBy:S.uid,createdAt:Date.now(),submitted:false}));
+    if(ok){await write(()=>S.db.doc("members/"+S.uid).set({teamId:id,name:S.name}),"Team created: "+nick);pendingPhoto=""}});
+}
+function shrink(file){return new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const img=new Image();img.onerror=rej;img.onload=()=>{const W=400,H=300,c=document.createElement("canvas");c.width=W;c.height=H;const g=c.getContext("2d");const s=Math.max(W/img.width,H/img.height),w=img.width*s,h=img.height*s;g.drawImage(img,(W-w)/2,(H-h)/2,w,h);res(c.toDataURL("image/jpeg",.72))};img.src=r.result};r.readAsDataURL(file)})}
+function teamCard(id,t,opts){
+  const mem=teamMembers(id),mine=myTeamId()===id;
+  return `<article class="team ${mine?"mine":""}"><div class="ph">${t.photo?`<img alt="${esc(t.nickname)} team photo" src="${esc(t.photo)}">`:esc(initials(t.nickname))}</div><div class="body"><div class="nick" dir="auto">${esc(t.nickname)}</div>${t.motto?`<div class="muted" dir="auto" style="font-size:.85rem">“${esc(t.motto)}”</div>`:""}<div class="members" dir="auto">${mem.length?mem.map(m=>esc(m.name)).join(", "):"No members yet"}</div><div class="row" style="margin-top:auto">${t.submitted?'<span class="badge ok">Submitted</span>':""}${opts&&opts.join&&!mine?`<button data-join="${id}">Join</button>`:""}${mine&&opts&&opts.join?`<span class="badge ok">Your team</span><button data-leave="1">Leave</button>`:""}${opts&&opts.admin?`<button class="danger" data-delteam="${id}">Remove</button>`:""}</div></div></article>`;
+}
+
+/* ---------- trainer: control ---------- */
+function controlShell(){
+  const phases=[["lobby","Lobby","Participants enter names"],["pre","Open pre-test","Individual, before training"],["teams","Open teams","Nicknames + photos"],["post","Open post-test","Team competition"],["results","Show results","Leaderboard on every screen"]];
+  return `<section class="card stack"><div class="spread"><h2>Control room</h2><span class="muted">Stage moves every participant's screen.</span></div>
+  <div class="phase-btns">${phases.map(([k,l,s])=>`<button data-phase="${k}" class="${S.session.phase===k?"on":""}"><span>${l}</span><small>${s}</small></button>`).join("")}</div>
+  <label class="row" for="reveal"><input type="checkbox" id="reveal" ${S.session.reveal?"checked":""}> Let participants see correct answers for their own pre-test</label></section>
+  <section class="stats" id="trainerStats"></section>
+  <section class="card stack"><div class="spread"><h2>Leaderboard</h2><div class="row"><label class="row" for="showIndiv"><input type="checkbox" id="showIndiv" ${S.showIndiv?"checked":""}> Include top 3 individual pre-test scores</label><button class="primary" id="publishBoard">Publish leaderboard</button></div></div>
+  <p class="muted">Score the written answers first, then publish. Participants only see results after you publish and open the Results stage.</p><div class="tbl" id="boardPreview"></div></section>
+  <section class="card stack"><h2>Teams</h2><div class="teams" id="teamGrid"></div></section>
+  <section class="card stack"><h2>Session tools</h2><div class="row">${S.downloads?`<button id="exportCsv">Export results (CSV)</button>`:""}<button class="danger" id="resetAll">Reset everything for a new class</button></div>${S.mode!=="live"?`<label class="row" for="localTrainer"><input type="checkbox" id="localTrainer" checked> Show trainer console on this device</label>`:""}</section>`;
+}
+function refreshControl(){
+  const preN=Object.keys(S.pre).length,teamN=Object.keys(S.teams).length,postN=Object.keys(S.post).length,joined=Object.keys(S.members).length;
+  const pres=Object.keys(S.pre).map(preResult).filter(Boolean),avg=pres.length?Math.round(pres.reduce((s,r)=>s+r.pct,0)/pres.length):null;
+  const pending=pres.filter(r=>r.pending).length+Object.keys(S.post).map(postResult).filter(r=>r&&r.pending).length;
+  $("#trainerStats").innerHTML=[["Pre-tests in",preN],["Pre-test class average",avg==null?"–":avg+"%"],["Teams",teamN],["People in teams",joined],["Team post-tests in",postN],["Answers awaiting your score",pending]].map(([l,v])=>`<div class="stat"><div class="eyebrow">${l}</div><div class="v">${v}</div></div>`).join("");
+  const b=computeBoard();
+  $("#boardPreview").innerHTML=b.teams.length?`<table><thead><tr><th>#</th><th>Team</th><th>Members</th><th>Pre avg</th><th>Post</th><th>Gain</th><th>Time</th></tr></thead><tbody>${b.teams.map(t=>`<tr><td class="n">${t.rank??"–"}</td><td dir="auto">${esc(t.nickname)}</td><td class="n">${t.members}</td><td class="n">${t.prePct==null?"–":t.prePct+"%"}</td><td class="n">${t.post==null?"–":t.post+" / "+t.postMax+" ("+t.postPct+"%)"}</td><td class="n">${t.gain==null?"–":(t.gain>0?"+":"")+t.gain}</td><td class="n">${t.secs==null?"–":fmtTime(t.secs)}</td></tr>`).join("")}</tbody></table>`:`<p class="muted">No teams yet.</p>`;
+}
+
+/* ---------- trainer: scoring ---------- */
+function scoreShell(){return `<section class="card stack"><h2>Score written answers</h2><p class="muted">Type a score for each answer; it saves when you leave the box. Choice questions are scored automatically.</p><div class="rubric">${RUBRIC.map(r=>`<div>${esc(r)}</div>`).join("")}</div></section><section class="stack"><h2>Team post-tests</h2><div class="stack" id="scorePost"></div></section><section class="stack"><h2>Individual pre-tests</h2><div class="stack" id="scorePre"></div></section>`}
+function answerText(q,a){if(q.type==="styles"){return STYLES.map(([k,l])=>`<b class="style-${k}">${l}:</b> ${esc(a&&a[k]||"—")}`).join("\n")}return esc(a||"—")}
+function scoreBlock(key,title,items,answers,extra){
+  const w=marksSum(key,items);const m=(S.marks[key]&&S.marks[key].items)||{};
+  return `<details class="sub" data-key="${key}"><summary><span><b dir="auto">${esc(title)}</b> <span class="muted">${extra||""}</span></span><span class="badge ${w.done<w.total?"pend":"ok"}" data-badge="${key}">${w.done}/${w.total} scored · ${w.sum} pts</span></summary><div class="inner">${
+    items.filter(q=>q.type!=="mc").map(q=>`<div class="ans"><div class="stack" style="gap:6px;min-width:0"><span class="muted" style="font-size:.85rem">${esc(q.prompt)}</span><div class="txt" dir="auto">${answerText(q,answers&&answers[q.id])}</div></div>${q.max>0?`<label class="mk" for="mk-${key}-${q.id}">Score (0–${q.max})<input type="number" min="0" max="${q.max}" step="1" id="mk-${key}-${q.id}" data-mk="${key}" data-q="${q.id}" data-max="${q.max}" value="${typeof m[q.id]==="number"?m[q.id]:""}"></label>`:`<span class="muted mk">Not scored</span>`}</div>`).join("")}</div></details>`;
+}
+let scoreSig="";
+function refreshScore(){
+  const sig=Object.keys(S.post).sort().join()+"|"+Object.keys(S.pre).sort().join();
+  if(sig!==scoreSig||!$("#scorePost").children.length){scoreSig=sig;
+    const open=[...document.querySelectorAll("details.sub[open]")].map(d=>d.dataset.key);
+    $("#scorePost").innerHTML=Object.keys(S.post).length?Object.entries(S.post).map(([tid,p])=>scoreBlock("post_"+tid,(S.teams[tid]&&S.teams[tid].nickname)||"Team",POST_ITEMS,p.answers,"· auto "+autoScore(POST_ITEMS,p.answers)+"/"+autoMax(POST_ITEMS))).join(""):`<p class="muted card">No team submissions yet.</p>`;
+    $("#scorePre").innerHTML=Object.keys(S.pre).length?Object.entries(S.pre).sort((a,b)=>String(a[1].name).localeCompare(String(b[1].name))).map(([uid,p])=>scoreBlock("pre_"+uid,p.name||"Participant",PRE_ITEMS,p.answers,"· auto "+autoScore(PRE_ITEMS,p.answers)+"/"+autoMax(PRE_ITEMS))).join(""):`<p class="muted card">No pre-tests yet.</p>`;
+    open.forEach(k=>{const d=document.querySelector(`details.sub[data-key="${k}"]`);if(d)d.open=true});
+  }else{
+    document.querySelectorAll("[data-badge]").forEach(b=>{const k=b.dataset.badge;const items=k.startsWith("pre_")?PRE_ITEMS:POST_ITEMS;const w=marksSum(k,items);b.className="badge "+(w.done<w.total?"pend":"ok");b.textContent=`${w.done}/${w.total} scored · ${w.sum} pts`});
+  }
+}
+
+/* ---------- results / big screen ---------- */
+function boardHtml(b,big){
+  if(!b||!b.teams||!b.teams.length)return `<div class="card"><p class="muted">Results will appear here when the trainer publishes them.</p></div>`;
+  const ranked=b.teams.filter(t=>t.rank!=null);
+  const row=t=>{const tm=S.teams[t.id]||{};return `<div class="lrow ${t.rank===1?"r1":""}"><div class="rk">${t.rank}</div><div class="av">${tm.photo?`<img alt="" src="${esc(tm.photo)}">`:esc(initials(t.nickname))}</div><div class="stack" style="gap:4px;min-width:0"><b class="nick" dir="auto" style="font-family:var(--f-display);font-size:${big?"1.4rem":"1.1rem"};overflow-wrap:anywhere">${esc(t.nickname)}</b><div class="bars"><div class="bar pre"><span>Pre</span><span class="t"><i style="width:${t.prePct||0}%"></i></span><span class="num">${t.prePct==null?"–":t.prePct+"%"}</span></div><div class="bar post"><span>Post</span><span class="t"><i style="width:${t.postPct||0}%"></i></span><span class="num">${t.postPct}%</span></div></div></div><div class="score">${t.post}<span class="muted" style="font-size:.55em"> / ${t.postMax}</span>${t.gain!=null?`<div class="gain ${t.gain>=0?"up":"down"}" style="font-size:.5em">${t.gain>0?"+":""}${t.gain} %-pt gain</div>`:""}</div></div>`};
+  return `<div class="stats"><div class="stat"><div class="eyebrow">Class pre-test average</div><div class="v">${b.classPre==null?"–":b.classPre+"%"}</div></div><div class="stat"><div class="eyebrow">Team post-test average</div><div class="v">${b.classPost==null?"–":b.classPost+"%"}</div></div><div class="stat"><div class="eyebrow">Teams ranked</div><div class="v">${ranked.length}</div></div></div>
+  <div class="board">${ranked.map(row).join("")}</div>
+  ${b.individuals&&b.individuals.length?`<section class="card stack"><h3>Top individual pre-test scores</h3><div class="row">${b.individuals.map((p,i)=>`<span class="chip"><b>${i+1}</b> ${esc(p.name)} · ${p.pct}%</span>`).join("")}</div></section>`:""}
+  <p class="muted" style="font-size:.82rem">Gain compares the team's post-test % with the average pre-test % of its members. The pre-test is individual and the post-test is a team effort, so read the gain as a learning signal, not an exact measure.</p>`;
+}
+function wallHtml(){
+  const ph=S.session.phase,teams=Object.entries(S.teams);
+  if(ph==="results")return `<div class="stack"><p class="eyebrow">StyleShift Arena · Final standings</p><h1 class="wall-title">The leaderboard</h1>${boardHtml(S.board,true)}</div>`;
+  if(ph==="pre"){const n=Object.keys(S.pre).length;return `<div class="stack"><p class="eyebrow">Part 1 · Individual pre-test</p><h1 class="wall-title">Answer on your own. ${PRE_MINUTES} minutes.</h1><div class="stats"><div class="stat"><div class="eyebrow">Submitted</div><div class="big">${n}</div></div></div><div class="row">${Object.values(S.pre).sort((a,b)=>a.submittedAt-b.submittedAt).map(p=>`<span class="chip" dir="auto">${esc(p.name)}</span>`).join("")}</div></div>`}
+  if(ph==="post")return `<div class="stack"><p class="eyebrow">Part 2 · Team post-test</p><h1 class="wall-title">Cases, scenarios and the dialect lab.</h1><div class="teams">${teams.map(([id,t])=>teamCard(id,t)).join("")}</div></div>`;
+  if(ph==="teams")return `<div class="stack"><p class="eyebrow">Part 2 · Team building</p><h1 class="wall-title">Pick a nickname. Snap a photo.</h1><div class="teams">${teams.length?teams.map(([id,t])=>teamCard(id,t)).join(""):`<p class="muted">Teams will appear here as they are created.</p>`}</div></div>`;
+  return `<div class="stack"><p class="eyebrow">StyleShift · Pharma field workshop</p><h1 class="wall-title">Style is the starting point. Versatility is the skill.</h1><p class="muted">Open this page on your phone and enter your name. The pre-test opens soon.</p><div class="row">${Object.values(S.members).map(m=>`<span class="chip">${esc(m.name)}</span>`).join("")}</div></div>`;
+}
+let confettiDone=false;
+function confetti(){if(confettiDone)return;confettiDone=true;try{if(window.matchMedia("(prefers-reduced-motion: reduce)").matches)return}catch(e){}
+  const c=document.createElement("canvas");c.className="confetti";document.body.appendChild(c);const g=c.getContext("2d");c.width=innerWidth;c.height=innerHeight;
+  const cs=getComputedStyle(document.documentElement),cols=["--driver","--expressive","--analytical","--amiable","--gold"].map(v=>cs.getPropertyValue(v).trim());
+  const P=Array.from({length:140},()=>({x:Math.random()*c.width,y:-20-Math.random()*c.height*.5,vx:(Math.random()-.5)*2,vy:2+Math.random()*3,s:5+Math.random()*6,r:Math.random()*6,c:cols[Math.floor(Math.random()*cols.length)]}));
+  let f=0;(function step(){g.clearRect(0,0,c.width,c.height);P.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.r+=.1;g.save();g.translate(p.x,p.y);g.rotate(p.r);g.fillStyle=p.c;g.fillRect(-p.s/2,-p.s/4,p.s,p.s/2);g.restore()});if(++f<240)requestAnimationFrame(step);else c.remove()})();
+}
+
+/* ---------- refresh (dynamic regions, no input loss) ---------- */
+function refresh(){
+  const grid=$("#teamGrid");
+  if(grid){const admin=S.isTrainer&&S.trainerView;const list=Object.entries(S.teams).sort((a,b)=>(a[1].createdAt||0)-(b[1].createdAt||0));
+    grid.innerHTML=list.length?list.map(([id,t])=>teamCard(id,t,{join:!admin&&!!S.name&&!(S.teams[myTeamId()]||{}).submitted,admin})).join(""):`<p class="muted">No teams yet. Be the first to create one.</p>`;
+    const tc=$("#teamCount");if(tc)tc.textContent=list.length+" team"+(list.length===1?"":"s")}
+  if($("#trainerStats"))refreshControl();
+  if($("#scorePost"))refreshScore();
+  const wall=$("#wall");if(wall){wall.innerHTML=wallHtml();if(S.session.phase==="results"&&S.board)confetti()}
+  const res=$("#results");if(res){res.innerHTML=`<p class="eyebrow">Final standings</p><h1>Leaderboard</h1>`+boardHtml(S.board,false);if(S.board)confetti()}
+  const pd=$("#preDone");if(pd&&S.myPre){const a=autoScore(PRE_ITEMS,S.myPre.answers);pd.innerHTML=`<section class="card stack"><p class="eyebrow">Pre-test submitted</p><h1>Thanks, ${esc(S.name)}.</h1><div class="row"><div><div class="big">${a}<span class="muted" style="font-size:.4em"> / ${autoMax(PRE_ITEMS)}</span></div><p class="muted">choice-question points, in ${fmtTime(S.myPre.secs||0)}</p></div></div><p>Your local-language answers are scored by the trainer. Keep this score in mind: after the training, your team will try to beat it.</p></section>${S.session.reveal?`<section class="card stack"><h2>Answer review</h2>${reviewHtml(PRE,S.myPre.answers)}</section>`:`<p class="muted">The trainer will reveal the correct answers later.</p>`}`}
+  const pod=$("#postDone");if(pod){const t=S.teams[myTeamId()]||{};pod.innerHTML=`<section class="card stack"><p class="eyebrow">Team post-test submitted</p><h1 dir="auto">${esc(t.nickname)} is in.</h1>${typeof t.auto==="number"?`<div class="big">${t.auto}<span class="muted" style="font-size:.4em"> / ${autoMax(POST_ITEMS)}</span></div><p class="muted">choice-question points so far. Case write-ups and the dialect lab add up to ${writtenMax(POST_ITEMS)} more after the trainer scores them.</p>`:""}<p>Submitted by ${esc(t.submittedBy||"your team")}. Watch the big screen for the results.</p></section>`}
+}
+
+/* ---------- events ---------- */
+function bindStatic(){
+  const k=S.lastKey;
+  if(k.startsWith("P:pre:quiz"))bindQuiz("pre",PRE_ITEMS);
+  else if(k.startsWith("P:post:quiz:")){const tid=k.split("|")[0].split(":")[3];bindQuiz("post",POST_ITEMS,tid)}
+  if($("#teamForm"))bindTeams();
+}
+document.addEventListener("submit",e=>{if(e.target.id==="nameForm"){e.preventDefault();const v=$("#nm").value.trim();if(!v)return;S.name=v;ls.set("ssa-name",v);
+  const m=S.members[S.uid];if(m)write(()=>S.db.doc("members/"+S.uid).update({name:v}));S.lastKey="";render();toast("Saved: "+v)}});
+document.addEventListener("click",async e=>{
+  const t=e.target.closest("button");if(!t)return;
+  if(t.dataset.tab){S.tab=t.dataset.tab;ls.set("ssa-tab",S.tab);render();return}
+  if(t.id==="swapView"){S.trainerView=!S.trainerView;S.lastKey="";render();return}
+  if(t.id==="newPart"){S.uid="local-"+rid();ls.set("ssa-localid",S.uid);S.name="";ls.set("ssa-name","");S.myPre=null;watchMine();S.lastKey="";render();return}
+  if(t.dataset.phase){await write(()=>S.db.doc("session/state").set(Object.assign({},S.session,{phase:t.dataset.phase,updatedAt:Date.now()})));S.lastKey="";render();return}
+  if(t.dataset.join){if(!S.name){S.err="Enter your name first.";render();return}await write(()=>S.db.doc("members/"+S.uid).set({teamId:t.dataset.join,name:S.name}),"Joined "+(S.teams[t.dataset.join]||{}).nickname);return}
+  if(t.dataset.leave){await write(()=>S.db.doc("members/"+S.uid).set({teamId:null,name:S.name}));return}
+  if(t.dataset.delteam){if(t.dataset.armed!=="1"){t.dataset.armed="1";t.textContent="Confirm remove";return}await write(()=>S.db.doc("teams/"+t.dataset.delteam).delete(),"Team removed");return}
+  if(t.id==="publishBoard"){const b=computeBoard();if(!b.teams.some(x=>x.rank!=null)){toast("No team has submitted yet.");return}await write(()=>S.db.doc("board/current").set(b),"Leaderboard published");confettiDone=false;return}
+  if(t.id==="exportCsv"){exportCsv();return}
+  if(t.id==="resetAll"){if(!S.confirmReset){S.confirmReset=true;t.textContent="Click again to erase all answers, teams and scores";return}S.confirmReset=false;await resetAll();return}
+});
+document.addEventListener("change",async e=>{
+  const t=e.target;
+  if(t.id==="reveal"){await write(()=>S.db.doc("session/state").set(Object.assign({},S.session,{reveal:t.checked})));return}
+  if(t.id==="showIndiv"){S.showIndiv=t.checked;return}
+  if(t.id==="localTrainer"){ls.set("ssa-localtrainer",t.checked);S.isTrainer=t.checked;S.lastKey="";render();return}
+  if(t.dataset&&t.dataset.mk){const key=t.dataset.mk,q=t.dataset.q,max=+t.dataset.max;let v=t.value===""?null:Math.max(0,Math.min(max,Math.round(+t.value)));if(v!=null)t.value=v;
+    const items=Object.assign({},(S.marks[key]&&S.marks[key].items)||{});if(v==null)delete items[q];else items[q]=v;
+    S.marks[key]={items};await write(()=>S.db.doc("marks/"+key).set({items,updatedAt:Date.now()}));refresh()}
+});
+async function resetAll(){
+  const ops=[];
+  for(const c of ["pre","post","marks"])for(const id of Object.keys(S[c]))ops.push(S.db.doc(c+"/"+id).delete());
+  for(const id of Object.keys(S.teams))ops.push(S.db.doc("teams/"+id).delete());
+  for(const id of Object.keys(S.members))ops.push(S.db.doc("members/"+id).delete());
+  ops.push(S.db.doc("board/current").delete());
+  await write(async()=>{await Promise.all(ops);await S.db.doc("session/state").set({phase:"lobby",reveal:false,updatedAt:Date.now()})},"Reset done. Ready for a new class.");
+  try{Object.keys(localStorage).filter(k=>k.startsWith("ssa-draft-")).forEach(k=>localStorage.removeItem(k))}catch(e){}
+  confettiDone=false;
+}
+function csvCell(v){v=v==null?"":String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+async function exportCsv(){
+  const rows=[["Type","Name / Team","Team","Auto points","Written points","Total","Max","Percent","Time (s)","Written scoring pending"]];
+  for(const uid of Object.keys(S.pre)){const r=preResult(uid),m=S.members[uid],tn=m&&m.teamId&&S.teams[m.teamId]?S.teams[m.teamId].nickname:"";rows.push(["Pre (individual)",r.name,tn,r.auto,r.written,r.total,r.max,r.pct,r.secs,r.pending?"yes":"no"])}
+  for(const tid of Object.keys(S.post)){const r=postResult(tid),tn=(S.teams[tid]||{}).nickname||tid;rows.push(["Post (team)",tn,tn,r.auto,r.written,r.total,r.max,r.pct,r.secs,r.pending?"yes":"no"])}
+  const csv="﻿"+rows.map(r=>r.map(csvCell).join(",")).join("\n");
+  try{await S.downloads.save({filename:"styleshift-arena-results.csv",data:csv});toast("Results saved")}catch(e){if(e&&e.code!=="declined")toast("Couldn't save the file ("+(e&&e.code||"error")+")")}
+}
+
+boot();
+})();
+</script>
+
+</body>
+</html>

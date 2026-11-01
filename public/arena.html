@@ -172,6 +172,17 @@ label.opt.wrong{border-color:var(--bad)}
 /* big screen */
 .wall-title{font-family:var(--f-display);font-weight:900;font-stretch:125%;font-size:clamp(1.8rem,5vw,3.4rem);line-height:1.02}
 .confetti{position:fixed;inset:0;pointer-events:none;z-index:20}
+.choice{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.pick{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:16px;border-width:2px;min-height:84px}
+.pick b{font-family:var(--f-display);font-stretch:112%;font-size:1.1rem}
+.pick span{font-weight:400;color:var(--ink-2);font-size:.9rem}
+.pick.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--panel))}
+ol.how{list-style:none;margin:0;padding:0;display:grid;gap:10px;counter-reset:how}
+ol.how li{counter-increment:how;display:grid;grid-template-columns:34px minmax(0,1fr);gap:2px 12px;align-items:start}
+ol.how li::before{content:counter(how);grid-row:span 2;width:30px;height:30px;border-radius:50%;background:var(--ink);color:var(--ground);display:grid;place-items:center;font-family:var(--f-display);font-weight:800}
+ol.how li b{font-family:var(--f-display);font-size:1rem}
+ol.how li span{color:var(--ink-2);font-size:.92rem}
+ul.tips{margin:0;padding-left:18px;color:var(--ink-2);font-size:.88rem;display:grid;gap:4px}
 .joinbar{display:flex;flex-wrap:wrap;gap:8px 28px;align-items:baseline;background:var(--panel-2);border-radius:var(--r);padding:14px 18px;font-size:1.15rem}
 .joinbar b{overflow-wrap:anywhere}
 .code{font-family:var(--f-display);font-weight:900;font-stretch:118%;letter-spacing:.14em;font-size:clamp(1.8rem,5vw,2.8rem);color:var(--accent)}
@@ -384,26 +395,47 @@ function startRemote(sess){
   S.db=RemoteDB(sess,msg=>{ls.del("ssa-class");showStart(msg)});
   attach();
 }
-function showStart(msg){
+const HOW_PARTICIPANT=[
+  ["Join","Open this page on your phone. Enter the class code shown on the trainer's screen, and your name."],
+  ["Pre-test","Before the training, answer on your own. About 15 minutes."],
+  ["Teams","After the training, form a team: choose a nickname and take a team photo."],
+  ["Post-test","Your team answers cases, short scenarios and a local-dialect lab together. Then the leaderboard."]];
+const HOW_TRAINER=[
+  ["Create the class","Below, enter a class name and a PIN. You get a 6-character class code."],
+  ["Show the code","Open the Big screen tab on the projector. It shows this address and the code."],
+  ["Run the stages","In the Control room, open the pre-test once everyone has joined. After the training, open Teams, then the post-test."],
+  ["Score and reveal","Score the written answers, publish the leaderboard, then open Results on every screen."]];
+const howList=items=>`<ol class="how">${items.map(([t,d])=>`<li><b>${esc(t)}</b><span>${esc(d)}</span></li>`).join("")}</ol>`;
+function trainerGuide(){return `<details class="sub"><summary><b>How to run the session</b><span class="muted">Trainer guide</span></summary><div class="inner">${howList(HOW_TRAINER.slice(1))}<p class="muted" style="font-size:.85rem">Participants' screens follow the stage you choose within a few seconds. You score the written answers (cases and the dialect lab) in Score answers; choice questions are scored automatically.</p></div></details>`}
+function showStart(msg,view){
   S.mode="start";clearInterval(S.timerId);document.body.classList.remove("wide");
   $("#steps").innerHTML="";$("#whoText").textContent="Not in a class yet";$("#who").classList.add("local");
   let code="";try{code=(new URLSearchParams(location.search).get("code")||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6)}catch(e){}
-  $("#main").innerHTML=`${msg?`<div class="notice warn" role="alert">${esc(msg)}</div>`:""}
-  <form class="card stack" id="joinForm"><p class="eyebrow">StyleShift · Pharma field workshop</p><h1>Join your class</h1><p class="muted">Your trainer shows the class code on the screen.</p>
-    <label class="field" for="jcode">Class code<input type="text" class="code-in" id="jcode" maxlength="7" autocomplete="off" autocapitalize="characters" spellcheck="false" value="${esc(code)}" required></label>
-    <label class="field" for="jname">Your name<input type="text" id="jname" maxlength="40" autocomplete="name" value="${esc(S.name)}" required></label>
-    <div class="row"><button class="primary" type="submit">Join class</button></div><p class="muted" role="alert"></p></form>
-  <details class="sub" ${code?"":"open"}><summary><b>I'm the trainer</b><span class="muted">Create a class or open yours</span></summary><div class="inner">
-    <form class="stack" id="createForm"><h3>Create a class</h3>
+  view=view||S.startView||(code?"join":"choose");S.startView=view;
+  const pick=(k,t,d)=>`<button type="button" class="pick ${view===k?"on":""}" data-start="${k}" aria-pressed="${view===k}"><b>${t}</b><span>${d}</span></button>`;
+  let body="";
+  if(view==="join")body=`<form class="card stack" id="joinForm"><h2>Join your class</h2>
+    <label class="field" for="jcode">Class code <span class="muted" style="font-weight:400">(6 letters and numbers on the trainer's screen)</span><input type="text" class="code-in" id="jcode" maxlength="7" autocomplete="off" autocapitalize="characters" spellcheck="false" value="${esc(code)}" required></label>
+    <label class="field" for="jname">Your name <span class="muted" style="font-weight:400">(as the trainer should see it)</span><input type="text" id="jname" maxlength="40" autocomplete="name" value="${esc(S.name)}" required></label>
+    <div class="row"><button class="primary" type="submit">Join class</button></div><p class="muted" role="alert"></p>
+    <ul class="tips"><li>No account or app needed.</li><li>Keep this page open. If it closes, open the same link on the same phone and you are still in the class.</li><li>Use one phone for the whole session. Joining on another phone counts as a new person.</li></ul></form>`;
+  else if(view==="trainer")body=`<section class="card stack"><h2>How a session runs</h2>${howList(HOW_TRAINER)}</section>
+    <form class="card stack" id="createForm"><h2>Create a class</h2>
       <label class="field" for="cname">Class name<input type="text" id="cname" maxlength="60" required placeholder="e.g. Amman cohort, November"></label>
       <div class="fields"><label class="field" for="cpin1">Trainer PIN (4–8 digits)<input type="password" inputmode="numeric" maxlength="8" id="cpin1" autocomplete="new-password" required></label><label class="field" for="cpin2">Repeat the PIN<input type="password" inputmode="numeric" maxlength="8" id="cpin2" autocomplete="new-password" required></label></div>
-      <p class="muted" style="font-size:.85rem">You get a class code. Use the code and this PIN to open the trainer console on any device.</p>
+      <p class="muted" style="font-size:.85rem">Remember the PIN: with the class code it opens your trainer console on any device.</p>
       <div class="row"><button class="primary" type="submit">Create class</button></div><p class="muted" role="alert"></p></form>
-    <form class="stack" id="openForm" style="border-top:1px solid var(--line);padding-top:12px"><h3>Open my class</h3>
+    <form class="card stack" id="openForm"><h2>Open a class I already created</h2>
       <div class="fields"><label class="field" for="ocode">Class code<input type="text" class="code-in" id="ocode" maxlength="7" autocomplete="off" autocapitalize="characters" spellcheck="false" required></label><label class="field" for="opin">Trainer PIN<input type="password" inputmode="numeric" maxlength="8" id="opin" autocomplete="current-password" required></label></div>
       <div class="row"><button type="submit">Open trainer console</button></div><p class="muted" role="alert"></p></form>
-  </div></details>
-  <p class="muted" style="font-size:.85rem">No internet in the room? <button type="button" id="goOffline">Run offline on this device</button></p>`;
+    <p class="muted" style="font-size:.85rem">No internet in the room? <button type="button" id="goOffline">Run offline on this device</button> Everything then stays on this one device, and participants take turns on it.</p>`;
+  else body=`<section class="card stack"><h2>How it works</h2>${howList(HOW_PARTICIPANT)}</section>`;
+  $("#main").innerHTML=`${msg?`<div class="notice warn" role="alert">${esc(msg)}</div>`:""}
+  <section class="card stack"><p class="eyebrow">StyleShift · Pharma field workshop</p><h1>StyleShift Arena</h1>
+    <p>A classroom competition in two parts: a short pre-test on your own before the training, then a team challenge after it. All you need is your phone and the class code from your trainer.</p>
+    <p class="eyebrow" style="margin-top:4px">Who are you?</p>
+    <div class="choice">${pick("join","I'm a participant","Join a class with the code from your trainer")}${pick("trainer","I'm the trainer","Create a class, or open one you created")}</div></section>
+  ${body}`;
 }
 async function startForm(form){
   const btn=form.querySelector("button[type=submit]"),msg=form.querySelector("[role=alert]");
@@ -536,7 +568,7 @@ function shell(){
   else if(ph==="results")h+=`<div id="results"></div>`;
   return h;
 }
-function lobbyShell(){return `<section class="card stack"><p class="eyebrow">StyleShift · Pharma field workshop</p><h1>Welcome to the Arena</h1><p>Two rounds of competition. First, an <b>individual pre-test</b> before the training. Later, you compete <b>as a team</b> with a nickname and a team photo in the post-test: business cases, scenarios, rapid-fire questions and a dialect lab where you write the real phrases doctors and reps use in your area.</p><p class="muted">The trainer will open the pre-test shortly. Enter your name now so you're ready.</p></section>${nameShell("Your name",true)}`}
+function lobbyShell(){return `<section class="card stack"><p class="eyebrow">StyleShift · Pharma field workshop</p><h1>Welcome to the Arena</h1><p>Two rounds of competition. First, an <b>individual pre-test</b> before the training. Later, you compete <b>as a team</b> with a nickname and a team photo in the post-test: business cases, scenarios, rapid-fire questions and a dialect lab where you write the real phrases doctors and reps use in your area.</p><p class="muted">${S.mode==="remote"?"You're in. Keep this page open: it moves to the pre-test by itself when the trainer starts it.":"The trainer will open the pre-test shortly. Enter your name now so you're ready."}</p></section>${nameShell("Your name",true)}`}
 function nameShell(title,inLobby){return `<form class="card stack" id="nameForm"><h2>${esc(title)}</h2><label class="field" for="nm">Your name, as the trainer should see it<input type="text" id="nm" maxlength="40" autocomplete="name" value="${esc(S.name)}" required></label><div class="row"><button class="primary" type="submit">${S.name&&inLobby?"Update name":"Continue"}</button>${S.name&&inLobby?`<span class="badge ok">Ready as ${esc(S.name)}</span>`:""}</div></form>`}
 
 /* ---------- quiz ---------- */
@@ -632,7 +664,7 @@ function teamCard(id,t,opts){
 /* ---------- trainer: control ---------- */
 function controlShell(){
   const phases=[["lobby","Lobby","Participants enter names"],["pre","Open pre-test","Individual, before training"],["teams","Open teams","Nicknames + photos"],["post","Open post-test","Team competition"],["results","Show results","Leaderboard on every screen"]];
-  return `${S.mode==="remote"?`<section class="card stack"><div class="spread"><div><p class="eyebrow">Class · ${esc(S.sess.className||"")}</p><div class="code">${esc(S.sess.code)}</div></div><button id="copyJoin">Copy join link</button></div><p class="muted">Participants open <b>${esc(joinUrl(false))}</b> and enter this code. To open this console on another device, use the code and your PIN.</p></section>`:""}<section class="card stack"><div class="spread"><h2>Control room</h2><span class="muted">Stage moves every participant's screen.</span></div>
+  return `${S.mode==="remote"?`<section class="card stack"><div class="spread"><div><p class="eyebrow">Class · ${esc(S.sess.className||"")}</p><div class="code">${esc(S.sess.code)}</div></div><button id="copyJoin">Copy join link</button></div><p class="muted">Participants open <b>${esc(joinUrl(false))}</b> and enter this code. To open this console on another device, use the code and your PIN.</p></section>`:""}${trainerGuide()}<section class="card stack"><div class="spread"><h2>Control room</h2><span class="muted">Stage moves every participant's screen.</span></div>
   <div class="phase-btns">${phases.map(([k,l,s])=>`<button data-phase="${k}" class="${S.session.phase===k?"on":""}"><span>${l}</span><small>${s}</small></button>`).join("")}</div>
   <label class="row" for="reveal"><input type="checkbox" id="reveal" ${S.session.reveal?"checked":""}> Let participants see correct answers for their own pre-test</label></section>
   <section class="stats" id="trainerStats"></section>
@@ -725,6 +757,7 @@ document.addEventListener("click",async e=>{
   if(t.dataset.tab){S.tab=t.dataset.tab;ls.set("ssa-tab",S.tab);render();return}
   if(t.id==="swapView"){if(S.mode==="local"&&S.trainerView){lockTrainer();return}S.trainerView=!S.trainerView;S.lastKey="";render();return}
   if(t.id==="lockTrainer"){lockTrainer();return}
+  if(t.dataset.start){showStart(null,t.dataset.start);const f=document.querySelector(t.dataset.start==="join"?"#jcode":"#cname");if(f&&window.innerWidth>700)f.focus();return}
   if(t.id==="goOffline"){ls.set("ssa-offline",true);location.reload();return}
   if(t.id==="goOnline"){ls.del("ssa-offline");location.reload();return}
   if(t.id==="copyJoin"){const u=joinUrl(true);try{await navigator.clipboard.writeText(u);toast("Join link copied")}catch(err){toast(u)}return}

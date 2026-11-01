@@ -122,3 +122,60 @@ export function verifyPin(pin: unknown, salt: string, hash: string): boolean {
 
 export const isExpired = (expiresAt: string | null | undefined, now = Date.now()): boolean =>
   !!expiresAt && new Date(expiresAt).getTime() <= now
+
+const TEAM_ID_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789'
+export function makeTeamId(): string {
+  let s = 't'
+  for (let i = 0; i < 8; i++) s += TEAM_ID_ALPHABET[randomInt(TEAM_ID_ALPHABET.length)]
+  return s
+}
+
+/** Group names typed by the trainer: 1 to 40 distinct non-empty names of up to 32 characters. */
+export function cleanGroupNames(v: unknown): string[] | null {
+  if (!Array.isArray(v) || v.length < 1 || v.length > LIMITS.teamsPerClass) return null
+  const out: string[] = []
+  for (const n of v) {
+    const t = cleanText(n, 32)
+    if (!t) return null
+    if (!out.some(o => o.toLowerCase() === t.toLowerCase())) out.push(t)
+  }
+  return out
+}
+
+/**
+ * Random, balanced placement of participants into the open (not yet submitted)
+ * teams. Members of submitted teams never move. With onlyUnassigned, people who
+ * already sit in an open team stay put and count toward its size.
+ * Returns participant id -> team id for everyone who moves (or stays placed).
+ */
+export function planSplit(
+  people: { id: string; teamId: string | null }[],
+  teams: { id: string; submitted: boolean }[],
+  onlyUnassigned: boolean,
+  rand: (n: number) => number = randomInt,
+): Record<string, string> | null {
+  const open = teams.filter(t => !t.submitted).map(t => t.id)
+  if (!open.length) return null
+  const openSet = new Set(open)
+  const closed = new Set(teams.filter(t => t.submitted).map(t => t.id))
+  const size: Record<string, number> = Object.fromEntries(open.map(t => [t, 0]))
+  const movers: string[] = []
+  for (const p of people) {
+    if (p.teamId && closed.has(p.teamId)) continue
+    if (onlyUnassigned && p.teamId && openSet.has(p.teamId)) { size[p.teamId]++; continue }
+    movers.push(p.id)
+  }
+  for (let i = movers.length - 1; i > 0; i--) {
+    const j = rand(i + 1)
+    ;[movers[i], movers[j]] = [movers[j], movers[i]]
+  }
+  const plan: Record<string, string> = {}
+  for (const id of movers) {
+    const min = Math.min(...open.map(t => size[t]))
+    const smallest = open.filter(t => size[t] === min)
+    const pick = smallest[rand(smallest.length)]
+    plan[id] = pick
+    size[pick]++
+  }
+  return plan
+}

@@ -17,7 +17,7 @@ const UNIQUE: Record<string, string[][]> = {
 let clock = Date.parse('2026-11-01T09:00:00Z')
 const now = () => new Date(clock++).toISOString()
 const DEFAULTS: Record<string, () => Row> = {
-  arena_classes: () => ({ id: randomUUID(), phase: 'lobby', reveal: false, board: null, created_at: now(), expires_at: new Date(clock + 60 * 864e5).toISOString() }),
+  arena_classes: () => ({ id: randomUUID(), phase: 'lobby', reveal: false, board: null, teams_locked: false, created_at: now(), expires_at: new Date(clock + 60 * 864e5).toISOString() }),
   arena_teams: () => ({ motto: '', photo: null, photo_version: 0, post_answers: null, post_secs: null, post_auto: null, submitted_by: null, submitted_at: null, created_at: now() }),
   arena_participants: () => ({ id: randomUUID(), team_id: null, pre_answers: null, pre_secs: null, pre_submitted_at: null, created_at: now() }),
   arena_marks: () => ({ updated_at: now() }),
@@ -95,6 +95,7 @@ export function createFakeDb() {
       delete() { op = 'delete'; return q },
       eq(c: string, v: unknown) { filters.push(r => r[c] === v); return q },
       is(c: string, v: null) { filters.push(r => (r[c] ?? null) === v); return q },
+      in(c: string, vs: unknown[]) { filters.push(r => vs.includes(r[c])); return q },
       order(c: string) { order = c; return q },
       maybeSingle() { single = 'maybe'; return Promise.resolve(run()) },
       single() { single = 'one'; return Promise.resolve(run()) },

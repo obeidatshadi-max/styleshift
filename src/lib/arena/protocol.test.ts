@@ -77,3 +77,34 @@ describe('arena secrets', () => {
     expect(isExpired('2026-03-01T00:00:00Z', Date.parse('2026-02-01T00:00:00Z'))).toBe(false)
   })
 })
+
+describe('arena groups', () => {
+  it('cleans group names and drops duplicates', async () => {
+    const { cleanGroupNames } = await import('./protocol')
+    expect(cleanGroupNames(['Group 1', ' group 1 ', 'Hawks'])).toEqual(['Group 1', 'Hawks'])
+    expect(cleanGroupNames([])).toBeNull()
+    expect(cleanGroupNames(['ok', ''])).toBeNull()
+    expect(cleanGroupNames('Group 1')).toBeNull()
+  })
+  it('makes valid team ids', async () => {
+    const { makeTeamId, isTeamId } = await import('./protocol')
+    for (let i = 0; i < 100; i++) expect(isTeamId(makeTeamId())).toBe(true)
+  })
+  it('splits people evenly and never moves members of submitted teams', async () => {
+    const { planSplit } = await import('./protocol')
+    const people = Array.from({ length: 10 }, (_, i) => ({ id: 'p' + i, teamId: i === 0 ? 'done' : null as string | null }))
+    const teams = [{ id: 'a', submitted: false }, { id: 'b', submitted: false }, { id: 'c', submitted: false }, { id: 'done', submitted: true }]
+    const plan = planSplit(people, teams, false)!
+    expect(plan.p0).toBeUndefined()
+    const sizes = Object.values(plan).reduce<Record<string, number>>((m, t) => ({ ...m, [t]: (m[t] ?? 0) + 1 }), {})
+    expect(Object.keys(sizes).sort()).toEqual(['a', 'b', 'c'])
+    expect(Math.max(...Object.values(sizes)) - Math.min(...Object.values(sizes))).toBeLessThanOrEqual(1)
+  })
+  it('only places people without a group when asked, filling the smallest groups', async () => {
+    const { planSplit } = await import('./protocol')
+    const people = [{ id: 'x', teamId: 'a' }, { id: 'y', teamId: 'a' }, { id: 'z', teamId: null }, { id: 'w', teamId: null }]
+    const plan = planSplit(people, [{ id: 'a', submitted: false }, { id: 'b', submitted: false }], true)!
+    expect(plan).toEqual({ z: 'b', w: 'b' })
+    expect(planSplit(people, [{ id: 'a', submitted: true }], false)).toBeNull()
+  })
+})

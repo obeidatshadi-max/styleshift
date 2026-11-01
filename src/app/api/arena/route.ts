@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, clientIp } from '@/lib/rate-limit'
 import {
-  LIMITS, cleanAnswers, cleanBoard, cleanInt, cleanMarkItems, cleanPhoto, cleanText, hashPin, isExpired,
-  isMarkKey, isPhase, isPin, isTeamId, makeCode, newSalt, newToken, normalizeCode, safeEqual, sha256, verifyPin,
+  LIMITS, cleanAnswers, cleanBoard, cleanGroupNames, cleanInt, cleanMarkItems, cleanPhoto, cleanText, hashPin, isExpired,
+  isMarkKey, isPhase, isPin, isTeamId, makeCode, makeTeamId, newSalt, newToken, normalizeCode, planSplit, safeEqual, sha256, verifyPin,
 } from '@/lib/arena/protocol'
 
 /**
@@ -21,7 +21,7 @@ type Body = Record<string, unknown>
 type Db = any
 type ClassRow = {
   id: string; code: string; name: string; pin_salt: string; pin_hash: string; trainer_key: string
-  phase: string; reveal: boolean; board: unknown; expires_at: string | null
+  phase: string; reveal: boolean; board: unknown; expires_at: string | null; teams_locked: boolean
 }
 type ParticipantRow = {
   id: string; name: string; team_id: string | null; token_hash: string
@@ -32,8 +32,9 @@ type Who = { cls: ClassRow; role: 'trainer' } | { cls: ClassRow; role: 'particip
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { 'cache-control': 'no-store' } })
 const fail = (error: string, status: number) => json({ error }, status)
 const ok = () => json({ ok: true })
+const LOCKED = 'Your trainer has set the groups. Ask them if you need to move.'
 const SESSION_ENDED = 'Your session for this class has ended. Join the class again.'
-const CLASS_COLS = 'id, code, name, pin_salt, pin_hash, trainer_key, phase, reveal, board, expires_at'
+const CLASS_COLS = 'id, code, name, pin_salt, pin_hash, trainer_key, phase, reveal, board, expires_at, teams_locked'
 const ME_COLS = 'id, name, team_id, token_hash, pre_answers, pre_secs, pre_submitted_at'
 
 async function findClass(db: Db, code: string): Promise<ClassRow | null> {
@@ -127,7 +128,7 @@ async function state(db: Db, who: Who) {
   const peopleRows = (people ?? []) as Record<string, unknown>[]
   const out: Record<string, unknown> = {
     class: {
-      code: cls.code, name: cls.name, phase: cls.phase, reveal: cls.reveal,
+      code: cls.code, name: cls.name, phase: cls.phase, reveal: cls.reveal, teamsLocked: !!cls.teams_locked,
       // Participants see the leaderboard only once the trainer opens Results.
       board: trainer || cls.phase === 'results' ? cls.board ?? null : null,
     },
@@ -178,6 +179,7 @@ async function submitPre(db: Db, cls: ClassRow, me: ParticipantRow, body: Body) 
 
 async function createTeam(db: Db, cls: ClassRow, me: ParticipantRow, body: Body) {
   if (cls.phase !== 'teams' && cls.phase !== 'post') return fail('Teams are not open right now.', 409)
+  if (cls.teams_locked) return fail(LOCKED, 409)
   if (!isTeamId(body.teamId)) return fail('Invalid team.', 400)
   const nickname = cleanText(body.nickname, 32)
   const motto = cleanText(body.motto, 60, true)
@@ -202,6 +204,7 @@ async function joinTeam(db: Db, cls: ClassRow, me: ParticipantRow, body: Body) {
   const teamId = body.teamId === null ? null : isTeamId(body.teamId) ? body.teamId : undefined
   if (teamId === undefined) return fail('Invalid team.', 400)
   if (teamId === me.team_id) return ok()
+  if (cls.teams_locked) return fail(LOCKED, 409)
   if (await teamSubmitted(db, cls.id, me.team_id)) return fail('Your team has already submitted.', 409)
   if (teamId) {
     const { data: team } = await db.from('arena_teams').select('id, submitted_at').eq('class_id', cls.id).eq('id', teamId).maybeSingle()
@@ -226,7 +229,90 @@ async function submitPost(db: Db, cls: ClassRow, me: ParticipantRow, body: Body)
   return ok()
 }
 
+/** A team member sets their team's nickname, motto or photo (also for groups the trainer made). */
+async function updateTeam(db: Db, cls: ClassRow, me: ParticipantRow, body: Body) {
+  if (!me.team_id) return fail('Join a team first.', 409)
+  const { data: team } = await db.from('arena_teams').select('id, photo_version, submitted_at').eq('class_id', cls.id).eq('id', me.team_id).maybeSingle()
+  if (!team) return fail('That team no longer exists.', 404)
+  if (team.submitted_at) return fail('Your team has already submitted.', 409)
+  const patch: Record<string, unknown> = {}
+  if (body.nickname !== undefined) {
+    const nickname = cleanText(body.nickname, 32)
+    if (!nickname) return fail('Give your team a nickname (up to 32 characters).', 400)
+    patch.nickname = nickname
+  }
+  if (body.motto !== undefined) {
+    const motto = cleanText(body.motto, 60, true)
+    if (motto === null) return fail('Keep the motto under 60 characters.', 400)
+    patch.motto = motto
+  }
+  if (body.photo !== undefined && body.photo !== '') {
+    const photo = cleanPhoto(body.photo)
+    if (!photo) return fail('That photo could not be used. Try another one.', 400)
+    patch.photo = photo
+    patch.photo_version = (team.photo_version ?? 0) + 1
+  }
+  if (Object.keys(patch).length) await db.from('arena_teams').update(patch).eq('class_id', cls.id).eq('id', me.team_id)
+  return ok()
+}
+
 /* ---------------- trainer actions ---------------- */
+
+async function createGroups(db: Db, cls: ClassRow, body: Body) {
+  const names = cleanGroupNames(body.names)
+  if (!names) return fail('Enter 1 to 40 group names of up to 32 characters.', 400)
+  const { count } = await db.from('arena_teams').select('id', { count: 'exact', head: true }).eq('class_id', cls.id)
+  if ((count ?? 0) + names.length > LIMITS.teamsPerClass) return fail(`A class can have at most ${LIMITS.teamsPerClass} teams.`, 403)
+  const { error } = await db.from('arena_teams').insert(names.map(nickname => ({ class_id: cls.id, id: makeTeamId(), nickname })))
+  if (error) {
+    if (error.code === '23505') return fail('Please try again.', 409)
+    throw new Error(error.message)
+  }
+  return ok()
+}
+
+async function assign(db: Db, cls: ClassRow, body: Body) {
+  if (typeof body.pid !== 'string' || !/^[0-9a-f-]{36}$/.test(body.pid)) return fail('Invalid participant.', 400)
+  const teamId = body.teamId === null ? null : isTeamId(body.teamId) ? body.teamId : undefined
+  if (teamId === undefined) return fail('Invalid team.', 400)
+  const { data: p } = await db.from('arena_participants').select('id, team_id').eq('class_id', cls.id).eq('id', body.pid).maybeSingle()
+  if (!p) return fail('That participant has left the class.', 404)
+  if (p.team_id === teamId) return ok()
+  if (await teamSubmitted(db, cls.id, p.team_id)) return fail("This person's team has already submitted.", 409)
+  if (teamId) {
+    const { data: team } = await db.from('arena_teams').select('id, submitted_at').eq('class_id', cls.id).eq('id', teamId).maybeSingle()
+    if (!team) return fail('That team no longer exists.', 404)
+    if (team.submitted_at) return fail('That team has already submitted.', 409)
+  }
+  await db.from('arena_participants').update({ team_id: teamId }).eq('class_id', cls.id).eq('id', body.pid)
+  return ok()
+}
+
+async function splitTeams(db: Db, cls: ClassRow, body: Body) {
+  const [{ data: people }, { data: teams }] = await Promise.all([
+    db.from('arena_participants').select('id, team_id').eq('class_id', cls.id),
+    db.from('arena_teams').select('id, submitted_at').eq('class_id', cls.id),
+  ])
+  const plan = planSplit(
+    ((people ?? []) as { id: string; team_id: string | null }[]).map(p => ({ id: p.id, teamId: p.team_id })),
+    ((teams ?? []) as { id: string; submitted_at: string | null }[]).map(t => ({ id: t.id, submitted: !!t.submitted_at })),
+    body.onlyUnassigned === true,
+  )
+  if (!plan) return fail('Create the groups first.', 409)
+  const byTeam: Record<string, string[]> = {}
+  for (const [pid, tid] of Object.entries(plan)) (byTeam[tid] ??= []).push(pid)
+  for (const [tid, ids] of Object.entries(byTeam)) {
+    await db.from('arena_participants').update({ team_id: tid }).eq('class_id', cls.id).in('id', ids)
+  }
+  return json({ ok: true, placed: Object.keys(plan).length })
+}
+
+async function setLock(db: Db, cls: ClassRow, body: Body) {
+  if (typeof body.locked !== 'boolean') return fail('Invalid setting.', 400)
+  await db.from('arena_classes').update({ teams_locked: body.locked }).eq('id', cls.id)
+  return ok()
+}
+
 
 async function setStage(db: Db, cls: ClassRow, body: Body) {
   const patch: Record<string, unknown> = {}
@@ -269,14 +355,14 @@ async function reset(db: Db, cls: ClassRow) {
   await db.from('arena_marks').delete().eq('class_id', cls.id)
   await db.from('arena_participants').delete().eq('class_id', cls.id)
   await db.from('arena_teams').delete().eq('class_id', cls.id)
-  await db.from('arena_classes').update({ phase: 'lobby', reveal: false, board: null }).eq('id', cls.id)
+  await db.from('arena_classes').update({ phase: 'lobby', reveal: false, board: null, teams_locked: false }).eq('id', cls.id)
   return ok()
 }
 
 /* ---------------- dispatch ---------------- */
 
-const PARTICIPANT_ACTIONS = ['rename', 'submitPre', 'createTeam', 'joinTeam', 'submitPost'] as const
-const TRAINER_ACTIONS = ['setStage', 'mark', 'publish', 'deleteTeam', 'reset'] as const
+const PARTICIPANT_ACTIONS = ['rename', 'submitPre', 'createTeam', 'joinTeam', 'updateTeam', 'submitPost'] as const
+const TRAINER_ACTIONS = ['setStage', 'mark', 'publish', 'deleteTeam', 'reset', 'createGroups', 'assign', 'splitTeams', 'setLock'] as const
 
 export async function POST(request: Request) {
   let body: unknown
@@ -305,6 +391,7 @@ export async function POST(request: Request) {
       if (action === 'submitPre') return await submitPre(db, cls, me, b)
       if (action === 'createTeam') return await createTeam(db, cls, me, b)
       if (action === 'joinTeam') return await joinTeam(db, cls, me, b)
+      if (action === 'updateTeam') return await updateTeam(db, cls, me, b)
       return await submitPost(db, cls, me, b)
     }
     const { cls } = who
@@ -312,6 +399,10 @@ export async function POST(request: Request) {
     if (action === 'mark') return await mark(db, cls, b)
     if (action === 'publish') return await publish(db, cls, b)
     if (action === 'deleteTeam') return await deleteTeam(db, cls, b)
+    if (action === 'createGroups') return await createGroups(db, cls, b)
+    if (action === 'assign') return await assign(db, cls, b)
+    if (action === 'splitTeams') return await splitTeams(db, cls, b)
+    if (action === 'setLock') return await setLock(db, cls, b)
     return await reset(db, cls)
   } catch (e) {
     console.error('arena', action, e)

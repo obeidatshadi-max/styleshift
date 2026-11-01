@@ -141,3 +141,48 @@ describe('arena teams and post-test', () => {
     expect(s.json.class).toMatchObject({ phase: 'lobby', reveal: false, board: null })
   })
 })
+
+describe('arena groups set by the trainer', () => {
+  it('creates groups, splits the class, moves people and locks teams', async () => {
+    const { code, trainerKey } = await newClass()
+    const t = { code, trainerKey }
+    const people = await Promise.all(['Rana', 'Omar', 'Lina', 'Sami', 'Dana'].map(n => joinAs(code, n)))
+    expect((await call({ action: 'createGroups', ...people[0], names: ['X'] })).status).toBe(403)
+    expect((await call({ action: 'splitTeams', ...t })).status).toBe(409)
+    expect((await call({ action: 'createGroups', ...t, names: ['Group 1', 'Group 2'] })).status).toBe(200)
+    expect(db.tables.arena_teams.map(r => r.nickname)).toEqual(['Group 1', 'Group 2'])
+    const split = await call({ action: 'splitTeams', ...t })
+    expect(split.json.placed).toBe(5)
+    const sizes = db.tables.arena_teams.map(tm => db.tables.arena_participants.filter(p => p.team_id === tm.id).length).sort()
+    expect(sizes).toEqual([2, 3])
+
+    const [g1, g2] = db.tables.arena_teams.map(r => r.id as string)
+    expect((await call({ action: 'assign', ...t, pid: people[0].pid, teamId: g2 })).status).toBe(200)
+    expect(db.tables.arena_participants.find(p => p.id === people[0].pid)!.team_id).toBe(g2)
+
+    await call({ action: 'setStage', ...t, phase: 'teams' })
+    expect((await call({ action: 'setLock', ...t, locked: true })).status).toBe(200)
+    expect((await call({ action: 'state', ...people[1] })).json.class.teamsLocked).toBe(true)
+    expect((await call({ action: 'joinTeam', ...people[0], teamId: g1 })).status).toBe(409)
+    expect((await call({ action: 'createTeam', ...people[0], teamId: 'tnewteam1', nickname: 'Solo' })).status).toBe(409)
+    // members can still name their group and add a photo while locked
+    expect((await call({ action: 'updateTeam', ...people[0], nickname: 'Hawks', photo: 'data:image/jpeg;base64,/9j/4AAQ' })).status).toBe(200)
+    const s = await call({ action: 'state', ...people[0] })
+    expect(s.json.teams.find((x: { id: string }) => x.id === g2)).toMatchObject({ nickname: 'Hawks', photoV: 1 })
+
+    await call({ action: 'setLock', ...t, locked: false })
+    expect((await call({ action: 'joinTeam', ...people[0], teamId: g1 })).status).toBe(200)
+  })
+  it('refuses to move members of a team that has submitted', async () => {
+    const { code, trainerKey } = await newClass()
+    const t = { code, trainerKey }
+    const rana = await joinAs(code, 'Rana')
+    await call({ action: 'createGroups', ...t, names: ['Group 1', 'Group 2'] })
+    const [g1, g2] = db.tables.arena_teams.map(r => r.id as string)
+    await call({ action: 'assign', ...t, pid: rana.pid, teamId: g1 })
+    await call({ action: 'setStage', ...t, phase: 'post' })
+    await call({ action: 'submitPost', ...rana, answers: { r1: 2 }, secs: 10, auto: 1 })
+    expect((await call({ action: 'assign', ...t, pid: rana.pid, teamId: g2 })).status).toBe(409)
+    expect((await call({ action: 'updateTeam', ...rana, nickname: 'Late' })).status).toBe(409)
+  })
+})

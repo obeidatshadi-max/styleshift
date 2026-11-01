@@ -17,6 +17,20 @@ trainer scoring and a leaderboard.
 
 Screens poll `/api/arena` every few seconds. Classes expire 60 days after creation.
 
+## Groups
+
+Teams can come from participants, from the trainer, or both. In the Control room's
+**Groups** section the trainer can:
+
+- create groups by name (one per line) or as numbered groups ("Group 1", "Group 2", ...);
+- **Split everyone randomly** into the open groups (evenly), or **Place people without a group**
+  into the smallest groups;
+- move any participant with the drop-down next to their name;
+- **Lock groups**: participants can no longer create, join or leave a team, but anyone in a
+  team can still set its nickname, motto and photo.
+
+Members of a team that has submitted its post-test are never moved.
+
 ## Offline mode
 
 **Run offline on this device** on the start screen keeps everything in that
@@ -26,7 +40,7 @@ trainer console is locked behind a device PIN.
 ## Data and security
 
 - Tables: `arena_classes`, `arena_teams`, `arena_participants`, `arena_marks`
-  (migration `20261101111021_arena_classes.sql`). RLS is on with no policies and
+  (migrations `20261101111021_arena_classes.sql`, `20261101114432_arena_teams_locked.sql`). RLS is on with no policies and
   `anon`/`authenticated` have no privileges: only `/api/arena` (service role) reads or
   writes them.
 - `/api/arena` and `/api/arena/photo` are excluded from the auth proxy and

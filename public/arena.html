@@ -78,7 +78,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 button:focus-visible,input:focus-visible,textarea:focus-visible,label.opt:focus-within{outline:3px solid var(--accent);outline-offset:2px}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .spread{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
-input[type=text],input[type=number],input[type=password],textarea{font:inherit;color:var(--ink);background:var(--ground);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
+select,input[type=text],input[type=number],input[type=password],textarea{font:inherit;color:var(--ink);background:var(--ground);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
 textarea{min-height:84px;resize:vertical;font-family:var(--f-body)}
 label.field{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.9rem}
 
@@ -167,7 +167,7 @@ label.opt.wrong{border-color:var(--bad)}
 .tbl{overflow-x:auto}
 .tbl table{border-collapse:collapse;width:100%;font-size:.88rem}
 .tbl th,.tbl td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
-.tbl td.n{text-align:right;font-variant-numeric:tabular-nums}
+.tbl td.n,.tbl th.n{text-align:right;font-variant-numeric:tabular-nums}
 
 /* big screen */
 .wall-title{font-family:var(--f-display);font-weight:900;font-stretch:125%;font-size:clamp(1.8rem,5vw,3.4rem);line-height:1.02}
@@ -290,6 +290,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const rid=()=>Math.random().toString(36).slice(2,10);
+const teamIdNew=()=>"t"+(rid()+rid()+"00000000").replace(/[^a-z0-9]/g,"").slice(0,8);
 const pct=(a,b)=>b>0?Math.round(a/b*100):0;
 const fmtTime=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")};
 const initials=t=>(String(t||"?").trim().split(/\s+/).map(w=>w[0]).join("").slice(0,2)||"?").toUpperCase();
@@ -345,7 +346,7 @@ function RemoteDB(sess,onLost){
   }
   function docData(path){
     if(!st)return null;
-    if(path==="session/state")return {phase:st.class.phase,reveal:!!st.class.reveal};
+    if(path==="session/state")return {phase:st.class.phase,reveal:!!st.class.reveal,teamsLocked:!!st.class.teamsLocked};
     if(path==="board/current")return st.class.board||undefined;
     const [c,id]=path.split("/");const m=coll(c);return m?m[id]:undefined;
   }
@@ -384,7 +385,7 @@ function RemoteDB(sess,onLost){
   const coll_=path=>({path,doc:id=>docRef(path+"/"+(id||rid())),
     onSnapshot(fn){const s={kind:"coll",path,fn,last:null};subs.add(s);setTimeout(emit,0);return()=>subs.delete(s)}});
   poll();
-  return {doc:docRef,collection:coll_,remote:true,reset:async()=>{await call("reset");poll()}};
+  return {doc:docRef,collection:coll_,remote:true,reset:async()=>{await call("reset");poll()},api:async(action,extra)=>{const r=await call(action,extra);poll();return r}};
 }
 function joinUrl(withCode){const base=location.origin+location.pathname;return withCode&&S.sess?base+"?code="+S.sess.code:base}
 function joinHint(){return S.mode==="remote"&&S.sess?`<div class="joinbar"><span>Join at <b>${esc(joinUrl(false).replace(/^https?:\/\//,""))}</b></span><span>Class code <span class="code">${esc(S.sess.code)}</span></span></div>`:""}
@@ -505,7 +506,7 @@ function watchTrainer(){
 }
 async function write(fn,okMsg){
   try{await fn();S.err="";if(okMsg)toast(okMsg);return true}
-  catch(e){const c=e&&e.code;if(S.mode==="remote"&&e&&e.status!==undefined){S.err=e.message;render();return false}S.err=c==="not_granted"?"Your access to this page doesn't allow saving answers. Ask the trainer to share it with you as a Contributor (can interact).":"Couldn't save ("+(c||"error")+"). Check your connection and try again.";render();return false}
+  catch(e){const c=e&&e.code;if(e&&e.status!==undefined){S.err=e.message;render();return false}S.err=c==="not_granted"?"Your access to this page doesn't allow saving answers. Ask the trainer to share it with you as a Contributor (can interact).":"Couldn't save ("+(c||"error")+"). Check your connection and try again.";render();return false}
 }
 function toast(m){const n=document.createElement("div");n.className="notice good";n.setAttribute("role","status");n.textContent=m;n.style.cssText="position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:30;box-shadow:0 6px 24px rgba(0,0,0,.18);background:var(--panel)";document.body.appendChild(n);setTimeout(()=>n.remove(),2600)}
 
@@ -538,10 +539,12 @@ function renderTop(){
   $("#whoText").textContent=(S.isTrainer&&S.trainerView?"Trainer":(S.name||"Participant"))+(S.mode==="live"?" · live":S.mode==="remote"?" · class "+S.sess.code:" · this device only");
 }
 function viewKey(){
-  if(S.isTrainer&&S.trainerView)return "T:"+S.tab+":"+(S.tab==="screen"?S.session.phase:S.tab==="control"?S.session.phase+":"+!!S.session.reveal:"");
+  if(S.isTrainer&&S.trainerView)return "T:"+S.tab+":"+(S.tab==="screen"?S.session.phase:S.tab==="control"?S.session.phase+":"+!!S.session.reveal+":"+!!S.session.teamsLocked:"");
   const ph=S.session.phase;
   if(ph==="pre")return "P:pre:"+(!S.name?"name":(S.myPre?"done":"quiz"));
-  if(ph==="post"){const t=myTeamId();return "P:post:"+(t?(S.teams[t].submitted?"done":"quiz:"+t):"noteam")}
+  const lk=S.session.teamsLocked?"L":"U";
+  if(ph==="post"){const t=myTeamId();return "P:post:"+(t?(S.teams[t].submitted?"done":"quiz:"+t):"noteam:"+lk)}
+  if(ph==="teams")return "P:teams:"+(myTeamId()||"-")+":"+lk+":"+(S.name?"n":"");
   return "P:"+ph;
 }
 function render(){
@@ -564,7 +567,7 @@ function shell(){
   if(ph==="lobby")h+=lobbyShell();
   else if(ph==="pre")h+=!S.name?nameShell("Join the pre-test"):S.myPre?`<div id="preDone"></div>`:quizShell(PRE,"pre");
   else if(ph==="teams")h+=teamsShell();
-  else if(ph==="post"){const t=myTeamId();h+=!t?`<div class="notice warn">You're not in a team yet. Join one below, then the team quiz opens.</div>`+teamsShell():S.teams[t].submitted?`<div id="postDone"></div>`:quizShell(POST,"post",t)}
+  else if(ph==="post"){const t=myTeamId();h+=!t?`<div class="notice warn">${S.session.teamsLocked?"You're not in a team yet. Ask your trainer to place you in a group; the team quiz then opens here.":"You're not in a team yet. Join one below, then the team quiz opens."}</div>`+teamsShell():S.teams[t].submitted?`<div id="postDone"></div>`:quizShell(POST,"post",t)}
   else if(ph==="results")h+=`<div id="results"></div>`;
   return h;
 }
@@ -636,29 +639,94 @@ function reviewHtml(bank,answers){
 
 /* ---------- teams ---------- */
 function teamsShell(){
-  const mine=myTeamId();
-  return `<section class="card stack"><p class="eyebrow">Part 2 · Build your team</p><h1>Pick a nickname. Snap a team photo.</h1><p class="muted">One person creates the team; teammates join it from their own phones. ${S.myPre?"":"Tip: the pre-test score of each member counts toward your team's learning gain."}</p></section>
+  const mine=myTeamId(),locked=!!S.session.teamsLocked,mt=mine?S.teams[mine]:null;
+  return `<section class="card stack"><p class="eyebrow">Part 2 · Build your team</p><h1>Pick a nickname. Snap a team photo.</h1><p class="muted">${locked?"Your trainer has set the groups.":"Create a team, or join one from your own phone. Your trainer may also place you in a group."} ${S.myPre?"":"Tip: the pre-test score of each member counts toward your team's learning gain."}</p></section>
   ${S.name?"":nameShell("First, your name")}
-  ${mine?"":`<form class="card stack" id="teamForm"><h2>Create a team</h2>
+  ${mt&&!mt.submitted?`<form class="card stack" id="teamEdit"><h2>Your team</h2><p class="muted">Anyone in the team can change its nickname, motto and photo.</p>
+    <label class="field" for="enick">Team nickname<input type="text" id="enick" maxlength="32" dir="auto" required value="${esc(mt.nickname)}"></label>
+    <label class="field" for="emotto">Team motto (optional)<input type="text" id="emotto" maxlength="60" dir="auto" value="${esc(mt.motto||"")}"></label>
+    <div class="photo-pick"><div class="prev" id="eprev">${mt.photo?`<img alt="Team photo" src="${esc(mt.photo)}">`:"No photo"}</div><label class="btn" for="ephoto" style="display:inline-flex;align-items:center">${mt.photo?"Change team photo":"Upload or take team photo"}</label><input type="file" id="ephoto" accept="image/*" hidden></div>
+    <div class="row"><button class="primary" type="submit">Save team</button></div></form>`:""}
+  ${mine?"":locked?`<div class="notice warn">You're not in a group yet. Your trainer will place you; this page updates by itself.</div>`:`<form class="card stack" id="teamForm"><h2>Create a team</h2>
     <label class="field" for="tnick">Team nickname<input type="text" id="tnick" maxlength="32" dir="auto" required placeholder="e.g. The Bottom Liners"></label>
     <label class="field" for="tmotto">Team motto (optional)<input type="text" id="tmotto" maxlength="60" dir="auto"></label>
     <div class="photo-pick"><div class="prev" id="tprev">No photo</div><label class="btn" for="tphoto" style="display:inline-flex;align-items:center">Upload or take team photo</label><input type="file" id="tphoto" accept="image/*" hidden></div>
     <div class="row"><button class="primary" type="submit">Create team and join</button></div></form>`}
   <section class="stack"><div class="spread"><h2>Teams</h2><span class="muted num" id="teamCount"></span></div><div class="teams" id="teamGrid"></div></section>`;
 }
-let pendingPhoto="";
+let pendingPhoto="",pendingEditPhoto="";
 function bindTeams(){
+  const ef=$("#teamEdit");
+  if(ef){pendingEditPhoto="";
+    $("#ephoto").addEventListener("change",async e=>{const file=e.target.files&&e.target.files[0];if(!file)return;try{pendingEditPhoto=await shrink(file);$("#eprev").innerHTML=`<img alt="Team photo preview" src="${pendingEditPhoto}">`}catch(err){$("#eprev").textContent="Couldn't read photo"}});
+    ef.addEventListener("submit",async e=>{e.preventDefault();const tid=myTeamId();if(!tid)return;
+      const patch={nickname:$("#enick").value.trim(),motto:$("#emotto").value.trim()};if(pendingEditPhoto)patch.photo=pendingEditPhoto;
+      if(await write(()=>teamOps.updateTeam(tid,patch),"Team saved"))pendingEditPhoto=""});
+  }
   const f=$("#teamForm");if(!f)return;
   $("#tphoto").addEventListener("change",async e=>{const file=e.target.files&&e.target.files[0];if(!file)return;try{pendingPhoto=await shrink(file);$("#tprev").innerHTML=`<img alt="Team photo preview" src="${pendingPhoto}">`}catch(err){$("#tprev").textContent="Couldn't read photo"}});
   f.addEventListener("submit",async e=>{e.preventDefault();if(!S.name){S.err="Enter your name first.";render();return}
-    const nick=$("#tnick").value.trim();if(!nick)return;const id="t"+rid();
+    const nick=$("#tnick").value.trim();if(!nick)return;const id=teamIdNew();
     const ok=await write(()=>S.db.doc("teams/"+id).set({nickname:nick,motto:$("#tmotto").value.trim(),photo:pendingPhoto,createdBy:S.uid,createdAt:Date.now(),submitted:false}));
     if(ok){await write(()=>S.db.doc("members/"+S.uid).set({teamId:id,name:S.name}),"Team created: "+nick);pendingPhoto=""}});
 }
 function shrink(file){return new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const img=new Image();img.onerror=rej;img.onload=()=>{const W=400,H=300,c=document.createElement("canvas");c.width=W;c.height=H;const g=c.getContext("2d");const s=Math.max(W/img.width,H/img.height),w=img.width*s,h=img.height*s;g.drawImage(img,(W-w)/2,(H-h)/2,w,h);res(c.toDataURL("image/jpeg",.72))};img.src=r.result};r.readAsDataURL(file)})}
 function teamCard(id,t,opts){
   const mem=teamMembers(id),mine=myTeamId()===id;
-  return `<article class="team ${mine?"mine":""}"><div class="ph">${t.photo?`<img alt="${esc(t.nickname)} team photo" src="${esc(t.photo)}">`:esc(initials(t.nickname))}</div><div class="body"><div class="nick" dir="auto">${esc(t.nickname)}</div>${t.motto?`<div class="muted" dir="auto" style="font-size:.85rem">“${esc(t.motto)}”</div>`:""}<div class="members" dir="auto">${mem.length?mem.map(m=>esc(m.name)).join(", "):"No members yet"}</div><div class="row" style="margin-top:auto">${t.submitted?'<span class="badge ok">Submitted</span>':""}${opts&&opts.join&&!mine?`<button data-join="${id}">Join</button>`:""}${mine&&opts&&opts.join?`<span class="badge ok">Your team</span><button data-leave="1">Leave</button>`:""}${opts&&opts.admin?`<button class="danger" data-delteam="${id}">Remove</button>`:""}</div></div></article>`;
+  return `<article class="team ${mine?"mine":""}"><div class="ph">${t.photo?`<img alt="${esc(t.nickname)} team photo" src="${esc(t.photo)}">`:esc(initials(t.nickname))}</div><div class="body"><div class="nick" dir="auto">${esc(t.nickname)}</div>${t.motto?`<div class="muted" dir="auto" style="font-size:.85rem">“${esc(t.motto)}”</div>`:""}<div class="members" dir="auto">${mem.length?mem.map(m=>esc(m.name)).join(", "):"No members yet"}</div><div class="row" style="margin-top:auto">${t.submitted?'<span class="badge ok">Submitted</span>':""}${opts&&opts.join&&!mine&&!S.session.teamsLocked?`<button data-join="${id}">Join</button>`:""}${mine&&opts&&opts.join?`<span class="badge ok">Your team</span>${S.session.teamsLocked?"":`<button data-leave="1">Leave</button>`}`:""}${opts&&opts.admin?`<button class="danger" data-delteam="${id}">Remove</button>`:""}</div></div></article>`;
+}
+
+/* ---------- team operations (live class: /api/arena; offline: local store) ---------- */
+function planSplitLocal(onlyUnassigned){
+  const teams=Object.entries(S.teams),open=teams.filter(([,t])=>!t.submitted).map(([id])=>id);if(!open.length)return null;
+  const closed=new Set(teams.filter(([,t])=>t.submitted).map(([id])=>id)),size=Object.fromEntries(open.map(t=>[t,0])),movers=[];
+  for(const [id,m] of Object.entries(S.members)){if(m.teamId&&closed.has(m.teamId))continue;if(onlyUnassigned&&m.teamId&&m.teamId in size){size[m.teamId]++;continue}movers.push(id)}
+  for(let i=movers.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[movers[i],movers[j]]=[movers[j],movers[i]]}
+  const plan={};for(const id of movers){const min=Math.min(...open.map(t=>size[t])),c=open.filter(t=>size[t]===min),pick=c[Math.floor(Math.random()*c.length)];plan[id]=pick;size[pick]++}
+  return plan;
+}
+const teamOps={
+  async createGroups(names){
+    if(S.db.api)return S.db.api("createGroups",{names});
+    let n=0;for(const nickname of names)await S.db.doc("teams/"+teamIdNew()).set({nickname,motto:"",photo:"",createdBy:"trainer",createdAt:Date.now()+(n++),submitted:false});
+  },
+  async assign(pid,teamId){
+    if(S.db.api)return S.db.api("assign",{pid,teamId});
+    const m=S.members[pid]||{};return S.db.doc("members/"+pid).set({teamId,name:m.name||""});
+  },
+  async split(onlyUnassigned){
+    if(S.db.api)return S.db.api("splitTeams",{onlyUnassigned});
+    const plan=planSplitLocal(onlyUnassigned);if(!plan)throw Object.assign(new Error("Create the groups first."),{status:409});
+    for(const [pid,tid] of Object.entries(plan))await S.db.doc("members/"+pid).set({teamId:tid,name:(S.members[pid]||{}).name||""});
+    return {placed:Object.keys(plan).length};
+  },
+  async lock(v){
+    if(S.db.api)return S.db.api("setLock",{locked:v});
+    return S.db.doc("session/state").set(Object.assign({},S.session,{teamsLocked:v,updatedAt:Date.now()}));
+  },
+  async updateTeam(tid,patch){
+    if(S.db.api)return S.db.api("updateTeam",patch);
+    return S.db.doc("teams/"+tid).update(patch);
+  }
+};
+function groupNamesToCreate(){
+  const typed=($("#grpNames").value||"").split(/\n|,/).map(x=>x.trim()).filter(Boolean);
+  if(typed.length)return typed;
+  const n=Math.max(1,Math.min(40,parseInt($("#grpCount").value,10)||0));
+  const used=new Set(Object.values(S.teams).map(t=>String(t.nickname).toLowerCase()));const out=[];
+  for(let i=1;out.length<n&&i<200;i++){const name="Group "+i;if(!used.has(name.toLowerCase()))out.push(name)}
+  return out;
+}
+let assignSig="";
+function refreshAssign(){
+  const box=$("#assignTable");if(!box||box.contains(document.activeElement))return;
+  const teams=Object.entries(S.teams).sort((a,b)=>(a[1].createdAt||0)-(b[1].createdAt||0));
+  const people=Object.entries(S.members).sort((a,b)=>String(a[1].name).localeCompare(String(b[1].name)));
+  const sig=JSON.stringify([teams.map(([id,t])=>[id,t.nickname,!!t.submitted]),people]);if(sig===assignSig&&box.children.length)return;assignSig=sig;
+  if(!people.length){box.innerHTML=`<p class="muted">Participants appear here as they join.</p>`;return}
+  const placed=people.filter(([,m])=>m.teamId&&S.teams[m.teamId]).length;
+  box.innerHTML=`<p class="muted num" style="margin-bottom:6px">${placed} of ${people.length} people are in a group.</p><table><thead><tr><th>Participant</th><th>Group</th></tr></thead><tbody>${people.map(([pid,m])=>{const cur=m.teamId&&S.teams[m.teamId]?m.teamId:"";const frozen=cur&&S.teams[cur].submitted;
+    return `<tr><td dir="auto">${esc(m.name)}</td><td><select data-assign="${esc(pid)}" aria-label="Group for ${esc(m.name)}" ${frozen?"disabled":""}><option value="">No group</option>${teams.map(([tid,t])=>`<option value="${esc(tid)}" ${tid===cur?"selected":""} ${t.submitted&&tid!==cur?"disabled":""}>${esc(t.nickname)}${t.submitted?" (submitted)":""}</option>`).join("")}</select></td></tr>`}).join("")}</tbody></table>`;
 }
 
 /* ---------- trainer: control ---------- */
@@ -670,7 +738,12 @@ function controlShell(){
   <section class="stats" id="trainerStats"></section>
   <section class="card stack"><div class="spread"><h2>Leaderboard</h2><div class="row"><label class="row" for="showIndiv"><input type="checkbox" id="showIndiv" ${S.showIndiv?"checked":""}> Include top 3 individual pre-test scores</label><button class="primary" id="publishBoard">Publish leaderboard</button></div></div>
   <p class="muted">Score the written answers first, then publish. Participants only see results after you publish and open the Results stage.</p><div class="tbl" id="boardPreview"></div></section>
-  <section class="card stack"><h2>Teams</h2><div class="teams" id="teamGrid"></div></section>
+  <section class="card stack"><div class="spread"><h2>Groups</h2><label class="row" for="lockTeams"><input type="checkbox" id="lockTeams" ${S.session.teamsLocked?"checked":""}> Lock groups</label></div>
+    <p class="muted">Make the groups yourself, let participants form their own teams, or both. When groups are locked, participants can't create, join or leave a team, but they can still set their team's nickname and photo.</p>
+    <div class="fields"><label class="field" for="grpNames">Group names, one per line<textarea id="grpNames" rows="3" dir="auto" placeholder="Leave empty to create numbered groups"></textarea></label><label class="field" for="grpCount">How many numbered groups<input type="number" id="grpCount" min="1" max="40" value="4"></label></div>
+    <div class="row"><button id="mkGroups">Create groups</button><button id="splitAll">Split everyone randomly</button><button id="splitRest">Place people without a group</button></div>
+    <div class="tbl" id="assignTable"></div>
+    <div class="teams" id="teamGrid"></div></section>
   <section class="card stack"><h2>Session tools</h2><div class="row">${S.downloads||S.mode!=="live"?`<button id="exportCsv">Export results (CSV)</button>`:""}<button class="danger" id="resetAll">Reset everything for a new class</button></div>${S.mode==="local"?`<div class="row"><button id="lockTrainer">Lock trainer console</button><span class="muted">Participants on this device will need your PIN to get back here.</span></div>`:""}${S.mode==="remote"?`<div class="row"><button id="leaveClass">Sign out of this class on this device</button><span class="muted">The class keeps running. Open it again with the code and your PIN.</span></div>`:""}</section>`;
 }
 function refreshControl(){
@@ -679,7 +752,7 @@ function refreshControl(){
   const pending=pres.filter(r=>r.pending).length+Object.keys(S.post).map(postResult).filter(r=>r&&r.pending).length;
   $("#trainerStats").innerHTML=[["Pre-tests in",preN],["Pre-test class average",avg==null?"–":avg+"%"],["Teams",teamN],["People in teams",joined],["Team post-tests in",postN],["Answers awaiting your score",pending]].map(([l,v])=>`<div class="stat"><div class="eyebrow">${l}</div><div class="v">${v}</div></div>`).join("");
   const b=computeBoard();
-  $("#boardPreview").innerHTML=b.teams.length?`<table><thead><tr><th>#</th><th>Team</th><th>Members</th><th>Pre avg</th><th>Post</th><th>Gain</th><th>Time</th></tr></thead><tbody>${b.teams.map(t=>`<tr><td class="n">${t.rank??"–"}</td><td dir="auto">${esc(t.nickname)}</td><td class="n">${t.members}</td><td class="n">${t.prePct==null?"–":t.prePct+"%"}</td><td class="n">${t.post==null?"–":t.post+" / "+t.postMax+" ("+t.postPct+"%)"}</td><td class="n">${t.gain==null?"–":(t.gain>0?"+":"")+t.gain}</td><td class="n">${t.secs==null?"–":fmtTime(t.secs)}</td></tr>`).join("")}</tbody></table>`:`<p class="muted">No teams yet.</p>`;
+  $("#boardPreview").innerHTML=b.teams.length?`<table><thead><tr><th class="n">#</th><th>Team</th><th class="n">Members</th><th class="n">Pre avg</th><th class="n">Post</th><th class="n">Gain</th><th class="n">Time</th></tr></thead><tbody>${b.teams.map(t=>`<tr><td class="n">${t.rank??"–"}</td><td dir="auto">${esc(t.nickname)}</td><td class="n">${t.members}</td><td class="n">${t.prePct==null?"–":t.prePct+"%"}</td><td class="n">${t.post==null?"–":t.post+" / "+t.postMax+" ("+t.postPct+"%)"}</td><td class="n">${t.gain==null?"–":(t.gain>0?"+":"")+t.gain}</td><td class="n">${t.secs==null?"–":fmtTime(t.secs)}</td></tr>`).join("")}</tbody></table>`:`<p class="muted">No teams yet.</p>`;
 }
 
 /* ---------- trainer: scoring ---------- */
@@ -736,6 +809,7 @@ function refresh(){
     grid.innerHTML=list.length?list.map(([id,t])=>teamCard(id,t,{join:!admin&&!!S.name&&!(S.teams[myTeamId()]||{}).submitted,admin})).join(""):`<p class="muted">No teams yet. Be the first to create one.</p>`;
     const tc=$("#teamCount");if(tc)tc.textContent=list.length+" team"+(list.length===1?"":"s")}
   if($("#trainerStats"))refreshControl();
+  refreshAssign();
   if($("#scorePost"))refreshScore();
   const wall=$("#wall");if(wall){wall.innerHTML=wallHtml();if(S.session.phase==="results"&&S.board)confetti()}
   const res=$("#results");if(res){res.innerHTML=`<p class="eyebrow">Final standings</p><h1>Leaderboard</h1>`+boardHtml(S.board,false);if(S.board)confetti()}
@@ -748,7 +822,7 @@ function bindStatic(){
   const k=S.lastKey;
   if(k.startsWith("P:pre:quiz"))bindQuiz("pre",PRE_ITEMS);
   else if(k.startsWith("P:post:quiz:")){const tid=k.split("|")[0].split(":")[3];bindQuiz("post",POST_ITEMS,tid)}
-  if($("#teamForm"))bindTeams();
+  if($("#teamForm")||$("#teamEdit"))bindTeams();
 }
 document.addEventListener("submit",e=>{if(["joinForm","createForm","openForm"].includes(e.target.id)){e.preventDefault();startForm(e.target);return}if(e.target.id==="pinForm"){e.preventDefault();unlockPin();return}if(e.target.id==="nameForm"){e.preventDefault();const v=$("#nm").value.trim();if(!v)return;S.name=v;ls.set("ssa-name",v);
   const m=S.members[S.uid];if(m)write(()=>S.db.doc("members/"+S.uid).update({name:v}));if(S.sess&&S.sess.role==="participant"){S.sess.name=v;ls.set("ssa-class",S.sess)}S.lastKey="";render();toast("Saved: "+v)}});
@@ -767,6 +841,9 @@ document.addEventListener("click",async e=>{
   if(t.id==="newPart"){S.uid="local-"+rid();ls.set("ssa-localid",S.uid);S.name="";ls.set("ssa-name","");S.myPre=null;watchMine();S.lastKey="";render();return}
   if(t.dataset.phase){await write(()=>S.db.doc("session/state").set(Object.assign({},S.session,{phase:t.dataset.phase,updatedAt:Date.now()})));S.lastKey="";render();return}
   if(t.dataset.join){if(!S.name){S.err="Enter your name first.";render();return}await write(()=>S.db.doc("members/"+S.uid).set({teamId:t.dataset.join,name:S.name}),"Joined "+(S.teams[t.dataset.join]||{}).nickname);return}
+  if(t.id==="mkGroups"){const names=groupNamesToCreate();if(!names.length)return;t.disabled=true;if(await write(()=>teamOps.createGroups(names),names.length+" group"+(names.length===1?"":"s")+" created")){$("#grpNames").value=""}t.disabled=false;return}
+  if(t.id==="splitAll"){if(t.dataset.armed!=="1"){t.dataset.armed="1";t.textContent="Click again to reshuffle everyone";return}t.dataset.armed="";t.textContent="Split everyone randomly";await write(()=>teamOps.split(false),"Everyone placed in a group");return}
+  if(t.id==="splitRest"){await write(()=>teamOps.split(true),"People without a group are placed");return}
   if(t.dataset.leave){await write(()=>S.db.doc("members/"+S.uid).set({teamId:null,name:S.name}));return}
   if(t.dataset.delteam){if(t.dataset.armed!=="1"){t.dataset.armed="1";t.textContent="Confirm remove";return}await write(()=>S.db.doc("teams/"+t.dataset.delteam).delete(),"Team removed");return}
   if(t.id==="publishBoard"){const b=computeBoard();if(!b.teams.some(x=>x.rank!=null)){toast("No team has submitted yet.");return}await write(()=>S.db.doc("board/current").set(b),"Leaderboard published");confettiDone=false;return}
@@ -775,6 +852,8 @@ document.addEventListener("click",async e=>{
 });
 document.addEventListener("change",async e=>{
   const t=e.target;
+  if(t.id==="lockTeams"){await write(()=>teamOps.lock(t.checked),t.checked?"Groups locked":"Groups unlocked");return}
+  if(t.dataset&&t.dataset.assign!==undefined){const pid=t.dataset.assign,tid=t.value||null;t.blur();await write(()=>teamOps.assign(pid,tid));assignSig="";refresh();return}
   if(t.id==="reveal"){await write(()=>S.db.doc("session/state").set(Object.assign({},S.session,{reveal:t.checked})));return}
   if(t.id==="showIndiv"){S.showIndiv=t.checked;return}
   if(t.dataset&&t.dataset.mk){const key=t.dataset.mk,q=t.dataset.q,max=+t.dataset.max;let v=t.value===""?null:Math.max(0,Math.min(max,Math.round(+t.value)));if(v!=null)t.value=v;

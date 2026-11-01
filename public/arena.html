@@ -78,7 +78,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 button:focus-visible,input:focus-visible,textarea:focus-visible,label.opt:focus-within{outline:3px solid var(--accent);outline-offset:2px}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .spread{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
-input[type=text],input[type=number],textarea{font:inherit;color:var(--ink);background:var(--ground);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
+input[type=text],input[type=number],input[type=password],textarea{font:inherit;color:var(--ink);background:var(--ground);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
 textarea{min-height:84px;resize:vertical;font-family:var(--f-body)}
 label.field{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.9rem}
 
@@ -322,7 +322,7 @@ async function boot(){
   if(S.mode!=="live"){
     S.mode="local";S.db=LocalDB();
     S.uid=ls.get("ssa-localid",null);if(!S.uid){S.uid="local-"+rid();ls.set("ssa-localid",S.uid)}
-    S.isTrainer=ls.get("ssa-localtrainer",true);
+    S.isTrainer=ls.get("ssa-trainer-unlocked",false)===true;
   }
   const db_=S.db;
   sub(db_.doc("session/state"),s=>{S.session=Object.assign({phase:"lobby",reveal:false},s.data()||{});render()});
@@ -392,7 +392,8 @@ function shell(){
   let h="";
   if(S.err)h+=`<div class="notice bad" role="alert">${esc(S.err)}</div>`;
   if(S.mode!=="live")h+=`<div class="notice warn"><b>Single-device mode.</b> This standalone copy keeps answers in this browser only. Run the class on one shared device (use “Next participant” between people), or use the claude.ai version for live play on every participant\'s phone.</div>`;
-  if(S.isTrainer)h+=`<div class="spread"><div class="tabs" role="tablist">${S.trainerView?[["control","Control room"],["score","Score answers"],["screen","Big screen"]].map(([k,l])=>`<button class="tab ${S.tab===k?"on":""}" data-tab="${k}">${l}</button>`).join(""):""}</div><div class="row">${S.mode!=="live"&&!S.trainerView?`<button id="newPart">Next participant on this device</button>`:""}<button id="swapView">${S.trainerView?"See participant view":"Back to trainer console"}</button></div></div>`;
+  if(S.isTrainer)h+=`<div class="spread"><div class="tabs" role="tablist">${S.trainerView?[["control","Control room"],["score","Score answers"],["screen","Big screen"]].map(([k,l])=>`<button class="tab ${S.tab===k?"on":""}" data-tab="${k}">${l}</button>`).join(""):""}</div><div class="row">${S.mode!=="live"&&!S.trainerView?`<button id="newPart">Next participant on this device</button>`:""}<button id="swapView">${S.trainerView?(S.mode!=="live"?"Lock and show participant view":"See participant view"):"Back to trainer console"}</button></div></div>`;
+  else if(S.mode!=="live")h+=`<div class="spread"><button id="newPart">Next participant on this device</button><button id="pinOpen">Trainer</button></div>`+(S.pinOpen?pinShell():"");
   if(S.isTrainer&&S.trainerView){h+=S.tab==="score"?scoreShell():S.tab==="screen"?`<div id="wall"></div>`:controlShell();return h}
   const ph=S.session.phase;
   if(ph==="lobby")h+=lobbyShell();
@@ -505,7 +506,7 @@ function controlShell(){
   <section class="card stack"><div class="spread"><h2>Leaderboard</h2><div class="row"><label class="row" for="showIndiv"><input type="checkbox" id="showIndiv" ${S.showIndiv?"checked":""}> Include top 3 individual pre-test scores</label><button class="primary" id="publishBoard">Publish leaderboard</button></div></div>
   <p class="muted">Score the written answers first, then publish. Participants only see results after you publish and open the Results stage.</p><div class="tbl" id="boardPreview"></div></section>
   <section class="card stack"><h2>Teams</h2><div class="teams" id="teamGrid"></div></section>
-  <section class="card stack"><h2>Session tools</h2><div class="row">${S.downloads?`<button id="exportCsv">Export results (CSV)</button>`:""}<button class="danger" id="resetAll">Reset everything for a new class</button></div>${S.mode!=="live"?`<label class="row" for="localTrainer"><input type="checkbox" id="localTrainer" checked> Show trainer console on this device</label>`:""}</section>`;
+  <section class="card stack"><h2>Session tools</h2><div class="row">${S.downloads?`<button id="exportCsv">Export results (CSV)</button>`:""}<button class="danger" id="resetAll">Reset everything for a new class</button></div>${S.mode!=="live"?`<div class="row"><button id="lockTrainer">Lock trainer console</button><span class="muted">Participants on this device will need your PIN to get back here.</span></div>`:""}</section>`;
 }
 function refreshControl(){
   const preN=Object.keys(S.pre).length,teamN=Object.keys(S.teams).length,postN=Object.keys(S.post).length,joined=Object.keys(S.members).length;
@@ -584,12 +585,15 @@ function bindStatic(){
   else if(k.startsWith("P:post:quiz:")){const tid=k.split("|")[0].split(":")[3];bindQuiz("post",POST_ITEMS,tid)}
   if($("#teamForm"))bindTeams();
 }
-document.addEventListener("submit",e=>{if(e.target.id==="nameForm"){e.preventDefault();const v=$("#nm").value.trim();if(!v)return;S.name=v;ls.set("ssa-name",v);
+document.addEventListener("submit",e=>{if(e.target.id==="pinForm"){e.preventDefault();unlockPin();return}if(e.target.id==="nameForm"){e.preventDefault();const v=$("#nm").value.trim();if(!v)return;S.name=v;ls.set("ssa-name",v);
   const m=S.members[S.uid];if(m)write(()=>S.db.doc("members/"+S.uid).update({name:v}));S.lastKey="";render();toast("Saved: "+v)}});
 document.addEventListener("click",async e=>{
   const t=e.target.closest("button");if(!t)return;
   if(t.dataset.tab){S.tab=t.dataset.tab;ls.set("ssa-tab",S.tab);render();return}
-  if(t.id==="swapView"){S.trainerView=!S.trainerView;S.lastKey="";render();return}
+  if(t.id==="swapView"){if(S.mode!=="live"&&S.trainerView){lockTrainer();return}S.trainerView=!S.trainerView;S.lastKey="";render();return}
+  if(t.id==="lockTrainer"){lockTrainer();return}
+  if(t.id==="pinOpen"){S.pinOpen=true;S.lastKey="";render();const f=$("#pin1");if(f)f.focus();return}
+  if(t.id==="pinCancel"){S.pinOpen=false;S.lastKey="";render();return}
   if(t.id==="newPart"){S.uid="local-"+rid();ls.set("ssa-localid",S.uid);S.name="";ls.set("ssa-name","");S.myPre=null;watchMine();S.lastKey="";render();return}
   if(t.dataset.phase){await write(()=>S.db.doc("session/state").set(Object.assign({},S.session,{phase:t.dataset.phase,updatedAt:Date.now()})));S.lastKey="";render();return}
   if(t.dataset.join){if(!S.name){S.err="Enter your name first.";render();return}await write(()=>S.db.doc("members/"+S.uid).set({teamId:t.dataset.join,name:S.name}),"Joined "+(S.teams[t.dataset.join]||{}).nickname);return}
@@ -603,11 +607,21 @@ document.addEventListener("change",async e=>{
   const t=e.target;
   if(t.id==="reveal"){await write(()=>S.db.doc("session/state").set(Object.assign({},S.session,{reveal:t.checked})));return}
   if(t.id==="showIndiv"){S.showIndiv=t.checked;return}
-  if(t.id==="localTrainer"){ls.set("ssa-localtrainer",t.checked);S.isTrainer=t.checked;S.lastKey="";render();return}
   if(t.dataset&&t.dataset.mk){const key=t.dataset.mk,q=t.dataset.q,max=+t.dataset.max;let v=t.value===""?null:Math.max(0,Math.min(max,Math.round(+t.value)));if(v!=null)t.value=v;
     const items=Object.assign({},(S.marks[key]&&S.marks[key].items)||{});if(v==null)delete items[q];else items[q]=v;
     S.marks[key]={items};await write(()=>S.db.doc("marks/"+key).set({items,updatedAt:Date.now()}));refresh()}
 });
+/* ---------- trainer PIN (single-device mode only; live mode uses edit access) ---------- */
+function pinShell(){const has=!!ls.get("ssa-pin",null);
+  return `<form class="card stack" id="pinForm"><h2>${has?"Trainer PIN":"Set a trainer PIN"}</h2><p class="muted">${has?"Enter the PIN to open the trainer console on this device.":"First time on this device: choose a 4–8 digit PIN. You will need it to open the trainer console again."}</p><label class="field" for="pin1">${has?"PIN":"New PIN"}<input type="password" inputmode="numeric" maxlength="8" id="pin1" autocomplete="off" required></label>${has?"":`<label class="field" for="pin2">Repeat the PIN<input type="password" inputmode="numeric" maxlength="8" id="pin2" autocomplete="off" required></label>`}<div class="row"><button class="primary" type="submit">${has?"Unlock":"Set PIN and unlock"}</button><button type="button" id="pinCancel">Cancel</button></div><p class="muted" id="pinMsg" role="alert"></p>${has?`<p class="muted" style="font-size:.82rem">Forgot the PIN? Clearing this browser's data for the site removes the PIN, and also every answer stored on this device.</p>`:""}</form>`}
+async function hashPin(pin,salt){const s=salt+":"+pin;try{const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("")}catch(e){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))|0;return "f"+h}}
+async function unlockPin(){const p1=$("#pin1").value.trim(),msg=$("#pinMsg");
+  if(!/^[0-9]{4,8}$/.test(p1)){msg.textContent="Use 4 to 8 digits.";return}
+  const rec=ls.get("ssa-pin",null);
+  if(!rec){if(p1!==$("#pin2").value.trim()){msg.textContent="The two PINs don't match.";return}const salt=rid();ls.set("ssa-pin",{salt,hash:await hashPin(p1,salt)})}
+  else if(await hashPin(p1,rec.salt)!==rec.hash){msg.textContent="Wrong PIN. Try again.";$("#pin1").value="";$("#pin1").focus();return}
+  ls.set("ssa-trainer-unlocked",true);S.isTrainer=true;S.trainerView=true;S.pinOpen=false;watchTrainer();S.lastKey="";render();toast("Trainer console unlocked")}
+function lockTrainer(){ls.set("ssa-trainer-unlocked",false);S.isTrainer=false;S.trainerView=true;S.pinOpen=false;S.lastKey="";render();toast("Trainer console locked")}
 async function resetAll(){
   const ops=[];
   for(const c of ["pre","post","marks"])for(const id of Object.keys(S[c]))ops.push(S.db.doc(c+"/"+id).delete());

@@ -172,6 +172,10 @@ label.opt.wrong{border-color:var(--bad)}
 /* big screen */
 .wall-title{font-family:var(--f-display);font-weight:900;font-stretch:125%;font-size:clamp(1.8rem,5vw,3.4rem);line-height:1.02}
 .confetti{position:fixed;inset:0;pointer-events:none;z-index:20}
+.joinbar{display:flex;flex-wrap:wrap;gap:8px 28px;align-items:baseline;background:var(--panel-2);border-radius:var(--r);padding:14px 18px;font-size:1.15rem}
+.joinbar b{overflow-wrap:anywhere}
+.code{font-family:var(--f-display);font-weight:900;font-stretch:118%;letter-spacing:.14em;font-size:clamp(1.8rem,5vw,2.8rem);color:var(--accent)}
+input.code-in{font-family:var(--f-display);font-size:1.4rem;letter-spacing:.2em;text-transform:uppercase}
 @media (prefers-reduced-motion: reduce){.progress i{transition:none}}
 </style>
 
@@ -296,6 +300,123 @@ function LocalDB(){
   return {doc:docRef,collection:coll,local:true};
 }
 
+/* ============================== LIVE CLASS MODE (StyleShift website) ============================== */
+const API="/api/arena";
+async function arenaCall(body){
+  let r,j=null;
+  try{r=await fetch(API,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body),cache:"no-store"})}
+  catch(e){const err=new Error("You seem to be offline. Check the connection and try again.");err.status=0;throw err}
+  try{j=await r.json()}catch(e){}
+  if(!r.ok){const err=new Error((j&&j.error)||("Something went wrong ("+r.status+")."));err.status=r.status;throw err}
+  return j;
+}
+/* Same doc/collection shape as LocalDB and the artifact db, backed by /api/arena with polling. */
+function RemoteDB(sess,onLost){
+  const auth=sess.role==="trainer"?{trainerKey:sess.trainerKey}:{pid:sess.pid,token:sess.token};
+  let st=null,timer=null,busy=false,again=false,dead=false;const subs=new Set();
+  async function call(action,extra){
+    try{return await arenaCall(Object.assign({action,code:sess.code},auth,extra||{}))}
+    catch(e){if(e.status===401||e.status===410){dead=true;clearTimeout(timer);onLost(e.message)}throw e}
+  }
+  const ts=v=>Date.parse(v)||0;
+  const photoUrl=t=>t.photoV?"/api/arena/photo?code="+encodeURIComponent(sess.code)+"&team="+encodeURIComponent(t.id)+"&v="+t.photoV:"";
+  function coll(name){
+    if(!st)return null;
+    if(name==="teams")return Object.fromEntries(st.teams.map(t=>[t.id,{nickname:t.nickname,motto:t.motto||"",photo:photoUrl(t),submitted:!!t.submitted,submittedBy:t.submittedBy||"",auto:t.auto,createdAt:ts(t.createdAt)}]));
+    if(name==="members")return Object.fromEntries(st.members.map(m=>[m.id,{teamId:m.teamId,name:m.name}]));
+    if(name==="pre"){
+      if(st.trainer)return Object.fromEntries(st.trainer.pre.map(p=>[p.id,{name:p.name,answers:p.answers||{},secs:p.secs||0,submittedAt:ts(p.submittedAt)}]));
+      return st.me&&st.me.pre?{[st.me.id]:{name:st.me.name,answers:st.me.pre.answers||{},secs:st.me.pre.secs||0,submittedAt:ts(st.me.pre.submittedAt)}}:{};
+    }
+    if(name==="post")return st.trainer?Object.fromEntries(st.trainer.post.map(p=>[p.teamId,{teamId:p.teamId,answers:p.answers||{},secs:p.secs||0,submittedBy:p.submittedBy||"",submittedAt:ts(p.submittedAt)}])):{};
+    if(name==="marks")return st.trainer?Object.fromEntries(st.trainer.marks.map(m=>[m.key,{items:m.items||{}}])):{};
+    return {};
+  }
+  function docData(path){
+    if(!st)return null;
+    if(path==="session/state")return {phase:st.class.phase,reveal:!!st.class.reveal};
+    if(path==="board/current")return st.class.board||undefined;
+    const [c,id]=path.split("/");const m=coll(c);return m?m[id]:undefined;
+  }
+  const snapDoc=(path,d)=>({id:path.split("/").pop(),exists:d!==undefined,data:()=>d===undefined?undefined:JSON.parse(JSON.stringify(d)),metadata:{fromCache:false,hasPendingWrites:false}});
+  function emit(){subs.forEach(s=>{
+    const v=s.kind==="doc"?docData(s.path):coll(s.path);if(v===null)return;
+    const k=v===undefined?"-":JSON.stringify(v);if(k===s.last)return;s.last=k;
+    if(s.kind==="doc")s.fn(snapDoc(s.path,v));
+    else{const docs=Object.keys(v).map(id=>snapDoc(s.path+"/"+id,v[id]));s.fn({docs,size:docs.length,empty:!docs.length})}
+  })}
+  function schedule(){clearTimeout(timer);if(!dead)timer=setTimeout(poll,document.hidden?15000:(sess.role==="trainer"?3000:2500))}
+  async function poll(){
+    if(dead)return;if(busy){again=true;return}
+    busy=true;
+    try{st=await call("state");if(S.connErr){S.connErr=false;S.err="";S.lastKey=""}emit();render()}
+    catch(e){if(!dead){S.connErr=true;S.err="Connection problem: "+e.message+" Retrying…";render()}}
+    finally{busy=false;if(again){again=false;poll()}else schedule()}
+  }
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!dead)poll()});
+  async function write(path,op,d){
+    const [c,id]=path.split("/");let p=null;
+    if(path==="session/state"&&op==="set")p=call("setStage",{phase:d.phase,reveal:!!d.reveal});
+    else if(path==="board/current"){if(op==="set")p=call("publish",{board:d})}
+    else if(c==="teams"){if(op==="set")p=call("createTeam",{teamId:id,nickname:d.nickname,motto:d.motto||"",photo:d.photo||""});else if(op==="delete")p=call("deleteTeam",{teamId:id})}
+    else if(c==="members"){if(op==="set")p=call("joinTeam",{teamId:d.teamId||null});else if(op==="update"&&d.name)p=call("rename",{name:d.name})}
+    else if(c==="pre"&&op==="set")p=call("submitPre",{answers:d.answers,secs:d.secs});
+    else if(c==="post"&&op==="set")p=call("submitPost",{answers:d.answers,secs:d.secs,auto:d.auto});
+    else if(c==="marks"&&op==="set")p=call("mark",{key:id,items:d.items});
+    if(!p)return;
+    const r=await p;poll();return r;
+  }
+  const docRef=path=>({id:path.split("/").pop(),path,
+    get:async()=>snapDoc(path,docData(path)??undefined),
+    set:d=>write(path,"set",d),update:d=>write(path,"update",d),delete:()=>write(path,"delete"),
+    onSnapshot(fn){const s={kind:"doc",path,fn,last:null};subs.add(s);setTimeout(emit,0);return()=>subs.delete(s)}});
+  const coll_=path=>({path,doc:id=>docRef(path+"/"+(id||rid())),
+    onSnapshot(fn){const s={kind:"coll",path,fn,last:null};subs.add(s);setTimeout(emit,0);return()=>subs.delete(s)}});
+  poll();
+  return {doc:docRef,collection:coll_,remote:true,reset:async()=>{await call("reset");poll()}};
+}
+function joinUrl(withCode){const base=location.origin+location.pathname;return withCode&&S.sess?base+"?code="+S.sess.code:base}
+function joinHint(){return S.mode==="remote"&&S.sess?`<div class="joinbar"><span>Join at <b>${esc(joinUrl(false).replace(/^https?:\/\//,""))}</b></span><span>Class code <span class="code">${esc(S.sess.code)}</span></span></div>`:""}
+function startRemote(sess){
+  S.mode="remote";S.sess=sess;S.isTrainer=sess.role==="trainer";S.trainerView=true;S.err="";
+  S.uid=S.isTrainer?"trainer":sess.pid;
+  if(!S.isTrainer&&sess.name){S.name=sess.name;ls.set("ssa-name",sess.name)}
+  S.db=RemoteDB(sess,msg=>{ls.del("ssa-class");showStart(msg)});
+  attach();
+}
+function showStart(msg){
+  S.mode="start";clearInterval(S.timerId);document.body.classList.remove("wide");
+  $("#steps").innerHTML="";$("#whoText").textContent="Not in a class yet";$("#who").classList.add("local");
+  let code="";try{code=(new URLSearchParams(location.search).get("code")||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6)}catch(e){}
+  $("#main").innerHTML=`${msg?`<div class="notice warn" role="alert">${esc(msg)}</div>`:""}
+  <form class="card stack" id="joinForm"><p class="eyebrow">StyleShift · Pharma field workshop</p><h1>Join your class</h1><p class="muted">Your trainer shows the class code on the screen.</p>
+    <label class="field" for="jcode">Class code<input type="text" class="code-in" id="jcode" maxlength="7" autocomplete="off" autocapitalize="characters" spellcheck="false" value="${esc(code)}" required></label>
+    <label class="field" for="jname">Your name<input type="text" id="jname" maxlength="40" autocomplete="name" value="${esc(S.name)}" required></label>
+    <div class="row"><button class="primary" type="submit">Join class</button></div><p class="muted" role="alert"></p></form>
+  <details class="sub" ${code?"":"open"}><summary><b>I'm the trainer</b><span class="muted">Create a class or open yours</span></summary><div class="inner">
+    <form class="stack" id="createForm"><h3>Create a class</h3>
+      <label class="field" for="cname">Class name<input type="text" id="cname" maxlength="60" required placeholder="e.g. Amman cohort, November"></label>
+      <div class="fields"><label class="field" for="cpin1">Trainer PIN (4–8 digits)<input type="password" inputmode="numeric" maxlength="8" id="cpin1" autocomplete="new-password" required></label><label class="field" for="cpin2">Repeat the PIN<input type="password" inputmode="numeric" maxlength="8" id="cpin2" autocomplete="new-password" required></label></div>
+      <p class="muted" style="font-size:.85rem">You get a class code. Use the code and this PIN to open the trainer console on any device.</p>
+      <div class="row"><button class="primary" type="submit">Create class</button></div><p class="muted" role="alert"></p></form>
+    <form class="stack" id="openForm" style="border-top:1px solid var(--line);padding-top:12px"><h3>Open my class</h3>
+      <div class="fields"><label class="field" for="ocode">Class code<input type="text" class="code-in" id="ocode" maxlength="7" autocomplete="off" autocapitalize="characters" spellcheck="false" required></label><label class="field" for="opin">Trainer PIN<input type="password" inputmode="numeric" maxlength="8" id="opin" autocomplete="current-password" required></label></div>
+      <div class="row"><button type="submit">Open trainer console</button></div><p class="muted" role="alert"></p></form>
+  </div></details>
+  <p class="muted" style="font-size:.85rem">No internet in the room? <button type="button" id="goOffline">Run offline on this device</button></p>`;
+}
+async function startForm(form){
+  const btn=form.querySelector("button[type=submit]"),msg=form.querySelector("[role=alert]");
+  msg.textContent="";btn.disabled=true;
+  try{
+    let sess;
+    if(form.id==="joinForm"){const r=await arenaCall({action:"join",code:$("#jcode").value,name:$("#jname").value});sess={role:"participant",code:r.code,pid:r.pid,token:r.token,name:r.name,className:r.className}}
+    else if(form.id==="createForm"){const p1=$("#cpin1").value.trim();if(!/^[0-9]{4,8}$/.test(p1))throw new Error("Choose a PIN of 4 to 8 digits.");if(p1!==$("#cpin2").value.trim())throw new Error("The two PINs don't match.");const r=await arenaCall({action:"create",name:$("#cname").value,pin:p1});sess={role:"trainer",code:r.code,trainerKey:r.trainerKey,className:r.name}}
+    else{const r=await arenaCall({action:"trainerLogin",code:$("#ocode").value,pin:$("#opin").value.trim()});sess={role:"trainer",code:r.code,trainerKey:r.trainerKey,className:r.name}}
+    ls.set("ssa-class",sess);startRemote(sess);
+  }catch(err){msg.textContent=err.message||"Something went wrong.";btn.disabled=false}
+}
+
 /* ============================== STATE ============================== */
 const S={mode:"connecting",db:null,user:null,downloads:null,uid:null,isTrainer:false,
   session:{phase:"lobby",reveal:false},teams:{},members:{},board:null,myPre:null,
@@ -320,10 +441,21 @@ async function boot(){
     if(!S.uid){S.mode="local"}
   }
   if(S.mode!=="live"){
+    // On the StyleShift website: live class mode (class code + /api/arena) unless the
+    // trainer chose offline mode. Opened as a file, or offline: this device only.
+    if(/^https?:$/.test(location.protocol)&&!ls.get("ssa-offline",false)){
+      const sess=ls.get("ssa-class",null);
+      if(sess&&sess.code)startRemote(sess);else showStart();
+      return;
+    }
     S.mode="local";S.db=LocalDB();
     S.uid=ls.get("ssa-localid",null);if(!S.uid){S.uid="local-"+rid();ls.set("ssa-localid",S.uid)}
     S.isTrainer=ls.get("ssa-trainer-unlocked",false)===true;
   }
+  attach();
+}
+function attach(){
+  S.lastKey="";
   const db_=S.db;
   sub(db_.doc("session/state"),s=>{S.session=Object.assign({phase:"lobby",reveal:false},s.data()||{});render()});
   sub(db_.collection("teams"),q=>{S.teams={};q.docs.forEach(d=>S.teams[d.id]=d.data());render()});
@@ -341,7 +473,7 @@ function watchTrainer(){
 }
 async function write(fn,okMsg){
   try{await fn();S.err="";if(okMsg)toast(okMsg);return true}
-  catch(e){const c=e&&e.code;S.err=c==="not_granted"?"Your access to this page doesn't allow saving answers. Ask the trainer to share it with you as a Contributor (can interact).":"Couldn't save ("+(c||"error")+"). Check your connection and try again.";render();return false}
+  catch(e){const c=e&&e.code;if(S.mode==="remote"&&e&&e.status!==undefined){S.err=e.message;render();return false}S.err=c==="not_granted"?"Your access to this page doesn't allow saving answers. Ask the trainer to share it with you as a Contributor (can interact).":"Couldn't save ("+(c||"error")+"). Check your connection and try again.";render();return false}
 }
 function toast(m){const n=document.createElement("div");n.className="notice good";n.setAttribute("role","status");n.textContent=m;n.style.cssText="position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:30;box-shadow:0 6px 24px rgba(0,0,0,.18);background:var(--panel)";document.body.appendChild(n);setTimeout(()=>n.remove(),2600)}
 
@@ -370,18 +502,18 @@ function computeBoard(){
 function renderTop(){
   const ph=S.session.phase,idx=PHASES.findIndex(p=>p[0]===ph);
   $("#steps").innerHTML=PHASES.map(([k,l],i)=>`<span class="step ${k===ph?"on":(idx>i?"done":"")}">${i+1} · ${l}</span>`).join("");
-  const chip=$("#who");chip.classList.toggle("local",S.mode!=="live");
-  $("#whoText").textContent=(S.isTrainer&&S.trainerView?"Trainer":(S.name||"Participant"))+(S.mode==="live"?" · live":" · this device only");
+  const chip=$("#who");chip.classList.toggle("local",S.mode==="local");
+  $("#whoText").textContent=(S.isTrainer&&S.trainerView?"Trainer":(S.name||"Participant"))+(S.mode==="live"?" · live":S.mode==="remote"?" · class "+S.sess.code:" · this device only");
 }
 function viewKey(){
-  if(S.isTrainer&&S.trainerView)return "T:"+S.tab+":"+(S.tab==="screen"?S.session.phase:"");
+  if(S.isTrainer&&S.trainerView)return "T:"+S.tab+":"+(S.tab==="screen"?S.session.phase:S.tab==="control"?S.session.phase+":"+!!S.session.reveal:"");
   const ph=S.session.phase;
   if(ph==="pre")return "P:pre:"+(!S.name?"name":(S.myPre?"done":"quiz"));
   if(ph==="post"){const t=myTeamId();return "P:post:"+(t?(S.teams[t].submitted?"done":"quiz:"+t):"noteam")}
   return "P:"+ph;
 }
 function render(){
-  if(S.mode==="connecting")return;
+  if(S.mode==="connecting"||S.mode==="start")return;
   renderTop();
   document.body.classList.toggle("wide",S.isTrainer&&S.trainerView&&S.tab==="screen");
   const key=viewKey()+"|"+(S.err?"e":"");
@@ -391,9 +523,10 @@ function render(){
 function shell(){
   let h="";
   if(S.err)h+=`<div class="notice bad" role="alert">${esc(S.err)}</div>`;
-  if(S.mode!=="live")h+=`<div class="notice warn"><b>Single-device mode.</b> This standalone copy keeps answers in this browser only. Run the class on one shared device (use “Next participant” between people), or use the claude.ai version for live play on every participant\'s phone.</div>`;
-  if(S.isTrainer)h+=`<div class="spread"><div class="tabs" role="tablist">${S.trainerView?[["control","Control room"],["score","Score answers"],["screen","Big screen"]].map(([k,l])=>`<button class="tab ${S.tab===k?"on":""}" data-tab="${k}">${l}</button>`).join(""):""}</div><div class="row">${S.mode!=="live"&&!S.trainerView?`<button id="newPart">Next participant on this device</button>`:""}<button id="swapView">${S.trainerView?(S.mode!=="live"?"Lock and show participant view":"See participant view"):"Back to trainer console"}</button></div></div>`;
-  else if(S.mode!=="live")h+=`<div class="spread"><button id="newPart">Next participant on this device</button><button id="pinOpen">Trainer</button></div>`+(S.pinOpen?pinShell():"");
+  if(S.mode==="local")h+=`<div class="notice warn"><b>Offline mode.</b> Answers stay in this browser only. Run the class on one shared device and use “Next participant” between people.${/^https?:$/.test(location.protocol)?` <button id="goOnline">Switch to live class mode</button>`:""}</div>`;
+  if(S.isTrainer)h+=`<div class="spread"><div class="tabs" role="tablist">${S.trainerView?[["control","Control room"],["score","Score answers"],["screen","Big screen"]].map(([k,l])=>`<button class="tab ${S.tab===k?"on":""}" data-tab="${k}">${l}</button>`).join(""):""}</div><div class="row">${S.mode==="local"&&!S.trainerView?`<button id="newPart">Next participant on this device</button>`:""}${S.mode==="remote"?"":`<button id="swapView">${S.trainerView?(S.mode==="local"?"Lock and show participant view":"See participant view"):"Back to trainer console"}</button>`}</div></div>`;
+  else if(S.mode==="local")h+=`<div class="spread"><button id="newPart">Next participant on this device</button><button id="pinOpen">Trainer</button></div>`+(S.pinOpen?pinShell():"");
+  else if(S.mode==="remote")h+=`<div class="spread"><span class="muted">Class <b class="num">${esc(S.sess.code)}</b>${S.sess.className?" · "+esc(S.sess.className):""}</span><button id="leaveClass">Leave class</button></div>`;
   if(S.isTrainer&&S.trainerView){h+=S.tab==="score"?scoreShell():S.tab==="screen"?`<div id="wall"></div>`:controlShell();return h}
   const ph=S.session.phase;
   if(ph==="lobby")h+=lobbyShell();
@@ -457,7 +590,7 @@ function bindQuiz(kind,items,tid){
     const secs=Math.round((Date.now()-d.startedAt)/1000);
     let ok;
     if(kind==="pre")ok=await write(()=>S.db.doc("pre/"+S.uid).set({name:S.name,answers:d.answers,startedAt:d.startedAt,submittedAt:Date.now(),secs}),"Submitted. Good luck!");
-    else ok=await write(async()=>{await S.db.doc("post/"+tid).set({teamId:tid,answers:d.answers,submittedBy:S.name||"",startedAt:d.startedAt,submittedAt:Date.now(),secs});await S.db.doc("teams/"+tid).update({submitted:true,submittedBy:S.name||"",submittedAt:Date.now(),auto:autoScore(POST_ITEMS,d.answers)})},"Team answers submitted!");
+    else ok=await write(async()=>{await S.db.doc("post/"+tid).set({teamId:tid,answers:d.answers,submittedBy:S.name||"",startedAt:d.startedAt,submittedAt:Date.now(),secs,auto:autoScore(POST_ITEMS,d.answers)});await S.db.doc("teams/"+tid).update({submitted:true,submittedBy:S.name||"",submittedAt:Date.now(),auto:autoScore(POST_ITEMS,d.answers)})},"Team answers submitted!");
     if(!ok)$("#submitQuiz").disabled=false;
   });
 }
@@ -499,14 +632,14 @@ function teamCard(id,t,opts){
 /* ---------- trainer: control ---------- */
 function controlShell(){
   const phases=[["lobby","Lobby","Participants enter names"],["pre","Open pre-test","Individual, before training"],["teams","Open teams","Nicknames + photos"],["post","Open post-test","Team competition"],["results","Show results","Leaderboard on every screen"]];
-  return `<section class="card stack"><div class="spread"><h2>Control room</h2><span class="muted">Stage moves every participant's screen.</span></div>
+  return `${S.mode==="remote"?`<section class="card stack"><div class="spread"><div><p class="eyebrow">Class · ${esc(S.sess.className||"")}</p><div class="code">${esc(S.sess.code)}</div></div><button id="copyJoin">Copy join link</button></div><p class="muted">Participants open <b>${esc(joinUrl(false))}</b> and enter this code. To open this console on another device, use the code and your PIN.</p></section>`:""}<section class="card stack"><div class="spread"><h2>Control room</h2><span class="muted">Stage moves every participant's screen.</span></div>
   <div class="phase-btns">${phases.map(([k,l,s])=>`<button data-phase="${k}" class="${S.session.phase===k?"on":""}"><span>${l}</span><small>${s}</small></button>`).join("")}</div>
   <label class="row" for="reveal"><input type="checkbox" id="reveal" ${S.session.reveal?"checked":""}> Let participants see correct answers for their own pre-test</label></section>
   <section class="stats" id="trainerStats"></section>
   <section class="card stack"><div class="spread"><h2>Leaderboard</h2><div class="row"><label class="row" for="showIndiv"><input type="checkbox" id="showIndiv" ${S.showIndiv?"checked":""}> Include top 3 individual pre-test scores</label><button class="primary" id="publishBoard">Publish leaderboard</button></div></div>
   <p class="muted">Score the written answers first, then publish. Participants only see results after you publish and open the Results stage.</p><div class="tbl" id="boardPreview"></div></section>
   <section class="card stack"><h2>Teams</h2><div class="teams" id="teamGrid"></div></section>
-  <section class="card stack"><h2>Session tools</h2><div class="row">${S.downloads?`<button id="exportCsv">Export results (CSV)</button>`:""}<button class="danger" id="resetAll">Reset everything for a new class</button></div>${S.mode!=="live"?`<div class="row"><button id="lockTrainer">Lock trainer console</button><span class="muted">Participants on this device will need your PIN to get back here.</span></div>`:""}</section>`;
+  <section class="card stack"><h2>Session tools</h2><div class="row">${S.downloads||S.mode!=="live"?`<button id="exportCsv">Export results (CSV)</button>`:""}<button class="danger" id="resetAll">Reset everything for a new class</button></div>${S.mode==="local"?`<div class="row"><button id="lockTrainer">Lock trainer console</button><span class="muted">Participants on this device will need your PIN to get back here.</span></div>`:""}${S.mode==="remote"?`<div class="row"><button id="leaveClass">Sign out of this class on this device</button><span class="muted">The class keeps running. Open it again with the code and your PIN.</span></div>`:""}</section>`;
 }
 function refreshControl(){
   const preN=Object.keys(S.pre).length,teamN=Object.keys(S.teams).length,postN=Object.keys(S.post).length,joined=Object.keys(S.members).length;
@@ -551,10 +684,10 @@ function boardHtml(b,big){
 function wallHtml(){
   const ph=S.session.phase,teams=Object.entries(S.teams);
   if(ph==="results")return `<div class="stack"><p class="eyebrow">StyleShift Arena · Final standings</p><h1 class="wall-title">The leaderboard</h1>${boardHtml(S.board,true)}</div>`;
-  if(ph==="pre"){const n=Object.keys(S.pre).length;return `<div class="stack"><p class="eyebrow">Part 1 · Individual pre-test</p><h1 class="wall-title">Answer on your own. ${PRE_MINUTES} minutes.</h1><div class="stats"><div class="stat"><div class="eyebrow">Submitted</div><div class="big">${n}</div></div></div><div class="row">${Object.values(S.pre).sort((a,b)=>a.submittedAt-b.submittedAt).map(p=>`<span class="chip" dir="auto">${esc(p.name)}</span>`).join("")}</div></div>`}
+  if(ph==="pre"){const n=Object.keys(S.pre).length;return `<div class="stack"><p class="eyebrow">Part 1 · Individual pre-test</p><h1 class="wall-title">Answer on your own. ${PRE_MINUTES} minutes.</h1>${joinHint()}<div class="stats"><div class="stat"><div class="eyebrow">Submitted</div><div class="big">${n}</div></div></div><div class="row">${Object.values(S.pre).sort((a,b)=>a.submittedAt-b.submittedAt).map(p=>`<span class="chip" dir="auto">${esc(p.name)}</span>`).join("")}</div></div>`}
   if(ph==="post")return `<div class="stack"><p class="eyebrow">Part 2 · Team post-test</p><h1 class="wall-title">Cases, scenarios and the dialect lab.</h1><div class="teams">${teams.map(([id,t])=>teamCard(id,t)).join("")}</div></div>`;
-  if(ph==="teams")return `<div class="stack"><p class="eyebrow">Part 2 · Team building</p><h1 class="wall-title">Pick a nickname. Snap a photo.</h1><div class="teams">${teams.length?teams.map(([id,t])=>teamCard(id,t)).join(""):`<p class="muted">Teams will appear here as they are created.</p>`}</div></div>`;
-  return `<div class="stack"><p class="eyebrow">StyleShift · Pharma field workshop</p><h1 class="wall-title">Style is the starting point. Versatility is the skill.</h1><p class="muted">Open this page on your phone and enter your name. The pre-test opens soon.</p><div class="row">${Object.values(S.members).map(m=>`<span class="chip">${esc(m.name)}</span>`).join("")}</div></div>`;
+  if(ph==="teams")return `<div class="stack"><p class="eyebrow">Part 2 · Team building</p><h1 class="wall-title">Pick a nickname. Snap a photo.</h1>${joinHint()}<div class="teams">${teams.length?teams.map(([id,t])=>teamCard(id,t)).join(""):`<p class="muted">Teams will appear here as they are created.</p>`}</div></div>`;
+  return `<div class="stack"><p class="eyebrow">StyleShift · Pharma field workshop</p><h1 class="wall-title">Style is the starting point. Versatility is the skill.</h1>${S.mode==="remote"?joinHint():`<p class="muted">Open this page on your phone and enter your name. The pre-test opens soon.</p>`}<div class="row">${Object.values(S.members).map(m=>`<span class="chip">${esc(m.name)}</span>`).join("")}</div></div>`;
 }
 let confettiDone=false;
 function confetti(){if(confettiDone)return;confettiDone=true;try{if(window.matchMedia("(prefers-reduced-motion: reduce)").matches)return}catch(e){}
@@ -585,13 +718,17 @@ function bindStatic(){
   else if(k.startsWith("P:post:quiz:")){const tid=k.split("|")[0].split(":")[3];bindQuiz("post",POST_ITEMS,tid)}
   if($("#teamForm"))bindTeams();
 }
-document.addEventListener("submit",e=>{if(e.target.id==="pinForm"){e.preventDefault();unlockPin();return}if(e.target.id==="nameForm"){e.preventDefault();const v=$("#nm").value.trim();if(!v)return;S.name=v;ls.set("ssa-name",v);
-  const m=S.members[S.uid];if(m)write(()=>S.db.doc("members/"+S.uid).update({name:v}));S.lastKey="";render();toast("Saved: "+v)}});
+document.addEventListener("submit",e=>{if(["joinForm","createForm","openForm"].includes(e.target.id)){e.preventDefault();startForm(e.target);return}if(e.target.id==="pinForm"){e.preventDefault();unlockPin();return}if(e.target.id==="nameForm"){e.preventDefault();const v=$("#nm").value.trim();if(!v)return;S.name=v;ls.set("ssa-name",v);
+  const m=S.members[S.uid];if(m)write(()=>S.db.doc("members/"+S.uid).update({name:v}));if(S.sess&&S.sess.role==="participant"){S.sess.name=v;ls.set("ssa-class",S.sess)}S.lastKey="";render();toast("Saved: "+v)}});
 document.addEventListener("click",async e=>{
   const t=e.target.closest("button");if(!t)return;
   if(t.dataset.tab){S.tab=t.dataset.tab;ls.set("ssa-tab",S.tab);render();return}
-  if(t.id==="swapView"){if(S.mode!=="live"&&S.trainerView){lockTrainer();return}S.trainerView=!S.trainerView;S.lastKey="";render();return}
+  if(t.id==="swapView"){if(S.mode==="local"&&S.trainerView){lockTrainer();return}S.trainerView=!S.trainerView;S.lastKey="";render();return}
   if(t.id==="lockTrainer"){lockTrainer();return}
+  if(t.id==="goOffline"){ls.set("ssa-offline",true);location.reload();return}
+  if(t.id==="goOnline"){ls.del("ssa-offline");location.reload();return}
+  if(t.id==="copyJoin"){const u=joinUrl(true);try{await navigator.clipboard.writeText(u);toast("Join link copied")}catch(err){toast(u)}return}
+  if(t.id==="leaveClass"){if(t.dataset.armed!=="1"){t.dataset.armed="1";t.textContent=S.isTrainer?"Click again to sign out":"Click again to leave. You would rejoin as a new person";return}ls.del("ssa-class");location.reload();return}
   if(t.id==="pinOpen"){S.pinOpen=true;S.lastKey="";render();const f=$("#pin1");if(f)f.focus();return}
   if(t.id==="pinCancel"){S.pinOpen=false;S.lastKey="";render();return}
   if(t.id==="newPart"){S.uid="local-"+rid();ls.set("ssa-localid",S.uid);S.name="";ls.set("ssa-name","");S.myPre=null;watchMine();S.lastKey="";render();return}
@@ -623,6 +760,7 @@ async function unlockPin(){const p1=$("#pin1").value.trim(),msg=$("#pinMsg");
   ls.set("ssa-trainer-unlocked",true);S.isTrainer=true;S.trainerView=true;S.pinOpen=false;watchTrainer();S.lastKey="";render();toast("Trainer console unlocked")}
 function lockTrainer(){ls.set("ssa-trainer-unlocked",false);S.isTrainer=false;S.trainerView=true;S.pinOpen=false;S.lastKey="";render();toast("Trainer console locked")}
 async function resetAll(){
+  if(S.db.reset){await write(()=>S.db.reset(),"Reset done. Ready for a new class.");try{Object.keys(localStorage).filter(k=>k.startsWith("ssa-draft-")).forEach(k=>localStorage.removeItem(k))}catch(e){}confettiDone=false;return}
   const ops=[];
   for(const c of ["pre","post","marks"])for(const id of Object.keys(S[c]))ops.push(S.db.doc(c+"/"+id).delete());
   for(const id of Object.keys(S.teams))ops.push(S.db.doc("teams/"+id).delete());
@@ -638,6 +776,7 @@ async function exportCsv(){
   for(const uid of Object.keys(S.pre)){const r=preResult(uid),m=S.members[uid],tn=m&&m.teamId&&S.teams[m.teamId]?S.teams[m.teamId].nickname:"";rows.push(["Pre (individual)",r.name,tn,r.auto,r.written,r.total,r.max,r.pct,r.secs,r.pending?"yes":"no"])}
   for(const tid of Object.keys(S.post)){const r=postResult(tid),tn=(S.teams[tid]||{}).nickname||tid;rows.push(["Post (team)",tn,tn,r.auto,r.written,r.total,r.max,r.pct,r.secs,r.pending?"yes":"no"])}
   const csv="﻿"+rows.map(r=>r.map(csvCell).join(",")).join("\n");
+  if(!S.downloads){try{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="styleshift-arena-results.csv";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);toast("Results downloaded")}catch(e){toast("Couldn't create the file")}return}
   try{await S.downloads.save({filename:"styleshift-arena-results.csv",data:csv});toast("Results saved")}catch(e){if(e&&e.code!=="declined")toast("Couldn't save the file ("+(e&&e.code||"error")+")")}
 }
 

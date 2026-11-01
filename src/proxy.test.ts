@@ -26,7 +26,10 @@ it('lets the hourly reminder trigger reach its route, which checks its own secre
   expect(res.headers.get('x-middleware-next')).toBe('1')
   expect(mocks.createServerClient).not.toHaveBeenCalled()
 })
-it('serves the standalone classroom arena page without authentication', () => {
+it('serves the classroom arena page and its self-authenticating API without a session', () => {
   expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: '/arena.html' })).toBe(false)
+  expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: '/api/arena' })).toBe(false)
+  expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: '/api/arena/photo' })).toBe(false)
+  expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: '/api/assignments' })).toBe(true)
   expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: '/dashboard' })).toBe(true)
 })

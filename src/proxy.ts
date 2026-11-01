@@ -82,6 +82,7 @@ export const config = {
   // offline fallback renders) before there's necessarily any session, and
   // precisely when a session check might itself be unreachable.
   // arena.html is the standalone StyleShift Arena classroom quiz; workshop
-  // participants open it without a StyleShift account, and it calls no API.
-  matcher: ['/((?!_next/static|_next/image|fonts/|favicon.ico|opengraph-image|twitter-image|icon|apple-icon|robots.txt|sitemap.xml|manifest.webmanifest|sw.js|offline|arena.html).*)'],
+  // participants open it without a StyleShift account. Its API, /api/arena,
+  // authenticates every request itself (trainer key or participant token).
+  matcher: ['/((?!_next/static|_next/image|fonts/|favicon.ico|opengraph-image|twitter-image|icon|apple-icon|robots.txt|sitemap.xml|manifest.webmanifest|sw.js|offline|arena.html|api/arena).*)'],
 }

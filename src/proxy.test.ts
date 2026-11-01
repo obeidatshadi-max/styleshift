@@ -28,6 +28,7 @@ it('lets the hourly reminder trigger reach its route, which checks its own secre
 })
 it('serves the classroom arena page and its self-authenticating API without a session', () => {
   expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: '/arena.html' })).toBe(false)
+  expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: '/arena-og.jpg' })).toBe(false)
   expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: '/api/arena' })).toBe(false)
   expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: '/api/arena/photo' })).toBe(false)
   expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: '/api/assignments' })).toBe(true)

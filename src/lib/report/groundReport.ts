@@ -191,7 +191,8 @@ export function groundReport(
     const evidence = groundEvidence(a.evidence, segments)
     const suggestion = str(a.suggestion)
     if (!evidence || evidence.speakerRole !== 'counterpart' || !isQuestionKind(a.kind) || !suggestion) return null
-    if (seenFit.has(evidence.segmentIndex)) return null
+    // One doctor line gets one finding: a line already reported as vague is not reported again here.
+    if (seenFit.has(evidence.segmentIndex) || seenVague.has(evidence.segmentIndex)) return null
     seenFit.add(evidence.segmentIndex)
     const reply = [...segments].sort((x, y) => x.segmentIndex - y.segmentIndex)
       .find(seg => seg.segmentIndex > evidence.segmentIndex && seg.speakerRole === 'rep')

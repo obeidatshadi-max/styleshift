@@ -50,6 +50,17 @@ describe('ConversationReport', () => {
     expect(screen.getByText('Which patients have you seen stop?')).toBeTruthy()
     expect(screen.getByText(/Our product is very well tolerated/)).toBeTruthy()
   })
+  it('labels quoted speakers as Doctor or You, never the raw role names', () => {
+    renderReport({ outdated: false, report: minimalReport({ vagueStatements: [{
+      evidence: { segmentIndex: 0, speakerRole: 'counterpart', quote: 'Patients do not like it.' },
+      pattern: 'unspecified_referent', precisionQuestion: 'Which patients have you seen stop?',
+      repReply: { segmentIndex: 1, speakerRole: 'rep', quote: 'Our product is very well tolerated.' },
+    }] }) })
+    const text = document.body.textContent ?? ''
+    expect(text).toContain('— Doctor')
+    expect(text).toContain('— You')
+    expect(text).not.toMatch(/— (counterpart|rep)\b/)
+  })
   it('keeps older saved reports readable without the optional card', () => {
     renderReport({ report: minimalReport(), outdated: false })
     expect(screen.queryByRole('region', { name: 'Understand this moment' })).toBeNull()

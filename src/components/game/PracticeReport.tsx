@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLang, useT } from '@/lib/i18n'
 import { ConversationReport } from '@/components/report/ConversationReport'
+import ShareWithManager from './ShareWithManager'
 import type { ConversationReport as Report } from '@/schemas/conversationReport'
 
 interface Props {
@@ -54,7 +55,7 @@ export default function PracticeReport({ sessionId, sessionType = 'ai_doctor_voi
     })().finally(() => clearTimeout(timeout))
     return () => { active = false; clearTimeout(timeout); controller.abort() }
   }, [sessionId, sessionType, analysisConsent, attempt])
-  if (report) return <><ConversationReport report={report} outdated={false} />{children?.(report)}</>
+  if (report) return <><ConversationReport report={report} outdated={false} />{sessionType === 'ai_doctor_text' && <ShareWithManager kind="simulation" id={sessionId} />}{children?.(report)}</>
   return <div role={failed ? 'alert' : 'status'} style={{ padding: 16, lineHeight: 1.6 }}>
     {t(failed ? 'practice.reportFailed' : 'practice.reportLoading')}
     {failed && <button onClick={() => setAttempt(n => n + 1)} style={{ display: 'block', marginTop: 12, padding: 12, cursor: 'pointer' }}>{t('practice.retryReport')}</button>}

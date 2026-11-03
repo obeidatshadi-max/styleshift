@@ -24,6 +24,8 @@ import BehavioralTrendsPanel from '@/components/dashboard/BehavioralTrendsPanel'
 import CompanyDoctorsPanel from '@/components/dashboard/CompanyDoctorsPanel'
 import { getBehavioralTrendsForReps } from '@/lib/behavioral-trends-dashboard'
 import WeeklyDigestPanel from '@/components/dashboard/WeeklyDigestPanel'
+import SharedByRepsPanel from '@/components/dashboard/SharedByRepsPanel'
+import { getSharedItems } from '@/lib/manager-share'
 import { buildWeeklyDigest, getRecentSessions } from '@/lib/weekly-digest'
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
@@ -54,8 +56,11 @@ export default async function DashboardPage() {
   const coachingQueue = await getCoachingQueue(user.id)
   const behavioralTrends = await getBehavioralTrendsForReps(stats.reps.map(r => r.id))
 
+  // Only what reps chose to share, limited to this manager's own reps.
+  const sharedItems = await getSharedItems(stats.companyId, stats.reps.map(r => r.id))
   const nowMs = Date.now()
   const digest = buildWeeklyDigest({
+    shared: sharedItems.map(i => ({ repId: i.repId, practisedAt: i.practisedAt })),
     companyName: stats.companyName, reps: stats.reps, nowMs,
     sessions: await getRecentSessions(stats.reps.map(r => r.id), nowMs),
     voiceLastPracticed: Object.fromEntries([...voiceStats.byRep].map(([id, v]) => [id, v.lastPracticed])),
@@ -108,6 +113,9 @@ export default async function DashboardPage() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <Panel title="This Week"><WeeklyDigestPanel digest={digest} /></Panel>
+        <Panel title="Shared by Reps">
+          <SharedByRepsPanel items={sharedItems} repNames={Object.fromEntries(stats.reps.map(r => [r.id, r.display_name]))} />
+        </Panel>
         <Panel title="Team Pulse"><TeamPulsePanel pulse={pulse} siteUrl={siteUrl} /></Panel>
         {leagueBoard && <Panel title="Team League"><LeagueBoardPanel board={leagueBoard} /></Panel>}
         <CoachingQueueAndAssign

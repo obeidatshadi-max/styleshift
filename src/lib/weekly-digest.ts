@@ -2,7 +2,8 @@ import { createAdminClient } from '@/lib/supabase-admin'
 
 // A manager's "this week" summary: how much the team practised, who has been quiet, and what the
 // team's coaching signals have in common. Only data managers can already see (practice sessions,
-// voice practice dates, behavioral trends) — never text simulations or debriefs, which stay private.
+// voice practice dates, behavioral trends) plus the text simulations and debriefs a rep has chosen to
+// share. Anything a rep has not shared stays private and is never counted.
 
 export interface DigestRep { id: string; display_name: string | null }
 export interface DigestSession { rep_id: string; completed_at: string | null }
@@ -11,6 +12,8 @@ export interface WeeklyDigest {
   practiceThisWeek: number
   practiceLastWeek: number
   activeReps: number
+  /** Simulations and debriefs reps shared with the manager that were practised this week. */
+  sharedThisWeek: number
   totalReps: number
   quietReps: string[]
   topFocus: { label: string; count: number } | null
@@ -29,9 +32,12 @@ export function buildWeeklyDigest(input: {
   voiceLastPracticed: Record<string, string | null>
   /** One coaching-experiment label per rep that has one. */
   focusLabels: string[]
+  /** Items reps chose to share: who, and when the practice itself happened. */
+  shared?: { repId: string; practisedAt: string }[]
   nowMs: number
 }): WeeklyDigest {
   const { reps, sessions, voiceLastPracticed, focusLabels, nowMs } = input
+  const shared = input.shared ?? []
   const inWindow = (iso: string | null | undefined, fromMs: number, toMs: number) => {
     const t = iso ? Date.parse(iso) : NaN
     return Number.isFinite(t) && t > fromMs && t <= toMs
@@ -44,6 +50,8 @@ export function buildWeeklyDigest(input: {
   const active = new Set<string>()
   for (const s of sessions) if (inWindow(s.completed_at, thisWeekStart, nowMs)) active.add(s.rep_id)
   for (const [repId, last] of Object.entries(voiceLastPracticed)) if (inWindow(last, thisWeekStart, nowMs)) active.add(repId)
+  const sharedNow = shared.filter(x => inWindow(x.practisedAt, thisWeekStart, nowMs))
+  for (const x of sharedNow) active.add(x.repId)
   const quietReps = reps.filter(r => !active.has(r.id)).map(r => r.display_name?.trim() || 'Unnamed rep')
 
   const counts = new Map<string, number>()
@@ -55,11 +63,12 @@ export function buildWeeklyDigest(input: {
   const lines = [
     `StyleShift weekly summary - ${input.companyName}`,
     `Game practice: ${practiceThisWeek} sessions this week (${delta === 0 ? 'same as' : `${delta > 0 ? '+' : ''}${delta} vs`} last week)`,
-    `Active reps (game or voice): ${active.size} of ${reps.length}`,
+    `Active reps (game, voice or shared practice): ${active.size} of ${reps.length}`,
+    ...(sharedNow.length ? [`Shared with you this week: ${sharedNow.length} ${sharedNow.length === 1 ? 'item' : 'items'}`] : []),
     ...(quietReps.length ? [`Not practised this week: ${quietReps.join(', ')}`] : []),
     ...(topFocus ? [`Most common coaching focus: ${topFocus.label} (${topFocus.count} reps)`] : []),
   ]
-  return { practiceThisWeek, practiceLastWeek, activeReps: active.size, totalReps: reps.length, quietReps, topFocus, summary: lines.join('\n') }
+  return { practiceThisWeek, practiceLastWeek, activeReps: active.size, sharedThisWeek: sharedNow.length, totalReps: reps.length, quietReps, topFocus, summary: lines.join('\n') }
 }
 
 /** Game practice sessions for the last two weeks, for a set of reps. */

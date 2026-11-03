@@ -7,6 +7,7 @@ import { DEBRIEF_FOCUSES, parseDebriefResult, type ActionStatus, type DebriefFoc
 import { addPromise } from '@/lib/promises'
 import { readCoachDrafts, writeCoachDrafts, type CoachDraft } from '@/lib/coach-drafts'
 import TextSimulation, { card, primaryBtn, ghostBtn } from './TextSimulation'
+import ShareWithManager from './ShareWithManager'
 import type { Doctor } from '@/types/game'
 
 interface Entry { id: string; created_at: string; doctor_id: string | null; doctor_name: string | null; input: DebriefInput; result: DebriefResult }
@@ -333,6 +334,7 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
         {promiseError && <p role="alert">{copy('Could not add the promise. Please try again.', 'تعذّرت إضافة الوعد. حاول مجدداً.')}</p>}
       </article>}
       <p role="status">{saved ? copy('Saved privately to your account.', 'حُفظت بشكل خاص في حسابك.') : copy('Coaching is ready, but could not be saved. Keep a copy before leaving.', 'التدريب جاهز لكن تعذّر حفظه. احتفظ بنسخة قبل المغادرة.')}</p>
+      {saved && activeId && <ShareWithManager key={activeId} kind="debrief" id={activeId} />}
       {!saved && recoveryToken && <button disabled={locked} style={primaryBtn} onClick={() => void coach(true)}>{copy('Retry saving', 'إعادة محاولة الحفظ')}</button>}
       <div style={card}>
         <h2 style={{ fontSize: 18 }}>{copy('Practice this with AI Doctor', 'تدرّب على ذلك مع الطبيب الذكي')}</h2>

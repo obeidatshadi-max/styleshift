@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import WeeklyDigestPanel from './WeeklyDigestPanel'
 
 const digest = {
-  practiceThisWeek: 7, practiceLastWeek: 10, activeReps: 2, totalReps: 3, quietReps: ['Bassam'],
+  practiceThisWeek: 7, practiceLastWeek: 10, activeReps: 2, sharedThisWeek: 0, totalReps: 3, quietReps: ['Bassam'],
   topFocus: { label: 'Listen step', count: 2 }, summary: 'StyleShift weekly summary - Acme',
 }
 beforeEach(() => { vi.stubGlobal('React', React) })

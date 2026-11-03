@@ -21,8 +21,10 @@ describe('practice coaching report', () => {
     render(view('text-session', 'ai_doctor_text'))
     fireEvent.click(await screen.findByRole('button', { name: 'Retry coaching report' }))
     await screen.findByText('Recovered coaching')
-    expect(fetchMock).toHaveBeenCalledTimes(3)
-    for (const call of fetchMock.mock.calls) {
+    // The share-with-manager toggle also looks up its own state once the report shows; only generation calls count here.
+    const generation = fetchMock.mock.calls.filter(call => String(call[0]).includes('/api/reports/generate'))
+    expect(generation).toHaveLength(3)
+    for (const call of generation) {
       expect(JSON.parse(String(call[1]?.body))).toEqual({ sessionId: 'text-session', sessionType: 'ai_doctor_text', lang: 'en' })
     }
   })
@@ -33,7 +35,7 @@ describe('practice coaching report', () => {
       .mockResolvedValueOnce(Response.json({ report: { label: 'Second try coaching' } }))
     render(view('slow-session', 'ai_doctor_text'))
     await screen.findByText('Second try coaching')
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls.filter(call => String(call[0]).includes('/api/reports/generate'))).toHaveLength(2)
     expect(screen.queryByRole('alert')).toBeNull()
   })
 

@@ -20,6 +20,7 @@ export interface TeamStats {
   activity: { day: string; count: number }[]
   plan: string
   inviteCode: string
+  companyId: string
   companyName: string
 }
 
@@ -68,6 +69,7 @@ export async function getTeamStatsForUser(userId: string): Promise<TeamStats | n
       activity: buildActivity([]),
       plan: company?.plan ?? 'free',
       inviteCode: company?.invite_code ?? '',
+      companyId,
       companyName: company?.name ?? 'Your Team',
     }
   }
@@ -112,6 +114,7 @@ export async function getTeamStatsForUser(userId: string): Promise<TeamStats | n
     activity: buildActivity(allSessions),
     plan: company?.plan ?? 'free',
     inviteCode: company?.invite_code ?? '',
+    companyId,
     companyName: company?.name ?? 'Your Team',
   }
 }

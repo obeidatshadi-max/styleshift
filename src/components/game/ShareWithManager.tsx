@@ -21,7 +21,7 @@ export default function ShareWithManager({ kind, id, initialSharedAt }: Props) {
   // Unknown until the server says so, unless the caller already has it: never show "private" for an item that is shared.
   const [loading, setLoading] = useState(initialSharedAt === undefined)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState(false)
+  const [error, setError] = useState<'failed' | 'no_manager' | null>(null)
 
   useEffect(() => {
     if (initialSharedAt !== undefined) return
@@ -35,14 +35,15 @@ export default function ShareWithManager({ kind, id, initialSharedAt }: Props) {
   }, [kind, id, initialSharedAt])
 
   async function toggle(next: boolean) {
-    setBusy(true); setError(false)
+    setBusy(true); setError(null)
     try {
       const res = await fetch('/api/share-with-manager', {
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind, id, shared: next }),
       })
+      if (res.status === 409) { setError('no_manager'); return }
       if (!res.ok) throw new Error(String(res.status))
       setShared(next)
-    } catch { setError(true) } finally { setBusy(false) }
+    } catch { setError('failed') } finally { setBusy(false) }
   }
 
   const what = kind === 'debrief'
@@ -59,7 +60,9 @@ export default function ShareWithManager({ kind, id, initialSharedAt }: Props) {
       <p style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--ink-dim)', margin: 0 }}>
         {shared ? (ar ? 'تمت المشاركة. يمكنك إيقافها في أي وقت. ' : 'Shared. You can stop sharing any time. ') : (ar ? 'خاص حالياً. ' : 'Private for now. ')}{what}
       </p>
-      {error && <p role="alert" style={{ fontSize: 14, color: 'var(--red)', margin: 0 }}>{ar ? 'تعذّر الحفظ. حاول مرة أخرى.' : 'Could not save. Try again.'}</p>}
+      {error && <p role="alert" style={{ fontSize: 14, color: 'var(--red)', margin: 0 }}>{error === 'no_manager'
+        ? (ar ? 'أنت لست ضمن فريق بعد، فلا يوجد مدير للمشاركة معه.' : 'You are not in a team yet, so there is no manager to share with.')
+        : (ar ? 'تعذّر الحفظ. حاول مرة أخرى.' : 'Could not save. Try again.')}</p>}
     </div>
   )
 }

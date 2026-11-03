@@ -17,9 +17,11 @@ let updated: Record<string, unknown> | null
 let filters: [string, unknown][]
 let updateResult: { data: { id: string }[] | null; error: unknown }
 let selectResult: { data: { shared_with_manager_at: string | null } | null; error: unknown }
+let profileResult: { data: { company_id: string | null } | null; error: unknown }
 
 beforeEach(() => {
   user = { id: 'rep-1' }; table = null; updated = null; filters = []
+  profileResult = { data: { company_id: 'company-1' }, error: null }
   updateResult = { data: [{ id }], error: null }
   selectResult = { data: { shared_with_manager_at: null }, error: null }
   vi.mocked(createClient).mockResolvedValue({ auth: { getUser: async () => ({ data: { user } }) } } as never)
@@ -29,8 +31,13 @@ beforeEach(() => {
     select: async () => updateResult,
     maybeSingle: async () => selectResult,
   }
+  const profileChain: any = { eq: () => profileChain, maybeSingle: async () => profileResult }
   vi.mocked(createAdminClient).mockReturnValue({
-    from: (t: string) => { table = t; return { update: (u: Record<string, unknown>) => { updated = u; return chain }, select: () => chain } },
+    from: (t: string) => {
+      if (t === 'profiles') return { select: () => profileChain }
+      table = t
+      return { update: (u: Record<string, unknown>) => { updated = u; return chain }, select: () => chain }
+    },
   } as never)
 })
 
@@ -51,10 +58,27 @@ describe('POST /api/share-with-manager', () => {
     expect(filters).toEqual([['id', id], ['rep_id', 'rep-1']])
     expect(typeof updated?.shared_with_manager_at).toBe('string')
   })
+  it('binds the share to the team the rep is in right now', async () => {
+    await post({ kind: 'simulation', id, shared: true })
+    expect(updated).toMatchObject({ shared_with_company_id: 'company-1' })
+  })
+  it('refuses to share when the rep is not in a team, and writes nothing', async () => {
+    profileResult = { data: { company_id: null }, error: null }
+    const res = await post({ kind: 'debrief', id, shared: true })
+    expect(res.status).toBe(409)
+    expect(await res.json()).toEqual({ error: 'no_manager' })
+    expect(updated).toBeNull()
+  })
+  it('does not need a team to stop sharing, and clears the company too', async () => {
+    profileResult = { data: { company_id: null }, error: null }
+    const res = await post({ kind: 'debrief', id, shared: false })
+    expect(res.status).toBe(200)
+    expect(updated).toEqual({ shared_with_manager_at: null, shared_with_company_id: null })
+  })
   it('maps simulations to agent_sessions and un-sharing clears the timestamp', async () => {
     const res = await post({ kind: 'simulation', id, shared: false })
     expect(table).toBe('agent_sessions')
-    expect(updated).toEqual({ shared_with_manager_at: null })
+    expect(updated).toEqual({ shared_with_manager_at: null, shared_with_company_id: null })
     expect(await res.json()).toEqual({ ok: true, sharedAt: null })
   })
   it('returns 404 when the row is not the rep\'s (nothing updated)', async () => {

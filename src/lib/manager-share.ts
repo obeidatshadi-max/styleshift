@@ -73,17 +73,18 @@ export function simulationForManager(
 }
 
 /**
- * Items the reps of one company have chosen to share, newest practice first. `repIds` MUST come from the
- * manager's own company (the caller already has it from team stats); nothing else limits the read.
+ * Items the reps of one company have chosen to share WITH THAT COMPANY, newest practice first. Both
+ * `companyId` and `repIds` come from the manager's own team stats. An item counts only if it was shared
+ * with this company, so a rep who later changed teams does not expose old shares to the new manager.
  */
-export async function getSharedItems(repIds: string[], limit = 20): Promise<SharedItem[]> {
+export async function getSharedItems(companyId: string, repIds: string[], limit = 20): Promise<SharedItem[]> {
   if (repIds.length === 0) return []
   const admin = createAdminClient()
   const [debriefs, sims] = await Promise.all([
     admin.from('coach_debriefs').select('id, rep_id, doctor_name, created_at, shared_with_manager_at, result')
-      .in('rep_id', repIds).not('shared_with_manager_at', 'is', null).order('created_at', { ascending: false }).limit(limit),
+      .in('rep_id', repIds).eq('shared_with_company_id', companyId).not('shared_with_manager_at', 'is', null).order('created_at', { ascending: false }).limit(limit),
     admin.from('agent_sessions').select('id, rep_id, doctor_id, created_at, shared_with_manager_at')
-      .in('rep_id', repIds).not('shared_with_manager_at', 'is', null).order('created_at', { ascending: false }).limit(limit),
+      .in('rep_id', repIds).eq('shared_with_company_id', companyId).not('shared_with_manager_at', 'is', null).order('created_at', { ascending: false }).limit(limit),
   ])
   const items: SharedItem[] = []
   for (const d of (debriefs.data ?? []) as Parameters<typeof debriefForManager>[0][]) {
@@ -94,12 +95,16 @@ export async function getSharedItems(repIds: string[], limit = 20): Promise<Shar
     const ids = simRows.map(s => s.id)
     const doctorIds = [...new Set(simRows.map(s => s.doctor_id).filter((x): x is string => !!x))]
     const [reports, doctors] = await Promise.all([
-      admin.from('conversation_reports').select('session_id, report, created_at').eq('session_type', 'ai_doctor_text')
-        .eq('status', 'complete').in('session_id', ids).order('created_at', { ascending: false }),
+      admin.from('conversation_reports').select('session_id, rep_id, report, created_at').eq('session_type', 'ai_doctor_text')
+        .eq('status', 'complete').in('session_id', ids).in('rep_id', repIds).order('created_at', { ascending: false }),
       doctorIds.length ? admin.from('doctors').select('id, name').in('id', doctorIds) : Promise.resolve({ data: [] as { id: string; name: string }[] }),
     ])
+    // A report counts only when it belongs to the same rep as the session it is attached to.
+    const owner = new Map(simRows.map(s => [s.id, s.rep_id]))
     const latest = new Map<string, unknown>()
-    for (const r of (reports.data ?? []) as { session_id: string; report: unknown }[]) if (!latest.has(r.session_id)) latest.set(r.session_id, r.report)
+    for (const r of (reports.data ?? []) as { session_id: string; rep_id: string; report: unknown }[]) {
+      if (owner.get(r.session_id) === r.rep_id && !latest.has(r.session_id)) latest.set(r.session_id, r.report)
+    }
     const names = new Map(((doctors.data ?? []) as { id: string; name: string }[]).map(d => [d.id, d.name]))
     for (const s of simRows) {
       const item = simulationForManager(s, s.doctor_id ? names.get(s.doctor_id) ?? null : null, latest.get(s.id))

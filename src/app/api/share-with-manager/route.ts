@@ -28,10 +28,19 @@ export async function POST(req: Request) {
   if (!request) return NextResponse.json({ error: 'invalid_input' }, { status: 400 })
   if (!(await checkRateLimit('share-with-manager', user.id, 120, 3600))) return NextResponse.json({ error: 'rate_limit' }, { status: 429 })
 
+  const admin = createAdminClient()
+  let companyId: string | null = null
+  if (request.shared) {
+    // The share is bound to the team the rep is in right now. A rep with no team has no manager to share with.
+    const { data: profile, error: profileError } = await admin.from('profiles').select('company_id').eq('id', user.id).maybeSingle()
+    if (profileError) return NextResponse.json({ error: 'share_failed' }, { status: 500 })
+    companyId = (profile as { company_id: string | null } | null)?.company_id ?? null
+    if (!companyId) return NextResponse.json({ error: 'no_manager' }, { status: 409 })
+  }
   const sharedAt = request.shared ? new Date().toISOString() : null
   // Ownership is part of the WHERE clause: a rep can only ever flag their own rows.
-  const { data, error } = await createAdminClient().from(SHARE_TABLE[request.kind])
-    .update({ shared_with_manager_at: sharedAt })
+  const { data, error } = await admin.from(SHARE_TABLE[request.kind])
+    .update({ shared_with_manager_at: sharedAt, shared_with_company_id: companyId })
     .eq('id', request.id).eq('rep_id', user.id).select('id')
   if (error) return NextResponse.json({ error: 'share_failed' }, { status: 500 })
   if (!data || data.length === 0) return NextResponse.json({ error: 'not_found' }, { status: 404 })

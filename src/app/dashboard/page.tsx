@@ -57,7 +57,7 @@ export default async function DashboardPage() {
   const behavioralTrends = await getBehavioralTrendsForReps(stats.reps.map(r => r.id))
 
   // Only what reps chose to share, limited to this manager's own reps.
-  const sharedItems = await getSharedItems(stats.reps.map(r => r.id))
+  const sharedItems = await getSharedItems(stats.companyId, stats.reps.map(r => r.id))
   const nowMs = Date.now()
   const digest = buildWeeklyDigest({
     shared: sharedItems.map(i => ({ repId: i.repId, practisedAt: i.practisedAt })),

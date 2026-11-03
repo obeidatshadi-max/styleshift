@@ -44,6 +44,13 @@ describe('ShareWithManager', () => {
     await screen.findByRole('alert')
     expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(false)
   })
+  it('tells a rep who is not in a team why sharing is unavailable, and stays private', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 409, json: async () => ({ error: 'no_manager' }) })))
+    view({ kind: 'simulation', id, initialSharedAt: null })
+    fireEvent.click(screen.getByRole('checkbox'))
+    expect((await screen.findByRole('alert')).textContent).toMatch(/not in a team yet/)
+    expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(false)
+  })
   it('loads the real state when the caller does not know it, and never shows private for a shared item', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => json({ sharedAt: '2026-11-03T09:00:00Z' })))
     view({ kind: 'simulation', id })

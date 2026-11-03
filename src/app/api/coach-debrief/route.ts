@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { createAnthropicComplete } from '@/agents/llm'
 import { debriefPrompt, parseDebriefInput, parseDebriefResult } from '@/lib/coach-debrief'
+import { applyClaimCheck, claimCheckPrompt, parseClaimCheck } from '@/lib/claim-check'
 import { signDebrief, verifyDebrief, type RecoverableDebrief } from '@/lib/debrief-recovery'
 
 const uuid = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v)
@@ -58,6 +59,15 @@ export async function POST(req: Request) {
   const raw = await createAnthropicComplete(key)(debriefPrompt(input, doctor.name))
   const result = raw ? parseDebriefResult(raw) : null
   if (!result) return NextResponse.json({ error: 'coach_unavailable' }, { status: 502 })
+  // Second pass: drop sentences that report events the rep never described. Fails open, so a checker
+  // outage never costs the rep a valid debrief.
+  const checkRaw = await createAnthropicComplete(key)(claimCheckPrompt(input, result.report))
+  const flagged = checkRaw ? parseClaimCheck(checkRaw) : null
+  if (flagged) {
+    const checked = applyClaimCheck(result.report, flagged)
+    result.report = checked.report
+    if (checked.removed) console.warn('[coach-debrief] removed unsupported sentences', checked.removed)
+  }
   return persist(db, { id: body.requestId ?? randomUUID(), rep_id: user.id, doctor_id: doctor.id, doctor_name: doctor.name, input, result, created_at: new Date().toISOString() })
 }
 export async function PUT(req: Request) {

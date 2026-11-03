@@ -3,6 +3,7 @@ import { useT } from '@/lib/i18n'
 import { useSavedReport } from '@/hooks/useSavedReport'
 import { ConversationReport } from '@/components/report/ConversationReport'
 import PracticeReport from './PracticeReport'
+import ShareWithManager from './ShareWithManager'
 
 interface Props { sessionId: string; onBack: () => void }
 
@@ -16,7 +17,7 @@ export default function PastSimulation({ sessionId, onBack }: Props) {
     <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
       <button onClick={onBack} style={{ alignSelf:'flex-start', padding:'8px 12px', cursor:'pointer' }}>{t('visit.backToHistory')}</button>
       {saved.status === 'loading' && <div role="status" style={{ padding:16 }}>{t('practice.reportLoading')}</div>}
-      {saved.status === 'found' && <ConversationReport report={saved.report} outdated={false} />}
+      {saved.status === 'found' && <><ConversationReport report={saved.report} outdated={false} /><ShareWithManager kind="simulation" id={sessionId} /></>}
       {(saved.status === 'missing' || saved.status === 'error') && (
         <>
           <div style={{ color:'var(--ink-dim)', fontSize:16, lineHeight:1.5 }}>{t('visit.reportNotSaved')}</div>

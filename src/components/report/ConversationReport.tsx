@@ -52,7 +52,7 @@ function Evidence({ evidence, audioAvailable }: { evidence: EvidenceRef; audioAv
       <p style={{ flex: 1, fontSize: 'max(12.5px, var(--voice-min-font, 0px))', lineHeight: 1.55, color: 'var(--ink-dim)', fontStyle: 'italic', margin: 0 }}>
         &ldquo;{evidence.quote}&rdquo;{' '}
         <span style={{ fontFamily: 'var(--mono)', fontSize: 'max(10px, var(--voice-min-font, 0px))', textTransform: 'none', letterSpacing: 'normal', fontStyle: 'normal', opacity: .75 }}>
-          &mdash; {evidence.speakerRole}
+          &mdash; {t(evidence.speakerRole === 'rep' ? 'report.role.rep' : 'report.role.counterpart')}
         </span>
       </p>
       {audioAvailable && (

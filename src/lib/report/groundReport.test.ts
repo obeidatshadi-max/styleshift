@@ -90,6 +90,22 @@ describe('groundReport', () => {
     expect(report.answerFit![0].repReply?.quote).toBe(asked[1].text)
     expect(report.answerFit![0].kind).toBe('judgment')
   })
+  it('reports one doctor line once: a line already flagged as vague is not repeated under answer-fit, and another line can take its place', () => {
+    const lines: TranscriptSegment[] = [
+      { ...segments[0], segmentIndex: 0, text: 'Is it only for patients on several agents?' },
+      { ...segments[1], segmentIndex: 1, text: 'It is a great product.' },
+      { ...segments[0], segmentIndex: 2, text: 'Why should I switch from what I use now?' },
+    ]
+    const report = groundReport(minimalRaw({
+      vagueStatements: [{ evidence: { segmentIndex: 0 }, pattern: 'unspecified_referent', precisionQuestion: 'Only suitable for whom?' }],
+      answerFit: [
+        { evidence: { segmentIndex: 0 }, kind: 'knowledge', suggestion: 'Answer with the trial facts.' },
+        { evidence: { segmentIndex: 2 }, kind: 'judgment', suggestion: 'Ask what matters first.' },
+      ],
+    }), lines, context, base)!
+    expect(report.vagueStatements!.map(v => v.evidence.segmentIndex)).toEqual([0])
+    expect(report.answerFit!.map(a => a.evidence.segmentIndex)).toEqual([2])
+  })
   it('keeps the model kind when the question text is unclear, and drops rep anchors, bad kinds, empty suggestions, duplicates; caps at 2', () => {
     const ok = { evidence: { segmentIndex: 0 }, kind: 'preference', suggestion: 'Ask what matters to them.' }
     const report = groundReport(minimalRaw({ answerFit: [

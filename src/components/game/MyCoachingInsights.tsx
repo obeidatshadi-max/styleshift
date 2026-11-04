@@ -12,7 +12,8 @@ import type { UnusedResourceFinding } from '@/lib/unused-resource-detector'
 // the rep it's about. Same self-fetching pattern as ChampionBanner/LeagueStrip.
 
 interface TrendsResponse {
-  gravity: BehavioralGravityResult
+  // The API returns null until the rep has enough analysed AI Doctor sessions.
+  gravity: BehavioralGravityResult | null
   unusedResources: UnusedResourceFinding[]
   mastermindInsights: MastermindInsight[]
 }
@@ -33,7 +34,7 @@ export default function MyCoachingInsights() {
 
   // Nothing yet, or too little AI Doctor history for a pattern to exist —
   // stay silent rather than show an empty-state banner on the home screen.
-  if (!data || data.gravity.overallSessionCount === 0 || data.mastermindInsights.length === 0) return null
+  if (!data || !data.gravity || data.gravity.overallSessionCount === 0 || data.mastermindInsights.length === 0) return null
 
   return (
     <div style={{ border: '1px solid var(--purple)', borderRadius: 14, padding: '14px 16px', background: 'rgba(176,108,255,.06)' }}>

@@ -28,6 +28,7 @@ import PatternMemoryCard from './PatternMemoryCard'
 import PracticeMyDoctor from './PracticeMyDoctor'
 import ProgressCard from './ProgressCard'
 import MyCoachingInsights from './MyCoachingInsights'
+import MyImprovementPlan from './MyImprovementPlan'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
 
@@ -167,6 +168,8 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
         <LeagueStrip />
 
         <MyCoachingInsights />
+
+        <MyImprovementPlan />
 
         {standings && standings.standings.length > 0 && panel(t('rank.title'),
           <>

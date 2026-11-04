@@ -14,6 +14,8 @@
 //    { action: 'poll', transcript_id: string }
 //      -> { status: 'queued'|'processing'|'completed'|'error',
 //           utterances?: [{ speaker, text, start, end, words }], error?: string }
+//    { action: 'delete', transcript_id: string }
+//      -> { deleted: boolean }   (also removes the uploaded audio)
 // ═══════════════════════════════════════════════════════════
 
 const { createClient } = require('@supabase/supabase-js')
@@ -131,6 +133,22 @@ exports.handler = async function (event) {
         console.log('assemblyai poll status:', data.status)
       }
       return { statusCode: response.status, headers, body: JSON.stringify(data) }
+    }
+
+    // Removes the transcript and the audio uploaded for it from AssemblyAI once
+    // the app holds the result. AssemblyAI would otherwise keep the audio for
+    // 24-48 hours and the transcript for 30 days.
+    if (body.action === 'delete') {
+      if (!body.transcript_id || !SAFE_ID.test(body.transcript_id)) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid transcript_id.' }) }
+      }
+      const response = await fetch(`https://api.assemblyai.com/v2/transcript/${encodeURIComponent(body.transcript_id)}`, {
+        method: 'DELETE',
+        headers: { authorization: apiKey },
+      })
+      if (!response.ok) console.error('assemblyai delete failed:', response.status)
+      else console.log('assemblyai delete ok, transcript id:', body.transcript_id)
+      return { statusCode: response.ok ? 200 : response.status, headers, body: JSON.stringify({ deleted: response.ok }) }
     }
 
     return { statusCode: 400, headers, body: JSON.stringify({ error: `Unknown action: ${body.action}` }) }

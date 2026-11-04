@@ -23,6 +23,25 @@ describe('roleplay transcription function', () => {
       speech_models: ['universal-3-pro', 'universal-2'],
     })
   })
+  it('deletes a transcript with the DELETE method', async () => {
+    const { run, fetch } = handler()
+    const res = await run(event({ action: 'delete', transcript_id: 'abc-123' }))
+    expect(res.statusCode).toBe(200)
+    expect(JSON.parse(res.body)).toEqual({ deleted: true })
+    expect(fetch.mock.calls[0][0]).toBe('https://api.assemblyai.com/v2/transcript/abc-123')
+    expect(fetch.mock.calls[0][1]).toMatchObject({ method: 'DELETE' })
+  })
+  it('refuses to delete with a malformed transcript id', async () => {
+    const { run, fetch } = handler()
+    expect((await run(event({ action: 'delete', transcript_id: '../upload' }))).statusCode).toBe(400)
+    expect((await run(event({ action: 'delete' }))).statusCode).toBe(400)
+    expect(fetch).not.toHaveBeenCalled()
+  })
+  it('requires a signed-in user to delete', async () => {
+    const { run, fetch } = handler(null)
+    expect((await run(event({ action: 'delete', transcript_id: 'abc' }))).statusCode).toBe(401)
+    expect(fetch).not.toHaveBeenCalled()
+  })
   it('rejects unauthenticated requests independently of page middleware', async () => {
     const { run, fetch } = handler()
     expect((await run(event({ action: 'upload', audio: 'AA==' }, ''))).statusCode).toBe(401)

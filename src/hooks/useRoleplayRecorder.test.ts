@@ -25,6 +25,7 @@ vi.mock('@/lib/assemblyai-client', () => ({
 import { useRoleplayRecorder } from './useRoleplayRecorder'
 import { createClient } from '@/lib/supabase-browser'
 import { diarizeAudio } from '@/lib/assemblyai-client'
+import { MAX_RECORDING_SEC, RECORDING_SIZE_GUARD_BYTES } from '@/lib/roleplay-limits'
 
 let lastTrack: { onended: (() => void) | null; stop: () => void }
 let lastRecorder: FakeMediaRecorder | null = null
@@ -74,7 +75,12 @@ function mockSupabaseSession() {
   return supabase
 }
 
-afterEach(() => { vi.clearAllMocks(); vi.unstubAllGlobals(); lastRecorder = null })
+afterEach(() => { vi.clearAllMocks(); vi.unstubAllGlobals(); vi.useRealTimers(); lastRecorder = null })
+
+const twoSpeakers = [
+  { speaker: 'A', text: 'hello', start: 0, end: 1, words: [] },
+  { speaker: 'B', text: 'hi there', start: 1, end: 2, words: [] },
+]
 
 describe('useRoleplayRecorder mic-death handling', () => {
   it('surfaces mic_lost (not a silent hang) when the audio track ends mid-recording', async () => {
@@ -118,5 +124,55 @@ describe('useRoleplayRecorder mic-death handling', () => {
 
     await waitFor(() => expect(result.current.phase).toBe('pick-speaker'))
     expect(result.current.error).toBeNull()
+  })
+})
+
+describe('useRoleplayRecorder automatic stop', () => {
+  it('stops by itself and goes to analysis when the recording reaches the size guard', async () => {
+    setupBrowserMocks()
+    mockSupabaseSession()
+    vi.mocked(diarizeAudio).mockResolvedValue(twoSpeakers)
+    const { result } = renderHook(() => useRoleplayRecorder('doc-1', null))
+
+    await act(async () => { await result.current.start() })
+    await act(async () => {
+      lastRecorder?.ondataavailable?.({ data: new Blob([new Uint8Array(RECORDING_SIZE_GUARD_BYTES)]) })
+    })
+
+    await waitFor(() => expect(result.current.phase).toBe('pick-speaker'))
+    expect(result.current.autoStopped).toBe(true)
+    expect(result.current.error).toBeNull()
+    expect(diarizeAudio).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops by itself at the time limit, not before', async () => {
+    vi.useFakeTimers()
+    setupBrowserMocks()
+    mockSupabaseSession()
+    vi.mocked(diarizeAudio).mockResolvedValue(twoSpeakers)
+    const { result } = renderHook(() => useRoleplayRecorder('doc-1', null))
+
+    await act(async () => { await result.current.start() })
+    await act(async () => { await vi.advanceTimersByTimeAsync((MAX_RECORDING_SEC - 5) * 1000) })
+    expect(result.current.phase).toBe('recording')
+    expect(result.current.autoStopped).toBe(false)
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(10 * 1000) })
+    expect(result.current.autoStopped).toBe(true)
+    expect(result.current.phase).toBe('pick-speaker')
+    expect(diarizeAudio).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not mark a rep-pressed Stop as automatic', async () => {
+    setupBrowserMocks()
+    mockSupabaseSession()
+    vi.mocked(diarizeAudio).mockResolvedValue(twoSpeakers)
+    const { result } = renderHook(() => useRoleplayRecorder('doc-1', null))
+
+    await act(async () => { await result.current.start() })
+    await act(async () => { await result.current.stop() })
+
+    await waitFor(() => expect(result.current.phase).toBe('pick-speaker'))
+    expect(result.current.autoStopped).toBe(false)
   })
 })

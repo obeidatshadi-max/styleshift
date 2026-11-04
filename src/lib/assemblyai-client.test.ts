@@ -28,7 +28,7 @@ describe('roleplay analysis recovery', () => {
     const result = await diarizeAudio(audio, job)
     expect(result).toEqual(utterances)
     const actions = fetchMock.mock.calls.map(call => JSON.parse(call[1].body).action)
-    expect(actions).toEqual(['submit', 'poll', 'poll'])
+    expect(actions).toEqual(['submit', 'poll', 'poll', 'delete'])
     const report = buildRoleplayResult(result, 'A', [], [])
     expect(report.talkRatio.repRatio).toBeGreaterThan(0)
     expect(report.durationSec).toBe(15)
@@ -51,6 +51,32 @@ describe('roleplay analysis recovery', () => {
     const job = { transcriptId: 'job' }
     await expect(diarizeAudio(audio, job)).rejects.toMatchObject({ code: 'diarize' })
     expect(job.transcriptId).toBe('job')
+  })
+  it('deletes the transcript and audio at the provider once it holds the result', async () => {
+    const job: DiarizationJob = { uploadUrl: 'https://cdn.assemblyai.com/upload/test' }
+    fetchMock.mockResolvedValueOnce(Response.json({ id: 'transcript' }))
+      .mockResolvedValueOnce(Response.json({ status: 'completed', utterances }))
+      .mockResolvedValueOnce(Response.json({ deleted: true }))
+    expect(await diarizeAudio(audio, job)).toEqual(utterances)
+    const sent = fetchMock.mock.calls.map(call => JSON.parse(call[1].body))
+    expect(sent[sent.length - 1]).toEqual({ action: 'delete', transcript_id: 'transcript' })
+    // the remote copy is gone, so a retry must upload again instead of polling it
+    expect(job).toEqual({})
+  })
+  it('still returns the result when the provider delete fails', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ id: 'transcript' }))
+      .mockResolvedValueOnce(Response.json({ status: 'completed', utterances }))
+      .mockResolvedValueOnce(new Response('{"error":"boom"}', { status: 500 }))
+    expect(await diarizeAudio(audio, { uploadUrl: 'https://cdn.assemblyai.com/upload/test' })).toEqual(utterances)
+  })
+  it('does not wait on a stalled delete', async () => {
+    vi.useFakeTimers()
+    fetchMock.mockResolvedValueOnce(Response.json({ id: 'transcript' }))
+      .mockResolvedValueOnce(Response.json({ status: 'completed', utterances }))
+      .mockImplementationOnce(() => new Promise(() => {}))
+    const pending = diarizeAudio(audio, { uploadUrl: 'https://cdn.assemblyai.com/upload/test' })
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(await pending).toEqual(utterances)
   })
   it('rejects oversized audio before upload', async () => {
     const large = new Blob([new Uint8Array(MAX_ROLEPLAY_AUDIO_BYTES + 1)])

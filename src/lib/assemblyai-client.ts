@@ -57,6 +57,23 @@ async function request<T>(body: Record<string, unknown>, signal?: AbortSignal): 
   }
 }
 
+const DISCARD_WAIT_MS = 5_000
+
+/**
+ * Once the app holds the transcript, ask AssemblyAI to delete it and the
+ * uploaded audio. Best effort and bounded: a failure or slow answer must never
+ * block the rep's report, because AssemblyAI deletes the audio itself after
+ * 24-48 hours and the transcript after 30 days.
+ */
+async function discardRemoteCopy(transcriptId: string, signal?: AbortSignal): Promise<void> {
+  try {
+    await Promise.race([
+      request({ action: 'delete', transcript_id: transcriptId }, signal).catch(() => {}),
+      new Promise<void>(resolve => setTimeout(resolve, DISCARD_WAIT_MS)),
+    ])
+  } catch { /* never block the report */ }
+}
+
 /** Retain job between retries so slow polling resumes without another paid upload/job. */
 export async function diarizeAudio(blob: Blob, job: DiarizationJob = {}, signal?: AbortSignal): Promise<DiarizedUtterance[]> {
   if (!blob.size) throw new DiarizationError('diarize', 'The recording is empty.')
@@ -77,6 +94,9 @@ export async function diarizeAudio(blob: Blob, job: DiarizationJob = {}, signal?
     const result = await request<TranscriptStatus>({ action: 'poll', transcript_id: job.transcriptId }, signal)
     if (result.status === 'completed') {
       if (!Array.isArray(result.utterances)) throw new DiarizationError('diarize', 'Analysis returned no speaker data.')
+      await discardRemoteCopy(job.transcriptId, signal)
+      delete job.transcriptId
+      delete job.uploadUrl
       return result.utterances
     }
     if (result.status === 'error') {

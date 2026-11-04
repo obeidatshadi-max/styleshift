@@ -7,6 +7,7 @@ import {
 } from '@/lib/roleplay-core'
 import { XP_VALUES } from '@/lib/game-data'
 import { persistTranscriptSegments } from '@/lib/transcript-segments'
+import { MAX_RECORDING_SEC, RECORDING_BITS_PER_SECOND, RECORDING_SIZE_GUARD_BYTES } from '@/lib/roleplay-limits'
 
 export type RecorderPhase = 'idle' | 'recording' | 'processing' | 'pick-speaker' | 'done' | 'error'
 export type RecorderError = 'mic' | 'diarize' | 'session' | 'speakers' | 'timeout' | 'too_large' | 'mic_lost'
@@ -80,6 +81,12 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
   const [speakerPreviews, setSpeakerPreviews] = useState<RawSpeakerPreview[]>([])
   const [result, setResult] = useState<RoleplayResult | null>(restored?.result ?? null)
   const [sessionId, setSessionId] = useState<string | null>(restored?.sessionId ?? null)
+  // True when the recorder stopped itself at the time or size limit, so the
+  // screens can tell the rep the analysis covers the first part of the call.
+  const [autoStopped, setAutoStopped] = useState(false)
+  const autoStopRequestedRef = useRef(false)
+  const bytesRecordedRef = useRef(0)
+  const stopRef = useRef<() => Promise<void>>(async () => {})
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [saveError, setSaveError] = useState(false)
@@ -152,8 +159,20 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     return () => document.removeEventListener('visibilitychange', reacquire)
   }, [])
 
+  // Ends the recording at the time or size limit and sends what was captured
+  // to analysis, exactly as if the rep had pressed Stop. Runs at most once.
+  const requestAutoStop = useCallback(() => {
+    if (!recordingActiveRef.current || autoStopRequestedRef.current) return
+    autoStopRequestedRef.current = true
+    setAutoStopped(true)
+    void stopRef.current()
+  }, [])
+
   const start = useCallback(async () => {
     setError(null)
+    setAutoStopped(false)
+    autoStopRequestedRef.current = false
+    bytesRecordedRef.current = 0
 
     // Fail fast if the session is already gone — otherwise the rep records
     // the whole roleplay and only finds out it can't be saved at the end.
@@ -235,13 +254,15 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     }, 100)
 
     elapsedIntervalRef.current = setInterval(() => {
-      setElapsedSec(Math.round((Date.now() - startTimeRef.current) / 1000))
+      const elapsedMs = Date.now() - startTimeRef.current
+      setElapsedSec(Math.round(elapsedMs / 1000))
+      if (elapsedMs >= MAX_RECORDING_SEC * 1000) requestAutoStop()
     }, 500)
 
     chunksRef.current = []
     let mediaRec: MediaRecorder
     try {
-      mediaRec = new MediaRecorder(stream, { audioBitsPerSecond: 64_000 })
+      mediaRec = new MediaRecorder(stream, { audioBitsPerSecond: RECORDING_BITS_PER_SECOND })
     } catch (err) {
       // Throws synchronously on browsers/devices with no MediaRecorder
       // support (e.g. old iOS Safari) — was uncaught before, so recording
@@ -252,7 +273,12 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
       setPhase('error')
       return
     }
-    mediaRec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+    mediaRec.ondataavailable = e => {
+      if (e.data.size === 0) return
+      chunksRef.current.push(e.data)
+      bytesRecordedRef.current += e.data.size
+      if (bytesRecordedRef.current >= RECORDING_SIZE_GUARD_BYTES) requestAutoStop()
+    }
 
     // Single onstop handler for the whole recording lifetime, dispatched by
     // recordingActiveRef rather than reassigned per-call: a manual stop()
@@ -283,12 +309,14 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
       track.onended = () => { if (mediaRecRef.current?.state === 'recording') mediaRecRef.current.stop() }
     })
 
-    mediaRec.start()
+    // A 1-second timeslice delivers audio in pieces while recording, so the
+    // size guard above can see how large the file is growing.
+    mediaRec.start(1000)
     mediaRecRef.current = mediaRec
     recordingActiveRef.current = true
 
     setPhase('recording')
-  }, [supabase, cleanupCapture])
+  }, [supabase, cleanupCapture, requestAutoStop])
 
   const analyzeRecording = useCallback(async () => {
     const blob = blobRef.current
@@ -363,6 +391,9 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     setPreviewUrl(previewRef.current)
     await analyzeRecording()
   }, [cleanupCapture, analyzeRecording])
+
+  // requestAutoStop is defined before stop, so it calls stop through this ref.
+  useEffect(() => { stopRef.current = stop }, [stop])
 
   const pickSpeaker = useCallback(async (repSpeaker: string) => {
     const utterances: Utterance[] = utterancesRef.current.map(u => ({
@@ -480,9 +511,12 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     setSessionId(null)
     setError(null)
     setElapsedSec(0)
+    setAutoStopped(false)
+    autoStopRequestedRef.current = false
+    bytesRecordedRef.current = 0
     setPhase('idle')
     try { window.sessionStorage.removeItem(storageKey) } catch { /* ignore */ }
   }, [cleanupCapture, storageKey])
 
-  return { phase, error, previewUrl, saveError, retryAnalysis: analyzeRecording, elapsedSec, speakerPreviews, result, sessionId, start, stop, pickSpeaker, backToPickSpeaker, reset }
+  return { phase, error, previewUrl, saveError, autoStopped, retryAnalysis: analyzeRecording, elapsedSec, speakerPreviews, result, sessionId, start, stop, pickSpeaker, backToPickSpeaker, reset }
 }

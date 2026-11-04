@@ -95,13 +95,28 @@ describe('save recovery and idempotency', () => {
     const retry = () => PUT(new Request('http://localhost/api/coach-debrief', { method: 'PUT', body: JSON.stringify({ recoveryToken: generated.recoveryToken }) }))
     expect(await (await retry()).json()).toMatchObject({ saved: true, id: requestId })
     expect(await (await retry()).json()).toMatchObject({ saved: true, id: requestId })
-    expect(complete).toHaveBeenCalledTimes(1)
+    expect(complete).toHaveBeenCalledTimes(2) // one generation + one claim check; retries add none
   })
   it('returns the original saved result on generation retry and rejects reused IDs with different input', async () => {
     await POST(request({ ...input, requestId }))
     expect(await (await POST(request({ ...input, requestId }))).json()).toMatchObject({ saved: true, id: requestId })
-    expect(complete).toHaveBeenCalledTimes(1)
+    expect(complete).toHaveBeenCalledTimes(2) // one generation + one claim check; the retry adds none
     expect((await POST(request({ ...input, requestId, account: 'A different account of the same customer visit.' }))).status).toBe(409)
+  })
+  it('removes a sentence the claim check flags as unsupported by the rep account', async () => {
+    const two = { ...report, strength: 'You listened. You confirmed it in writing.' }
+    complete.mockReset()
+    complete.mockResolvedValueOnce(JSON.stringify({ questions: [], report: two }))
+      .mockResolvedValueOnce(JSON.stringify({ unsupported: { strength: ['You confirmed it in writing.'] } }))
+    const body = await (await POST(request({ ...input, requestId }))).json()
+    expect(body.result.report.strength).toBe('You listened.')
+  })
+  it('keeps the report unchanged when the claim check fails', async () => {
+    complete.mockReset()
+    complete.mockResolvedValueOnce(JSON.stringify({ questions: [], report })).mockResolvedValueOnce(null)
+    const body = await (await POST(request({ ...input, requestId }))).json()
+    expect(body.result.report.strength).toBe('You listened.')
+    expect(body.saved).toBe(true)
   })
   it('rejects a tampered recovery token and a different account', async () => {
     failInsert = true

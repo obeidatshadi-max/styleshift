@@ -21,6 +21,7 @@ import { methodologyBuilderEnabled } from '@/lib/methodologies'
 import KnowledgePackPanel from '@/components/dashboard/KnowledgePackPanel'
 import { knowledgePacksEnabled } from '@/lib/knowledge-packs'
 import BehavioralTrendsPanel from '@/components/dashboard/BehavioralTrendsPanel'
+import ImprovementBoardPanel from '@/components/dashboard/ImprovementBoardPanel'
 import CompanyDoctorsPanel from '@/components/dashboard/CompanyDoctorsPanel'
 import { getBehavioralTrendsForReps } from '@/lib/behavioral-trends-dashboard'
 import WeeklyDigestPanel from '@/components/dashboard/WeeklyDigestPanel'
@@ -136,6 +137,7 @@ export default async function DashboardPage() {
         <Panel title="Voice Practice">
           <VoicePracticePanel stats={voiceStats} reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} />
         </Panel>
+        <Panel title="Behavioral Improvement"><ImprovementBoardPanel /></Panel>
         <Panel title="Behavioral Trends">
           <BehavioralTrendsPanel reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} trendsByRep={behavioralTrends} />
         </Panel>

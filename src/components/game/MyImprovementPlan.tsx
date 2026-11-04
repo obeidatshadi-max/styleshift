@@ -12,7 +12,8 @@ import type { FollowupView } from '@/lib/improvement/server'
 
 interface Payload { report: ImprovementReport; followups: FollowupView[] }
 
-const fmt = (key: MetricKey, v: number) => (METRICS[key].unit === 'percent' ? `${v}%` : String(v))
+// Isolated left-to-right so a percent sign stays after its number inside Arabic text.
+const fmt = (key: MetricKey, v: number) => `⁦${METRICS[key].unit === 'percent' ? `${v}%` : String(v)}⁩`
 const chip = (color: string): React.CSSProperties => ({
   fontFamily: 'var(--mono)', fontSize: 12, padding: '2px 8px', borderRadius: 999, border: `1px solid ${color}`, color, whiteSpace: 'nowrap',
 })
@@ -110,11 +111,15 @@ export default function MyImprovementPlan({ initial }: { initial?: Payload }) {
                 <div style={{ fontSize: 15, lineHeight: 1.5 }}>
                   <strong>{it.metricKey ? metricName(it.metricKey) : t(`improve.drill.${it.drill.kind}`)}</strong>: {roadmapLine(it)}
                 </div>
-                <div style={{ fontSize: 14, color: 'var(--ink-dim)', marginTop: 4 }}>
-                  {t(`improve.drill.${it.drill.kind}`)}
-                  {it.drill.clearStep && <> · {t('improve.focusStep', { step: t(`improve.step.${it.drill.clearStep}`) })}</>}
-                </div>
-                <div style={{ marginTop: 6 }}><span style={chip('var(--ink-dim)')}>{t('improve.tier.observed_practice')}</span></div>
+                {it.reason !== 'needs_more_data' && (
+                  <>
+                    <div style={{ fontSize: 14, color: 'var(--ink-dim)', marginTop: 4 }}>
+                      {t(`improve.drill.${it.drill.kind}`)}
+                      {it.drill.clearStep && <> · {t('improve.focusStep', { step: t(`improve.step.${it.drill.clearStep}`) })}</>}
+                    </div>
+                    <div style={{ marginTop: 6 }}><span style={chip('var(--ink-dim)')}>{t('improve.tier.observed_practice')}</span></div>
+                  </>
+                )}
               </div>
             ))}
           </div>

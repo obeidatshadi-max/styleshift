@@ -290,6 +290,13 @@ describe('report accuracy (representative pharma scenarios)', () => {
     expect(r.evidence.verified).toMatchObject({ total: 1, seen: 1 })
     expect(r.evidence.selfReported).toEqual(base.evidence.selfReported)
     expect(r.followups[0].practice).toEqual(base.followups[0].practice)
+    expect(r.caveats).toEqual([]) // 1 self-report, 1 manager confirmation: nothing left unverified
+  })
+
+  it('keeps the unverified caveat while self-reports outnumber confirmations', () => {
+    const two: FieldCheck = { id: 'c9', followupId: 'f1', repId: 'rep', kind: 'self_reported', recordedBy: 'rep', observed: 'seen', at: day(12) }
+    const verified: FieldCheck = { id: 'c2', followupId: 'f1', repId: 'rep', kind: 'verified', recordedBy: 'mgr', observed: 'seen', at: day(12) }
+    const r = buildImprovementReport({ records: [...oncology, ...after], followups: [followup], checks: [...checks, two, verified], now: new Date(day(12)) })
     expect(r.caveats).toEqual(['self_report_not_verified'])
   })
 

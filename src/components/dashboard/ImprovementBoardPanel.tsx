@@ -86,8 +86,8 @@ export default function ImprovementBoardPanel({ initial }: { initial?: BoardRow[
                 return (
                   <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 13, lineHeight: 1.5 }}>
-                      <strong>{it.metricKey ? METRIC_LABEL[it.metricKey] : DRILL_LABEL[it.drill.kind]}</strong> · {DRILL_LABEL[it.drill.kind]}
-                      {it.drill.clearStep ? ` · ${it.drill.clearStep}` : ''} · {REASON_LABEL[it.reason]} <span style={{ color: 'var(--ink-dim)' }}>({CONFIDENCE_LABEL[it.confidence]})</span>
+                      <strong>{it.metricKey ? METRIC_LABEL[it.metricKey] : DRILL_LABEL[it.drill.kind]}</strong>
+                      {it.reason !== 'needs_more_data' && <> · {DRILL_LABEL[it.drill.kind]}{it.drill.clearStep ? ` · ${it.drill.clearStep}` : ''}</>} · {REASON_LABEL[it.reason]} <span style={{ color: 'var(--ink-dim)' }}>({CONFIDENCE_LABEL[it.confidence]})</span>
                     </span>
                     {it.reason !== 'needs_more_data' && (
                       <button disabled={alreadyOpen || busy === `a:${repId}:${it.id}`} onClick={() => assign(repId, it)}>

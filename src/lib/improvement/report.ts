@@ -49,7 +49,8 @@ export function buildImprovementReport(input: {
   if (records.length === 0) caveats.push('no_sessions')
   else if (records.length < 4) caveats.push('few_sessions')
   if (snapshot && !snapshot.comparable) caveats.push('no_comparison_yet')
-  if (selfReported.total > 0) caveats.push('self_report_not_verified')
+  // Only while the rep has reported more than managers have confirmed.
+  if (selfReported.total > verified.total) caveats.push('self_report_not_verified')
   if (followups.length > 0 && verified.total === 0) caveats.push('no_verified_field_evidence')
   if (followups.some(f => f.rejectedChecks > 0)) caveats.push('check_rejected')
 

@@ -6,6 +6,7 @@ import { useT, useGameData } from '@/lib/i18n'
 import LangToggle from '@/components/LangToggle'
 import ThemeToggle from '@/components/ThemeToggle'
 import ForgotPasswordForm from './ForgotPasswordForm'
+import PasswordInput from './PasswordInput'
 
 const STYLE_COLOR: Record<string, string> = { driver:'var(--purple)', expressive:'var(--green)', amiable:'var(--pink)', analytical:'var(--cyan)' }
 
@@ -227,14 +228,14 @@ export default function LoginForm() {
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)' }}>
                   {t('login.pinLabel')}
                 </div>
-                <input
-                  type="password"
+                <PasswordInput
                   inputMode="numeric"
                   autoComplete="current-password"
                   maxLength={6}
                   value={pin}
-                  onChange={e => setPin(e.target.value)}
+                  onChange={setPin}
                   placeholder={t('login.pinPlaceholder')}
+                  ariaLabel={t('login.pinLabel')}
                   required
                   style={inputStyle}
                 />
@@ -253,7 +254,7 @@ export default function LoginForm() {
             ) : (
               <form onSubmit={handleRepIndividualAuth} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('login.email')} aria-label={t('login.email')} required style={inputStyle} />
-                <input type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} placeholder={t('login.password')} aria-label={t('login.password')} required style={inputStyle} />
+                <PasswordInput autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={setPassword} placeholder={t('login.password')} ariaLabel={t('login.password')} required style={inputStyle} />
                 {mode === 'login' && (
                   <button type="button" onClick={() => { setMode('forgot'); setError(null) }}
                     style={{ background: 'transparent', border: 'none', color: 'var(--cyan)', fontSize: 15, cursor: 'pointer', fontFamily: 'var(--sans)', textAlign: 'start', padding: 0 }}>
@@ -279,7 +280,7 @@ export default function LoginForm() {
         ) : (
           <form onSubmit={handleManagerLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('login.email')} aria-label={t('login.email')} required style={inputStyle} />
-            <input type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} placeholder={t('login.password')} aria-label={t('login.password')} required style={inputStyle} />
+            <PasswordInput autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={setPassword} placeholder={t('login.password')} ariaLabel={t('login.password')} required style={inputStyle} />
             {mode === 'login' && (
               <button type="button" onClick={() => { setMode('forgot'); setError(null) }}
                 style={{ background: 'transparent', border: 'none', color: 'var(--cyan)', fontSize: 15, cursor: 'pointer', fontFamily: 'var(--sans)', textAlign: 'start', padding: 0 }}>

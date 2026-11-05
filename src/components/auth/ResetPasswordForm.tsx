@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import { useT } from '@/lib/i18n'
+import PasswordInput from './PasswordInput'
 import LangToggle from '@/components/LangToggle'
 import ThemeToggle from '@/components/ThemeToggle'
 
@@ -43,10 +44,10 @@ export default function ResetPasswordForm() {
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 20 }}><ThemeToggle /><LangToggle /></div>
       <form onSubmit={submit} style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 16, padding: 24, boxShadow: 'var(--shadow)', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <h1 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>{t('reset.title')}</h1>
-        <input type="password" autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)}
-          placeholder={t('reset.new')} aria-label={t('reset.new')} required style={inputStyle} />
-        <input type="password" autoComplete="new-password" value={again} onChange={e => setAgain(e.target.value)}
-          placeholder={t('reset.confirm')} aria-label={t('reset.confirm')} required style={inputStyle} />
+        <PasswordInput autoComplete="new-password" value={password} onChange={setPassword}
+          placeholder={t('reset.new')} ariaLabel={t('reset.new')} required style={inputStyle} />
+        <PasswordInput autoComplete="new-password" value={again} onChange={setAgain}
+          placeholder={t('reset.confirm')} ariaLabel={t('reset.confirm')} required style={inputStyle} />
         {error && <p role="alert" style={{ color: 'var(--red)', fontSize: 16, lineHeight: 1.5, margin: 0 }}>{error}</p>}
         <button type="submit" disabled={busy} style={btnPrimary}>{busy ? '...' : t('reset.save')}</button>
       </form>

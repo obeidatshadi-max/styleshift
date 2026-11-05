@@ -40,7 +40,11 @@ create unique index certifications_one_live_per_program
 
 alter table public.certifications enable row level security;
 revoke all on public.certifications from anon, authenticated;
-grant select on public.certifications to authenticated;
+-- Column-level read access only. The manager's notes (exception reason, withdrawal reason), the
+-- frozen evidence and criteria, and who issued it are never readable straight from the database by a
+-- signed-in user. The app reads them through the server with the service role.
+grant select (id, company_id, rep_id, rep_name, program_name, criteria_met, verify_code, issued_at, revoked_at)
+  on public.certifications to authenticated;
 
 -- A rep reads their own certificates; a manager reads their company's. All writes go through the
 -- server with the service role, which checks the caller's role itself.

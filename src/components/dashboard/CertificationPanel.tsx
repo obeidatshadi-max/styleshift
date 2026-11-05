@@ -87,7 +87,7 @@ export default function CertificationPanel({ initial }: { initial?: Overview }) 
           ))}
         </div>
         <p style={{ fontSize: 13, color: 'var(--ink-dim)', margin: '8px 0 0' }}>
-          0 means not required. Evidence is read live from each rep’s practice; voice figures cover the last {data.windowDays} days.
+          0 means not required. Evidence is read live from each rep’s practice records, which the rep’s own account writes, so treat a pass as a guide, not proof. You decide whether to issue. Voice figures cover the last {data.windowDays} days.
           {!parsed.ok && <strong style={{ color: 'var(--red)' }}> {parsed.error}.</strong>}
         </p>
       </section>

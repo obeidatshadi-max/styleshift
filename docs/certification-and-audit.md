@@ -22,6 +22,12 @@ Until both are done the dashboard panel, the rep card, the API routes and the pu
 - **Reps** see their certificates on the Home screen (EN/AR).
 - **Public check page** `/verify/<12-character code>`: shows the programme, the rep's name, the company, the date, and Valid or Withdrawn. Never the evidence, the exception reason or the withdrawal reason. It prints to PDF. Codes avoid 0/O/1/I/L.
 
+## What the evidence is worth
+
+The evidence comes from practice records that each rep's own account writes (game sessions, voice sessions, scorecards). A rep who wanted to could fake those rows, so a pass is a guide for the manager, **not proof**. The manager decides whether to issue, and the panel says so. If certificates will carry real weight (for a client or a regulator), add a server-only "verified" marker to those records and count only verified rows.
+
+Signed-in users can read only the basic certificate columns straight from the database. The exception reason, withdrawal reason, frozen evidence and criteria are read by the server only.
+
 ## Audit trail
 
 `audit_events` is append-only: a database trigger refuses update, delete and truncate, and the app has no write path to it. Certificate events are written by a database trigger in the same transaction as the change, so a certificate cannot be issued or withdrawn without a record. Managers read their company's trail on the dashboard.

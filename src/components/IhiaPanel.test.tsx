@@ -44,6 +44,42 @@ describe('Iraqi knowledge interface', () => {
     await screen.findByText('هذا قصدك؟')
     expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ text: approved.expression, region: 'baghdad' })
   })
+  it('turns a phrase reps corrected into a draft and marks the proposals as drafted', async () => {
+    const proposal = { heard: 'وكت', meant: 'وقت', ids: ['p1', 'p2'], times: 2, reps: 2, latest: '2026-11-05T10:00:00Z' }
+    const fetch = vi.fn().mockImplementation(async (url, init) => {
+      if (url === '/api/ihia/proposals' && !init?.method) return Response.json({ proposals: [proposal] })
+      if (url === '/api/ihia/proposals') return Response.json({ ok: true })
+      if (url === '/api/ihia/knowledge' && init?.method === 'POST') return Response.json({ ...approved, id: 'new-entry' }, { status: 201 })
+      return Response.json([])
+    })
+    vi.stubGlobal('fetch', fetch)
+    render(<IhiaPanel reviewer />)
+    await screen.findByText('Phrases reps corrected in recordings')
+    expect(screen.getByText('2 time(s) by 2 rep(s)')).toBeTruthy()
+    fireEvent.click(screen.getByText('Start a draft'))
+    expect((screen.getByLabelText('expression') as HTMLInputElement).value).toBe('وقت')
+    fireEvent.change(screen.getByLabelText('literal meaning'), { target: { value: 'Time' } })
+    fireEvent.change(screen.getByLabelText('contextual meaning'), { target: { value: 'Asking for time' } })
+    fireEvent.click(screen.getByText('Save draft'))
+    await screen.findByText('Saved as draft. Approval is required.')
+    const patch = fetch.mock.calls.find(c => c[0] === '/api/ihia/proposals' && c[1]?.method === 'PATCH')!
+    expect(JSON.parse(patch[1].body)).toEqual({ ids: ['p1', 'p2'], action: 'drafted', entryId: 'new-entry' })
+  })
+  it('dismisses a proposed phrase without creating an entry', async () => {
+    const proposal = { heard: 'وكت', meant: 'وقت', ids: ['p1'], times: 1, reps: 1, latest: '2026-11-05T10:00:00Z' }
+    const fetch = vi.fn().mockImplementation(async (url, init) => {
+      if (url === '/api/ihia/proposals' && !init?.method) return Response.json({ proposals: [proposal] })
+      if (url === '/api/ihia/proposals') return Response.json({ ok: true })
+      return Response.json([])
+    })
+    vi.stubGlobal('fetch', fetch)
+    render(<IhiaPanel reviewer />)
+    await screen.findByText('Phrases reps corrected in recordings')
+    fireEvent.click(screen.getByText('Dismiss'))
+    await waitFor(() => expect(fetch.mock.calls.some(c => c[1]?.method === 'PATCH')).toBe(true))
+    expect(JSON.parse(fetch.mock.calls.find(c => c[1]?.method === 'PATCH')![1].body)).toEqual({ ids: ['p1'], action: 'dismissed' })
+    expect(fetch.mock.calls.some(c => c[0] === '/api/ihia/knowledge' && c[1]?.method === 'POST')).toBe(false)
+  })
   it('supports approval and version history with explicit review reasons', async () => {
     const fetch = vi.fn().mockImplementation(async (url, init) => {
       if (String(url).includes('?history=')) return Response.json([{ version: 1, snapshot: approved }])

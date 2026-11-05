@@ -4,12 +4,23 @@ import { useLang } from '@/lib/i18n'
 import { useSavedReport } from '@/hooks/useSavedReport'
 import { ConversationReport } from '@/components/report/ConversationReport'
 import PracticeReport from './PracticeReport'
+import TranscriptCorrection from './TranscriptCorrection'
 
-function SavedOrGenerate({ sessionId }: { sessionId: string }) {
+function SavedOrGenerate({ sessionId, latestVersion }: { sessionId: string; latestVersion: number | null }) {
   const saved = useSavedReport('human_partner', sessionId)
   const { lang } = useLang()
+  const [regenerate, setRegenerate] = useState(false)
   if (saved.status === 'loading') return <p role="status">{lang === 'ar' ? 'جاري تحميل التحليل…' : 'Loading conversation analysis…'}</p>
-  if (saved.status === 'found') return <ConversationReport report={saved.report} outdated={false} />
+  // A correction after this report was written makes it outdated: it still shows, marked as old,
+  // until the rep creates it again from the corrected text.
+  const outdated = saved.status === 'found' && latestVersion !== null && saved.report.transcriptVersion < latestVersion
+  if (saved.status === 'found' && !regenerate) return <>
+    <ConversationReport report={saved.report} outdated={outdated} />
+    {outdated && <button type="button" onClick={() => setRegenerate(true)}
+      style={{ cursor: 'pointer', padding: '12px 16px', borderRadius: 10, background: 'var(--cyan)', color: 'var(--on-accent)', border: '1px solid var(--cyan)', width: '100%', marginTop: 12 }}>
+      {lang === 'ar' ? 'أعد إنشاء التحليل من النص المصحّح' : 'Create the analysis again from the corrected text'}
+    </button>}
+  </>
   return <PracticeReport sessionId={sessionId} sessionType="human_partner" analysisConsent />
 }
 
@@ -18,8 +29,11 @@ export default function RecordedConversationAnalysis({ sessionId }: { sessionId:
   const { lang } = useLang()
   const [consent, setConsent] = useState(false)
   const [open, setOpen] = useState(false)
+  const [latestVersion, setLatestVersion] = useState<number | null>(null)
   const ar = lang === 'ar'
-  return <section aria-label={ar ? 'تحليل المحادثة باللهجة العراقية' : 'Iraqi conversation analysis'}
+  return <>
+    <TranscriptCorrection sessionId={sessionId} onSaved={setLatestVersion} />
+    <section aria-label={ar ? 'تحليل المحادثة باللهجة العراقية' : 'Iraqi conversation analysis'}
     style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 14, marginBottom: 16 }}>
     <h3 style={{ fontSize: 16, color: 'var(--cyan)' }}>{ar ? 'فهم المحادثة باللهجة العراقية' : 'Understand the Iraqi conversation'}</h3>
     <p style={{ fontSize: 16, lineHeight: 1.7, margin: '8px 0 12px' }}>{ar
@@ -33,6 +47,7 @@ export default function RecordedConversationAnalysis({ sessionId }: { sessionId:
     {!open ? <button disabled={!consent} type="button" onClick={() => setOpen(true)} style={{ cursor: 'pointer', padding: '12px 16px', borderRadius: 10,
       background: 'var(--cyan)', color: 'var(--on-accent)', border: '1px solid var(--cyan)', width: '100%' }}>
       {ar ? 'تحليل المحادثة بالذكاء الاصطناعي' : 'AI conversation analysis'}
-    </button> : <SavedOrGenerate sessionId={sessionId} />}
+    </button> : <SavedOrGenerate key={latestVersion ?? 0} sessionId={sessionId} latestVersion={latestVersion} />}
   </section>
+  </>
 }

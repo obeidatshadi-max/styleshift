@@ -4,6 +4,8 @@ import { REGIONS, type Knowledge } from '@/lib/ihia/core'
 import type { SuggestedExpression } from '@/lib/ihia/suggestions'
 
 type Entry = Knowledge & { review_note: string }
+/** Reps' corrections of misheard phrases, grouped: the same fix made several times shows once. */
+type Proposal = { heard: string; meant: string; ids: string[]; times: number; reps: number; latest: string }
 const field = { display: 'block', width: '100%', padding: 10, margin: '6px 0 14px', background: 'var(--panel)', color: 'var(--ink)', border: '1px solid var(--line)', borderRadius: 8 }
 const box = { background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 16, padding: 18, marginTop: 20 }
 const blank = { expression: '', literal_meaning: '', contextual_meaning: '', specialty: 'general', region: 'baghdad', kind: 'dialect', uncertainty: '', source_reference: '' }
@@ -20,6 +22,8 @@ export default function IhiaPanel({ reviewer }: { reviewer: boolean }) {
   const [suggestions, setSuggestions] = useState<SuggestedExpression[]>([])
   const [savedSuggestions, setSavedSuggestions] = useState<Set<string>>(new Set())
   const [suggesting, setSuggesting] = useState(false)
+  const [proposals, setProposals] = useState<Proposal[]>([])
+  const [fromProposal, setFromProposal] = useState<Proposal | null>(null)
   async function request(path: string, init?: RequestInit) {
     const res = await fetch(path, { ...init, cache: 'no-store' })
     const data = await res.json()
@@ -28,6 +32,24 @@ export default function IhiaPanel({ reviewer }: { reviewer: boolean }) {
   }
   async function refresh() {
     try { setEntries(await request('/api/ihia/knowledge')) } catch (e) { setMessage(String(e)) }
+    try {
+      const data = await request('/api/ihia/proposals')
+      setProposals(Array.isArray(data?.proposals) ? data.proposals : [])
+    } catch { setProposals([]) }
+  }
+  async function dismissProposal(proposal: Proposal) {
+    setBusy(true); setMessage('')
+    try {
+      await request('/api/ihia/proposals', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: proposal.ids, action: 'dismissed' }) })
+      await refresh()
+    } catch (e) { setMessage(String(e)) } finally { setBusy(false) }
+  }
+  function startFromProposal(proposal: Proposal) {
+    setEdit(null); setFromProposal(proposal)
+    setDraft({ ...blank, expression: proposal.meant,
+      uncertainty: `The speech engine wrote «${proposal.heard}»; reps corrected it to «${proposal.meant}». Meaning and region not yet confirmed.`,
+      source_reference: `Corrected by ${proposal.reps} rep(s), ${proposal.times} time(s), in pilot recordings. An Iraqi speaker must confirm.` })
+    setMessage('Fill in the meanings, check the wording, then save as a draft.')
   }
   useEffect(() => { if (reviewer) void refresh() }, [reviewer]) // eslint-disable-line react-hooks/exhaustive-deps
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -40,9 +62,13 @@ export default function IhiaPanel({ reviewer }: { reviewer: boolean }) {
     event.preventDefault(); setBusy(true); setMessage('')
     const note = new FormData(event.currentTarget).get('note')
     try {
-      await request('/api/ihia/knowledge', { method: edit ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' },
+      const saved = await request('/api/ihia/knowledge', { method: edit ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(edit ? { id: edit.id, version: edit.version, action: 'correct', entry: draft, review_note: note } : draft) })
-      setEdit(null); setDraft(blank); setMessage('Saved as draft. Approval is required.'); await refresh()
+      if (!edit && fromProposal && saved?.id) {
+        await request('/api/ihia/proposals', { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: fromProposal.ids, action: 'drafted', entryId: saved.id }) }).catch(() => {})
+      }
+      setEdit(null); setFromProposal(null); setDraft(blank); setMessage('Saved as draft. Approval is required.'); await refresh()
     } catch (e) { setMessage(String(e)) } finally { setBusy(false) }
   }
   async function review(event: FormEvent<HTMLFormElement>, entry: Entry) {
@@ -109,6 +135,17 @@ export default function IhiaPanel({ reviewer }: { reviewer: boolean }) {
         <details><summary>Evidence and original utterance</summary><pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(result, null, 2)}</pre></details></div>}
     </section>
     <p role="status">{busy ? 'Working…' : message}</p>
+    {reviewer && proposals.length > 0 && <section style={box} aria-label="Phrases corrected by reps">
+      <h2>Phrases reps corrected in recordings</h2>
+      <p>Only the changed words are shared, never whole lines or names. Start a draft to add one to the library, or dismiss it.</p>
+      {proposals.map(p => <article key={p.ids[0]} style={{ ...box, marginTop: 10 }}>
+        <p dir="auto">Speech engine wrote: <strong>{p.heard}</strong></p>
+        <p dir="auto">Reps corrected it to: <strong>{p.meant}</strong></p>
+        <p>{p.times} time(s) by {p.reps} rep(s)</p>
+        <button type="button" disabled={busy} onClick={() => startFromProposal(p)}>Start a draft</button>
+        <button type="button" disabled={busy} onClick={() => void dismissProposal(p)}>Dismiss</button>
+      </article>)}
+    </section>}
     {reviewer && <section style={box}><h2>{edit ? 'Correct expression' : 'Add expression for review'}</h2>
       <form onSubmit={save}>
         {Object.entries(draft).map(([key, value]) => <label key={key}>{key.replaceAll('_', ' ')}

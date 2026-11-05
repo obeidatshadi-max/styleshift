@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyFidelity, parseFeedback, parseFidelity, parseKeyMessageInput, parsePracticeInput, parseVersions, visibleToRep, type Versions } from './key-message'
+import { applyFidelity, feedbackPrompt, parseFeedback, parseFidelity, parseKeyMessageInput, parsePracticeInput, parseVersions, visibleToRep, type Versions } from './key-message'
 
 const D = '11111111-1111-4111-8111-111111111111'
 const v = (over: Partial<Versions> = {}): Versions => ({ driver: 'Drive one.', expressive: 'Express one.', amiable: 'Amiable one.', analytical: 'Analytical one.', ...over })
@@ -71,11 +71,13 @@ describe('parseFidelity', () => {
 
 describe('parsePracticeInput', () => {
   it('needs a known style and text, and share must be boolean', () => {
-    expect(parsePracticeInput({ style: 'driver', text: ' hi ' })).toEqual({ style: 'driver', text: 'hi', share: false })
+    expect(parsePracticeInput({ style: 'driver', text: ' hi ' })).toEqual({ style: 'driver', text: 'hi', share: false, spoken: false })
     expect(parsePracticeInput({ style: 'driver', text: 'hi', share: true })?.share).toBe(true)
     expect(parsePracticeInput({ style: 'boss', text: 'hi' })).toBeNull()
     expect(parsePracticeInput({ style: 'driver', text: '' })).toBeNull()
     expect(parsePracticeInput({ style: 'driver', text: 'hi', share: 'yes' })).toBeNull()
+    expect(parsePracticeInput({ style: 'driver', text: 'hi', spoken: true })?.spoken).toBe(true)
+    expect(parsePracticeInput({ style: 'driver', text: 'hi', spoken: 'yes' })).toBeNull()
   })
 })
 
@@ -84,6 +86,13 @@ describe('parseFeedback', () => {
     const f = { styleFit: 'a', faithful: 'b', strength: 'c', tryNext: 'd' }
     expect(parseFeedback(JSON.stringify(f))).toEqual(f)
     expect(parseFeedback(JSON.stringify({ ...f, tryNext: '' }))).toBeNull()
+  })
+})
+
+describe('feedbackPrompt', () => {
+  it('tells the coach to judge words only when the attempt is a transcript, and not otherwise', () => {
+    expect(feedbackPrompt('m', 'driver', 'a', true).system).toMatch(/transcript[\s\S]*cannot hear tone, pace or volume/)
+    expect(feedbackPrompt('m', 'driver', 'a').system).not.toMatch(/transcript/)
   })
 })
 

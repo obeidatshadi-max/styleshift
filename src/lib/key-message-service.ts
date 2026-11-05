@@ -135,7 +135,7 @@ export async function practiceKeyMessage(db: SupabaseClient, complete: CompleteF
   const message = data as Row | null
   if (!message || visibleToRep([message], userId).length === 0) return fail(404, 'not_found')
 
-  const raw = await complete(feedbackPrompt(message.message_text, input.style, input.text))
+  const raw = await complete(feedbackPrompt(message.message_text, input.style, input.text, input.spoken))
   const feedback: Feedback | null = raw ? parseFeedback(raw) : null
   if (!feedback) return fail(502, 'coach_unavailable')
 

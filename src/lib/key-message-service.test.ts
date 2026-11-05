@@ -83,7 +83,7 @@ describe('createKeyMessage', () => {
 describe('practiceKeyMessage', () => {
   const message = (over: Record<string, unknown> = {}) => ({ id: 'm1', company_id: 'co', created_by: MGR, created_by_role: 'manager', rep_ids: null, active: true, created_at: '2026-11-01T00:00:00Z', message_text: 'Statin X lowers LDL.', ...over })
   const ok = (over: Record<string, unknown> = {}) => fakeDb({ profiles: { data: { company_id: 'co', role: 'rep' } }, key_messages: { data: message(over) }, key_message_attempts: { data: { id: 'att' } }, key_message_progress: { data: null } })
-  const attempt = { style: 'driver' as const, text: 'Statin X lowers LDL, can I start a patient?', share: false }
+  const attempt = { style: 'driver' as const, text: 'Statin X lowers LDL, can I start a patient?', share: false, spoken: false }
 
   it('saves the attempt, returns feedback, marks the message done', async () => {
     const { db, calls } = ok()
@@ -91,6 +91,16 @@ describe('practiceKeyMessage', () => {
     expect(r).toEqual({ status: 200, body: { id: 'att', feedback } })
     expect(calls.find(c => c.table === 'key_message_attempts')!.arg).toMatchObject({ rep_id: REP, style: 'driver', shared_with_manager: false })
     expect(calls.find(c => c.op === 'upsert')!.arg).toEqual({ key_message_id: 'm1', rep_id: REP })
+  })
+
+  it('asks the coach to judge words only when the attempt is spoken', async () => {
+    const { db } = ok()
+    const complete = llm(JSON.stringify(feedback))
+    await practiceKeyMessage(db, complete, REP, 'm1', { ...attempt, spoken: true })
+    expect(complete.mock.calls[0][0].system).toMatch(/transcript of the rep speaking aloud/)
+    const plain = llm(JSON.stringify(feedback))
+    await practiceKeyMessage(ok().db, plain, REP, 'm1', attempt)
+    expect(plain.mock.calls[0][0].system).not.toMatch(/transcript of the rep speaking aloud/)
   })
 
   it('shares with the manager only when the rep ticks share AND a manager set the message', async () => {

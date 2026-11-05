@@ -5,6 +5,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { LanguageProvider } from '@/lib/i18n'
 import KeyMessagePractice from './KeyMessagePractice'
 
+// The real recorder needs a microphone; this stand-in "hears" a fixed sentence when tapped.
+vi.mock('./VoiceRecorder', () => ({
+  default: ({ onTranscript }: { onTranscript: (t: string) => void }) =>
+    React.createElement('button', { type: 'button', onClick: () => onTranscript('Spoken words from the mic.') }, 'mic'),
+}))
+
 const VERSIONS = { driver: 'Driver version.', expressive: 'Expressive version.', amiable: 'Amiable version.', analytical: 'Analytical version.' }
 const feedback = { styleFit: 'Fit text', faithful: 'Faithful text', strength: 'Strength text', tryNext: 'Next text' }
 const msg = (over: Record<string, unknown> = {}) => ({ id: 'm1', text: 'Statin X lowers LDL.', mode: 'written', versions: VERSIONS, dueDate: null, doctorId: null, fromManager: true, completed: false, ...over })
@@ -47,7 +53,7 @@ describe('KeyMessagePractice', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Get feedback' }))
     expect(await screen.findByText('Fit text')).toBeTruthy()
     const post = fetchMock.mock.calls.find(c => String(c[0]).endsWith('/practice'))!
-    expect(JSON.parse((post[1] as RequestInit).body as string)).toEqual({ style: 'driver', text: 'My version.', share: false })
+    expect(JSON.parse((post[1] as RequestInit).body as string)).toEqual({ style: 'driver', text: 'My version.', share: false, spoken: false })
     expect(screen.getByText(/Done/)).toBeTruthy()
   })
 
@@ -66,6 +72,21 @@ describe('KeyMessagePractice', () => {
     await screen.findByText('Fit text')
     const post = fetchMock.mock.calls.find(c => String(c[0]).endsWith('/practice'))!
     expect(JSON.parse((post[1] as RequestInit).body as string).share).toBe(true)
+  })
+
+  it('fills the box from a recording, lets the rep edit it, and sends it marked as spoken', async () => {
+    load({ role: 'rep', doctors: [], messages: [msg({ mode: 'verbal' })] })
+    view()
+    fireEvent.click(await screen.findByRole('button', { name: 'Practise' }))
+    expect(screen.getByText(/asked you to practise this one aloud/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'mic' }))
+    const box = screen.getByPlaceholderText(/Write what you would say/) as HTMLTextAreaElement
+    expect(box.value).toBe('Spoken words from the mic.')
+    fireEvent.change(box, { target: { value: 'Spoken words from the mic, fixed.' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Get feedback' }))
+    await screen.findByText('Fit text')
+    const post = fetchMock.mock.calls.find(c => String(c[0]).endsWith('/practice'))!
+    expect(JSON.parse((post[1] as RequestInit).body as string)).toMatchObject({ text: 'Spoken words from the mic, fixed.', spoken: true })
   })
 
   it('preselects and highlights the customer\'s style when the message is for a known doctor', async () => {

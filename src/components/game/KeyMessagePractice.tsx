@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useGameData, useT } from '@/lib/i18n'
 import { FEEDBACK_FIELDS, KM_MAX_MESSAGE, KM_STYLES, type Feedback, type KmStyle, type Versions } from '@/lib/key-message'
 import { bodyText, card, ghostBtn, primaryBtn, sectionLabel, smallLabel } from './TextSimulation'
+import VoiceRecorder from './VoiceRecorder'
 
 interface Msg { id: string; text: string; mode: string; versions: Versions | null; dueDate: string | null; doctorId: string | null; fromManager: boolean; completed: boolean }
 interface Doc { id: string; name: string; style: KmStyle | null }
@@ -20,6 +21,7 @@ export default function KeyMessagePractice() {
   const [style, setStyle] = useState<KmStyle>('driver')
   const [text, setText] = useState('')
   const [share, setShare] = useState(false)
+  const [spoken, setSpoken] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
@@ -40,13 +42,13 @@ export default function KeyMessagePractice() {
   const styleOf = (m: Msg) => data.doctors.find(d => d.id === m.doctorId)
   const toggle = (m: Msg) => {
     setOpen(open === m.id ? null : m.id)
-    setText(''); setFeedback(null); setError(null); setShare(false)
+    setText(''); setFeedback(null); setError(null); setShare(false); setSpoken(false)
     setStyle(styleOf(m)?.style ?? 'driver')
   }
 
   const submit = async (m: Msg) => {
     setBusy(true); setError(null)
-    const res = await fetch(`/api/key-messages/${m.id}/practice`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ style, text, share }) }).catch(() => null)
+    const res = await fetch(`/api/key-messages/${m.id}/practice`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ style, text, share, spoken }) }).catch(() => null)
     setBusy(false)
     if (!res?.ok) { setError(t(res?.status === 429 ? 'km.err.rate' : 'km.err.feedback')); return }
     const body = await res.json() as { feedback: Feedback }
@@ -102,8 +104,14 @@ export default function KeyMessagePractice() {
                   ))}
                 </div>
 
+                {m.mode === 'verbal' && <p style={{ ...bodyText, color: 'var(--cyan)' }}>{t('km.mode.verbal')}</p>}
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+                  <span style={smallLabel}>{t('km.speak')}</span>
+                  <VoiceRecorder onTranscript={tr => { setText(prev => prev ? `${prev} ${tr}` : tr); setSpoken(true) }} />
+                </div>
+                <p style={{ ...bodyText, color: 'var(--ink-dim)', margin: '0 0 8px' }}>{t('km.speakHint')}</p>
                 <label style={{ display: 'grid', gap: 6 }}>
-                  <span style={smallLabel}>{t('km.write')}</span>
+                  <span style={smallLabel}>{t(spoken ? 'km.writeSpoken' : 'km.write')}</span>
                   <textarea dir="auto" rows={4} value={text} maxLength={1200} placeholder={t('km.placeholder')} onChange={e => setText(e.target.value)} style={field} />
                 </label>
                 {m.fromManager && (

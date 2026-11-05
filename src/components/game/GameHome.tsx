@@ -26,6 +26,7 @@ import MethodologyCard from './MethodologyCard'
 import NextChallengeCard from './NextChallengeCard'
 import PatternMemoryCard from './PatternMemoryCard'
 import PracticeMyDoctor from './PracticeMyDoctor'
+import KeyMessagePractice from './KeyMessagePractice'
 import ProgressCard from './ProgressCard'
 import MyCoachingInsights from './MyCoachingInsights'
 import MyImprovementPlan from './MyImprovementPlan'
@@ -144,6 +145,8 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
         <ProgressCard />
 
         <PracticeMyDoctor />
+
+        <KeyMessagePractice />
 
         <button onClick={() => setMoreOpen(o => !o)} aria-expanded={moreOpen}
           style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--line)', color:'var(--ink-dim)', background:'transparent', borderRadius:10, padding:'10px 16px', touchAction:'manipulation' }}>

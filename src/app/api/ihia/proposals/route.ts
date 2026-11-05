@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { ihiaEnabled, isReviewer } from '@/lib/ihia/server'
 
 async function context() {
@@ -8,14 +9,16 @@ async function context() {
   const { data: { user } } = await db.auth.getUser()
   if (!user) return { response: NextResponse.json({ error: 'unauthorized' }, { status: 401 }) }
   if (!(await isReviewer(db, user.id))) return { response: NextResponse.json({ error: 'forbidden' }, { status: 403 }) }
-  return { db, user }
+  // The table grants signed-in users no read or update access at all: reps may only insert, and
+  // reviewers get proposals through this route, which drops the rep id before anything leaves the server.
+  return { db, user, admin: createAdminClient() }
 }
 
 /** Pending proposals, grouped so the same fix made by several reps shows once with a count. */
 export async function GET() {
   const ctx = await context()
   if (ctx.response) return ctx.response
-  const { data, error } = await ctx.db!.from('ihia_proposals').select('id, heard, meant, rep_id, created_at')
+  const { data, error } = await ctx.admin!.from('ihia_proposals').select('id, heard, meant, rep_id, created_at')
     .eq('status', 'pending').order('created_at', { ascending: false }).limit(500)
   if (error) return NextResponse.json({ error: 'proposals_unavailable' }, { status: 503 })
   const groups = new Map<string, { heard: string; meant: string; ids: string[]; reps: Set<string>; latest: string }>()
@@ -40,7 +43,7 @@ export async function PATCH(req: Request) {
     || (body.action !== 'drafted' && body.action !== 'dismissed')
     || (body.action === 'drafted' && typeof body.entryId !== 'string'))
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
-  const { error } = await ctx.db!.from('ihia_proposals').update({
+  const { error } = await ctx.admin!.from('ihia_proposals').update({
     status: body.action, entry_id: body.action === 'drafted' ? body.entryId : null,
     handled_by: ctx.user!.id, handled_at: new Date().toISOString(),
   }).in('id', ids as string[]).eq('status', 'pending')

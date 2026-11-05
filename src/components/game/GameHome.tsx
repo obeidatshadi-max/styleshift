@@ -30,6 +30,7 @@ import KeyMessagePractice from './KeyMessagePractice'
 import ProgressCard from './ProgressCard'
 import MyCoachingInsights from './MyCoachingInsights'
 import MyImprovementPlan from './MyImprovementPlan'
+import MyCertificates from './MyCertificates'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
 
@@ -173,6 +174,8 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
         <MyCoachingInsights />
 
         <MyImprovementPlan />
+
+        <MyCertificates />
 
         {standings && standings.standings.length > 0 && panel(t('rank.title'),
           <>

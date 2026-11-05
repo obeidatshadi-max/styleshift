@@ -22,6 +22,8 @@ import MethodologyBuilderPanel from '@/components/dashboard/MethodologyBuilderPa
 import { methodologyBuilderEnabled } from '@/lib/methodologies'
 import KnowledgePackPanel from '@/components/dashboard/KnowledgePackPanel'
 import { knowledgePacksEnabled } from '@/lib/knowledge-packs'
+import CertificationPanel from '@/components/dashboard/CertificationPanel'
+import { certificationEnabled } from '@/lib/certification'
 import BehavioralTrendsPanel from '@/components/dashboard/BehavioralTrendsPanel'
 import ImprovementBoardPanel from '@/components/dashboard/ImprovementBoardPanel'
 import CompanyDoctorsPanel from '@/components/dashboard/CompanyDoctorsPanel'
@@ -144,6 +146,7 @@ export default async function DashboardPage() {
         <Panel title="Behavioral Trends">
           <BehavioralTrendsPanel reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} trendsByRep={behavioralTrends} />
         </Panel>
+        {certificationEnabled() && <Panel title="Certification & Audit Trail"><CertificationPanel /></Panel>}
         <Panel title="Activity This Week"><ActivityBar activity={stats?.activity ?? []} /></Panel>
         {stats?.inviteCode && (
           <Panel title="Invite Link">

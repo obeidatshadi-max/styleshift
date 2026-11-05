@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useT } from '@/lib/i18n'
+import { useLang, useT } from '@/lib/i18n'
+import { localizeInsight } from '@/lib/mastermind-localize'
 import type { MastermindInsight } from '@/lib/mastermind-coach'
 import type { BehavioralGravityResult } from '@/lib/behavioral-gravity'
 import type { UnusedResourceFinding } from '@/lib/unused-resource-detector'
@@ -20,6 +21,7 @@ interface TrendsResponse {
 
 export default function MyCoachingInsights() {
   const t = useT()
+  const { lang } = useLang()
   const [data, setData] = useState<TrendsResponse | null>(null)
   const [openIndex, setOpenIndex] = useState<number | null>(null)
 
@@ -42,7 +44,8 @@ export default function MyCoachingInsights() {
         {t('mastermind.title')}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {data.mastermindInsights.map((insight, i) => {
+        {data.mastermindInsights.map((raw, i) => {
+          const insight = localizeInsight(raw, lang)
           const open = openIndex === i
           return (
             <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px' }}>

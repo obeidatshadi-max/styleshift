@@ -22,4 +22,19 @@ describe('MyCoachingInsights', () => {
     await new Promise(r => setTimeout(r, 20))
     expect(container.innerHTML).toBe('')
   })
+
+  // Reps in Iraq use the Arabic UI; the insight sentences are built in English on the server,
+  // so the card rebuilds them in Arabic from the evidence that travels with each insight.
+  it('shows the insight sentences in Arabic when the language is Arabic', async () => {
+    localStorage.setItem('styleshift_lang', 'ar')
+    const insight = {
+      source: 'gravity', observation: 'Under Doubt objections, your reply length shifts.', pattern: 'p', impact: 'i', alternative: 'a',
+      evidence: { trigger: 'doubt', sessionCount: 4, metric: 'avgRepTurnLength', deviationPct: 60, winRate: 25, baselineWinRate: 60, winRateGapPts: 35 },
+      experiment: { objectionType: 'doubt', focusStep: 'listen', label: 'Practice Doubt objections' },
+    }
+    vi.stubGlobal('fetch', vi.fn(async () => json({ gravity: { overallSessionCount: 10, patterns: [] }, unusedResources: [], mastermindInsights: [insight] })))
+    const { findByText } = view()
+    expect(await findByText(/عند ظهور «الشك»/)).toBeTruthy()
+    localStorage.removeItem('styleshift_lang')
+  })
 })

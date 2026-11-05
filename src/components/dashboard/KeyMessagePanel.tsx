@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { KM_MAX_MESSAGE, KM_STYLES, type Versions } from '@/lib/key-message'
 
 interface Shared { repName: string | null; style: string; text: string; createdAt: string }
-interface Msg { id: string; text: string; versions: Versions | null; dueDate: string | null; total: number; completed: number; shared: Shared[] }
+interface Msg { id: string; text: string; mode?: string; versions: Versions | null; dueDate: string | null; total: number; completed: number; shared: Shared[] }
 interface Data { role: string; messages: Msg[]; reps: Array<{ id: string; name: string | null }> }
 
 const inputStyle: React.CSSProperties = { background: 'var(--surface-subtle)', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', color: 'var(--ink)', fontFamily: 'var(--sans)', fontSize: 13.5, outline: 'none', width: '100%' }
@@ -20,6 +20,7 @@ export default function KeyMessagePanel() {
   const [due, setDue] = useState('')
   const [picked, setPicked] = useState<string[]>([])
   const [everyone, setEveryone] = useState(true)
+  const [mode, setMode] = useState<'written' | 'verbal'>('written')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
@@ -37,11 +38,11 @@ export default function KeyMessagePanel() {
     setBusy(true); setError(null)
     const res = await fetch('/api/key-messages', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ text, dueDate: due || null, repIds: everyone ? null : picked }),
+      body: JSON.stringify({ text, mode, dueDate: due || null, repIds: everyone ? null : picked }),
     }).catch(() => null)
     setBusy(false)
     if (!res?.ok) { setError(res?.status === 429 ? 'Too many requests. Wait a little and try again.' : 'Could not create the message. Try again.'); return }
-    setText(''); setDue(''); setPicked([]); setEveryone(true)
+    setText(''); setDue(''); setPicked([]); setEveryone(true); setMode('written')
     await load()
   }
   const chip = (on: boolean): React.CSSProperties => ({ ...ghostBtn, textTransform: 'none', borderColor: on ? 'var(--cyan)' : 'var(--line)', color: on ? 'var(--cyan)' : 'var(--ink-dim)' })
@@ -66,6 +67,12 @@ export default function KeyMessagePanel() {
         })}
       </div>
 
+      <span style={labelStyle}>How should reps practise it?</span>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button type="button" aria-pressed={mode === 'written'} onClick={() => setMode('written')} style={chip(mode === 'written')}>Write it</button>
+        <button type="button" aria-pressed={mode === 'verbal'} onClick={() => setMode('verbal')} style={chip(mode === 'verbal')}>Say it aloud</button>
+      </div>
+
       <label style={labelStyle} htmlFor="km-due">Due date (optional)</label>
       <input id="km-due" type="date" value={due} onChange={e => setDue(e.target.value)} style={{ ...inputStyle, width: 'auto' }} />
 
@@ -80,7 +87,7 @@ export default function KeyMessagePanel() {
           <div key={m.id} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 12 }}>
             <div dir="auto" style={{ fontSize: 14, lineHeight: 1.5 }}>{m.text}</div>
             <div style={{ ...labelStyle, margin: '8px 0' }}>
-              {m.completed} of {m.total} finished{m.dueDate ? ` · due ${m.dueDate}` : ''}
+              {m.completed} of {m.total} finished{m.mode === 'verbal' ? ' · say it aloud' : ''}{m.dueDate ? ` · due ${m.dueDate}` : ''}
             </div>
             <button onClick={() => setOpenId(openId === m.id ? null : m.id)} aria-expanded={openId === m.id} style={ghostBtn}>{openId === m.id ? 'Hide details' : 'Show details'}</button>
             {openId === m.id && <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>

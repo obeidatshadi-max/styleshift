@@ -28,7 +28,11 @@ async function me(db: SupabaseClient, userId: string): Promise<Me | null> {
 export async function listForUser(db: SupabaseClient, userId: string): Promise<Result> {
   const profile = await me(db, userId)
   if (!profile?.company_id) return { status: 200, body: { role: profile?.role ?? 'rep', messages: [], doctors: [] } }
-  const { data, error } = await db.from('key_messages').select('*').eq('company_id', profile.company_id).eq('active', true).order('created_at', { ascending: false }).limit(100)
+  // The audience filter goes in the query, before the cap, so other people's messages can never push
+  // someone's own out of the 100-row window. userId comes from the session and is a uuid.
+  const base = db.from('key_messages').select('*').eq('company_id', profile.company_id).eq('active', true)
+  const scoped = profile.role === 'manager' ? base.eq('created_by_role', 'manager') : base.or(`created_by.eq.${userId},rep_ids.is.null,rep_ids.cs.{${userId}}`)
+  const { data, error } = await scoped.order('created_at', { ascending: false }).limit(100)
   if (error) return fail(503, 'storage_unavailable')
   const rows = (data as Row[] | null) ?? []
 

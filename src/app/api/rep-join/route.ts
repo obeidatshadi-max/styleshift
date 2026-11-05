@@ -51,21 +51,24 @@ export async function POST(request: Request) {
   })
   if (!createError && created?.user) {
     userId = created.user.id
-  } else {
-    // Re-join via the same invite link (new device, reinstalled app, etc.) —
-    // resolve the existing user id via generateLink purely as a lookup (the
-    // link itself is discarded, never used to authenticate), then reset
-    // their PIN to the one just entered.
-    const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-      type: 'magiclink',
-      email,
-    })
+  } else if (createError && /already|registered|exists/i.test(createError.message)) {
+    // The number already has a login. This used to reset its PIN to whatever was typed here and move
+    // the person into this company, so anyone holding an invite link and a colleague's number could
+    // take the account over. Now an existing rep is told to sign in, or to ask their manager for a
+    // new PIN (the manager's Reset PIN). Only a leftover login with no profile (a join that failed
+    // half way) is finished off here, because there is nobody to lock out.
+    const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({ type: 'magiclink', email })
     if (linkError || !linkData)
       return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
+    const { data: existing } = await admin.from('profiles').select('id').eq('id', linkData.user.id).maybeSingle()
+    if (existing)
+      return NextResponse.json({ error: 'This mobile number already has an account. Sign in with your PIN, or ask your manager to reset it.' }, { status: 409 })
     userId = linkData.user.id
     const { error: pwError } = await admin.auth.admin.updateUserById(userId, { password: pin })
     if (pwError)
       return NextResponse.json({ error: 'Failed to set PIN' }, { status: 500 })
+  } else {
+    return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
   }
 
   // Assign to company (upsert handles both first-join and re-join)

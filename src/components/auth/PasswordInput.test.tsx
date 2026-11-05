@@ -82,3 +82,14 @@ describe('Show password on every password box', () => {
     expect((screen.getByLabelText('Repeat the new password') as HTMLInputElement).type).toBe('password')
   })
 })
+
+describe('rep sign-in hint', () => {
+  it('tells a rep who forgot their PIN to ask the manager, in English and Arabic', async () => {
+    wrap(<LoginForm />)
+    expect(screen.getByText(/Forgot your PIN\? Ask your manager to reset it/)).toBeTruthy()
+    cleanup()
+    localStorage.setItem('styleshift_lang', 'ar')
+    wrap(<LoginForm />)
+    expect(await screen.findByText(/نسيت الرمز السري/)).toBeTruthy()
+  })
+})

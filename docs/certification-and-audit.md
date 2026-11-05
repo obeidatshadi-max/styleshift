@@ -30,9 +30,9 @@ Signed-in users can read only the basic certificate columns straight from the da
 
 ## Audit trail
 
-`audit_events` is append-only: a database trigger refuses update, delete and truncate, and the app has no write path to it. Certificate events are written by a database trigger in the same transaction as the change, so a certificate cannot be issued or withdrawn without a record. Managers read their company's trail on the dashboard.
+`audit_events` is append-only: a database trigger refuses update, delete and truncate. Certificate events are written by a database trigger in the same transaction as the change, so a certificate cannot be issued or withdrawn without a record. Rep PIN resets (`rep.pin_reset`, `rep.pin_reset_failed`) are written by the server just before the PIN changes; if that record cannot be written, the PIN is not changed. Managers read their company's trail on the dashboard.
 
-**What it is not:** it is not cryptographically chained, so someone with full database owner access could in principle still alter it. It covers certificate events only; other manager actions (assignments, scenarios, knowledge packs) do not write to it yet.
+**What it is not:** it is not cryptographically chained, so someone with full database owner access could in principle still alter it. It covers certificate events and rep PIN resets only; other manager actions (assignments, scenarios, knowledge packs) do not write to it yet.
 
 ## Checked
 

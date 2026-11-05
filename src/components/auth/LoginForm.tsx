@@ -248,6 +248,9 @@ export default function LoginForm() {
                 <p style={{ color: 'var(--ink-dim)', fontSize: 14, lineHeight: 1.5, margin: 0 }}>
                   {t('login.mobileHint')}
                 </p>
+                <p style={{ color: 'var(--ink-dim)', fontSize: 14, lineHeight: 1.5, margin: 0 }}>
+                  {t('login.forgotPin')}
+                </p>
               </form>
             ) : mode === 'forgot' ? (
               <ForgotPasswordForm initialEmail={email} onBack={() => { setMode('login'); setError(null) }} />

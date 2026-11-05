@@ -22,6 +22,7 @@ import MethodologyBuilderPanel from '@/components/dashboard/MethodologyBuilderPa
 import { methodologyBuilderEnabled } from '@/lib/methodologies'
 import KnowledgePackPanel from '@/components/dashboard/KnowledgePackPanel'
 import { knowledgePacksEnabled } from '@/lib/knowledge-packs'
+import RepPinPanel from '@/components/dashboard/RepPinPanel'
 import CertificationPanel from '@/components/dashboard/CertificationPanel'
 import { certificationEnabled } from '@/lib/certification'
 import BehavioralTrendsPanel from '@/components/dashboard/BehavioralTrendsPanel'
@@ -136,6 +137,7 @@ export default async function DashboardPage() {
         {keyMessageEnabled() && <Panel title="Key Message Practice"><KeyMessagePanel /></Panel>}
         {methodologyBuilderEnabled() && <Panel title="Selling Methodology"><MethodologyBuilderPanel /></Panel>}
         {knowledgePacksEnabled() && <Panel title="Product Knowledge"><KnowledgePackPanel /></Panel>}
+        <Panel title="Rep Sign-in (PIN reset)"><RepPinPanel /></Panel>
         <Panel title="AI Doctor Profiles"><CompanyDoctorsPanel reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} /></Panel>
         <Panel title="Team Leaderboard"><Leaderboard reps={stats?.reps ?? []} /></Panel>
         <Panel title="Skill Gap Heatmap"><SkillHeatmap levelAccuracy={stats?.levelAccuracy ?? []} /></Panel>

@@ -16,6 +16,8 @@ import { getCoachingQueue } from '@/lib/coaching-queue'
 import ScenarioEditorPanel from '@/components/dashboard/ScenarioEditorPanel'
 import SimScenarioBuilderPanel from '@/components/dashboard/SimScenarioBuilderPanel'
 import { scenarioBuilderEnabled } from '@/lib/sim-scenarios'
+import { keyMessageEnabled } from '@/lib/key-message'
+import KeyMessagePanel from '@/components/dashboard/KeyMessagePanel'
 import MethodologyBuilderPanel from '@/components/dashboard/MethodologyBuilderPanel'
 import { methodologyBuilderEnabled } from '@/lib/methodologies'
 import KnowledgePackPanel from '@/components/dashboard/KnowledgePackPanel'
@@ -129,6 +131,7 @@ export default async function DashboardPage() {
             <SimScenarioBuilderPanel reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} />
           </Panel>
         )}
+        {keyMessageEnabled() && <Panel title="Key Message Practice"><KeyMessagePanel /></Panel>}
         {methodologyBuilderEnabled() && <Panel title="Selling Methodology"><MethodologyBuilderPanel /></Panel>}
         {knowledgePacksEnabled() && <Panel title="Product Knowledge"><KnowledgePackPanel /></Panel>}
         <Panel title="AI Doctor Profiles"><CompanyDoctorsPanel reps={stats.reps.map(r => ({ id: r.id, name: r.display_name }))} /></Panel>

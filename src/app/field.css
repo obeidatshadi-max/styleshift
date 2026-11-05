@@ -50,8 +50,10 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{box-shadow:none;
 @media(max-width:640px){.app-nav{position:fixed;top:auto;bottom:0;inset-inline:0;padding:8px 10px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--panel)}.app-nav-tabs{border:none;padding:0;gap:4px;border-radius:0}.app-nav-tab{flex-direction:column;gap:4px;font-size:13px;padding:9px 3px}.app-nav-context{margin-bottom:6px}.app-nav-context button{min-height:44px;padding-block:6px}.home-appbar{padding-top:max(14px,env(safe-area-inset-top))}}
 .landing{max-width:760px;margin:0 auto;padding:0 20px 72px}
 .landing-hero{padding-bottom:40px}
-.landing-cta-row{margin-top:24px}
+.landing-cta-row{margin-top:24px;display:flex;flex-wrap:wrap;gap:12px}
 .landing-cta{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 32px;border-radius:16px;background:var(--cyan);color:var(--on-accent);font-weight:800;font-size:17px;text-decoration:none}
+.landing-cta-secondary{background:transparent;color:var(--cyan);border:1px solid var(--cyan)}
+.landing-link{color:inherit;text-decoration:underline;text-underline-offset:3px}
 .landing-note{margin-top:14px;color:var(--ink-dim);font-size:15px;max-width:470px}
 .landing-section{padding:8px 4px 36px}
 .landing-section h2{font-size:clamp(22px,4.5vw,28px);line-height:1.25;letter-spacing:-.6px;font-weight:800;margin-bottom:8px}

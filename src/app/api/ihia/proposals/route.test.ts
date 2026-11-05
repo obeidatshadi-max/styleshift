@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 vi.mock('@/lib/supabase-server', () => ({ createClient: vi.fn() }))
+vi.mock('@/lib/supabase-admin', () => ({ createAdminClient: vi.fn() }))
 vi.mock('@/lib/ihia/server', () => ({ ihiaEnabled: () => true, isReviewer: vi.fn() }))
 import { GET, PATCH } from './route'
 import { createClient } from '@/lib/supabase-server'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { isReviewer } from '@/lib/ihia/server'
 
 afterEach(() => vi.clearAllMocks())
@@ -10,13 +12,16 @@ const patchReq = (body: unknown) => new Request('http://localhost/api/ihia/propo
 
 function db(rows: unknown[] = [], updateSpy = vi.fn()) {
   const chain = { in: (..._a: unknown[]) => ({ eq: async (..._b: unknown[]) => { updateSpy(); return { error: null } } }) }
+  const table = {
+    select: () => ({ eq: () => ({ order: () => ({ limit: async () => ({ data: rows, error: null }) }) }) }),
+    update: (patch: unknown) => { updateSpy(patch); return chain },
+  }
+  // A signed-in user's own client must never touch the table: any read or update through it fails the test.
   vi.mocked(createClient).mockResolvedValue({
     auth: { getUser: async () => ({ data: { user: { id: 'rev-1' } } }) },
-    from: () => ({
-      select: () => ({ eq: () => ({ order: () => ({ limit: async () => ({ data: rows, error: null }) }) }) }),
-      update: (patch: unknown) => { updateSpy(patch); return chain },
-    }),
+    from: () => { throw new Error('the reviewer route must use the server client for proposals') },
   } as never)
+  vi.mocked(createAdminClient).mockReturnValue({ from: () => table } as never)
   return updateSpy
 }
 

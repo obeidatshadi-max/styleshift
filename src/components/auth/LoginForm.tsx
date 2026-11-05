@@ -16,11 +16,15 @@ export default function LoginForm() {
   const t = useT()
   const { STYLES, STYLE_ORDER } = useGameData()
 
-  const [tab, setTab] = useState<'rep' | 'manager'>('rep')
-  const [repMode, setRepMode] = useState<'mobile' | 'individual'>('mobile')
+  // The home page links straight to the right form: /login?tab=manager&mode=signup and so on.
+  const startTab = searchParams.get('tab') === 'manager' ? 'manager' : 'rep'
+  const startRepMode = searchParams.get('rep') === 'individual' ? 'individual' : 'mobile'
+  const [tab, setTab] = useState<'rep' | 'manager'>(startTab)
+  const [repMode, setRepMode] = useState<'mobile' | 'individual'>(startRepMode)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login')
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>(
+    searchParams.get('mode') === 'signup' && (startTab === 'manager' || startRepMode === 'individual') ? 'signup' : 'login')
   const [mobile, setMobile] = useState('')
   const [pin, setPin] = useState('')
   const [error, setError] = useState<string | null>(null)

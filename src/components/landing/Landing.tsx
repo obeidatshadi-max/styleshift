@@ -6,7 +6,12 @@ import ThemeToggle from '@/components/ThemeToggle'
 
 const STYLE_COLOR: Record<string, string> = { driver: 'var(--purple)', expressive: 'var(--green)', amiable: 'var(--pink)', analytical: 'var(--cyan)' }
 
-/** Signed-out front door: say what the product is, what happens inside, then hand off to /login. */
+// Where each button lands on the sign-in screen: reps can sign up with an email (the mobile + PIN
+// route is for people a manager invited), managers on their own tab.
+export const CREATE_ACCOUNT = '/login?tab=rep&rep=individual&mode=signup'
+export const CREATE_MANAGER = '/login?tab=manager&mode=signup'
+
+/** Front door: say what the product is, what happens inside, then hand off to /login. */
 export default function Landing() {
   const t = useT()
   const { STYLES, STYLE_ORDER } = useGameData()
@@ -30,9 +35,10 @@ export default function Landing() {
         <h1>{t('landing.title')}</h1>
         <p>{t('landing.sub')}</p>
         <div className="landing-cta-row">
-          <Link href="/login" className="landing-cta">{t('landing.cta')}</Link>
+          <Link href={CREATE_ACCOUNT} className="landing-cta">{t('login.createAccount')}</Link>
+          <Link href="/login" className="landing-cta landing-cta-secondary">{t('login.signIn')}</Link>
         </div>
-        <p className="landing-note">{t('landing.invite')}</p>
+        <p className="landing-note"><Link href="/login" className="landing-link">{t('landing.invite')}</Link></p>
       </section>
 
       <section className="landing-section" aria-labelledby="landing-steps">
@@ -72,9 +78,10 @@ export default function Landing() {
           {expectations.map(e => <li key={e}>{e}</li>)}
         </ul>
         <div className="landing-cta-row">
-          <Link href="/login" className="landing-cta">{t('landing.cta')}</Link>
+          <Link href={CREATE_ACCOUNT} className="landing-cta">{t('login.createAccount')}</Link>
+          <Link href="/login" className="landing-cta landing-cta-secondary">{t('login.signIn')}</Link>
         </div>
-        <p className="landing-note">{t('landing.manager')}</p>
+        <p className="landing-note"><Link href={CREATE_MANAGER} className="landing-link">{t('landing.manager')}</Link></p>
       </section>
     </main>
   )

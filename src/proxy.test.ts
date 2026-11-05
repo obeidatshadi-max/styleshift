@@ -40,3 +40,8 @@ it('lets anyone open a certificate check page, while other pages still need a se
   const dashboard = await proxy(new NextRequest('https://style-shift.netlify.app/dashboard'))
   expect(dashboard.headers.get('location')).toContain('/login')
 })
+it('shows the home page at /welcome to anyone, signed in or not', async () => {
+  mocks.createServerClient.mockReturnValue({ auth: { getUser: async () => ({ data: { user: null } }) } })
+  const res = await proxy(new NextRequest('https://style-shift.netlify.app/welcome'))
+  expect(res.headers.get('location')).toBeNull()
+})

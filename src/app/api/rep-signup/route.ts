@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, clientIp } from '@/lib/rate-limit'
+import { isMobileRepEmail } from '@/lib/rep-pin'
 
 export async function POST(request: Request) {
   if (!(await checkRateLimit('rep-signup', clientIp(request), 5, 600)))
@@ -9,6 +10,10 @@ export async function POST(request: Request) {
   const { email, password, name } = await request.json()
   if (!email?.trim() || !password)
     return NextResponse.json({ error: 'Email and password required' }, { status: 400 })
+  // That domain is the hidden login of PIN reps; letting anyone register an address on it would let
+  // them claim a colleague's mobile number in advance.
+  if (isMobileRepEmail(email.trim()))
+    return NextResponse.json({ error: 'Please use a different email address.' }, { status: 400 })
   if (password.length < 6)
     return NextResponse.json({ error: 'Password must be at least 6 characters.' }, { status: 400 })
 

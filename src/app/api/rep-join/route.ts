@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit, clientIp } from '@/lib/rate-limit'
 
 const PIN_RE = /^\d{6}$/
+const MOBILE_RE = /^\d{8,15}$/
 
 export async function POST(request: Request) {
   if (!(await checkRateLimit('rep-join', clientIp(request), 10, 600)))
@@ -36,13 +37,21 @@ export async function POST(request: Request) {
   }
 
   const normalizedMobile = mobile.replace(/[\s\-\(\)+]/g, '')
+  // The number becomes part of a hidden login email, so it has to be digits only.
+  if (!MOBILE_RE.test(normalizedMobile))
+    return NextResponse.json({ error: 'Enter a valid mobile number' }, { status: 400 })
+  // One number, not just one IP: otherwise a botnet can probe which numbers already have an account.
+  if (!(await checkRateLimit('rep-join-number', normalizedMobile, 5, 600)))
+    return NextResponse.json({ error: 'Too many attempts. Try again in a few minutes.' }, { status: 429 })
   const email = `${normalizedMobile}@s.styleshift.rep`
+  const blocked = () => NextResponse.json({ error: 'We could not complete the join. If you already have an account, sign in with your PIN or ask your manager to reset it.' }, { status: 409 })
 
   // The PIN the rep just chose becomes their Supabase password — reuses
   // GoTrue's own hashing/verification instead of us rolling our own, and
   // gives every returning login a real secret to prove instead of just a
   // mobile number anyone could type in.
-  let userId: string | undefined
+  let userId: string
+  let leftover = false
   const { data: created, error: createError } = await admin.auth.admin.createUser({
     email,
     password: pin,
@@ -60,24 +69,36 @@ export async function POST(request: Request) {
     const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({ type: 'magiclink', email })
     if (linkError || !linkData)
       return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
-    const { data: existing } = await admin.from('profiles').select('id').eq('id', linkData.user.id).maybeSingle()
-    if (existing)
-      return NextResponse.json({ error: 'This mobile number already has an account. Sign in with your PIN, or ask your manager to reset it.' }, { status: 409 })
+    const { data: existing, error: lookupError } = await admin.from('profiles').select('id').eq('id', linkData.user.id).maybeSingle()
+    // If we cannot tell whether someone owns this login, change nothing.
+    if (lookupError)
+      return NextResponse.json({ error: 'Could not complete the join. Try again.' }, { status: 503 })
+    if (existing) return blocked()
     userId = linkData.user.id
-    const { error: pwError } = await admin.auth.admin.updateUserById(userId, { password: pin })
-    if (pwError)
-      return NextResponse.json({ error: 'Failed to set PIN' }, { status: 500 })
+    leftover = true
   } else {
     return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
   }
 
-  // Assign to company (upsert handles both first-join and re-join)
-  await admin
+  // Claim the profile with an insert that can never overwrite or move an existing one. Two joins racing
+  // for the same leftover login cannot both win: the loser's insert conflicts, and it never reaches the
+  // password change below.
+  const { error: claimError } = await admin
     .from('profiles')
-    .upsert(
-      { id: userId, company_id: company.id, role: 'rep', display_name: name.trim() },
-      { onConflict: 'id' }
-    )
+    .insert({ id: userId, company_id: company.id, role: 'rep', display_name: name.trim() })
+  if (claimError) {
+    if (!leftover) await admin.auth.admin.deleteUser(userId)
+    if (leftover && claimError.code === '23505') return blocked()
+    return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
+  }
+
+  if (leftover) {
+    const { error: pwError } = await admin.auth.admin.updateUserById(userId, { password: pin })
+    if (pwError) {
+      await admin.from('profiles').delete().eq('id', userId)
+      return NextResponse.json({ error: 'Failed to set PIN' }, { status: 500 })
+    }
+  }
 
   // Funnel event — best-effort (insert() resolves with an error object rather
   // than rejecting, so this can't throw and never blocks the rep's join).

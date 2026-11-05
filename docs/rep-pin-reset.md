@@ -15,3 +15,15 @@ Until now, opening a company invite link and entering **any rep's mobile number 
 **Side effect to know about:** a rep who forgot their PIN can no longer fix it by re-opening the invite link. That is exactly what the manager reset is for.
 
 **Not covered:** the rep's existing signed-in sessions are not ended by a reset, so a rep who was already signed in on a lost phone stays signed in there until the session expires.
+
+## Hardening after a security review of the invite-link join
+
+- A mobile number must be digits only (8 to 15), because it becomes part of the hidden login address.
+- Joins are limited per number (5 per 10 minutes) as well as per IP (10 per 10 minutes).
+- The profile is claimed with an insert that cannot overwrite or move an existing profile, and **before** the PIN is set, so two joins racing for the same leftover login cannot both win. If the profile lookup fails, nothing is changed.
+- Nobody can register an address on the hidden `@s.styleshift.rep` domain through rep or manager sign-up, which would have claimed a colleague's number in advance.
+- The refusal message no longer says outright that an account exists.
+
+**Still true, and not fixable without an SMS provider:**
+- The first person to open an invite link with a number sets that number's PIN. A stranger holding the link could claim a colleague's number before the colleague joins and lock them out. If it happens through your own company's link, use Reset PIN on that profile and give the new PIN to the real person; through another company's link, this manager cannot recover it. The real fix is to verify the number with a one-time SMS code.
+- The refusal still tells someone probing numbers that the number is already registered. Rate limits slow this down; they do not remove it.

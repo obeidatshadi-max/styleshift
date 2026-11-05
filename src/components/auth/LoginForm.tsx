@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useT, useGameData } from '@/lib/i18n'
 import LangToggle from '@/components/LangToggle'
 import ThemeToggle from '@/components/ThemeToggle'
+import ForgotPasswordForm from './ForgotPasswordForm'
 
 const STYLE_COLOR: Record<string, string> = { driver:'var(--purple)', expressive:'var(--green)', amiable:'var(--pink)', analytical:'var(--cyan)' }
 
@@ -19,7 +20,7 @@ export default function LoginForm() {
   const [repMode, setRepMode] = useState<'mobile' | 'individual'>('mobile')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login')
   const [mobile, setMobile] = useState('')
   const [pin, setPin] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -243,10 +244,18 @@ export default function LoginForm() {
                   {t('login.mobileHint')}
                 </p>
               </form>
+            ) : mode === 'forgot' ? (
+              <ForgotPasswordForm initialEmail={email} onBack={() => { setMode('login'); setError(null) }} />
             ) : (
               <form onSubmit={handleRepIndividualAuth} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('login.email')} aria-label={t('login.email')} required style={inputStyle} />
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('login.password')} aria-label={t('login.password')} required style={inputStyle} />
+                <input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('login.email')} aria-label={t('login.email')} required style={inputStyle} />
+                <input type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} placeholder={t('login.password')} aria-label={t('login.password')} required style={inputStyle} />
+                {mode === 'login' && (
+                  <button type="button" onClick={() => { setMode('forgot'); setError(null) }}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--cyan)', fontSize: 15, cursor: 'pointer', fontFamily: 'var(--sans)', textAlign: 'start', padding: 0 }}>
+                    {t('login.forgot')}
+                  </button>
+                )}
                 {error && <p style={{ color: 'var(--red)', fontSize: 16, fontFamily: 'var(--mono)' }}>{error}</p>}
                 <button type="submit" disabled={loading} style={btnPrimary}>
                   {loading ? '...' : mode === 'login' ? t('login.signIn') : t('login.createAccount')}
@@ -261,10 +270,18 @@ export default function LoginForm() {
               </form>
             )}
           </>
+        ) : mode === 'forgot' ? (
+          <ForgotPasswordForm initialEmail={email} onBack={() => { setMode('login'); setError(null) }} />
         ) : (
           <form onSubmit={handleManagerLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('login.email')} aria-label={t('login.email')} required style={inputStyle} />
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('login.password')} aria-label={t('login.password')} required style={inputStyle} />
+            <input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('login.email')} aria-label={t('login.email')} required style={inputStyle} />
+            <input type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} placeholder={t('login.password')} aria-label={t('login.password')} required style={inputStyle} />
+            {mode === 'login' && (
+              <button type="button" onClick={() => { setMode('forgot'); setError(null) }}
+                style={{ background: 'transparent', border: 'none', color: 'var(--cyan)', fontSize: 15, cursor: 'pointer', fontFamily: 'var(--sans)', textAlign: 'start', padding: 0 }}>
+                {t('login.forgot')}
+              </button>
+            )}
             {error && <p style={{ color: error === t('login.checkEmail') ? 'var(--green)' : 'var(--red)', fontSize: 16, fontFamily: 'var(--mono)' }}>{error}</p>}
             <button type="submit" disabled={loading} style={btnPrimary}>
               {loading ? '...' : mode === 'login' ? t('login.signIn') : t('login.createAccount')}

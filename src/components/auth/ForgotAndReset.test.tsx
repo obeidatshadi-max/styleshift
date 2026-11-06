@@ -5,10 +5,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { LanguageProvider } from '@/lib/i18n'
 
 const m = vi.hoisted(() => ({
-  resetPasswordForEmail: vi.fn(), updateUser: vi.fn(), push: vi.fn(), refresh: vi.fn(),
+  resetPasswordForEmail: vi.fn(), updateUser: vi.fn(), push: vi.fn(), refresh: vi.fn(), signOut: vi.fn(),
 }))
 vi.mock('@/lib/supabase-browser', () => ({
-  createClient: () => ({ auth: { resetPasswordForEmail: m.resetPasswordForEmail, updateUser: m.updateUser, signInWithPassword: vi.fn() } }),
+  createClient: () => ({ auth: { resetPasswordForEmail: m.resetPasswordForEmail, updateUser: m.updateUser, signInWithPassword: vi.fn(), signOut: m.signOut } }),
 }))
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: m.push, refresh: m.refresh }),
@@ -19,7 +19,7 @@ import ResetPasswordForm from './ResetPasswordForm'
 import LoginForm from './LoginForm'
 
 const wrap = (node: React.ReactElement) => render(React.createElement(LanguageProvider, null, node))
-beforeEach(() => { vi.stubGlobal('React', React); m.resetPasswordForEmail.mockResolvedValue({ error: null }); m.updateUser.mockResolvedValue({ error: null }) })
+beforeEach(() => { vi.stubGlobal('React', React); m.resetPasswordForEmail.mockResolvedValue({ error: null }); m.updateUser.mockResolvedValue({ error: null }); m.signOut.mockResolvedValue({ error: null }) })
 afterEach(() => { cleanup(); vi.clearAllMocks(); vi.unstubAllGlobals(); localStorage.clear() })
 
 describe('ForgotPasswordForm', () => {
@@ -74,11 +74,43 @@ describe('ResetPasswordForm', () => {
     expect(m.updateUser).not.toHaveBeenCalled()
   })
 
-  it('saves the new password and goes to the app', async () => {
+  it('saves the new password, says so, and waits for the person to choose where to go', async () => {
     wrap(<ResetPasswordForm />)
     fill('abcdef', 'abcdef')
-    await waitFor(() => expect(m.push).toHaveBeenCalledWith('/play'))
+    expect((await screen.findByRole('status')).textContent).toContain('Password updated')
     expect(m.updateUser).toHaveBeenCalledWith({ password: 'abcdef' })
+    expect(m.push).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByText('Continue to the app'))
+    expect(m.push).toHaveBeenCalledWith('/play')
+    expect(m.signOut).not.toHaveBeenCalled()
+  })
+
+  it('after saving, "Sign in again" signs out first and then opens the sign-in page', async () => {
+    wrap(<ResetPasswordForm />)
+    fill('abcdef', 'abcdef')
+    fireEvent.click(await screen.findByText('Sign in again with the new password'))
+    await waitFor(() => expect(m.push).toHaveBeenCalledWith('/login'))
+    expect(m.signOut).toHaveBeenCalled()
+    expect(m.signOut.mock.invocationCallOrder[0]).toBeLessThan(m.push.mock.invocationCallOrder[0])
+  })
+
+  it('offers a way back to sign in before saving, which signs out first', async () => {
+    wrap(<ResetPasswordForm />)
+    fireEvent.click(screen.getByText('Back to sign in'))
+    await waitFor(() => expect(m.push).toHaveBeenCalledWith('/login'))
+    expect(m.signOut).toHaveBeenCalled()
+    expect(m.updateUser).not.toHaveBeenCalled()
+  })
+
+  it('says the same in Arabic', async () => {
+    localStorage.setItem('styleshift_lang', 'ar')
+    wrap(<ResetPasswordForm />)
+    expect(await screen.findByText('العودة إلى تسجيل الدخول')).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('كلمة المرور الجديدة'), { target: { value: 'abcdef' } })
+    fireEvent.change(screen.getByLabelText('أعد كتابة كلمة المرور الجديدة'), { target: { value: 'abcdef' } })
+    fireEvent.click(screen.getByText('احفظ كلمة المرور'))
+    expect((await screen.findByRole('status')).textContent).toContain('تم تحديث كلمة المرور')
+    expect(screen.getByText('سجّل الدخول من جديد بكلمة المرور الجديدة')).toBeTruthy()
   })
 
   it('says the link may have expired when Supabase refuses, and stays on the page', async () => {

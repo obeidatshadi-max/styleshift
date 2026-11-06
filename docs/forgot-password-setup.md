@@ -27,4 +27,4 @@ The link uses a token in the URL instead of the default code, so it works even w
 
 1. Open the sign-in page, Manager tab, click "Forgot password?", enter a manager email, click Send.
 2. The email should arrive within a minute. Click the link: you should land on "Choose a new password".
-3. Save a new password: you should land in the app, and the new password should work next time.
+3. Save a new password: you see "Password updated" with two buttons. "Continue to the app" keeps you signed in. "Sign in again with the new password" signs you out and opens the sign-in page, so you can confirm the new password works. The page also has "Back to sign in" before you save.

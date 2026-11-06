@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import PilotAdminPanel from './PilotAdminPanel'
+import { analyse } from '@/lib/validation/analysis'
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 const P = '11111111-1111-4111-8111-111111111111'
@@ -75,5 +76,28 @@ describe('pilot administration panel', () => {
     expect(JSON.parse(call[1].body)).toEqual({
       repId: REP, sessionType: 'ai_doctor_text', sessionId: SESSION, scenarioType: 'A', scenarioVersion: 'v1', phase: 'baseline', seenBefore: false, assessorIds: [A1, A2],
     })
+  })
+
+  it('runs the analysis with the entered inputs and shows the label, recommendation, indicators and minimums', async () => {
+    const report = analyse({ dataSource: 'synthetic', cases: [], claims: [], securityGate: 'PASS', criticalIncidents: 0 })
+    const fetch = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/analysis')) return Response.json({ pilotStatus: 'running', interim: true, report })
+      if (url === '/api/validation/admin/pilots') return Response.json({ pilots: [{ id: P, name: 'Pilot one', status: 'running', dataSource: 'synthetic', companyId: 'c' }] })
+      return Response.json(detail('running'))
+    })
+    vi.stubGlobal('fetch', fetch)
+    render(<PilotAdminPanel />)
+    fireEvent.click(await screen.findByText(/Pilot one/))
+    await screen.findByText('Run analysis')
+    fireEvent.change(screen.getByLabelText('Critical incidents'), { target: { value: '0' } })
+    fireEvent.change(screen.getByLabelText('Security gate'), { target: { value: 'PASS' } })
+    fireEvent.click(screen.getByText('Run analysis'))
+    await screen.findByText(/not pilot evidence/)
+    expect(screen.getByText(/INTERIM: the pilot is not closed/)).toBeTruthy()
+    expect(screen.getByText('NOT PILOT DATA')).toBeTruthy()
+    expect(screen.getByText('evidenceValidity')).toBeTruthy()
+    expect(screen.getByText(/doubleRatedSessions: 0 of 30/)).toBeTruthy()
+    const call = fetch.mock.calls.find(c => String(c[0]).includes('/analysis'))!
+    expect(call[0]).toBe(`/api/validation/admin/pilots/${P}/analysis?gate=PASS&incidents=0`)
   })
 })

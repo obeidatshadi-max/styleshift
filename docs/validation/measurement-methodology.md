@@ -116,3 +116,15 @@ There is no weighted readiness score. Each gate is shown separately with its num
 - Combining practice, transfer, field and business results.
 - Describing synthetic data as pilot evidence.
 - Treating a simulated physician state (trust, skepticism, engagement, time pressure) as a measurement of a real person.
+
+## 10. Addendum A: choices the first analysis run had to make (2026-11-06, before any pilot data existed)
+
+Writing the analysis (`src/lib/validation/analysis.ts`) showed four places where this document left a choice open. They are fixed here, in advance, so no result can influence them. Changing one later is a new version.
+
+1. **Headline rater-agreement figure.** The target says "kappa or ICC at least 0.70". The status uses the **pooled weighted kappa** across domains (cluster bootstrap by session). The session-average ICC(2,1) is always reported beside it, not instead of it.
+2. **Several raters on one case.** All unordered pairs of raters are used for kappa. The ICC uses each case's first two raters, ordered by rater id.
+3. **Several adjudicators on one claim.** The claim takes the **majority** verdict. On a tie it takes the **more adverse** tied verdict (unsupported over partly supported over supported). The number of claims where adjudicators disagreed is reported.
+4. **Recommendation order (section 8).** A critical incident, a failed security gate, or an indicator that is NOT MET (possible only once its minimum sample exists) is NO-GO. Otherwise, any indicator that is still unmeasured or under its minimum, or any unmet section 7 minimum, gives INSUFFICIENT EVIDENCE. Only then GO or CONDITIONAL GO. Synthetic and staging data never produce a recommendation (section 9).
+
+Indicators the stored data cannot yet measure report NOT ENOUGH DATA with the reason, and so keep the recommendation at INSUFFICIENT EVIDENCE: evidence validity (no human judgement of each cited line is stored), planned sessions completed (no plan is stored), targeted behavior change (the AI-chosen target domain per representative is not stored; only overall change is reported, as exploratory), and Arabic negation (the benchmark has not been run).
+

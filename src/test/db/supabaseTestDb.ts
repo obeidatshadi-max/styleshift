@@ -7,10 +7,9 @@ import { join } from 'node:path'
  * triggers and constraints can be tested for real rather than mocked. It is NOT a Supabase project:
  * it knows nothing about production data or settings.
  *
- * Known gap, stated plainly: `doctors`, `doctor_visits` and `daily_challenges` are used by the migrations
- * but never created by them (they were made outside the migration files). The stand-ins below are minimal
- * and assume the owner-only policies the migrations' own comments describe. Their REAL policies must be
- * checked against production; tests here prove nothing about them beyond the migrations that touch them.
+ * `doctors`, `doctor_visits` and `daily_challenges` used to be hand-written stand-ins here because production
+ * had them without a migration. `003a_production_baseline_gap.sql` now creates them exactly as production has
+ * them (checked by schemaBaseline.test.ts), so a database built here is built only from the files.
  */
 
 const MIGRATIONS_DIR = join(process.cwd(), 'supabase', 'migrations')
@@ -34,19 +33,6 @@ const SUPABASE_STUBS = `
   alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
   alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
   grant execute on all functions in schema auth to anon, authenticated, service_role;
-`
-
-// STAND-INS (see the note above). Owner-only, as the migrations' comments say production has.
-const STAND_INS = `
-  create table public.doctors (id uuid primary key default gen_random_uuid(), rep_id uuid not null, name text not null default '', style text, created_at timestamptz default now(), updated_at timestamptz default now());
-  alter table public.doctors enable row level security;
-  create policy "own doctors" on public.doctors for all using (rep_id = auth.uid()) with check (rep_id = auth.uid());
-  create table public.doctor_visits (id uuid primary key default gen_random_uuid(), doctor_id uuid, rep_id uuid not null, source text, note text, created_at timestamptz default now());
-  alter table public.doctor_visits enable row level security;
-  create policy "own visits" on public.doctor_visits for all using (rep_id = auth.uid()) with check (rep_id = auth.uid());
-  create table public.daily_challenges (id uuid primary key default gen_random_uuid(), rep_id uuid not null, challenge_date date, level int);
-  alter table public.daily_challenges enable row level security;
-  create policy "own challenges" on public.daily_challenges for all using (rep_id = auth.uid()) with check (rep_id = auth.uid());
 `
 
 /**
@@ -103,7 +89,6 @@ async function inRole<T>(db: PGlite, role: string, claims: Record<string, unknow
 export async function createTestDb(opts: { skip?: string[] } = {}): Promise<TestDb> {
   const db = new PGlite()
   await db.exec(SUPABASE_STUBS)
-  await db.exec(STAND_INS)
   const migrations: MigrationResult[] = []
   const files = readdirSync(MIGRATIONS_DIR).filter(f => f.endsWith('.sql')).sort()
   for (const file of files) {

@@ -1,0 +1,251 @@
+{
+  "about": "Which repo migration file corresponds to which production history entry. Checked by src/test/db/schemaBaseline.test.ts.",
+  "files": {
+    "001_initial_schema.sql": {
+      "status": "unrecorded",
+      "note": "predates the history table; objects present in production (fingerprint match)"
+    },
+    "002_phase2b_schema.sql": {
+      "status": "recorded",
+      "prod": "20260603110324 add_stripe_columns",
+      "note": "stripe columns recorded; the rest of the file is unrecorded but present"
+    },
+    "003_avatars.sql": {
+      "status": "recorded",
+      "prod": "20260604090133 add_profile_avatar_and_avatars_bucket; 20260604090614 tighten_avatars_drop_listing_policy",
+      "note": "the file holds the final state of both entries"
+    },
+    "003a_production_baseline_gap.sql": {
+      "status": "baseline",
+      "prod": "20260603194943 add_daily_challenges; 20260604045202 add_doctors; 20260902081932 doctor_visits; 20260905073844 doctor_visits_source_add_voice_partner",
+      "note": "new in this change; a no-op on production"
+    },
+    "004_daily_three.sql": {
+      "status": "recorded",
+      "prod": "20260605201207 daily_three"
+    },
+    "005_assignments.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "006_xp_events.sql": {
+      "status": "recorded",
+      "prod": "20260620042436 xp_events_ledger"
+    },
+    "007_leagues.sql": {
+      "status": "recorded",
+      "prod": "20260620045509 leagues"
+    },
+    "008_sps_profile.sql": {
+      "status": "recorded",
+      "prod": "20260901033945 sps_profile"
+    },
+    "009_roleplay_sessions.sql": {
+      "status": "recorded",
+      "prod": "20260901083147 roleplay_sessions"
+    },
+    "010_roleplay_sessions_doctor_scope.sql": {
+      "status": "recorded",
+      "prod": "20260901083722 roleplay_sessions_doctor_scope"
+    },
+    "011_lock_manager_rep_update.sql": {
+      "status": "recorded",
+      "prod": "20260903032438 lock_manager_rep_update"
+    },
+    "012_roleplay_coaching_metrics.sql": {
+      "status": "recorded",
+      "prod": "20260903081831 roleplay_coaching_metrics"
+    },
+    "013_colleagues.sql": {
+      "status": "recorded",
+      "prod": "20260903154247 colleagues"
+    },
+    "014_voice_partner_sessions.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "015_voice_partner_opening_sessions.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "016_voice_partner_question_sessions.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "017_voice_partner_fab_sessions.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "018_voice_partner_closing_sessions.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "019_groups.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "020_assignment_replies.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "021_voice_events.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "022_own_session_history_delete.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "023_invite_events.sql": {
+      "status": "recorded",
+      "prod": "20260910041916 invite_events"
+    },
+    "024_company_scenarios.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "025_company_scenarios_category.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "026_ai_doctor_phase1.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "027_ai_doctor_phase2.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "028_ai_doctor_phase3.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "029_ai_doctor_phase4.sql": {
+      "status": "recorded",
+      "prod": "20260912025514 ai_doctor_phase4_pressure_shift"
+    },
+    "030_ai_doctor_realtime_timing.sql": {
+      "status": "not-applied",
+      "note": "conversation_turns.started_at and ended_at are MISSING in production, yet the app inserts them. The owner must run this file."
+    },
+    "030_voice_partner_live_source.sql": {
+      "status": "recorded",
+      "prod": "20260918060725 030_voice_partner_live_source"
+    },
+    "031_voice_partner_sessions_difficulty_challenging.sql": {
+      "status": "recorded",
+      "prod": "20260918102005 031_voice_partner_sessions_difficulty_challenging"
+    },
+    "032_agent_sessions.sql": {
+      "status": "recorded",
+      "prod": "20260920094527 032_agent_sessions"
+    },
+    "033_conversation_reports.sql": {
+      "status": "recorded",
+      "prod": "20260927155549 033_conversation_reports"
+    },
+    "034_fix_delete_customer_visit_segments_search_path.sql": {
+      "status": "recorded",
+      "prod": "20260927155637 034_fix_delete_customer_visit_segments_search_path"
+    },
+    "035_capability_foundations.sql": {
+      "status": "recorded",
+      "prod": "20261008065805 capability_foundations"
+    },
+    "036_drill_attempts.sql": {
+      "status": "recorded",
+      "prod": "20261008065815 drill_attempts"
+    },
+    "20261003120000_coach_debriefs.sql": {
+      "status": "recorded",
+      "prod": "20261003132107 coach_debriefs"
+    },
+    "20261003121000_coach_debriefs_limit_privileges.sql": {
+      "status": "recorded",
+      "prod": "20261003132305 coach_debriefs_limit_privileges"
+    },
+    "20261004120000_shared_doctor_profiles.sql": {
+      "status": "recorded",
+      "prod": "20261003211545 shared_doctor_profiles"
+    },
+    "20261005120000_doctor_visit_plan.sql": {
+      "status": "recorded",
+      "prod": "20261005042112 doctor_visit_plan"
+    },
+    "20261005130000_push_subscriptions.sql": {
+      "status": "recorded",
+      "prod": "20261005050904 push_subscriptions"
+    },
+    "20261005140000_visit_promise_done.sql": {
+      "status": "recorded",
+      "prod": "20261005085008 visit_promise_done"
+    },
+    "20261005150000_reliable_promises.sql": {
+      "status": "recorded",
+      "prod": "20261005153346 reliable_promises_20261005"
+    },
+    "20261016091923_ihia_knowledge.sql": {
+      "status": "recorded",
+      "prod": "20261016091923 ihia_knowledge"
+    },
+    "20261101111021_arena_classes.sql": {
+      "status": "recorded",
+      "prod": "20261101111021 arena_classes"
+    },
+    "20261101114432_arena_teams_locked.sql": {
+      "status": "recorded",
+      "prod": "20261101114432 arena_teams_locked"
+    },
+    "20261103130000_share_with_manager.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "20261104130000_coaching_followups.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "20261104131000_protect_profile_authority.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "20261105120000_key_messages.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "20261105150000_ihia_proposals.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "20261105160000_certification_audit.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "20261105170000_ihia_proposals_lock_down.sql": {
+      "status": "unrecorded",
+      "note": "objects present in production (fingerprint match)"
+    },
+    "20261106120000_security_hardening.sql": {
+      "status": "unrecorded",
+      "prod": "20260603114459 fix_rls_recursion; 20260912110226 roleplay_sessions_own_update_policy",
+      "note": "brings the repo to parity with two production entries that had no file"
+    },
+    "20261106130000_roleplay_sessions_production_columns.sql": {
+      "status": "recorded",
+      "prod": "20260912112640 roleplay_sessions_adaptation_score",
+      "note": "also partner_style and partner_confidence, added by hand"
+    },
+    "20261106140000_validation_pilot.sql": {
+      "status": "not-applied",
+      "note": "validation pilot tables; applied only after owner approval"
+    },
+    "20261106150000_sessions_manager_read_fix.sql": {
+      "status": "not-applied",
+      "note": "closes the sessions read hole and pins the helper functions; the owner runs it"
+    }
+  },
+  "prodOnly": {
+    "20260907184834 styleshift_review_progress": "created, then removed by 20260907190242; no object remains",
+    "20260907184904 index_review_progress_owner": "created, then removed by 20260907190242; no object remains",
+    "20260907190242 remove_styleshift_review_progress": "net effect none"
+  }
+}

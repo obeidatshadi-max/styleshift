@@ -125,8 +125,8 @@
       "prod": "20260912025514 ai_doctor_phase4_pressure_shift"
     },
     "030_ai_doctor_realtime_timing.sql": {
-      "status": "not-applied",
-      "note": "conversation_turns.started_at and ended_at are MISSING in production, yet the app inserts them. The owner must run this file."
+      "status": "unrecorded",
+      "note": "applied by the owner in the SQL editor on 2026-11-06 (was missing); not in the history table. Verified by fingerprint."
     },
     "030_voice_partner_live_source.sql": {
       "status": "recorded",
@@ -239,8 +239,8 @@
       "note": "validation pilot tables; applied only after owner approval"
     },
     "20261106150000_sessions_manager_read_fix.sql": {
-      "status": "not-applied",
-      "note": "closes the sessions read hole and pins the helper functions; the owner runs it"
+      "status": "unrecorded",
+      "note": "applied by the owner in the SQL editor on 2026-11-06; not in the history table. Verified by fingerprint."
     }
   },
   "prodOnly": {

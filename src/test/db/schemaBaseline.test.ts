@@ -23,13 +23,10 @@ const map = JSON.parse(readFileSync(join(BASELINE_DIR, 'migration-history-map.js
 }
 
 /** Differences from production that are known and waiting for the owner to run a file in the SQL editor. */
-const KNOWN_TABLE_DRIFT = [
-  // 030_ai_doctor_realtime_timing was never applied: production has no started_at / ended_at.
-  { table: 'conversation_turns', parts: ['columns'] },
-  // production's "manager sessions read" policy has no manager check; 20261106150000 fixes it.
-  { table: 'sessions', parts: ['policies'] },
-]
-const KNOWN_FUNCTION_DRIFT = ['auth_company_id()', 'auth_is_manager()'] // 20261106150000 pins search_path and STABLE
+// Empty since the owner applied 030_ai_doctor_realtime_timing and 20261106150000_sessions_manager_read_fix on
+// 2026-11-06 and the snapshot was re-captured. Add an entry here only for a difference waiting on the owner.
+const KNOWN_TABLE_DRIFT: { table: string; parts: string[] }[] = []
+const KNOWN_FUNCTION_DRIFT: string[] = []
 
 describe('schema baseline: files vs production snapshot', () => {
   let t: TestDb
@@ -84,10 +81,6 @@ describe('migration history map', () => {
 
   it('no file marked recorded or unrecorded is a migration that changes production state without being applied', () => {
     const notApplied = Object.entries(map.files).filter(([, e]) => e.status === 'not-applied').map(([f]) => f)
-    expect(notApplied).toEqual([
-      '030_ai_doctor_realtime_timing.sql',
-      '20261106140000_validation_pilot.sql',
-      '20261106150000_sessions_manager_read_fix.sql',
-    ])
+    expect(notApplied).toEqual(['20261106140000_validation_pilot.sql'])
   })
 })

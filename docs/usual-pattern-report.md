@@ -41,3 +41,12 @@ The new field is optional. Reports saved before it existed render as before and 
 - The feeling-and-motive filter is a short word list behind the prompt rules. It will miss phrasings it does not list.
 - Arabic wording is unreviewed. **Needs review by an Iraqi trainer:** every `report.usual.*` string, the time-limit and detail patterns in `socialSignals.ts`, and the Arabic emotion words in `usualVsToday.ts`.
 - Nothing here writes to a doctor profile. Simulation results never update a real doctor.
+
+## Calls side by side (colleague role-plays)
+
+In the colleague's history (Practice with a colleague, then the colleague), a "Calls side by side" panel lays out each call's quoted statements next to the others, grouped by the doctor the colleague was asked to play, oldest to newest, at most six calls per doctor.
+
+- It reads each call's stored report (`report.socialStyle.usualVsToday`) for the signed-in rep only. Calls with no report say so; reports made before the usual-pattern view existed say so. Nothing is regenerated.
+- It shows statements and the practice setting that call used. It counts, ranks, averages and scores nothing, and says it describes no trait. Seeing whether the same practice doctor played out differently from call to call is left to the rep.
+- Code: `src/lib/report/callsSideBySide.ts` (grouping), `src/components/game/CallsSideBySide.tsx` (loading and display), mounted in `Colleagues.tsx`.
+- Limits: it needs a generated report per call; it covers colleague role-plays only; the same Arabic-review note as above applies to the new `calls.*` strings.

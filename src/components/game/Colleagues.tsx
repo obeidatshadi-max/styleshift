@@ -6,6 +6,7 @@ import { useColleagueSessions } from '@/hooks/useColleagueSessions'
 import type { Colleague } from '@/types/game'
 import RoleplayRecorder from './RoleplayRecorder'
 import RoleplayHistorySummaryCard, { RoleplaySessionCard } from './RoleplayHistorySummaryCard'
+import CallsSideBySide from './CallsSideBySide'
 
 interface Props { onExit: () => void }
 
@@ -157,6 +158,7 @@ function ColleagueHistory({ colleagueId, name }: { colleagueId: string; name: st
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
       <RoleplayHistorySummaryCard sessions={sessions} name={name} />
+      <CallsSideBySide colleagueId={colleagueId} />
       {sessions.map(s => (
         <RoleplaySessionCard key={s.id} session={s} dateText={new Date(s.created_at).toLocaleString(lang === 'ar' ? 'ar' : 'en', { dateStyle: 'short', timeStyle: 'short' })} />
       ))}

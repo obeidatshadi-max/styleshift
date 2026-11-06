@@ -33,7 +33,7 @@ export async function proxy(request: NextRequest) {
   // Let /auth/* through unauthenticated: the email-confirmation route handler
   // (/auth/confirm) must run to create the session — bouncing it to /login here
   // would discard the activation token before it's ever exchanged.
-  const publicPaths = ['/login', '/auth', '/invite', '/join-group', '/api/rep-join', '/api/rep-login', '/api/rep-signup', '/api/manager-signup', '/verify', '/welcome']
+  const publicPaths = ['/login', '/auth', '/invite', '/join-group', '/api/rep-join', '/api/rep-login', '/api/rep-signup', '/api/manager-signup', '/verify', '/welcome', '/reset-link']
   // '/' is the public landing page; match it exactly, since every path starts with '/'.
   if (!user && path !== '/' && !publicPaths.some(p => path.startsWith(p))) {
     const url = request.nextUrl.clone()

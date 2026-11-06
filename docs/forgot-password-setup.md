@@ -17,11 +17,11 @@ Project `cnlloaihrrmattuidpeh`, Authentication section.
 ```html
 <h2>Reset your password</h2>
 <p>Open this link to choose a new password:</p>
-<p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password">Choose a new password</a></p>
+<p><a href="{{ .SiteURL }}/reset-link?token_hash={{ .TokenHash }}">Choose a new password</a></p>
 <p>If you did not ask for this, ignore this email.</p>
 ```
 
-The link uses a token in the URL instead of the default code, so it works even when the email is opened in a different browser from the one that asked for it. Site URL must be `https://style-shift.netlify.app` (it already is).
+The link uses a token in the URL instead of the default code, so it works even when the email is opened in a different browser from the one that asked for it. It points at `/reset-link`, a page with a Continue button: the single-use token is only spent when the person presses it. Linking straight to `/auth/confirm` let mail systems that open links to scan them (common on company mail) use the token up first, so people arrived at "expired". Old emails that still point at `/auth/confirm` keep working. Site URL must be `https://style-shift.netlify.app` (it already is).
 
 ## Check it
 

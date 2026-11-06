@@ -5,21 +5,23 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { LanguageProvider } from '@/lib/i18n'
 
 const m = vi.hoisted(() => ({
-  resetPasswordForEmail: vi.fn(), updateUser: vi.fn(), push: vi.fn(), refresh: vi.fn(), signOut: vi.fn(),
+  resetPasswordForEmail: vi.fn(), updateUser: vi.fn(), push: vi.fn(), refresh: vi.fn(), signOut: vi.fn(), verifyOtp: vi.fn(),
+  params: new URLSearchParams(),
 }))
 vi.mock('@/lib/supabase-browser', () => ({
-  createClient: () => ({ auth: { resetPasswordForEmail: m.resetPasswordForEmail, updateUser: m.updateUser, signInWithPassword: vi.fn(), signOut: m.signOut } }),
+  createClient: () => ({ auth: { resetPasswordForEmail: m.resetPasswordForEmail, updateUser: m.updateUser, signInWithPassword: vi.fn(), signOut: m.signOut, verifyOtp: m.verifyOtp } }),
 }))
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: m.push, refresh: m.refresh }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => m.params,
 }))
 import ForgotPasswordForm from './ForgotPasswordForm'
 import ResetPasswordForm from './ResetPasswordForm'
+import ResetLinkForm from './ResetLinkForm'
 import LoginForm from './LoginForm'
 
 const wrap = (node: React.ReactElement) => render(React.createElement(LanguageProvider, null, node))
-beforeEach(() => { vi.stubGlobal('React', React); m.resetPasswordForEmail.mockResolvedValue({ error: null }); m.updateUser.mockResolvedValue({ error: null }); m.signOut.mockResolvedValue({ error: null }) })
+beforeEach(() => { vi.stubGlobal('React', React); m.resetPasswordForEmail.mockResolvedValue({ error: null }); m.updateUser.mockResolvedValue({ error: null }); m.signOut.mockResolvedValue({ error: null }); m.verifyOtp.mockResolvedValue({ error: null }); m.params = new URLSearchParams() })
 afterEach(() => { cleanup(); vi.clearAllMocks(); vi.unstubAllGlobals(); localStorage.clear() })
 
 describe('ForgotPasswordForm', () => {
@@ -55,6 +57,44 @@ describe('ForgotPasswordForm', () => {
     expect((screen.getByLabelText('البريد الإلكتروني') as HTMLInputElement).value).toBe('x@y.com')
     fireEvent.click(screen.getByText('العودة إلى تسجيل الدخول'))
     expect(back).toHaveBeenCalled()
+  })
+})
+
+describe('ResetLinkForm: where the reset email points', () => {
+  it('does not use up the link when the page opens, only when the person presses Continue', async () => {
+    m.params = new URLSearchParams('token_hash=abc123')
+    wrap(<ResetLinkForm />)
+    expect(screen.getByText('Reset your password')).toBeTruthy()
+    expect(m.verifyOtp).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByText('Continue'))
+    await waitFor(() => expect(m.push).toHaveBeenCalledWith('/reset-password'))
+    expect(m.verifyOtp).toHaveBeenCalledWith({ type: 'recovery', token_hash: 'abc123' })
+  })
+
+  it('says the link has expired, and offers the way back to sign in, when the token is refused', async () => {
+    m.params = new URLSearchParams('token_hash=used')
+    m.verifyOtp.mockResolvedValue({ error: { message: 'Token has expired or is invalid' } })
+    wrap(<ResetLinkForm />)
+    fireEvent.click(screen.getByText('Continue'))
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('expired, or was already used')
+    expect(alert.textContent).toContain('Forgot password?')
+    expect(screen.getByText('Back to sign in').closest('a')!.getAttribute('href')).toBe('/login')
+    expect(m.push).not.toHaveBeenCalled()
+  })
+
+  it('says so at once when the link has no token', () => {
+    wrap(<ResetLinkForm />)
+    expect(screen.getByRole('alert').textContent).toContain('missing')
+    expect(m.verifyOtp).not.toHaveBeenCalled()
+  })
+
+  it('speaks Arabic', async () => {
+    localStorage.setItem('styleshift_lang', 'ar')
+    m.params = new URLSearchParams('token_hash=abc123')
+    wrap(<ResetLinkForm />)
+    expect(await screen.findByText('إعادة تعيين كلمة المرور')).toBeTruthy()
+    expect(screen.getByText('متابعة')).toBeTruthy()
   })
 })
 
@@ -119,6 +159,21 @@ describe('ResetPasswordForm', () => {
     fill('abcdef', 'abcdef')
     expect((await screen.findByRole('alert')).textContent).toContain('may have expired')
     expect(m.push).not.toHaveBeenCalled()
+  })
+})
+
+describe('a reset link that failed', () => {
+  it('says the reset link expired or was used, not that an activation link did, and points to Forgot password', async () => {
+    m.params = new URLSearchParams('confirm_error=reset')
+    wrap(<LoginForm />)
+    const text = (await screen.findByText(/This reset link has expired or was already used/)).textContent ?? ''
+    expect(text).toContain('Forgot password?')
+    expect(text).not.toMatch(/activation|sign up/i)
+  })
+  it('keeps the activation wording for a sign-up link', async () => {
+    m.params = new URLSearchParams('confirm_error=1')
+    wrap(<LoginForm />)
+    expect(await screen.findByText(/activation link has expired/)).toBeTruthy()
   })
 })
 

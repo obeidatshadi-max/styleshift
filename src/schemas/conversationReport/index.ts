@@ -47,7 +47,7 @@ export type VoiceMetric = typeof VOICE_METRICS[number]
 
 export const SIGNAL_CATEGORIES = [
   'directness', 'detail_request', 'results_focus', 'relationship_language',
-  'possibility_interest', 'reassurance_request', 'pace_preference',
+  'possibility_interest', 'reassurance_request', 'pace_preference', 'time_limit',
 ] as const
 export type SignalCategory = typeof SIGNAL_CATEGORIES[number]
 export function isSignalCategory(v: unknown): v is SignalCategory {
@@ -193,6 +193,33 @@ export interface AdaptationFinding {
   suggestedAdjustment: string | null
 }
 
+/** Where the "usual pattern" came from. Never a measurement, and never model-written. */
+export type UsualPatternSource = 'rep_recorded' | 'practice_setting' | 'none'
+
+/** One thing the counterpart actually said, tagged with what kind of statement it was (not what it means). */
+export interface TodayObservation {
+  /** 'brief_replies' is counted from reply length, not from wording: it describes how short, never why. */
+  category: SignalCategory | 'brief_replies'
+  evidence: EvidenceRef
+}
+
+/**
+ * "Usual pattern / This conversation / Helpful adjustment". Additive: only reports generated after this
+ * existed carry it, so older saved reports render as before and never look newly analysed.
+ * `usual` comes from trusted app context; `observations` are counterpart quotes that the transcript confirms.
+ */
+export interface UsualVsToday {
+  usual: { style: SocialStyle | null; source: UsualPatternSource }
+  observations: TodayObservation[]
+  /** The final grounded reading differs from the rep's saved profile. Not evidence of a changed trait. */
+  differsFromUsual: boolean
+  /** A short conversation: the reading is limited. */
+  limited: boolean
+  uncertainty: string | null
+  adjustment: string | null
+  examplePhrase: string | null
+}
+
 export interface SocialStyleSection {
   customer: SocialStyleRead
   rep: SocialStyleRead
@@ -206,6 +233,8 @@ export interface SocialStyleSection {
     mostUsefulAdjustment: string
     suggestedWordingNextVisit: string
   } | null
+  /** Additive field: older saved reports remain readable. */
+  usualVsToday?: UsualVsToday | null
 }
 
 export interface ConversationReport {

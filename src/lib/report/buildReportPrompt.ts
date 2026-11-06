@@ -189,7 +189,16 @@ transcript by segmentIndex. A segmentIndex that does not appear in the transcrip
 
 For socialStyle, ground every "possibleStyle" claim in one or more of the listed detected signals via
 their segmentIndex — do not assign a style with no matching signal. Use null / "insufficient evidence"
-freely; do not force a style onto ambiguous or contradictory signals.
+freely; do not force a style onto ambiguous or contradictory signals. Cite a counterpart line for the customer
+read and a rep line for the rep read; a line from the other speaker is discarded.
+
+For the customer's coachingCard and alternativeExplanation, describe only what the counterpart said or did, in
+observable terms ("asked for a short summary"). Never name a feeling, motive, honesty or personality ("is
+anxious", "does not care"). A request for brevity or evidence in one conversation is not proof of a personality
+type or of a changed trait: a usual preference for detail and a need for a short visit today can both be true.
+When the reason for something is unclear, say so in alternativeExplanation. mostUsefulAdjustment is one practical
+step, preferably a respectful clarifying question when the need is unclear. suggestedWordingNextVisit is one short
+phrase the rep could say. Never claim the rep caused a later reaction because it came after the rep's turn.
 
 In every text field, never write segment numbers or bracketed references such as [3] — the app shows the
 evidence itself; refer to moments in words ("when the doctor asked about interactions").

@@ -19,10 +19,18 @@ export interface RoleplaySessionRow {
   rep_style: string | null
   partner_style: string | null
   adaptation_score: number | null
+  /** The saved doctor the colleague was asked to play, when the rep chose one. */
+  doctor_id?: string | null
 }
 
+/**
+ * `practiceStyle` is the style on the rep's own saved doctor profile that the colleague was asked to play
+ * (null when no doctor was chosen or it has no style). It is shown as a practice setting, not as a saved
+ * profile of the colleague. The session's own `partner_style` is NOT used: it is the app's automatic read of
+ * this same conversation, so comparing the report with it would compare a conversation with itself.
+ */
 export function adaptRoleplaySession(
-  rows: TranscriptSegmentRow[], session: RoleplaySessionRow,
+  rows: TranscriptSegmentRow[], session: RoleplaySessionRow, practiceStyle: SocialStyle | null = null,
 ): { segments: TranscriptSegment[]; context: ReportContext } {
   const segments: TranscriptSegment[] = rows.map(r => ({
     segmentIndex: r.segment_index,
@@ -33,14 +41,13 @@ export function adaptRoleplaySession(
     createdAt: null,
   }))
 
-  const savedCounterpartStyle: SocialStyle | null = isSocialStyle(session.partner_style) ? session.partner_style : null
-
   const context: ReportContext = {
     objective: null,
     productContext: null,
     isSimulation: false,
     simulationPersona: null,
-    savedCounterpartStyle,
+    savedCounterpartStyle: null,
+    configuredPracticeStyle: isSocialStyle(practiceStyle) ? practiceStyle : null,
     deterministicMetrics: {
       talkRatio: session.talk_ratio, rapidTurnSwitches: session.rapid_turn_switches,
       questionRatio: session.question_ratio, openQuestionRatio: session.open_question_ratio,

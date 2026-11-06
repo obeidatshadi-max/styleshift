@@ -278,6 +278,9 @@ export interface ReportContext {
   isSimulation: boolean
   simulationPersona: { style: SocialStyle | null; hiddenConcern: string | null } | null
   savedCounterpartStyle: SocialStyle | null
+  /** The saved doctor profile a colleague was asked to play in a live role-play: a configured practice tendency,
+   * never a finding about the colleague and never a trait of a real doctor. Set only from the rep's own saved doctor. */
+  configuredPracticeStyle?: SocialStyle | null
   deterministicMetrics: Record<string, number | string | boolean | null>
   qualityFlags: string[]
   knowledge?: ReportKnowledge | null

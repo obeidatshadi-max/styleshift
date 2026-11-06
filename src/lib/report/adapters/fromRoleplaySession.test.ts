@@ -19,7 +19,16 @@ describe('adaptRoleplaySession', () => {
   it('passes stored deterministic metrics through as context, not simulation', () => {
     const { context } = adaptRoleplaySession(segmentRows, sessionRow)
     expect(context.isSimulation).toBe(false)
-    expect(context.savedCounterpartStyle).toBe('analytical')
     expect(context.deterministicMetrics.talkRatio).toBe(0.55)
+  })
+  it('does not treat the session\'s own automatic style read as a saved profile', () => {
+    const { context } = adaptRoleplaySession(segmentRows, sessionRow)
+    expect(context.savedCounterpartStyle).toBeNull()
+    expect(context.configuredPracticeStyle).toBeNull()
+  })
+  it('carries the saved doctor\'s style as a practice setting, and ignores anything that is not a style', () => {
+    expect(adaptRoleplaySession(segmentRows, sessionRow, 'amiable').context.configuredPracticeStyle).toBe('amiable')
+    expect(adaptRoleplaySession(segmentRows, sessionRow, 'amiable').context.savedCounterpartStyle).toBeNull()
+    expect(adaptRoleplaySession(segmentRows, sessionRow, 'nonsense' as never).context.configuredPracticeStyle).toBeNull()
   })
 })

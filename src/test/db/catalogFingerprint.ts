@@ -33,7 +33,7 @@ export const TABLE_FINGERPRINT_SQL =
  * settings such as search_path. The harness stub gen_random_bytes is left out; production gets it from pgcrypto.
  */
 export const FUNCTION_FINGERPRINT_SQL =
-  `select string_agg(p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')|def=' || p.prosecdef::text || '|h:' || left(md5(regexp_replace(p.prosrc, '\\s+', ' ', 'g') || '/' || p.provolatile::text || '/' || coalesce(p.proconfig::text, '')), 8), ' ; ' order by p.proname) as fp from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname not like 'health360%' and p.proname not like 'validation%' and p.proname <> 'gen_random_bytes'`
+  `select string_agg(p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')|def=' || p.prosecdef::text || '|h:' || left(md5(btrim(regexp_replace(p.prosrc, '\\s+', ' ', 'g')) || '/' || p.provolatile::text || '/' || coalesce(p.proconfig::text, '')), 8), ' ; ' order by p.proname) as fp from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname not like 'health360%' and p.proname not like 'validation%' and p.proname <> 'gen_random_bytes'`
 
 export interface TableFingerprint { rls: boolean; columns: string; constraints: string; indexes: string; policies: string; triggers: string }
 

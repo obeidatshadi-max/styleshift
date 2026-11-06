@@ -1,5 +1,6 @@
 import { isVaguePattern } from '@/lib/precision-language'
 import { classifyDoctorQuestion, isQuestionKind } from '@/lib/question-kind'
+import { buildUsualVsToday } from '@/lib/report/usualVsToday'
 import {
   isCertainty, isCommitmentStatus, isObjectiveStatus, isPerformanceDimension, isSocialStyle, isSignalCategory,
   VOICE_METRICS,
@@ -226,25 +227,31 @@ export function groundReport(
   const ss = (r.socialStyle && typeof r.socialStyle === 'object' ? r.socialStyle : {}) as Record<string, unknown>
   function groundStyleRead(raw: unknown, subject: 'customer' | 'rep'): ConversationReport['socialStyle']['customer'] {
     const s = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+    // A style read about the customer is evidenced by the customer's words, and one about the rep by the rep's.
+    // A line from the other speaker is never accepted as proof, whatever the model cites.
+    const expectedSpeaker = subject === 'customer' ? 'counterpart' : 'rep'
     const strongestSignals = (Array.isArray(s.strongestSignals) ? s.strongestSignals : []).map(sig => {
       const g = (sig && typeof sig === 'object' ? sig : {}) as Record<string, unknown>
       const evidence = groundEvidence(g.evidence, segments)
-      if (!evidence) return null
+      if (!evidence || evidence.speakerRole !== expectedSpeaker) return null
       return { text: evidence.quote, evidence, category: isSignalCategory(g.category) ? g.category : 'directness' }
     }).filter((x): x is NonNullable<typeof x> => x !== null)
     // A style claim with zero matching signals is forced to null — never a
     // forced label with no evidence behind it.
     const claimedStyle = isSocialStyle(s.possibleStyle) ? s.possibleStyle : null
     const isSim = subject === 'customer' && context.isSimulation
+    // The final reading: a claim that kept no evidence is already null here, and so cannot raise a
+    // "differs from your saved profile" note below.
+    const finalStyle = strongestSignals.length > 0 ? claimedStyle : null
     return {
       subject,
       strongestSignals,
-      possibleStyle: strongestSignals.length > 0 ? claimedStyle : null,
+      possibleStyle: finalStyle,
       mixedEvidenceNote: strOrNull(s.mixedEvidenceNote),
       alternativeExplanation: strOrNull(s.alternativeExplanation),
       savedProfile: subject === 'customer' && !isSim ? context.savedCounterpartStyle : null,
-      profileDrift: subject === 'customer' && !isSim && context.savedCounterpartStyle != null && claimedStyle != null
-        ? claimedStyle !== context.savedCounterpartStyle : false,
+      profileDrift: subject === 'customer' && !isSim && context.savedCounterpartStyle != null && finalStyle != null
+        ? finalStyle !== context.savedCounterpartStyle : false,
       isSimulationSetting: isSim,
     }
   }
@@ -291,7 +298,10 @@ export function groundReport(
     visitSummary, customerUnderstanding, performance, criticalMoments, momentUnderstanding, vagueStatements, answerFit,
     voiceMeasurements: buildVoiceMeasurements(context.deterministicMetrics),
     commitments, coachingPriority, strength,
-    socialStyle: { customer: customerRead, rep: repRead, adaptation, signalChanges, coachingCard },
+    socialStyle: {
+      customer: customerRead, rep: repRead, adaptation, signalChanges, coachingCard,
+      usualVsToday: buildUsualVsToday({ customer: customerRead, context, segments, coachingCard }),
+    },
     qualityFlags: context.qualityFlags,
   }
 }

@@ -21,6 +21,8 @@ const RULES: SignalRule[] = [
   { category: 'relationship_language', pattern: /\b(how (are|is) (you|your family)|appreciate you|good to see you)\b|شلونك|شخبار|حبيبي|العائلة|شكرا الك/i },
   { category: 'possibility_interest', pattern: /\b(what if|possibilit(y|ies)|could this|imagine|down the (road|line))\b|شنو لو|ممكن بالمستقبل|تخيل/i },
   { category: 'reassurance_request', pattern: /\b(are you sure|what happens if|support (after|later)|guarantee)\b|متاكد|شنو الضمان|دعم بعدين/i },
+  // About time, not personality: a stated limit on how long the conversation can last.
+  { category: 'time_limit', pattern: /\b(one|1|two|2|a few|few|couple of) minutes?\b|\b(short on time|in a hurry|running late|only have (a )?(minute|moment|few minutes)|keep it (short|brief)|make it (short|quick|brief))\b|عندي\s?(دقيقة|دقيقتين|دقايق)|وقتي\s?(ضيق|قليل)|مستعجل|اختصر|باختصار/i },
   { category: 'pace_preference', pattern: /\b(more time|slow down|take (your|my) time|not (yet|ready))\b|خذ\s?لك\s?(وقت|وكت)|مو جاهز|ببطء/i },
 ]
 
@@ -38,18 +40,22 @@ function normalizeForMatch(text: string): string {
 
 export function extractSocialSignals(segments: TranscriptSegment[], speakerRole: 'rep' | 'counterpart'): SocialStyleSignal[] {
   const signals: SocialStyleSignal[] = []
+  // One signal per (segment, speaker, category): a single line can carry more than one kind of statement
+  // ("I have one minute, but leave the study"), but the same category is never counted twice for it.
+  // Counts are not probabilities of a personality type.
+  const seen = new Set<string>()
   for (const seg of segments) {
     if (seg.speakerRole !== speakerRole) continue
     const normalized = normalizeForMatch(seg.text)
     for (const rule of RULES) {
-      if (rule.pattern.test(normalized)) {
-        signals.push({
-          text: seg.text,
-          evidence: { segmentIndex: seg.segmentIndex, speakerRole: seg.speakerRole, quote: seg.text },
-          category: rule.category,
-        })
-        break // one signal per segment keeps the strongest-match, avoids over-counting a single line
-      }
+      const key = `${seg.segmentIndex}|${seg.speakerRole}|${rule.category}`
+      if (seen.has(key) || !rule.pattern.test(normalized)) continue
+      seen.add(key)
+      signals.push({
+        text: seg.text,
+        evidence: { segmentIndex: seg.segmentIndex, speakerRole: seg.speakerRole, quote: seg.text },
+        category: rule.category,
+      })
     }
   }
   return signals

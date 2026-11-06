@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useT } from '@/lib/i18n'
-import { SOCIAL_STYLES, type SocialStyle, type SocialStyleSection, type SocialStyleRead, type AdaptationFinding } from '@/schemas/conversationReport'
+import { SOCIAL_STYLES, type SocialStyle, type SocialStyleSection, type SocialStyleRead, type AdaptationFinding, type UsualVsToday } from '@/schemas/conversationReport'
 import { compareSelfToObserved } from '@/lib/self-vs-observed'
 
 const fieldLabel: React.CSSProperties = { fontFamily: 'var(--mono)', fontSize: 'max(10.5px, var(--voice-min-font, 0px))', letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)' }
@@ -26,7 +26,74 @@ function StyleRead({ read }: { read: SocialStyleRead }) {
       {read.profileDrift && (
         <p data-testid="social-style-drift" style={{ ...note, color: 'var(--amber)' }}>
           {t('report.socialStyle.driftFrom')} {read.savedProfile ? t(`report.socialStyle.style.${read.savedProfile}`) : ''}
+          <span style={{ display: 'block', color: 'var(--ink-dim)' }}>{t('report.usual.differsWhy')}</span>
         </p>
+      )}
+    </div>
+  )
+}
+
+/** Observations from the same line share one quote, so the doctor's words are not repeated. */
+function groupByLine(observations: UsualVsToday['observations']) {
+  const groups: { evidence: UsualVsToday['observations'][number]['evidence']; categories: UsualVsToday['observations'][number]['category'][] }[] = []
+  for (const o of observations) {
+    const g = groups.find(x => x.evidence.segmentIndex === o.evidence.segmentIndex)
+    if (g) g.categories.push(o.category); else groups.push({ evidence: o.evidence, categories: [o.category] })
+  }
+  return groups
+}
+
+/** "Usual pattern / This conversation / What remains uncertain / Helpful adjustment". Only rendered for reports that carry it. */
+function UsualVsTodayView({ view }: { view: UsualVsToday }) {
+  const t = useT()
+  const { usual } = view
+  const heading = (key: string) => <div style={{ ...fieldLabel, marginBottom: 4 }}>{t(key)}</div>
+  const briefReplies = view.observations.some(o => o.category === 'brief_replies')
+  const hasUncertainty = view.uncertainty || view.differsFromUsual || view.limited || briefReplies
+  return (
+    <div data-testid="usual-vs-today" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div data-testid="usual-pattern">
+        {heading('report.usual.usual')}
+        {usual.source === 'none' || usual.style === null
+          ? <p style={bodyText}>{t('report.usual.none')}</p>
+          : <>
+              <p style={bodyText}>{t(usual.source === 'practice_setting' ? 'report.usual.practice' : 'report.usual.saved', { style: t(`report.socialStyle.style.${usual.style}`) })}</p>
+              <p style={note}>{t(usual.source === 'practice_setting' ? 'report.usual.practiceNote' : 'report.usual.savedNote')}</p>
+            </>}
+      </div>
+
+      <div data-testid="usual-today">
+        {heading('report.usual.today')}
+        {view.observations.length === 0
+          ? <p style={bodyText}>{t('report.usual.noObs')}</p>
+          : groupByLine(view.observations).map(g => (
+              <div key={g.evidence.segmentIndex} style={{ marginBottom: 8 }}>
+                {g.categories.map(c => <p key={c} style={bodyText}>{t(`report.usual.obs.${c}`)}</p>)}
+                <p style={{ ...note, borderInlineStart: '3px solid var(--line)', paddingInlineStart: 10 }}>{t('report.usual.said')}: “<bdi>{g.evidence.quote}</bdi>”</p>
+              </div>
+            ))}
+      </div>
+
+      {hasUncertainty && (
+        <div data-testid="usual-uncertain">
+          {heading('report.usual.uncertain')}
+          {view.uncertainty && <p style={bodyText}><bdi>{view.uncertainty}</bdi></p>}
+          {briefReplies && !view.uncertainty && <p style={bodyText}>{t('report.usual.briefUncertain')}</p>}
+          {view.differsFromUsual && (
+            <p data-testid="usual-differs" style={{ ...note, color: 'var(--amber)' }}>
+              {t('report.usual.differs')} {t('report.usual.differsWhy')}
+            </p>
+          )}
+          {view.limited && <p style={note}>{t('report.usual.limited')}</p>}
+        </div>
+      )}
+
+      {view.adjustment && (
+        <div data-testid="usual-adjust" style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px' }}>
+          {heading('report.usual.adjust')}
+          <p style={bodyText}><bdi>{view.adjustment}</bdi></p>
+          {view.examplePhrase && <p style={{ ...note, marginTop: 8 }}>{t('report.usual.sayExample')}: “<bdi>{view.examplePhrase}</bdi>”</p>}
+        </div>
       )}
     </div>
   )
@@ -80,7 +147,8 @@ export function SocialStyleCard({ section }: { section: SocialStyleSection }) {
   const t = useT()
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <StyleRead read={section.customer} />
+      {/* Reports that carry the usual-vs-today view show it instead of the older customer read and coaching card, so the same advice is not shown twice. */}
+      {section.usualVsToday ? <UsualVsTodayView view={section.usualVsToday} /> : <StyleRead read={section.customer} />}
       <RepStyleRead read={section.rep} />
 
       {section.adaptation.length > 0 && (
@@ -97,7 +165,7 @@ export function SocialStyleCard({ section }: { section: SocialStyleSection }) {
         </div>
       )}
 
-      {section.coachingCard && (
+      {section.coachingCard && !section.usualVsToday && (
         <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div><span style={fieldLabel}>{t('report.socialStyle.observedSignals')}: </span><span style={bodyText}>{section.coachingCard.observedSignals}</span></div>
           <div><span style={fieldLabel}>{t('report.socialStyle.possiblePreference')}: </span><span style={bodyText}>{section.coachingCard.possiblePreference}</span></div>

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { diarizeAudio, MAX_ROLEPLAY_AUDIO_BYTES, type DiarizationJob } from './assemblyai-client'
+import { diarizeAudio, pendingRemoteDeleteIds, MAX_ROLEPLAY_AUDIO_BYTES, type DiarizationJob } from './assemblyai-client'
 import { buildRoleplayResult } from './roleplay-core'
 const auth = vi.hoisted(() => ({ getSession: vi.fn() }))
 vi.mock('@/lib/supabase-browser', () => ({ createClient: () => ({ auth }) }))
@@ -13,6 +13,11 @@ beforeEach(() => {
   auth.getSession.mockResolvedValue({ data: { session: { access_token: 'test-token' } } })
   fetchMock = vi.fn()
   vi.stubGlobal('fetch', fetchMock)
+  const store = new Map<string, string>()
+  vi.stubGlobal('localStorage', {
+    getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, v) },
+    removeItem: (k: string) => { store.delete(k) }, clear: () => store.clear(),
+  })
 })
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers() })
 const audio = new Blob(['test audio'], { type: 'audio/webm' })
@@ -23,6 +28,7 @@ describe('roleplay analysis recovery', () => {
     fetchMock.mockResolvedValueOnce(Response.json({ id: 'transcript' }))
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce(Response.json({ status: 'completed', utterances }))
+      .mockResolvedValueOnce(Response.json({ deleted: true }))
     await expect(diarizeAudio(audio, job)).rejects.toThrow('offline')
     expect(job.transcriptId).toBe('transcript')
     const result = await diarizeAudio(audio, job)
@@ -77,6 +83,60 @@ describe('roleplay analysis recovery', () => {
     const pending = diarizeAudio(audio, { uploadUrl: 'https://cdn.assemblyai.com/upload/test' })
     await vi.advanceTimersByTimeAsync(5_000)
     expect(await pending).toEqual(utterances)
+  })
+  describe('remote deletion is acknowledged or remembered, never just assumed', () => {
+    const run = (job: DiarizationJob = { uploadUrl: 'https://cdn.assemblyai.com/upload/test' }) => diarizeAudio(audio, job)
+    const completed = () => fetchMock.mockResolvedValueOnce(Response.json({ id: 'transcript-1' })).mockResolvedValueOnce(Response.json({ status: 'completed', utterances }))
+
+    it('an acknowledged deletion leaves nothing to retry', async () => {
+      completed(); fetchMock.mockResolvedValueOnce(Response.json({ deleted: true }))
+      await run()
+      expect(pendingRemoteDeleteIds()).toEqual([])
+    })
+    it('treats { deleted: false } as NOT acknowledged and remembers the id only', async () => {
+      completed(); fetchMock.mockResolvedValue(Response.json({ deleted: false }))
+      expect(await run()).toEqual(utterances)
+      expect(pendingRemoteDeleteIds()).toEqual(['transcript-1'])
+      expect(localStorage.getItem('styleshift.pendingRemoteDeletes')).not.toMatch(/utterance|text|audio/i)
+    })
+    it('retries once straight away, and succeeds on the second try', async () => {
+      completed(); fetchMock.mockResolvedValueOnce(new Response('{}', { status: 500 })).mockResolvedValueOnce(Response.json({ deleted: true }))
+      await run()
+      expect(pendingRemoteDeleteIds()).toEqual([])
+      expect(fetchMock.mock.calls.filter(c => JSON.parse(c[1].body).action === 'delete')).toHaveLength(2)
+    })
+    it('a remembered deletion is tried again the next time analysis runs, and forgotten once acknowledged', async () => {
+      localStorage.setItem('styleshift.pendingRemoteDeletes', JSON.stringify([{ id: 'old-transcript', tries: 1 }]))
+      fetchMock.mockImplementation(async (_u: string, o: { body: string }) => {
+        const b = JSON.parse(o.body)
+        if (b.action === 'delete') return Response.json({ deleted: true })
+        if (b.action === 'submit') return Response.json({ id: 'transcript-2' })
+        return Response.json({ status: 'completed', utterances })
+      })
+      await run()
+      await vi.waitFor(() => expect(pendingRemoteDeleteIds()).toEqual([]))
+      const deletedIds = fetchMock.mock.calls.map(c => JSON.parse(c[1].body)).filter(b => b.action === 'delete').map(b => b.transcript_id)
+      expect(deletedIds).toContain('old-transcript')
+    })
+    it('gives up after a few unconfirmed tries instead of retrying for ever', async () => {
+      localStorage.setItem('styleshift.pendingRemoteDeletes', JSON.stringify([{ id: 'stuck', tries: 3 }]))
+      fetchMock.mockImplementation(async (_u: string, o: { body: string }) => {
+        const b = JSON.parse(o.body)
+        if (b.action === 'delete') return new Response('{}', { status: 500 })
+        if (b.action === 'submit') return Response.json({ id: 'transcript-3' })
+        return Response.json({ status: 'completed', utterances })
+      })
+      await run()
+      await vi.waitFor(() => expect(pendingRemoteDeleteIds()).not.toContain('stuck'))
+    })
+    it('asks for the remote copy of a FAILED job to be removed as well', async () => {
+      fetchMock.mockResolvedValueOnce(Response.json({ id: 'transcript-4' }))
+        .mockResolvedValueOnce(Response.json({ status: 'error', error: 'bad audio' }))
+        .mockResolvedValueOnce(Response.json({ deleted: true }))
+      await expect(run()).rejects.toMatchObject({ code: 'diarize' })
+      const sent = fetchMock.mock.calls.map(c => JSON.parse(c[1].body))
+      expect(sent[sent.length - 1]).toEqual({ action: 'delete', transcript_id: 'transcript-4' })
+    })
   })
   it('rejects oversized audio before upload', async () => {
     const large = new Blob([new Uint8Array(MAX_ROLEPLAY_AUDIO_BYTES + 1)])

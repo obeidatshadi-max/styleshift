@@ -235,8 +235,8 @@
       "note": "also partner_style and partner_confidence, added by hand"
     },
     "20261106140000_validation_pilot.sql": {
-      "status": "not-applied",
-      "note": "validation pilot tables; applied only after owner approval"
+      "status": "unrecorded",
+      "note": "applied by the owner in the SQL editor on 2026-11-06 (8 tables, 15 policies, 10 triggers, 14 functions, no anon grants, verified by count); not in the history table. The pilot screens stay off until VALIDATION_PILOT_ENABLED is set."
     },
     "20261106150000_sessions_manager_read_fix.sql": {
       "status": "unrecorded",

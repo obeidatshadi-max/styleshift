@@ -81,6 +81,6 @@ describe('migration history map', () => {
 
   it('no file marked recorded or unrecorded is a migration that changes production state without being applied', () => {
     const notApplied = Object.entries(map.files).filter(([, e]) => e.status === 'not-applied').map(([f]) => f)
-    expect(notApplied).toEqual(['20261106140000_validation_pilot.sql'])
+    expect(notApplied).toEqual([])  // the owner applied the validation migration on 2026-11-06
   })
 })

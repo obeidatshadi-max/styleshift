@@ -15,9 +15,9 @@ The report shows this view instead of the older customer read and coaching card,
 
 | Part | Source |
 |---|---|
-| Usual pattern | App context only (`ReportContext`). Never model text. |
+| Usual pattern | App context only (`ReportContext`). Never model text. Three cases: a rep-recorded profile of the actual person (`savedCounterpartStyle`; no flow supplies one yet), a simulated doctor's configured style, or, in a live role-play with a colleague, the style on the saved doctor the colleague was asked to play (`configuredPracticeStyle`). The last two are labelled "Practice setting". |
 | Observations | Counterpart lines the transcript confirms, whose category the deterministic extractor also found in that same line. The model picks among detected signals; it cannot add one. A separate "short replies" observation is counted from reply length. |
-| Differs from usual | The final grounded style reading, so a claim that kept no evidence cannot raise it. Never shown for a simulation. |
+| Differs from usual | The final grounded style reading, so a claim that kept no evidence cannot raise it. Only for a rep-recorded profile; never for a practice setting. |
 | Uncertainty, adjustment, phrase | Model prose from the existing coaching card, kept only when at least one confirmed observation backs it and it names no feeling or motive. |
 
 Code: `src/lib/report/usualVsToday.ts` (builder), `groundReport.ts` (wiring), `socialSignals.ts` (extraction), `SocialStyleCard.tsx` (display), schema field `socialStyle.usualVsToday` (optional).
@@ -35,7 +35,7 @@ The new field is optional. Reports saved before it existed render as before and 
 
 ## Limits
 
-- **Saved doctor profile reaches reports only from colleague role-plays** (`partner_style`). Real customer visits, AI-doctor voice and AI-doctor text pass no saved style: `customer_visits` has no doctor link. Those reports show "No usual pattern recorded" or the practice setting. Linking a visit to a doctor needs a column and a picker in the recording flow.
+- **A rep-recorded profile of the actual person reaches no report yet.** Real customer visits, AI-doctor voice and AI-doctor text pass none: `customer_visits` has no doctor link. Linking a visit to a doctor needs a column and a picker in the recording flow. Colleague role-plays use the saved doctor the colleague played, as a practice setting. The session's own `partner_style` is the app's automatic read of that same conversation and is deliberately not used.
 - The saved style is a rep-chosen label, not a measurement or a verified trait.
 - Matching is deliberately literal. It misses many phrasings, and "two minutes" or "data" can occasionally appear in an unrelated sense. Signal counts are not personality probabilities.
 - The feeling-and-motive filter is a short word list behind the prompt rules. It will miss phrasings it does not list.

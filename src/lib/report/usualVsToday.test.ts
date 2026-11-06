@@ -202,3 +202,20 @@ describe('the report prompt', () => {
     expect(prompt).not.toMatch(/saved profile|savedCounterpartStyle/i)
   })
 })
+
+describe('a colleague playing one of the rep saved doctors', () => {
+  const colleague = ctx({ configuredPracticeStyle: 'analytical' })
+  const s = view(raw({ possibleStyle: 'driver', strongestSignals: [sig(0, 'time_limit')], coachingCard: card }, { coachingCard: card }), THREE, colleague)
+  it('is a practice setting, not a saved profile of the colleague', () => {
+    expect(s.usualVsToday!.usual).toEqual({ style: 'analytical', source: 'practice_setting' })
+    expect(s.customer.savedProfile).toBeNull()
+  })
+  it('is not compared with the conversation as if it were a trait', () => {
+    expect(s.usualVsToday!.differsFromUsual).toBe(false)
+    expect(s.customer.profileDrift).toBe(false)
+  })
+  it('with no saved doctor chosen, shows no usual pattern at all', () => {
+    const none = view(raw({ possibleStyle: 'driver', strongestSignals: [sig(0, 'time_limit')] }), THREE, ctx())
+    expect(none.usualVsToday!.usual).toEqual({ style: null, source: 'none' })
+  })
+})

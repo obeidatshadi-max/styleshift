@@ -58,8 +58,11 @@ interface Inputs {
  */
 export function buildUsualVsToday({ customer, context, segments, coachingCard }: Inputs): UsualVsToday {
   const sim = context.isSimulation
-  const usualStyle: SocialStyle | null = sim ? context.simulationPersona?.style ?? null : context.savedCounterpartStyle
-  const source: UsualPatternSource = usualStyle === null ? 'none' : sim ? 'practice_setting' : 'rep_recorded'
+  // A simulated doctor, or a colleague playing one of the rep's saved doctors, gives a practice setting.
+  // Only a rep-recorded profile of the actual person counts as the usual pattern.
+  const practice: SocialStyle | null = sim ? context.simulationPersona?.style ?? null : context.configuredPracticeStyle ?? null
+  const usualStyle: SocialStyle | null = practice ?? (sim ? null : context.savedCounterpartStyle)
+  const source: UsualPatternSource = usualStyle === null ? 'none' : practice !== null ? 'practice_setting' : 'rep_recorded'
 
   const detected = extractSocialSignals(segments, 'counterpart')
   const confirmed = (sig: SocialStyleSignal) =>
@@ -86,7 +89,7 @@ export function buildUsualVsToday({ customer, context, segments, coachingCard }:
   return {
     usual: { style: usualStyle, source },
     observations,
-    differsFromUsual: !sim && usualStyle !== null && hasEvidence && customer.possibleStyle !== null && customer.possibleStyle !== usualStyle,
+    differsFromUsual: source === 'rep_recorded' && usualStyle !== null && hasEvidence && customer.possibleStyle !== null && customer.possibleStyle !== usualStyle,
     limited: context.qualityFlags.includes('short_session') || counterpartTurns < MIN_COUNTERPART_TURNS,
     uncertainty: hasEvidence ? safeProse(customer.alternativeExplanation ?? customer.mixedEvidenceNote) : null,
     adjustment: hasEvidence ? safeProse(coachingCard?.mostUsefulAdjustment) : null,

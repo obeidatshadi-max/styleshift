@@ -47,3 +47,26 @@ describe('POST /api/reports/generate', () => {
     expect(res.status).toBe(502)
   })
 })
+
+describe('POST /api/reports/generate: the doctor a colleague played', () => {
+  it('reads that doctor from the rep own records only, and never from the session own style read', async () => {
+    const lookups: Array<[string, string]> = []
+    const base = mockSupabaseForRoleplay('rep-1')
+    vi.mocked(createClient).mockResolvedValue({
+      ...base,
+      from: (table: string) => {
+        if (table === 'doctors') return { select: () => ({ eq: (c1: string, v1: string) => ({ eq: (c2: string, v2: string) => ({ maybeSingle: async () => { lookups.push([c1, v1], [c2, v2]); return { data: { style: 'amiable' }, error: null } } }) }) }) }
+        if (table === 'roleplay_sessions') {
+          const real = base.from(table) as { select: () => { eq: () => { eq: () => { single: () => Promise<{ data: Record<string, unknown> }> } } } }
+          return { select: () => ({ eq: () => ({ eq: () => ({ single: async () => { const r = await real.select().eq().eq().single(); return { data: { ...r.data, doctor_id: 'doc-1' }, error: null } } }) }) }) }
+        }
+        return base.from(table)
+      },
+    } as never)
+    vi.mocked(checkRateLimit).mockResolvedValue(true)
+    vi.stubEnv('ANTHROPIC_API_KEY', 'key')
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false })))
+    await POST(request({ sessionType: 'human_partner', sessionId: 's1' }))
+    expect(lookups).toEqual([['id', 'doc-1'], ['rep_id', 'rep-1']])
+  })
+})

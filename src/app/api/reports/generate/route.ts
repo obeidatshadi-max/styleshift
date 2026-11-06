@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { createAnthropicComplete } from '@/agents/llm'
-import { isReportSessionType, type TranscriptSegment, type ReportContext } from '@/schemas/conversationReport'
+import { isReportSessionType, isSocialStyle, type TranscriptSegment, type ReportContext } from '@/schemas/conversationReport'
 import { extractSocialSignals } from '@/lib/report/socialSignals'
 import { buildReportPrompt, mergeReportParts, REPORT_PARTS, type ReportPart } from '@/lib/report/buildReportPrompt'
 import { groundReport } from '@/lib/report/groundReport'
@@ -47,8 +47,15 @@ async function loadSessionData(
     const versionOf = (r: { transcript_version?: number }) => typeof r.transcript_version === 'number' ? r.transcript_version : 1
     const transcriptVersion = Math.max(...segmentRows.map(versionOf))
     const latest = segmentRows.filter(r => versionOf(r) === transcriptVersion)
+    // The colleague played one of the rep's saved doctors. Its style is the practice setting, read from the rep's
+    // own record only (rep_id filter plus row-level security); a missing doctor or style just means none.
+    let practiceStyle = null
+    if (sessionType === 'human_partner' && typeof session.doctor_id === 'string') {
+      const { data: doctor } = await supabase.from('doctors').select('style').eq('id', session.doctor_id).eq('rep_id', repId).maybeSingle()
+      practiceStyle = isSocialStyle(doctor?.style) ? doctor.style : null
+    }
     const { segments, context } = sessionType === 'human_partner'
-      ? adaptRoleplaySession(latest, session) : adaptCustomerVisit(latest, session)
+      ? adaptRoleplaySession(latest, session, practiceStyle) : adaptCustomerVisit(latest, session)
     return { segments, context, transcriptVersion }
   }
   if (sessionType === 'ai_doctor_voice') {

@@ -26,8 +26,10 @@ async function rejects(p: Promise<unknown>, match?: RegExp) {
 let t: TestDb
 const draft = (rater: string, assignment: string, ratingId: string) =>
   t.asUser(rater, `insert into public.human_ratings (id, assignment_id, rater_id, rubric_version) values ('${ratingId}','${assignment}','${rater}','hrr-1.0.0')`, { commit: true })
+// These tests are about who can see and change what, not about answers, so the ratings they submit are marked
+// unscorable (a real, allowed state). Submitting answers is tested in "a rating can only be submitted complete".
 const submit = (rater: string, ratingId: string) =>
-  t.asUser(rater, `update public.human_ratings set status = 'submitted' where id = '${ratingId}' returning id`, { commit: true })
+  t.asUser(rater, `update public.human_ratings set status = 'submitted', unscorable = true where id = '${ratingId}' returning id`, { commit: true })
 
 beforeAll(async () => {
   t = await createTestDb()
@@ -158,7 +160,7 @@ describe('blindness', () => {
     expect((await t.asUser(assessorA, `select 1 from public.human_rating_items`)).length).toBeGreaterThan(0)
   })
   it('submitting stamps the time on the server, whatever the client sends', async () => {
-    const r = await t.asUser(assessorA, `update public.human_ratings set status = 'submitted', submitted_at = '2001-01-01' where id = '${rA1}' returning submitted_at`, { commit: true })
+    const r = await t.asUser(assessorA, `update public.human_ratings set status = 'submitted', unscorable = true, submitted_at = '2001-01-01' where id = '${rA1}' returning submitted_at`, { commit: true })
     expect(new Date(r[0].submitted_at as string).getFullYear()).toBeGreaterThanOrEqual(2026)
   })
   it('a second assessor rates and submits the same case independently', async () => {
@@ -301,7 +303,7 @@ describe('erasing an account does not get blocked by the append-only rule', () =
     expect((await t.asService(`select adjudicator_id from public.claim_adjudications where assignment_id = '${asg1}'`)).every(r => r.adjudicator_id === null)).toBe(true)
   })
   it('the erasure path cannot be used to change anything else', async () => {
-    await rejects(t.asService(`update public.human_ratings set rater_id = null, unscorable = true where id = '${rA1}'`), /submitted rating cannot change/)
+    await rejects(t.asService(`update public.human_ratings set rater_id = null, unscorable = false where id = '${rA1}'`), /submitted rating cannot change/)
   })
 })
 

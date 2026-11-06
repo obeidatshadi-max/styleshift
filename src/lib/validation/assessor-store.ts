@@ -32,12 +32,17 @@ export function supabaseAssessorStore(userDb: SupabaseClient, adminDb: SupabaseC
     },
 
     async turns(assignmentId) {
-      const a = check(await adminDb.from('validation_assignments').select('session_type, session_id').eq('id', assignmentId).maybeSingle())
+      // The caller (assessor-service) only asks for a case that the assessor's own, policy-filtered read returned,
+      // which already requires a running pilot and a current assessor membership.
+      const a = check(await adminDb.from('validation_assignments').select('session_type, session_id, rep_id').eq('id', assignmentId).maybeSingle())
       // Only AI-doctor sessions keep their turns in conversation_turns. Human-partner calls are recorded as audio and
       // need a transcript view of their own; until then those cases are reported as not available, never guessed.
       if (!a || (a.session_type !== 'ai_doctor_voice' && a.session_type !== 'ai_doctor_text')) return null
-      const rows = check(await adminDb.from('conversation_turns').select('turn_index, role, text').eq('session_id', a.session_id).order('turn_index')) ?? []
+      // Scoped to the case's own rep as well as its session, so a transcript can never be assembled from another rep's rows.
+      const rows = check(await adminDb.from('conversation_turns').select('turn_index, role, text').eq('session_id', a.session_id).eq('rep_id', a.rep_id).order('turn_index')) ?? []
       if (!rows.length) return null
+      // Duplicate turn numbers would make "turn 3" mean two things, so such a case is not shown rather than guessed.
+      if (new Set(rows.map(r => r.turn_index)).size !== rows.length) return null
       return rows.map((r): Turn => ({ index: r.turn_index as number, role: r.role as Turn['role'], text: r.text as string }))
     },
 

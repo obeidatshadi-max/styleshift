@@ -21,6 +21,8 @@
 --  * "Not observable" is stored as an empty score, never as a number. A rating needs a turn reference.
 --  * Deleting (a rep withdrawing) is a server or administrator action; a signed-in user cannot delete any of it.
 --  * Every pilot carries a data_source label (synthetic, staging or pilot).
+--  * An assessor reads their cases only while the pilot is running and they are still an assessor in it.
+--  * A rating is submitted complete: all nine domains, unless the case is unscorable; a 5 cites two turns.
 -- AI scores are not stored here, so a rater has nothing to see by accident.
 
 create table public.validation_pilots (
@@ -96,7 +98,9 @@ create table public.human_rating_items (
   uncertain boolean not null default false,
   primary key (rating_id, domain),
   check ((observable and score is not null) or (not observable and score is null)),
-  check (not observable or cardinality(turn_refs) >= 1)
+  check (not observable or cardinality(turn_refs) >= 1),
+  -- Rubric hrr-1.0.0 section 1: a 5 needs at least two separate pieces of evidence.
+  check (score is distinct from 5 or cardinality(turn_refs) >= 2)
 );
 
 create table public.rating_adjudications (
@@ -196,8 +200,13 @@ create policy "read own membership, administrators read all" on public.validatio
 create policy "rep reads own assignments, administrators read all" on public.validation_assignments
   for select to authenticated using (rep_id = auth.uid() or public.validation_is_member(pilot_id, array['administrator']));
 
+-- An assessor reads their cases only while the pilot is running and they are still an assessor in it. The server
+-- shows a transcript only for a case this policy returns, so removing someone or closing the pilot also ends that.
 create policy "assessor reads own cases, administrators read all" on public.validation_assessor_assignments
-  for select to authenticated using (assessor_id = auth.uid() or public.validation_is_member(pilot_id, array['administrator']));
+  for select to authenticated using (
+    (assessor_id = auth.uid() and public.validation_pilot_running(pilot_id) and public.validation_is_member(pilot_id, array['assessor']))
+    or public.validation_is_member(pilot_id, array['administrator'])
+  );
 
 -- Ratings: a rater reads only their own; others read only SUBMITTED ones, and only administrators and adjudicators.
 create policy "read own ratings, or submitted ones as administrator or adjudicator" on public.human_ratings
@@ -278,7 +287,14 @@ begin
        or new.rubric_version is distinct from old.rubric_version or new.created_at is distinct from old.created_at then
       raise exception 'a rating keeps its case, rater, rubric version and creation time' using errcode = '42501';
     end if;
-    if new.status = 'submitted' then new.submitted_at := now(); end if;
+    if new.status = 'submitted' then
+      -- A submitted rating answers all nine domains (the primary key makes them distinct) unless the case is
+      -- unscorable. Checked here, not only in the API, so a direct call cannot submit a partial rating.
+      if not new.unscorable and (select count(*) from public.human_rating_items where rating_id = new.id) < 9 then
+        raise exception 'a submitted rating answers all nine domains, unless the case is marked unscorable' using errcode = '23514';
+      end if;
+      new.submitted_at := now();
+    end if;
     return new;
   end if;
   -- DELETE: signed-in users never delete. The server or an administrator does, for example when a rep withdraws.

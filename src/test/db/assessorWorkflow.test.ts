@@ -77,10 +77,24 @@ describe('assessor store statements against the real policies', () => {
     await rejects(insertItems(rating, [item(rating, 'closing', false, 3, [])]), /check/i)
   })
 
-  it('submits once; a second submit changes nothing (the store reports false)', async () => {
-    const q = `update public.human_ratings set status = 'submitted' where id = '${rating}' and rater_id = '${me}' and status = 'draft' returning id`
-    expect(await as(me, q)).toHaveLength(1)
-    expect(await as(me, q)).toEqual([])
+  const DOMAINS = ['opening', 'questioning', 'active_listening', 'clinical_communication', 'objection_handling', 'style_adaptation', 'state_adaptation', 'composure', 'closing']
+  const submitSql = (r: string) => `update public.human_ratings set status = 'submitted' where id = '${r}' and rater_id = '${me}' and status = 'draft' returning id`
+
+  it('a 5 needs two turns as evidence, in the database as well as in the API', async () => {
+    await rejects(insertItems(rating, [item(rating, 'closing', true, 5, [0])]), /check/i)
+    await insertItems(rating, [item(rating, 'closing', true, 5, [0, 1])])
+    await as(me, `delete from public.human_rating_items where rating_id = '${rating}' and domain = 'closing'`)
+  })
+
+  it('a partial rating cannot be submitted, even by a direct call that skips the API', async () => {
+    await rejects(as(me, submitSql(rating)), /answers all nine domains/)
+    expect(await t.asUser(me, `select status from public.human_ratings where id = '${rating}'`)).toEqual([{ status: 'draft' }])
+  })
+
+  it('submits once when all nine domains are answered; a second submit changes nothing (the store reports false)', async () => {
+    await insertItems(rating, DOMAINS.filter(d => d !== 'opening').map(d => item(rating, d, d !== 'composure', d === 'composure' ? null : 3, d === 'composure' ? [] : [0])))
+    expect(await as(me, submitSql(rating))).toHaveLength(1)
+    expect(await as(me, submitSql(rating))).toEqual([])
     const [row] = await t.asUser(me, `select status, submitted_at from public.human_ratings where id = '${rating}'`) as { status: string; submitted_at: string | null }[]
     expect(row.status).toBe('submitted')
     expect(row.submitted_at).not.toBeNull()
@@ -92,7 +106,7 @@ describe('assessor store statements against the real policies', () => {
     expect(await as(me, `delete from public.human_rating_items where rating_id = '${rating}' returning rating_id`)).toEqual([])
     await rejects(insertItems(rating, [item(rating, 'closing', true, 3, [0])]), /cannot change|row-level security/)
     expect(await t.asUser(me, `select unscorable from public.human_ratings where id = '${rating}'`)).toEqual([{ unscorable: false }])
-    expect(await t.asUser(me, `select domain from public.human_rating_items where rating_id = '${rating}'`)).toEqual([{ domain: 'opening' }])
+    expect(await t.asUser(me, `select domain from public.human_rating_items where rating_id = '${rating}'`)).toHaveLength(9)
   })
 
   it('the other assessor cannot see this rating', async () => {
@@ -104,5 +118,26 @@ describe('assessor store statements against the real policies', () => {
     await t.asService(`update public.validation_pilots set status = 'closed' where id = '${pilot}'`)
     await rejects(as(other, `insert into public.human_ratings (assignment_id, rater_id, rubric_version) values ('${theirs}','${other}','hrr-1.0.0')`), /row-level security/)
     await t.asService(`update public.validation_pilots set status = 'running' where id = '${pilot}'`)
+  })
+})
+
+describe('assessor access ends with their membership or the pilot', () => {
+  it('cases disappear when the pilot is closed, and when the assessor is removed from it', async () => {
+    const list = `select assignment_id from public.validation_assessor_assignments where assessor_id = '${other}'`
+    expect(await t.asUser(other, list)).toHaveLength(1)
+    await t.asService(`update public.validation_pilots set status = 'closed' where id = '${pilot}'`)
+    expect(await t.asUser(other, list)).toEqual([])
+    expect(await t.asUser(admin, `select assignment_id from public.validation_assessor_assignments`)).toHaveLength(2)
+    await t.asService(`update public.validation_pilots set status = 'running' where id = '${pilot}'`)
+    expect(await t.asUser(other, list)).toHaveLength(1)
+    await t.asService(`delete from public.validation_pilot_members where pilot_id = '${pilot}' and user_id = '${other}'`)
+    expect(await t.asUser(other, list)).toEqual([])
+  })
+
+  it('an unscorable case can be submitted with no domain answers', async () => {
+    await t.asService(`insert into public.validation_pilot_members (pilot_id, user_id, role) values ('${pilot}','${other}','assessor')`)
+    const r = await as(other, `insert into public.human_ratings (assignment_id, rater_id, rubric_version, unscorable) values ('${theirs}','${other}','hrr-1.0.0', true) returning id`)
+    const rid = (r[0] as { id: string }).id
+    expect(await as(other, `update public.human_ratings set status = 'submitted' where id = '${rid}' returning id`)).toHaveLength(1)
   })
 })

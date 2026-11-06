@@ -17,9 +17,10 @@ API: `GET /api/validation/assessor/cases`, `GET` and `PUT /api/validation/assess
 |---|---|
 | Only the assigned assessor reads or writes a case; nobody sees another assessor's rating | Database policies (the routes run every read and write as the signed-in assessor), plus an assignment check in the service |
 | A score is 1 to 5, or NO with no score; an observable domain cites at least one turn | Service validation and database checks |
-| A 5 cites at least two turns (rubric section 1) | Service validation only |
-| A cited turn must exist in the case | Service validation |
-| A submission answers all nine domains, unless the case is unscorable | Service validation |
+| A 5 cites at least two turns (rubric section 1) | Service validation and a database check |
+| A cited turn must exist in the case | Service validation only (the database does not know a case's turns) |
+| A submission answers all nine domains, unless the case is unscorable | Service validation and a database trigger, so a direct call cannot submit a partial rating |
+| Access to a case (and its transcript) ends when the pilot is closed or the assessor is removed from it | The database policy on assigned cases; the server only shows a transcript for a case that policy returns |
 | A submitted rating, and its items, never change | Database triggers and policies; the service also refuses first |
 | Writes only while the pilot is running and the assessor is still a member | Database policies; the route turns the refusal into a plain 403 |
 | Database error text never reaches the browser | `respond()` in `assessor-route.ts` |
@@ -34,6 +35,7 @@ API: `GET /api/validation/assessor/cases`, `GET` and `PUT /api/validation/assess
 
 ## Known limits
 
+- **Cited turns are checked by the API only**, and the transcript is not frozen when a case is assigned. Turns are read live from the conversation record, scoped to the case's own rep and session; a case with duplicate turn numbers is not shown. A direct database call could cite a turn number that does not exist.
 - **Only AI-doctor sessions have a transcript here.** Cases built on human-partner calls report "no transcript yet" instead of showing anything. They need their own transcript view.
 - **Free text is not de-identified.** The transcript is shown as spoken; if a rep or a doctor says a name, the assessor sees it. De-identification of the text is a pilot-design decision, not done here.
 - **English only.** Labels and instructions are English; the conversations themselves display in their own language.

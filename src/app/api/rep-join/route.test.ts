@@ -38,7 +38,7 @@ const join = (over: Record<string, unknown> = {}) => POST(new Request('http://lo
 const exists = { error: { message: 'A user with this email address has already been registered' } }
 const leftover = () => {
   m.createUser.mockResolvedValue({ data: null, ...exists })
-  m.generateLink.mockResolvedValue({ data: { user: { id: 'orphan' } }, error: null })
+  m.generateLink.mockResolvedValue({ data: { user: { id: 'orphan', created_at: '2020-01-01T00:00:00Z' } }, error: null })
   m.updateUserById.mockResolvedValue({ error: null })
   m.insert.mockResolvedValue({ error: null })
 }
@@ -52,6 +52,15 @@ describe('POST /api/rep-join: a new rep', () => {
     expect(m.createUser.mock.calls[0][0]).toMatchObject({ email: '0780563731@s.styleshift.rep', password: '482913' })
     expect(m.insert).toHaveBeenCalledWith({ id: 'u1', company_id: 'co-1', role: 'rep', display_name: 'Attacker' })
     expect(m.generateLink).not.toHaveBeenCalled()
+    expect(m.updateUserById).not.toHaveBeenCalled()
+  })
+
+  it('does NOT delete the login when someone else claimed the profile first: the winner owns it', async () => {
+    m.createUser.mockResolvedValue({ data: { user: { id: 'u1' } }, error: null })
+    m.insert.mockResolvedValue({ error: { message: 'duplicate key', code: '23505' } })
+    const res = await join()
+    expect(res.status).toBe(409)
+    expect(m.deleteUser).not.toHaveBeenCalled()
     expect(m.updateUserById).not.toHaveBeenCalled()
   })
 
@@ -112,6 +121,23 @@ describe('POST /api/rep-join: a leftover login with no profile', () => {
     expect(m.calls).toEqual(['claim'])
     expect(m.updateUserById).not.toHaveBeenCalled()
     expect(m.deleteUser).not.toHaveBeenCalled()
+  })
+
+  it('leaves a login alone that is only seconds old, because another join may still be finishing it', async () => {
+    leftover()
+    m.generateLink.mockResolvedValue({ data: { user: { id: 'orphan', created_at: new Date(Date.now() - 5000).toISOString() } }, error: null })
+    const res = await join()
+    expect(res.status).toBe(409)
+    expect(m.calls).toEqual([])
+    expect(m.insert).not.toHaveBeenCalled()
+    expect(m.updateUserById).not.toHaveBeenCalled()
+  })
+
+  it('leaves a login alone when its age cannot be read', async () => {
+    leftover()
+    m.generateLink.mockResolvedValue({ data: { user: { id: 'orphan' } }, error: null })
+    expect((await join()).status).toBe(409)
+    expect(m.calls).toEqual([])
   })
 
   it('takes the profile back if setting the PIN fails', async () => {

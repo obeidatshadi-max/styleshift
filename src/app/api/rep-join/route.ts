@@ -5,6 +5,8 @@ import { checkRateLimit, clientIp } from '@/lib/rate-limit'
 
 const PIN_RE = /^\d{6}$/
 const MOBILE_RE = /^\d{8,15}$/
+// A login with no profile must be at least this old before a new join may finish it off.
+const LEFTOVER_AFTER_MS = 2 * 60 * 1000
 
 export async function POST(request: Request) {
   if (!(await checkRateLimit('rep-join', clientIp(request), 10, 600)))
@@ -74,6 +76,11 @@ export async function POST(request: Request) {
     if (lookupError)
       return NextResponse.json({ error: 'Could not complete the join. Try again.' }, { status: 503 })
     if (existing) return blocked()
+    // A login created moments ago may belong to a join that is still in progress (it creates the login,
+    // then the profile). Only a login that has sat without a profile for a while counts as a leftover;
+    // anything younger, or with no readable age, is treated as someone else's join and left alone.
+    const ageMs = Date.now() - Date.parse(linkData.user.created_at)
+    if (!(ageMs > LEFTOVER_AFTER_MS)) return blocked()
     userId = linkData.user.id
     leftover = true
   } else {
@@ -87,8 +94,10 @@ export async function POST(request: Request) {
     .from('profiles')
     .insert({ id: userId, company_id: company.id, role: 'rep', display_name: name.trim() })
   if (claimError) {
+    // Someone else owns this profile now. Whoever owns it must keep the login, so never delete it here.
+    if (claimError.code === '23505') return blocked()
+    // Any other failure: a login this request just created has no profile and no owner, so remove it.
     if (!leftover) await admin.auth.admin.deleteUser(userId)
-    if (leftover && claimError.code === '23505') return blocked()
     return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
   }
 

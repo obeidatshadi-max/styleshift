@@ -8,7 +8,16 @@
 --  * Assessors see no rep identity and no baseline/follow-up status: they read validation_assessor_assignments,
 --    which holds only the case id, the pilot and the scenario type.
 --  * A submitted rating, and its items, can never change. Adjudications are append-only. Originals are never overwritten.
---  * An adjudicator cannot adjudicate a case they rated themselves.
+--  * Nobody adjudicates a case they are assigned to rate or have rated, and nobody who adjudicated a case can be
+--    assigned to rate it (either order). Someone who is assigned to a case cannot read other raters' ratings of it
+--    until they have submitted their own, even if they are also an adjudicator in the same pilot.
+--  * An administrator cannot also be an assessor in the same pilot.
+--  * Writes need the pilot to be running and the writer to still be a member of it. submitted_at is set by the
+--    database, not the client.
+--  * An adjudication must cite at least two distinct SUBMITTED ratings of the same case. A claim verdict that cites
+--    a report must cite the report of that case.
+--  * Erasure stays possible: deleting a rater or adjudicator's account, or a rep's report, blanks the reference
+--    (the record stays, without the person) instead of being blocked by the append-only rule.
 --  * "Not observable" is stored as an empty score, never as a number. A rating needs a turn reference.
 --  * Deleting (a rep withdrawing) is a server or administrator action; a signed-in user cannot delete any of it.
 --  * Every pilot carries a data_source label (synthetic, staging or pilot).
@@ -66,7 +75,7 @@ create table public.validation_assessor_assignments (
 create table public.human_ratings (
   id uuid primary key default gen_random_uuid(),
   assignment_id uuid not null references public.validation_assignments(id) on delete cascade,
-  rater_id uuid not null references public.profiles(id),
+  rater_id uuid references public.profiles(id) on delete set null,
   rubric_version text not null,
   status text not null default 'draft' check (status in ('draft', 'submitted')),
   unscorable boolean not null default false,
@@ -95,7 +104,7 @@ create table public.rating_adjudications (
   assignment_id uuid not null references public.validation_assignments(id) on delete cascade,
   domain text not null check (domain in ('opening', 'questioning', 'active_listening', 'clinical_communication',
     'objection_handling', 'style_adaptation', 'state_adaptation', 'composure', 'closing')),
-  adjudicator_id uuid not null references public.profiles(id),
+  adjudicator_id uuid references public.profiles(id) on delete set null,
   score smallint not null check (score between 1 and 5),
   reason text not null check (char_length(reason) between 1 and 300),
   original_rating_ids uuid[] not null check (cardinality(original_rating_ids) >= 2),
@@ -110,7 +119,7 @@ create table public.claim_adjudications (
   claim_ref text not null check (char_length(claim_ref) between 1 and 120),
   certainty text check (certainty is null or certainty in ('stated', 'inferred', 'not_established')),
   verdict text not null check (verdict in ('supported', 'partly_supported', 'unsupported')),
-  adjudicator_id uuid not null references public.profiles(id),
+  adjudicator_id uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now(),
   unique (assignment_id, claim_ref, adjudicator_id)
 );
@@ -124,6 +133,33 @@ returns boolean language sql stable security definer set search_path = public, p
 create or replace function public.validation_pilot_of(p_assignment uuid)
 returns uuid language sql stable security definer set search_path = public, pg_temp as
   'select a.pilot_id from public.validation_assignments a where a.id = p_assignment';
+
+-- Is the caller assigned to rate this case, or have they rated it? Then they must not adjudicate it.
+create or replace function public.validation_has_conflict(p_assignment uuid)
+returns boolean language sql stable security definer set search_path = public, pg_temp as
+  'select exists (select 1 from public.validation_assessor_assignments x where x.assignment_id = p_assignment and x.assessor_id = auth.uid())
+       or exists (select 1 from public.human_ratings r where r.assignment_id = p_assignment and r.rater_id = auth.uid())';
+
+-- May the caller see OTHER raters'' submitted ratings of this case? Only if they are not assigned to rate it,
+-- or have already submitted their own.
+create or replace function public.validation_blind_ok(p_assignment uuid)
+returns boolean language sql stable security definer set search_path = public, pg_temp as
+  'select not exists (select 1 from public.validation_assessor_assignments x where x.assignment_id = p_assignment and x.assessor_id = auth.uid())
+       or exists (select 1 from public.human_ratings r where r.assignment_id = p_assignment and r.rater_id = auth.uid() and r.status = ''submitted'')';
+
+create or replace function public.validation_has_adjudicated(p_assignment uuid)
+returns boolean language sql stable security definer set search_path = public, pg_temp as
+  'select exists (select 1 from public.rating_adjudications a where a.assignment_id = p_assignment and a.adjudicator_id = auth.uid())
+       or exists (select 1 from public.claim_adjudications c where c.assignment_id = p_assignment and c.adjudicator_id = auth.uid())';
+
+create or replace function public.validation_pilot_running(p_pilot uuid)
+returns boolean language sql stable security definer set search_path = public, pg_temp as
+  'select exists (select 1 from public.validation_pilots p where p.id = p_pilot and p.status = ''running'')';
+
+revoke all on function public.validation_has_conflict(uuid), public.validation_blind_ok(uuid),
+  public.validation_has_adjudicated(uuid), public.validation_pilot_running(uuid) from public, anon;
+grant execute on function public.validation_has_conflict(uuid), public.validation_blind_ok(uuid),
+  public.validation_has_adjudicated(uuid), public.validation_pilot_running(uuid) to authenticated;
 
 revoke all on function public.validation_is_member(uuid, text[]) from public, anon;
 revoke all on function public.validation_pilot_of(uuid) from public, anon;
@@ -167,53 +203,82 @@ create policy "assessor reads own cases, administrators read all" on public.vali
 create policy "read own ratings, or submitted ones as administrator or adjudicator" on public.human_ratings
   for select to authenticated using (
     rater_id = auth.uid()
-    or (status = 'submitted' and public.validation_is_member(public.validation_pilot_of(assignment_id), array['administrator', 'adjudicator']))
+    or (status = 'submitted'
+        and public.validation_is_member(public.validation_pilot_of(assignment_id), array['administrator', 'adjudicator'])
+        and public.validation_blind_ok(assignment_id))
   );
 create policy "assessor starts a draft rating on an assigned case" on public.human_ratings
   for insert to authenticated with check (
     rater_id = auth.uid() and status = 'draft' and submitted_at is null
+    and public.validation_pilot_running(public.validation_pilot_of(assignment_id))
     and public.validation_is_member(public.validation_pilot_of(assignment_id), array['assessor'])
     and exists (select 1 from public.validation_assessor_assignments x where x.assignment_id = human_ratings.assignment_id and x.assessor_id = auth.uid())
+    and not public.validation_has_adjudicated(assignment_id)
   );
 create policy "assessor edits or submits their own draft" on public.human_ratings
-  for update to authenticated using (rater_id = auth.uid() and status = 'draft') with check (rater_id = auth.uid());
+  for update to authenticated
+  using (rater_id = auth.uid() and status = 'draft'
+    and public.validation_pilot_running(public.validation_pilot_of(assignment_id))
+    and public.validation_is_member(public.validation_pilot_of(assignment_id), array['assessor']))
+  with check (rater_id = auth.uid()
+    and public.validation_pilot_running(public.validation_pilot_of(assignment_id))
+    and public.validation_is_member(public.validation_pilot_of(assignment_id), array['assessor']));
 
 create policy "items follow the visibility of their rating" on public.human_rating_items
   for select to authenticated using (exists (select 1 from public.human_ratings r where r.id = rating_id));
 create policy "assessor adds items to their own draft" on public.human_rating_items
-  for insert to authenticated with check (exists (select 1 from public.human_ratings r where r.id = rating_id and r.rater_id = auth.uid() and r.status = 'draft'));
+  for insert to authenticated with check (exists (select 1 from public.human_ratings r where r.id = rating_id and r.rater_id = auth.uid() and r.status = 'draft'
+    and public.validation_pilot_running(public.validation_pilot_of(r.assignment_id)) and public.validation_is_member(public.validation_pilot_of(r.assignment_id), array['assessor'])));
 create policy "assessor edits items of their own draft" on public.human_rating_items
-  for update to authenticated using (exists (select 1 from public.human_ratings r where r.id = rating_id and r.rater_id = auth.uid() and r.status = 'draft'))
-  with check (exists (select 1 from public.human_ratings r where r.id = rating_id and r.rater_id = auth.uid() and r.status = 'draft'));
+  for update to authenticated using (exists (select 1 from public.human_ratings r where r.id = rating_id and r.rater_id = auth.uid() and r.status = 'draft'
+    and public.validation_pilot_running(public.validation_pilot_of(r.assignment_id)) and public.validation_is_member(public.validation_pilot_of(r.assignment_id), array['assessor'])))
+  with check (exists (select 1 from public.human_ratings r where r.id = rating_id and r.rater_id = auth.uid() and r.status = 'draft'
+    and public.validation_pilot_running(public.validation_pilot_of(r.assignment_id)) and public.validation_is_member(public.validation_pilot_of(r.assignment_id), array['assessor'])));
 create policy "assessor removes items from their own draft" on public.human_rating_items
-  for delete to authenticated using (exists (select 1 from public.human_ratings r where r.id = rating_id and r.rater_id = auth.uid() and r.status = 'draft'));
+  for delete to authenticated using (exists (select 1 from public.human_ratings r where r.id = rating_id and r.rater_id = auth.uid() and r.status = 'draft'
+    and public.validation_pilot_running(public.validation_pilot_of(r.assignment_id)) and public.validation_is_member(public.validation_pilot_of(r.assignment_id), array['assessor'])));
 
 create policy "administrators and adjudicators read adjudications" on public.rating_adjudications
-  for select to authenticated using (public.validation_is_member(public.validation_pilot_of(assignment_id), array['administrator', 'adjudicator']));
-create policy "adjudicator records an adjudication on a case they did not rate" on public.rating_adjudications
+  for select to authenticated using (
+    public.validation_is_member(public.validation_pilot_of(assignment_id), array['administrator', 'adjudicator'])
+    and public.validation_blind_ok(assignment_id));
+create policy "adjudicator records an adjudication on a case they were not assigned to rate" on public.rating_adjudications
   for insert to authenticated with check (
     adjudicator_id = auth.uid()
+    and public.validation_pilot_running(public.validation_pilot_of(assignment_id))
     and public.validation_is_member(public.validation_pilot_of(assignment_id), array['adjudicator'])
-    and not exists (select 1 from public.human_ratings r where r.assignment_id = rating_adjudications.assignment_id and r.rater_id = auth.uid())
+    and not public.validation_has_conflict(assignment_id)
   );
 
 create policy "administrators and adjudicators read claim adjudications" on public.claim_adjudications
-  for select to authenticated using (public.validation_is_member(public.validation_pilot_of(assignment_id), array['administrator', 'adjudicator']));
-create policy "adjudicator records a claim verdict" on public.claim_adjudications
+  for select to authenticated using (
+    public.validation_is_member(public.validation_pilot_of(assignment_id), array['administrator', 'adjudicator'])
+    and public.validation_blind_ok(assignment_id));
+create policy "adjudicator records a claim verdict on a case they were not assigned to rate" on public.claim_adjudications
   for insert to authenticated with check (
     adjudicator_id = auth.uid()
+    and public.validation_pilot_running(public.validation_pilot_of(assignment_id))
     and public.validation_is_member(public.validation_pilot_of(assignment_id), array['adjudicator'])
+    and not public.validation_has_conflict(assignment_id)
   );
 
--- Immutability. These hold for every role, including the service role.
+-- Immutability and integrity. These hold for every role, including the service role.
+
+-- A rating keeps its case, rater and rubric version; a submitted one never changes. The one allowed change to a
+-- submitted rating is blanking the rater when that person's account is erased. submitted_at is set here, not by the client.
 create or replace function public.validation_guard_rating()
 returns trigger language plpgsql set search_path = public, pg_temp as $$
 begin
   if tg_op = 'UPDATE' then
-    if old.status = 'submitted' then raise exception 'a submitted rating cannot change' using errcode = '42501'; end if;
-    if new.assignment_id is distinct from old.assignment_id or new.rater_id is distinct from old.rater_id or new.rubric_version is distinct from old.rubric_version then
-      raise exception 'a rating keeps its case, rater and rubric version' using errcode = '42501';
+    if (to_jsonb(new) - 'rater_id') = (to_jsonb(old) - 'rater_id') and new.rater_id is null and old.rater_id is not null then
+      return new;  -- erasure of the rater's account: the rating stays, without the person
     end if;
+    if old.status = 'submitted' then raise exception 'a submitted rating cannot change' using errcode = '42501'; end if;
+    if new.assignment_id is distinct from old.assignment_id or new.rater_id is distinct from old.rater_id
+       or new.rubric_version is distinct from old.rubric_version or new.created_at is distinct from old.created_at then
+      raise exception 'a rating keeps its case, rater, rubric version and creation time' using errcode = '42501';
+    end if;
+    if new.status = 'submitted' then new.submitted_at := now(); end if;
     return new;
   end if;
   -- DELETE: signed-in users never delete. The server or an administrator does, for example when a rep withdraws.
@@ -241,10 +306,19 @@ $$;
 create trigger human_rating_items_guard before insert or update or delete on public.human_rating_items
   for each row execute function public.validation_guard_item();
 
+-- Adjudications are append-only. The only change allowed is blanking a person reference (the adjudicator's
+-- erased account) or the report reference (the rep deleted that report), and only to null.
 create or replace function public.validation_append_only()
 returns trigger language plpgsql set search_path = public, pg_temp as $$
 begin
-  if tg_op = 'UPDATE' then raise exception 'adjudications cannot be edited' using errcode = '42501'; end if;
+  if tg_op = 'UPDATE' then
+    if (to_jsonb(new) - 'adjudicator_id' - 'report_id') = (to_jsonb(old) - 'adjudicator_id' - 'report_id')
+       and ((to_jsonb(new) ->> 'adjudicator_id') is null or (to_jsonb(new) ->> 'adjudicator_id') is not distinct from (to_jsonb(old) ->> 'adjudicator_id'))
+       and ((to_jsonb(new) ->> 'report_id') is null or (to_jsonb(new) ->> 'report_id') is not distinct from (to_jsonb(old) ->> 'report_id')) then
+      return new;
+    end if;
+    raise exception 'adjudications cannot be edited' using errcode = '42501';
+  end if;
   if auth.role() in ('authenticated', 'anon') then raise exception 'adjudications are removed by the server only' using errcode = '42501'; end if;
   return old;
 end;
@@ -253,3 +327,65 @@ create trigger rating_adjudications_append_only before update or delete on publi
   for each row execute function public.validation_append_only();
 create trigger claim_adjudications_append_only before update or delete on public.claim_adjudications
   for each row execute function public.validation_append_only();
+
+-- An adjudication must cite at least two distinct SUBMITTED ratings of the same case.
+create or replace function public.validation_check_adjudication()
+returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
+declare distinct_ids int; matching int;
+begin
+  select count(distinct x) into distinct_ids from unnest(new.original_rating_ids) x;
+  select count(*) into matching from public.human_ratings r
+    where r.id = any (new.original_rating_ids) and r.assignment_id = new.assignment_id and r.status = 'submitted';
+  if distinct_ids <> cardinality(new.original_rating_ids) or distinct_ids < 2 or matching <> distinct_ids then
+    raise exception 'an adjudication must cite at least two distinct submitted ratings of the same case' using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+create trigger rating_adjudications_check before insert on public.rating_adjudications
+  for each row execute function public.validation_check_adjudication();
+
+-- A claim verdict that cites a report must cite the report of that case.
+create or replace function public.validation_check_claim()
+returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
+begin
+  if new.report_id is not null and not exists (
+    select 1 from public.validation_assignments a join public.conversation_reports c on c.id = new.report_id
+    where a.id = new.assignment_id and c.session_type = a.session_type and c.session_id = a.session_id and c.rep_id = a.rep_id
+  ) then
+    raise exception 'the report does not belong to this case' using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+create trigger claim_adjudications_check before insert on public.claim_adjudications
+  for each row execute function public.validation_check_claim();
+
+-- Separation of duties.
+-- 1) An administrator is not also an assessor in the same pilot.
+create or replace function public.validation_check_member()
+returns trigger language plpgsql set search_path = public, pg_temp as $$
+begin
+  if (new.role = 'assessor' and exists (select 1 from public.validation_pilot_members m where m.pilot_id = new.pilot_id and m.user_id = new.user_id and m.role = 'administrator'))
+     or (new.role = 'administrator' and exists (select 1 from public.validation_pilot_members m where m.pilot_id = new.pilot_id and m.user_id = new.user_id and m.role = 'assessor')) then
+    raise exception 'an administrator cannot also be an assessor in the same pilot' using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+create trigger validation_pilot_members_check before insert or update on public.validation_pilot_members
+  for each row execute function public.validation_check_member();
+
+-- 2) Nobody who adjudicated a case is assigned to rate it afterwards (the other order is the policy above).
+create or replace function public.validation_check_assessor_assignment()
+returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
+begin
+  if exists (select 1 from public.rating_adjudications a where a.assignment_id = new.assignment_id and a.adjudicator_id = new.assessor_id)
+     or exists (select 1 from public.claim_adjudications c where c.assignment_id = new.assignment_id and c.adjudicator_id = new.assessor_id) then
+    raise exception 'this person has adjudicated the case and cannot rate it' using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+create trigger validation_assessor_assignments_check before insert on public.validation_assessor_assignments
+  for each row execute function public.validation_check_assessor_assignment();

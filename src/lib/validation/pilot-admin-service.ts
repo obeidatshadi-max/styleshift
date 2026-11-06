@@ -98,10 +98,9 @@ export async function addMember(store: PilotAdminStore, pilotId: string, raw: un
   if (held.includes(b.role)) return fail(409, 'This person already has that role in the pilot.')
   // The database refuses this pairing too (human readers of the pilot must stay independent of its administrators).
   if ((b.role === 'assessor' && held.includes('administrator')) || (b.role === 'administrator' && held.includes('assessor'))) return fail(409, 'An administrator cannot also be an assessor in the same pilot.')
-  if (b.role === 'assessor') {
-    // Nobody rates their own conversation.
-    if ((await store.cases(pilotId)).some(c => c.repId === b.userId)) return fail(409, 'This person is a representative in the pilot and cannot also be an assessor.')
-  }
+  // A representative of the pilot is never one of its members, in any role: an assessor would rate their own
+  // conversation, an adjudicator or administrator would see ratings of it. The database refuses this too.
+  if ((await store.cases(pilotId)).some(c => c.repId === b.userId)) return fail(409, 'This person is a representative in the pilot and cannot also be a member of it.')
   await store.addMember(pilotId, b.userId, b.role)
   return { status: 200, body: { ok: true } }
 }
@@ -133,10 +132,14 @@ export async function addCase(store: PilotAdminStore, pilotId: string, raw: unkn
   if (assessors.some(a => !a)) return fail(400, 'Every assessor must first be added to the pilot as an assessor.')
   if (!(await store.sessionBelongsToRep(b.sessionType, b.sessionId, b.repId))) return fail(400, 'That session does not exist for this representative.')
 
+  if (members.some(m => m.userId === b.repId)) return fail(400, 'That person is a member of the pilot and cannot also be a representative in it.')
+
   const warnings: string[] = []
   for (const id of ids) {
     const p = await store.profile(id)
-    if (p?.role === 'manager') warnings.push(`${p.displayName} is a manager in the same company and may know this representative; a manager from outside the company would be blinder.`)
+    // Re-checked now, not only when they were added: someone who has since left the company must not be given cases.
+    if (!p || p.companyId !== pilot.companyId) return fail(400, 'Every assessor must currently be in this company.')
+    if (p.role === 'manager') warnings.push(`${p.displayName} is a manager in the same company and may know this representative; a manager from outside the company would be blinder.`)
   }
   const made = await store.addCase(pilotId, {
     repId: b.repId, sessionType: b.sessionType, sessionId: b.sessionId, scenarioType: b.scenarioType,
@@ -160,6 +163,14 @@ export async function changeStatus(store: PilotAdminStore, pilotId: string, raw:
     const cases = await store.cases(pilotId)
     if (cases.length === 0) return fail(409, 'Add at least one case before starting.')
     if (cases.some(c => c.assessorIds.length < MIN_ASSESSORS)) return fail(409, `Every case needs at least ${MIN_ASSESSORS} assessors before starting.`)
+    // Everyone involved must still be in the company (and administrators still managers) at the moment it starts.
+    const involved = [...new Set([...(await store.members(pilotId)).map(m => m.userId), ...cases.map(c => c.repId)])]
+    for (const id of involved) {
+      const p = await store.profile(id)
+      if (!p || p.companyId !== pilot.companyId) return fail(409, 'Someone in this pilot has left the company. Remove them before starting.')
+    }
+    const stale = (await store.members(pilotId)).find(m => m.role === 'administrator')
+    if (stale && (await store.profile(stale.userId))?.role !== 'manager') return fail(409, 'An administrator of this pilot is no longer a manager.')
   }
   await store.setStatus(pilotId, to)
   return { status: 200, body: { status: to } }

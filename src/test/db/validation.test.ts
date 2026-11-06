@@ -37,8 +37,8 @@ beforeAll(async () => {
   await t.db.exec(`insert into auth.users (id, email) select u, u::text || '@test.invalid' from unnest(array[${users.map(u => `'${u}'`).join(',')}]::uuid[]) u`)
   await t.asService(`insert into public.companies (id, name) values ('${CO}','A'),('${CO_B}','B')`)
   await t.asService(`insert into public.profiles (id, company_id, role, display_name) values
-    ('${admin}','${CO}','manager','Admin'),('${assessorA}',null,'rep','Assessor A'),('${assessorB}',null,'rep','Assessor B'),
-    ('${adjud}',null,'rep','Adjudicator'),('${dual}',null,'rep','Dual'),('${ghost}',null,'rep','Ghost'),('${rep1}','${CO}','rep','Rep 1'),
+    ('${admin}','${CO}','manager','Admin'),('${assessorA}','${CO}','rep','Assessor A'),('${assessorB}','${CO}','rep','Assessor B'),
+    ('${adjud}','${CO}','rep','Adjudicator'),('${dual}','${CO}','rep','Dual'),('${ghost}','${CO}','rep','Ghost'),('${rep1}','${CO}','rep','Rep 1'),
     ('${rep2}','${CO}','rep','Rep 2'),('${mgrA}','${CO}','manager','Manager A'),('${mgrB}','${CO_B}','manager','Manager B'),('${stranger}',null,'rep','Stranger')`)
   await t.asService(`insert into public.validation_pilots (id, company_id, name, data_source, rubric_version, methodology_version, protocol_version, status, created_by)
     values ('${pilot}','${CO}','Pilot','synthetic','hrr-1.0.0','mm-1.0.0','bvp-1.0.0','running','${admin}')`)

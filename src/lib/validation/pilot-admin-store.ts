@@ -29,6 +29,7 @@ export function supabasePilotAdminStore(userDb: SupabaseClient, adminDb: Supabas
     async myPilots() {
       const ids = await administeredPilotIds()
       if (!ids.length) return []
+      // Same rule as pilot(): the pilots listed are the ones the caller can still administer.
       const rows = check(await userDb.from('validation_pilots').select('id, name, status, data_source, company_id').in('id', ids).order('created_at', { ascending: false })) ?? []
       return (rows as PilotRow[]).map(toPilot)
     },
@@ -36,7 +37,12 @@ export function supabasePilotAdminStore(userDb: SupabaseClient, adminDb: Supabas
     async pilot(pilotId) {
       if (!(await administeredPilotIds()).includes(pilotId)) return null
       const row = check(await userDb.from('validation_pilots').select('id, name, status, data_source, company_id').eq('id', pilotId).maybeSingle())
-      return row ? toPilot(row as PilotRow) : null
+      if (!row) return null
+      // Administrator rights follow the caller's CURRENT profile, read by the server: still a manager, still in the
+      // pilot's company. (The database policy checks the same, so a stale membership row grants nothing in either place.)
+      const me = check(await adminDb.from('profiles').select('role, company_id').eq('id', userId).maybeSingle())
+      if (!me || me.role !== 'manager' || me.company_id !== (row as PilotRow).company_id) return null
+      return toPilot(row as PilotRow)
     },
 
     async createPilot({ companyId, name, dataSource }) {

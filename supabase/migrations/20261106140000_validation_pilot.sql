@@ -23,6 +23,8 @@
 --  * Every pilot carries a data_source label (synthetic, staging or pilot).
 --  * An assessor reads their cases only while the pilot is running and they are still an assessor in it.
 --  * A rating is submitted complete: all nine domains, unless the case is unscorable; a 5 cites two turns.
+--  * Membership counts only while the person is in the pilot's company (an administrator: and still a manager).
+--  * A representative of a pilot is never one of its members, and has a conflict on their own case.
 -- AI scores are not stored here, so a rater has nothing to see by accident.
 
 create table public.validation_pilots (
@@ -132,7 +134,14 @@ create table public.claim_adjudications (
 -- cannot see (and without recursion). They return a boolean or an id only.
 create or replace function public.validation_is_member(p_pilot uuid, p_roles text[])
 returns boolean language sql stable security definer set search_path = public, pg_temp as
-  'select exists (select 1 from public.validation_pilot_members m where m.pilot_id = p_pilot and m.user_id = auth.uid() and m.role = any (p_roles))';
+  -- Membership counts only while the person is still in the pilot's company, and an administrator only while still a
+  -- manager. Someone who moves company or loses the manager role loses access at once, in every policy and in the
+  -- server's transcript path (which only serves cases these policies return).
+  'select exists (select 1 from public.validation_pilot_members m
+     join public.validation_pilots p on p.id = m.pilot_id
+     join public.profiles pr on pr.id = m.user_id
+     where m.pilot_id = p_pilot and m.user_id = auth.uid() and m.role = any (p_roles)
+       and pr.company_id = p.company_id and (m.role <> ''administrator'' or pr.role = ''manager''))';
 
 create or replace function public.validation_pilot_of(p_assignment uuid)
 returns uuid language sql stable security definer set search_path = public, pg_temp as
@@ -142,14 +151,16 @@ returns uuid language sql stable security definer set search_path = public, pg_t
 create or replace function public.validation_has_conflict(p_assignment uuid)
 returns boolean language sql stable security definer set search_path = public, pg_temp as
   'select exists (select 1 from public.validation_assessor_assignments x where x.assignment_id = p_assignment and x.assessor_id = auth.uid())
-       or exists (select 1 from public.human_ratings r where r.assignment_id = p_assignment and r.rater_id = auth.uid())';
+       or exists (select 1 from public.human_ratings r where r.assignment_id = p_assignment and r.rater_id = auth.uid())
+       or exists (select 1 from public.validation_assignments a where a.id = p_assignment and a.rep_id = auth.uid())';
 
 -- May the caller see OTHER raters'' submitted ratings of this case? Only if they are not assigned to rate it,
 -- or have already submitted their own.
 create or replace function public.validation_blind_ok(p_assignment uuid)
 returns boolean language sql stable security definer set search_path = public, pg_temp as
-  'select not exists (select 1 from public.validation_assessor_assignments x where x.assignment_id = p_assignment and x.assessor_id = auth.uid())
-       or exists (select 1 from public.human_ratings r where r.assignment_id = p_assignment and r.rater_id = auth.uid() and r.status = ''submitted'')';
+  'select (not exists (select 1 from public.validation_assessor_assignments x where x.assignment_id = p_assignment and x.assessor_id = auth.uid())
+       or exists (select 1 from public.human_ratings r where r.assignment_id = p_assignment and r.rater_id = auth.uid() and r.status = ''submitted''))
+       and not exists (select 1 from public.validation_assignments a where a.id = p_assignment and a.rep_id = auth.uid())';
 
 create or replace function public.validation_has_adjudicated(p_assignment uuid)
 returns boolean language sql stable security definer set search_path = public, pg_temp as
@@ -405,3 +416,23 @@ end;
 $$;
 create trigger validation_assessor_assignments_check before insert on public.validation_assessor_assignments
   for each row execute function public.validation_check_assessor_assignment();
+
+-- 3) A representative of a pilot is never also one of its members (an administrator or adjudicator would see ratings
+-- of their own conversation; an assessor would rate it). Checked in both orders.
+create or replace function public.validation_check_rep_overlap()
+returns trigger language plpgsql set search_path = public, pg_temp as $$
+begin
+  if tg_table_name = 'validation_pilot_members' then
+    if exists (select 1 from public.validation_assignments a where a.pilot_id = new.pilot_id and a.rep_id = new.user_id) then
+      raise exception 'a representative in the pilot cannot also be a member of it' using errcode = '23514';
+    end if;
+  elsif exists (select 1 from public.validation_pilot_members m where m.pilot_id = new.pilot_id and m.user_id = new.rep_id) then
+    raise exception 'a member of the pilot cannot also be a representative in it' using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+create trigger validation_pilot_members_rep_overlap before insert on public.validation_pilot_members
+  for each row execute function public.validation_check_rep_overlap();
+create trigger validation_assignments_rep_overlap before insert on public.validation_assignments
+  for each row execute function public.validation_check_rep_overlap();

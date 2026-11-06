@@ -81,3 +81,51 @@ describe('pilot administration against the real tables', () => {
     expect(await t.asService(`select id from public.conversation_turns where session_id = '${session}' and rep_id = '${a1}' limit 1`)).toEqual([])
   })
 })
+
+describe('access follows the person\'s current company and role', () => {
+  const listCases = (u: string) => t.asUser(u, `select assignment_id from public.validation_assessor_assignments where assessor_id = '${u}'`)
+  const seesPilot = (u: string) => t.asUser(u, `select id from public.validation_pilots`)
+
+  it('an assessor who leaves the company loses the pilot and the case at once, and gets them back if they return', async () => {
+    expect(await listCases(a1)).toHaveLength(1)
+    await t.asService(`update public.profiles set company_id = null where id = '${a1}'`)
+    expect(await listCases(a1)).toEqual([])
+    expect(await seesPilot(a1)).toEqual([])
+    await t.asService(`update public.profiles set company_id = '${CO}' where id = '${a1}'`)
+    expect(await listCases(a1)).toHaveLength(1)
+  })
+
+  it('an administrator who is no longer a manager, or has left the company, loses the administrator\'s view', async () => {
+    expect(await seesPilot(mgr)).toHaveLength(1)
+    await t.asService(`update public.profiles set role = 'rep' where id = '${mgr}'`)
+    expect(await seesPilot(mgr)).toEqual([])
+    expect(await t.asUser(mgr, `select assignment_id from public.validation_assessor_assignments`)).toEqual([])
+    await t.asService(`update public.profiles set role = 'manager', company_id = null where id = '${mgr}'`)
+    expect(await seesPilot(mgr)).toEqual([])
+    await t.asService(`update public.profiles set company_id = '${CO}' where id = '${mgr}'`)
+    expect(await seesPilot(mgr)).toHaveLength(1)
+  })
+})
+
+describe('a representative of the pilot is never one of its members', () => {
+  it('cannot be added as a member, in any role, once they are a representative', async () => {
+    for (const role of ['assessor', 'adjudicator']) {
+      await rejects(t.asService(`insert into public.validation_pilot_members (pilot_id, user_id, role) values ('${pilot}','${rep}','${role}')`), /cannot also be a member/)
+    }
+  })
+
+  it('cannot become a representative once they are a member', async () => {
+    await rejects(t.asService(`insert into public.validation_assignments (pilot_id, rep_id, session_type, session_id, scenario_type, scenario_version, phase, seen_before)
+      values ('${pilot}','${a1}','ai_doctor_text','${id(399)}','D','v1','baseline',false)`), /cannot also be a representative/)
+  })
+
+  it('counts as a conflict for adjudication and sees no other rater\'s ratings of their own case, even as an administrator', async () => {
+    // Force the overlap past the trigger to prove the policies hold on their own (as a data-repair or old row would).
+    await t.db.exec(`alter table public.validation_pilot_members disable trigger validation_pilot_members_rep_overlap;
+      insert into public.validation_pilot_members (pilot_id, user_id, role) values ('${pilot}','${rep}','adjudicator');
+      alter table public.validation_pilot_members enable trigger validation_pilot_members_rep_overlap;`)
+    await t.asService(`update public.profiles set company_id = '${CO}' where id = '${rep}'`)
+    expect(await t.asUser(rep, `select public.validation_has_conflict('${assignment}') as c`)).toEqual([{ c: true }])
+    expect(await t.asUser(rep, `select public.validation_blind_ok('${assignment}') as b`)).toEqual([{ b: false }])
+  })
+})

@@ -72,10 +72,13 @@ describe('addMember', () => {
     expect((await addMember(store, u(100), { userId: A1, role: 'administrator' })).status).toBe(400)
     expect(calls).toEqual([])
   })
-  it('refuses to make a representative of the pilot an assessor', async () => {
-    const { store, calls } = fake({ cases: [{ id: u(200), repId: A1, scenarioType: 'A', phase: 'baseline', assessorIds: [A2, MGR] }] })
-    expect((await addMember(store, u(100), { userId: A1, role: 'assessor' })).status).toBe(409)
-    expect(calls).toEqual([])
+  it('refuses to make a representative of the pilot a member in any role', async () => {
+    const { store, calls } = fake({ members: [], cases: [{ id: u(200), repId: A1, scenarioType: 'A', phase: 'baseline', assessorIds: [A2, MGR] }] })
+    for (const role of ['assessor', 'adjudicator']) expect((await addMember(store, u(100), { userId: A1, role })).status, role).toBe(409)
+    expect((await addMember(store, u(100), { userId: ADMIN, role: 'administrator' })).status).toBe(200)
+    expect(calls).toEqual([`addMember:${ADMIN}:administrator`])
+    const asAdmin = fake({ members: [], cases: [{ id: u(200), repId: ADMIN, scenarioType: 'A', phase: 'baseline', assessorIds: [A2, MGR] }] })
+    expect((await addMember(asAdmin.store, u(100), { userId: ADMIN, role: 'administrator' })).status).toBe(409)
   })
   it('refuses a repeat role, and an administrator who would also be an assessor, before the database has to', async () => {
     const { store, calls } = fake({ members: [{ userId: A1, role: 'assessor', displayName: 'A1' }, { userId: MGR, role: 'administrator', displayName: 'Mgr' }] })
@@ -123,6 +126,16 @@ describe('addCase', () => {
     expect((await addCase(store, u(100), goodCase())).status).toBe(400)
     expect(calls).toEqual([])
   })
+  it('refuses a representative who is already a member of the pilot', async () => {
+    const { store, calls } = fake({ members: [{ userId: A1, role: 'assessor', displayName: 'A1' }, { userId: A2, role: 'assessor', displayName: 'A2' }, { userId: REP, role: 'adjudicator', displayName: 'Rep' }] })
+    expect((await addCase(store, u(100), goodCase())).status).toBe(400)
+    expect(calls).toEqual([])
+  })
+  it('re-checks that every assessor is still in the company when a case is added', async () => {
+    const { store, calls } = fake({ members: [{ userId: A1, role: 'assessor', displayName: 'A1' }, { userId: OUTSIDER, role: 'assessor', displayName: 'Outsider' }] })
+    expect((await addCase(store, u(100), goodCase({ assessorIds: [A1, OUTSIDER] }))).status).toBe(400)
+    expect(calls).toEqual([])
+  })
   it('rejects values outside the protocol', async () => {
     const { store } = fake()
     for (const bad of [{ scenarioType: 'E' }, { scenarioVersion: 'v3' }, { phase: 'midterm' }, { sessionType: 'phone' }, { seenBefore: 'no' }, { sessionId: 'x' }, { repId: 'x' }]) {
@@ -144,6 +157,14 @@ describe('changeStatus', () => {
     const { store, calls } = fake({ cases: [twoAssessors] })
     expect((await changeStatus(store, u(100), { status: 'running' })).status).toBe(200)
     expect(calls).toEqual(['setStatus:running'])
+  })
+  it('does not start if someone in the pilot has left the company, or an administrator is no longer a manager', async () => {
+    const left = fake({ cases: [twoAssessors], members: [{ userId: A1, role: 'assessor', displayName: 'A1' }, { userId: OUTSIDER, role: 'assessor', displayName: 'Outsider' }] })
+    expect((await changeStatus(left.store, u(100), { status: 'running' })).status).toBe(409)
+    expect(left.calls).toEqual([])
+    const notManager = fake({ cases: [twoAssessors], members: [{ userId: A1, role: 'administrator', displayName: 'A1' }, { userId: A2, role: 'assessor', displayName: 'A2' }] })
+    expect((await changeStatus(notManager.store, u(100), { status: 'running' })).status).toBe(409)
+    expect(notManager.calls).toEqual([])
   })
   it('runs, then closes, and never goes back', async () => {
     expect((await changeStatus(fake({ pilot: { status: 'running' } }).store, u(100), { status: 'closed' })).status).toBe(200)

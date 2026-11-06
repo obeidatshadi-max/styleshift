@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { LanguageProvider } from '@/lib/i18n'
 
 const m = vi.hoisted(() => ({ params: new URLSearchParams() }))
@@ -68,6 +68,16 @@ describe('the sign-in screen opens on the form the home page linked to', () => {
     wrap(<LoginForm />)
     expect(screen.getByLabelText('Email')).toBeTruthy()
     expect(screen.getByText('Already have an account? Sign in')).toBeTruthy()
+  })
+
+  it('uses the same promise as the home page, not the old training wording', () => {
+    wrap(<LoginForm />)
+    expect(screen.getByText('Read the doctor · Shift your approach')).toBeTruthy()
+    expect(screen.getByText('Field coach for pharma reps')).toBeTruthy()
+    fireEvent.click(screen.getByText('How it works'))
+    expect(screen.getByRole('heading', { name: 'Walk into every visit prepared. Walk out knowing your next step.' })).toBeTruthy()
+    expect(screen.getByText(/Read each doctor's style, shift yours to fit/)).toBeTruthy()
+    expect(document.body.textContent).not.toMatch(/Win the call|Social Style Mastery/)
   })
 
   it('a plain /login still opens on mobile + PIN sign-in', () => {

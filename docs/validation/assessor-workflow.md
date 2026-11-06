@@ -55,3 +55,10 @@ Not yet: picking a session from a list (the id is typed), scenario assignment an
 - **English only.** Labels and instructions are English; the conversations themselves display in their own language.
 - **Saving a draft is several requests, not one transaction.** If the connection drops mid-save, the stored draft can be incomplete; the screen still holds what was typed, so saving again repairs it.
 - **Not yet exercised end to end on the live project.** The tables now exist in production, but no pilot has been run there. The database behavior is tested in a real Postgres (PGlite); the Supabase client calls are covered by unit tests with a fake store. A synthetic pilot (data source `synthetic`) is the first live check.
+
+## Analysis run (`/validation/admin`, section "Results")
+
+`GET /api/validation/admin/pilots/{id}/analysis?gate=PASS&incidents=0` (administrator only; read-only). It reads only SUBMITTED ratings, joins the AI scores from the AI-doctor session scorecards (after the human ratings were given), and returns the pre-specified statistics (methodology mm-1.0.0 and its addendum A): per-domain and pooled rater agreement with bootstrap intervals, the session-average ICC, AI-versus-human agreement with the cut-point sensitivity checks, claim accuracy with Wilson intervals, coaching change, the section 7 minimums, each indicator's status and the recommendation. Every figure carries its sample size and how many pairs were left out. A pilot that is not closed is labelled INTERIM; synthetic and staging data are labelled as not pilot evidence and get no recommendation.
+
+Known limits: human-partner calls have no stored AI scorecard, so their AI scores are empty (left out, never zero). Evidence validity, planned sessions, targeted-domain change and Arabic negation are not measurable from stored data yet, so the recommendation stays INSUFFICIENT EVIDENCE until they are. The two inputs it cannot compute (critical incidents, security gate) are entered by the administrator.
+

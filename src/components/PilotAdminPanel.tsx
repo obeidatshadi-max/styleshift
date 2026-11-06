@@ -1,9 +1,14 @@
 'use client'
 import { useEffect, useState } from 'react'
+import type { AnalysisReport } from '@/lib/validation/analysis'
 import { DATA_SOURCES, MEMBER_ROLES, MIN_ASSESSORS, PHASES, SCENARIO_TYPES, SCENARIO_VERSIONS, SESSION_TYPES, type CaseRow, type Member, type Person, type Pilot } from '@/lib/validation/pilot-admin-service'
 
 const box = { background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 16, padding: 18, marginTop: 20 }
 const field = { padding: 8, background: 'var(--panel)', color: 'var(--ink)', border: '1px solid var(--line)', borderRadius: 8 }
+
+const num = (v: number | null | undefined, d = 2) => (v === null || v === undefined ? 'n/a' : v.toFixed(d))
+const interval = (i: { estimate: number | null; lower: number | null; upper: number | null; n: number; excluded: number }) =>
+  `${num(i.estimate)} (95% interval ${num(i.lower)} to ${num(i.upper)}; ${i.n} pairs, ${i.excluded} left out)`
 
 interface Detail { pilot: Pilot; versions: { rubric: string; methodology: string; protocol: string }; members: Member[]; cases: CaseRow[]; people: Person[] }
 
@@ -14,6 +19,9 @@ export default function PilotAdminPanel() {
   const [message, setMessage] = useState('')
   const [warnings, setWarnings] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
+  const [analysis, setAnalysis] = useState<{ pilotStatus: string; interim: boolean; report: AnalysisReport } | null>(null)
+  const [incidents, setIncidents] = useState('')
+  const [gate, setGate] = useState('UNKNOWN')
   const [name, setName] = useState('')
   const [dataSource, setDataSource] = useState<string>('synthetic')
   const [memberId, setMemberId] = useState('')
@@ -35,7 +43,7 @@ export default function PilotAdminPanel() {
     setBusy(true); setMessage(''); setWarnings([])
     try { await run(); setMessage(done); await loadPilots(); if (open) await loadDetail(open) } catch (e) { setMessage((e as Error).message) } finally { setBusy(false) }
   }
-  function openPilot(id: string) { setOpen(id); setDetail(null); setMessage(''); setWarnings([]); void loadDetail(id) }
+  function openPilot(id: string) { setOpen(id); setDetail(null); setAnalysis(null); setMessage(''); setWarnings([]); void loadDetail(id) }
 
   const draft = detail?.pilot.status === 'draft'
   const assessors = detail?.members.filter(m => m.role === 'assessor') ?? []
@@ -102,6 +110,31 @@ export default function PilotAdminPanel() {
           </fieldset>
           <button type="submit" disabled={busy} style={{ ...field, fontWeight: 700, justifySelf: 'start' }}>Add case</button>
         </form>}
+      </section>
+      <section style={box}>
+        <h2 style={{ marginTop: 0 }}>Results</h2>
+        <p style={{ marginTop: 0 }}>Runs the analysis fixed in advance (methodology {detail.versions.methodology}). Read-only: it changes no rating. Two inputs cannot be computed from the stored data, so you enter them.</p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+          <input value={incidents} onChange={e => setIncidents(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="Critical incidents (number)" style={field} aria-label="Critical incidents" inputMode="numeric" />
+          <select value={gate} onChange={e => setGate(e.target.value)} style={field} aria-label="Security gate">{['UNKNOWN', 'PASS', 'CONDITIONAL', 'FAIL'].map(g => <option key={g} value={g}>security gate: {g}</option>)}</select>
+          <button type="button" disabled={busy} style={{ ...field, fontWeight: 700 }}
+            onClick={() => void act(async () => { setAnalysis(await call(`/api/validation/admin/pilots/${detail.pilot.id}/analysis?gate=${gate}${incidents ? `&incidents=${incidents}` : ''}`)) }, 'Analysis done.')}>Run analysis</button>
+        </div>
+        {analysis && <div>
+          <p><strong>{analysis.report.label}</strong>{analysis.interim ? ' · INTERIM: the pilot is not closed' : ''} · recommendation: <strong>{analysis.report.recommendation.replace(/_/g, ' ')}</strong></p>
+          {analysis.report.conditions.length > 0 && <p>Conditions: {analysis.report.conditions.join('; ')}</p>}
+          <ul>
+            <li>Cases: {analysis.report.counts.cases}, with two or more ratings: {analysis.report.counts.casesWithTwoRatings}, representatives: {analysis.report.counts.reps}</li>
+            <li>Rater agreement (pooled weighted kappa): {interval(analysis.report.raterAgreement.pooledKappa)}</li>
+            <li>AI against human (pooled weighted kappa): {interval(analysis.report.aiHumanAgreement.pooledKappa)}</li>
+            <li>Unsupported AI claims: {analysis.report.claims.unsupported} of {analysis.report.claims.adjudicated}{analysis.report.claims.rate.p !== null ? ` (${num(analysis.report.claims.rate.p * 100, 1)}%, upper bound ${num((analysis.report.claims.rate.upper ?? 0) * 100, 1)}%)` : ''}</li>
+            <li>Change from baseline to follow-up on an alternate scenario: {analysis.report.coachingChange.alternateScenario.n} representatives, mean difference {num(analysis.report.coachingChange.alternateScenario.meanDifference)}. {analysis.report.coachingChange.note}</li>
+          </ul>
+          <h3>Indicators</h3>
+          <ul>{Object.entries(analysis.report.indicators).map(([k, v]) => <li key={k}><strong>{k}</strong>: {v.status.replace(/_/g, ' ')} · {v.detail}</li>)}</ul>
+          <h3>Minimum data before any recommendation</h3>
+          <ul>{Object.entries(analysis.report.minimums).map(([k, m]) => <li key={k}>{k}: {m.have ?? 'none'} of {m.need} {m.reached ? '✓' : '✗'}</li>)}</ul>
+        </div>}
       </section>
     </>}
   </div>

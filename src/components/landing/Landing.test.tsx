@@ -15,22 +15,35 @@ beforeEach(() => { vi.stubGlobal('React', React); m.params = new URLSearchParams
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear() })
 
 describe('Landing', () => {
-  it('offers Create account and Sign in, twice, and links the manager line to manager sign-up', () => {
+  it('leads with the whole-visit promise, not training', () => {
     wrap(<Landing />)
-    const create = screen.getAllByText('Create Account').map(a => a.closest('a')!.getAttribute('href'))
-    const signIn = screen.getAllByText('Sign In').map(a => a.closest('a')!.getAttribute('href'))
-    expect(create).toEqual([CREATE_ACCOUNT, CREATE_ACCOUNT])
-    expect(signIn).toEqual(['/login', '/login'])
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Walk into every visit prepared. Walk out knowing your next step.')
+    for (const step of ['Prepare', 'Practice', 'Debrief', 'Follow through']) expect(screen.getByRole('heading', { name: step })).toBeTruthy()
+    expect(screen.getByText('If you are a rep')).toBeTruthy()
+    expect(screen.getByText('If you lead a team')).toBeTruthy()
+  })
+
+  it('offers Create account and Sign in at the top and bottom, and routes managers to manager sign-up', () => {
+    wrap(<Landing />)
+    const hrefs = (label: string) => screen.getAllByText(label).map(a => a.closest('a')!.getAttribute('href'))
+    expect(hrefs('Create Account').filter(h => h === CREATE_ACCOUNT)).toHaveLength(3)
+    expect(hrefs('Create Account').filter(h => h === CREATE_MANAGER)).toHaveLength(1)
+    expect(hrefs('Sign In')).toEqual(['/login', '/login'])
     expect(screen.getByText(/Team manager\?/).closest('a')!.getAttribute('href')).toBe(CREATE_MANAGER)
     expect(screen.getByText(/Have an invite from your manager/).closest('a')!.getAttribute('href')).toBe('/login')
-    expect(screen.getByText('Understand your customer before the visit')).toBeTruthy()
+  })
+
+  it('labels the phone mockup as a sample, so it is never read as a real doctor', () => {
+    wrap(<Landing />)
+    expect(screen.getAllByText('Sample screen').length).toBeGreaterThan(0)
   })
 
   it('speaks Arabic when the app is Arabic', async () => {
     localStorage.setItem('styleshift_lang', 'ar')
     wrap(<Landing />)
-    expect((await screen.findAllByText('إنشاء حساب')).length).toBe(2)
+    expect((await screen.findByRole('heading', { level: 1 })).textContent).toContain('ادخل كل زيارة وأنت مستعد')
     expect(screen.getAllByText('تسجيل الدخول').length).toBe(2)
+    expect(screen.getAllByText('إنشاء حساب').length).toBeGreaterThan(0)
   })
 })
 

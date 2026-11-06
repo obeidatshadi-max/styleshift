@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'StyleShift — Read the room. Win the call.',
+    name: 'StyleShift — Read the doctor. Shift your approach.',
     short_name: 'StyleShift',
-    description: 'Social Style mastery game for pharma sales reps.',
+    description: 'Your field coach for every doctor visit, for pharma sales reps.',
     start_url: '/play',
     display: 'standalone',
     background_color: '#f5f5fb',

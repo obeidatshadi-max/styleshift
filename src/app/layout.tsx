@@ -5,8 +5,8 @@ import { LanguageProvider } from '@/lib/i18n'
 import OfflineSync from '@/components/OfflineSync'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://style-shift.netlify.app'
-const TITLE = 'StyleShift — Read the room. Win the call.'
-const DESCRIPTION = 'Social Style mastery game for pharma sales reps — read doctors, defuse objections, and win the call.'
+const TITLE = 'StyleShift — Read the doctor. Shift your approach.'
+const DESCRIPTION = 'Your field coach for every doctor visit — prepare, practice, debrief and follow through. Built for pharma sales reps and their managers.'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

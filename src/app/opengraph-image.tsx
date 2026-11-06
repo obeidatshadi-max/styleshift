@@ -28,7 +28,7 @@ export default function Image() {
         }}
       >
         <div style={{ fontSize: 26, letterSpacing: 14, textTransform: 'uppercase', color: '#38d6ff', display: 'flex' }}>
-          Social Style Mastery Game
+          Field coach for pharma reps
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', fontSize: 132, fontWeight: 800, marginTop: 18, letterSpacing: -2 }}>
@@ -37,7 +37,7 @@ export default function Image() {
         </div>
 
         <div style={{ fontSize: 40, color: '#8ea3d6', marginTop: 8, display: 'flex' }}>
-          Read the room · Win the call
+          Read the doctor · Shift your approach
         </div>
 
         <div style={{ display: 'flex', gap: 20, marginTop: 56 }}>

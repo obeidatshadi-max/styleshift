@@ -44,8 +44,9 @@ export async function GET(request: NextRequest) {
   }
 
   // Token missing/expired/invalid → send back to login with a flag so the form
-  // can explain what happened.
+  // can explain what happened. A reset link gets its own wording: calling it an
+  // "activation link" and suggesting sign-up sent people to "account already exists".
   redirectTo.pathname = '/login'
-  redirectTo.searchParams.set('confirm_error', '1')
+  redirectTo.searchParams.set('confirm_error', type === 'recovery' ? 'reset' : '1')
   return NextResponse.redirect(redirectTo)
 }

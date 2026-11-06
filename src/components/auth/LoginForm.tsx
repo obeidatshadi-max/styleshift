@@ -44,7 +44,8 @@ export default function LoginForm() {
   }
 
   useEffect(() => {
-    if (searchParams.get('confirm_error')) setError(t('login.confirmError'))
+    const failure = searchParams.get('confirm_error')
+    if (failure) setError(t(failure === 'reset' ? 'login.resetLinkError' : 'login.confirmError'))
   }, [searchParams, t])
 
   // Supabase delivers an expired/invalid magic-link as a URL hash fragment

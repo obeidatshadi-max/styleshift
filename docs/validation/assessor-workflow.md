@@ -31,7 +31,21 @@ API: `GET /api/validation/assessor/cases`, `GET` and `PUT /api/validation/assess
 
 1. Owner approves and applies `supabase/migrations/20261106140000_validation_pilot.sql` (not applied yet).
 2. Set `VALIDATION_PILOT_ENABLED=true` on the site. Until then the routes return 404 and the page redirects.
-3. A pilot, its members and its cases must exist. **There is no administrator screen yet**; they are created with SQL. That screen is the next piece.
+3. A manager creates the pilot and its cases on `/validation/admin` (below).
+
+## Pilot administration (`/validation/admin`)
+
+A manager creates a pilot for their own company and becomes its administrator. The administrator then:
+
+- adds people from the company as assessors, adjudicators or (other) administrators;
+- adds cases while the pilot is a draft: a representative of the company, one of that representative's real sessions (AI-doctor session or colleague practice call), the scenario type and version, the phase, whether the scenario was seen before, and two to five assessors;
+- starts the pilot (cases can no longer be added; assessors then see their cases), and later closes it (ratings stop; it cannot reopen).
+
+Rules the service enforces: the pilot, its members and cases are written only by the server, after checking that the caller administers that pilot; a case needs at least two assessors who are pilot assessors; nobody rates their own conversation, and a representative of the pilot cannot become an assessor; an administrator cannot also be an assessor (also enforced by the database); a pilot starts only with at least one case and two assessors on every case; status moves draft, running, closed and never back. A manager assessing a representative of their own company is allowed but flagged with a warning.
+
+API: `GET`/`POST /api/validation/admin/pilots`, `GET /api/validation/admin/pilots/{id}`, `POST` on `.../members`, `.../cases` and `.../status`. `src/test/db/pilotAdmin.test.ts` replays the store's statements against the real tables.
+
+Not yet: picking a session from a list (the id is typed), scenario assignment and the Latin-square order from the protocol, removing a member or a case, calibration records, and assessors from outside the company.
 
 ## Known limits
 

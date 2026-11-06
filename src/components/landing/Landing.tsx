@@ -78,22 +78,6 @@ export default function Landing() {
         </ol>
       </section>
 
-      <section className="landing-section" aria-labelledby="landing-doors">
-        <h2 id="landing-doors">{t('landing.doorsTitle')}</h2>
-        <div className="landing-doors">
-          <div className="landing-card">
-            <h3>{t('landing.repTitle')}</h3>
-            <ul className="landing-expect">{repPoints.map(p => <li key={p}>{p}</li>)}</ul>
-            <Link href={CREATE_ACCOUNT} className="landing-link">{t('login.createAccount')}</Link>
-          </div>
-          <div className="landing-card">
-            <h3>{t('landing.mgrTitle')}</h3>
-            <ul className="landing-expect">{managerPoints.map(p => <li key={p}>{p}</li>)}</ul>
-            <Link href={CREATE_MANAGER} className="landing-link">{t('login.createAccount')}</Link>
-          </div>
-        </div>
-      </section>
-
       <section className="landing-section" aria-labelledby="landing-styles">
         <h2 id="landing-styles">{t('landing.stylesTitle')}</h2>
         <p className="landing-sub">{t('landing.stylesSub')}</p>
@@ -108,6 +92,22 @@ export default function Landing() {
             )
           })}
         </ul>
+      </section>
+
+      <section className="landing-section" aria-labelledby="landing-doors">
+        <h2 id="landing-doors">{t('landing.doorsTitle')}</h2>
+        <div className="landing-doors">
+          <div className="landing-card">
+            <h3>{t('landing.repTitle')}</h3>
+            <ul className="landing-expect">{repPoints.map(p => <li key={p}>{p}</li>)}</ul>
+            <Link href={CREATE_ACCOUNT} className="landing-link">{t('login.createAccount')}</Link>
+          </div>
+          <div className="landing-card">
+            <h3>{t('landing.mgrTitle')}</h3>
+            <ul className="landing-expect">{managerPoints.map(p => <li key={p}>{p}</li>)}</ul>
+            <Link href={CREATE_MANAGER} className="landing-link">{t('login.createAccount')}</Link>
+          </div>
+        </div>
       </section>
 
       <section className="landing-section" aria-labelledby="landing-field">

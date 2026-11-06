@@ -29,7 +29,7 @@ API: `GET /api/validation/assessor/cases`, `GET` and `PUT /api/validation/assess
 
 ## Turning it on
 
-1. Owner approves and applies `supabase/migrations/20261106140000_validation_pilot.sql` (not applied yet).
+1. ~~Apply `supabase/migrations/20261106140000_validation_pilot.sql`.~~ **Done 2026-11-06** by the owner in the SQL editor; verified in production: 8 tables with row-level security, 15 policies, 10 triggers, 14 functions, no anonymous grants.
 2. Set `VALIDATION_PILOT_ENABLED=true` on the site. Until then the routes return 404 and the page redirects.
 3. A manager creates the pilot and its cases on `/validation/admin` (below).
 
@@ -54,4 +54,4 @@ Not yet: picking a session from a list (the id is typed), scenario assignment an
 - **Free text is not de-identified.** The transcript is shown as spoken; if a rep or a doctor says a name, the assessor sees it. De-identification of the text is a pilot-design decision, not done here.
 - **English only.** Labels and instructions are English; the conversations themselves display in their own language.
 - **Saving a draft is several requests, not one transaction.** If the connection drops mid-save, the stored draft can be incomplete; the screen still holds what was typed, so saving again repairs it.
-- **Not yet exercised against a live Supabase project**, because the tables do not exist there. The database behavior is tested in a real Postgres (PGlite); the Supabase client calls are covered by unit tests with a fake store.
+- **Not yet exercised end to end on the live project.** The tables now exist in production, but no pilot has been run there. The database behavior is tested in a real Postgres (PGlite); the Supabase client calls are covered by unit tests with a fake store. A synthetic pilot (data source `synthetic`) is the first live check.

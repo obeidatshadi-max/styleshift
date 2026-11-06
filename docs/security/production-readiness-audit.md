@@ -4,8 +4,10 @@ Audited 2026-11-06 against `main` at `e14d84d`. This document says what was veri
 
 ## Verdict: CONDITIONAL
 
+**Update 2026-11-06 (later): the hardening was applied to production by the project owner** (the parts of the migration that change production: steps 2, 3 and 4 and the companies `insert` revoke; the helper-function, profiles-policy and roleplay-update steps already matched production and were skipped). A read-only catalog check afterwards returned the expected values: no `manager conversation turns read` policy (0), both assignment insert policies reference `assignments` (2), and `protect_profile_authority` mentions `group_id` (1). F2, F3 and F5 are therefore closed in production. **Not yet confirmed:** a signed-in walk-through as a rep and as a manager (dashboard, assignments, practice history) after the change. F1 (drift), the remaining findings and the "not verified" list below are unchanged, so the verdict stays CONDITIONAL.
+
 - No critical security finding. One high-severity **operational** finding (schema drift, F1) is only partly repaired in code.
-- Three medium or low security findings are **confirmed in production** and fixed in code (migration `20261106120000_security_hardening.sql`, one app change). **That migration has not been applied to production.** It needs your approval.
+- Three medium or low security findings were **confirmed in production**. They are fixed in code (migration `20261106120000_security_hardening.sql`, one app change) and were applied to production afterwards (see the update above).
 - Production was read only through the Supabase dashboard (SELECT queries on the catalog). Nothing in production was changed.
 - Not verified: Supabase Auth settings, Netlify environment variables and which commit is deployed, and any behaviour that needs a real signed-in session against production.
 

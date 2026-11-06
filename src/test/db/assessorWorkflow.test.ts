@@ -29,7 +29,7 @@ beforeAll(async () => {
   await t.db.exec(`insert into auth.users (id, email) select u, u::text || '@test.invalid' from unnest(array['${admin}','${me}','${other}','${rep}']::uuid[]) u`)
   await t.asService(`insert into public.companies (id, name) values ('${CO}','A')`)
   await t.asService(`insert into public.profiles (id, company_id, role, display_name) values
-    ('${admin}','${CO}','manager','Admin'),('${me}',null,'rep','Me'),('${other}',null,'rep','Other'),('${rep}','${CO}','rep','Rep')`)
+    ('${admin}','${CO}','manager','Admin'),('${me}','${CO}','rep','Me'),('${other}','${CO}','rep','Other'),('${rep}','${CO}','rep','Rep')`)
   await t.asService(`insert into public.validation_pilots (id, company_id, name, data_source, rubric_version, methodology_version, protocol_version, status, created_by)
     values ('${pilot}','${CO}','P','synthetic','hrr-1.0.0','mm-1.0.0','bvp-1.0.0','running','${admin}')`)
   await t.asService(`insert into public.validation_pilot_members (pilot_id, user_id, role) values ('${pilot}','${admin}','administrator'),('${pilot}','${me}','assessor'),('${pilot}','${other}','assessor')`)

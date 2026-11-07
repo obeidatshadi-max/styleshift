@@ -55,3 +55,4 @@ next-env.d.ts
 
 # Model benchmark output (synthetic transcripts only, but keep results out of git)
 tools/benchmark/out/
+tools/benchmark/out-*.log

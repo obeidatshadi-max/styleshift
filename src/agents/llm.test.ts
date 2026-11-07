@@ -27,6 +27,41 @@ describe('createAnthropicComplete model choice', () => {
   })
 })
 
+describe('createAnthropicComplete reply handling', () => {
+  it('reads the text block when a thinking block comes first (Haiku 5.5)', async () => {
+    stubFetch({ content: [{ type: 'thinking', thinking: '', signature: 's' }, { type: 'text', text: '{"ok":true}' }], stop_reason: 'end_turn',
+      usage: { input_tokens: 10, output_tokens: 900, output_tokens_details: { thinking_tokens: 700 } } })
+    const seen: CompleteUsage[] = []
+    const out = await createAnthropicComplete('k', { onUsage: u => seen.push(u) })({ system: 's', prompt: 'p', maxTokens: 10 })
+    expect(out).toBe('{"ok":true}')
+    expect(seen[0].thinkingTokens).toBe(700)
+  })
+
+  it('returns null when the model stopped inside its thinking and wrote no text', async () => {
+    stubFetch({ content: [{ type: 'thinking', thinking: '', signature: 's' }], stop_reason: 'max_tokens', usage: { input_tokens: 10, output_tokens: 10 } })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(await createAnthropicComplete('k')({ system: 's', prompt: 'p', maxTokens: 10 })).toBeNull()
+  })
+
+  it('joins several text blocks and still reads a single plain text block', async () => {
+    stubFetch({ content: [{ type: 'text', text: 'a' }, { type: 'text', text: 'b' }] })
+    expect(await createAnthropicComplete('k')({ system: 's', prompt: 'p', maxTokens: 10 })).toBe('ab')
+  })
+
+  it('adds extra body fields and scales max_tokens only when asked', async () => {
+    const fn = stubFetch({ content: [{ type: 'text', text: 'x' }] })
+    await createAnthropicComplete('k', { extraBody: { output_config: { effort: 'low' } }, maxTokensMultiplier: 2 })({ system: 's', prompt: 'p', maxTokens: 100 })
+    const body = JSON.parse((fn.mock.calls[0] as unknown as [string, { body: string }])[1].body)
+    expect(body.output_config).toEqual({ effort: 'low' })
+    expect(body.max_tokens).toBe(200)
+    const fn2 = stubFetch({ content: [{ type: 'text', text: 'x' }] })
+    await createAnthropicComplete('k')({ system: 's', prompt: 'p', maxTokens: 100 })
+    const b2 = JSON.parse((fn2.mock.calls[0] as unknown as [string, { body: string }])[1].body)
+    expect(b2.max_tokens).toBe(100)
+    expect(Object.keys(b2).sort()).toEqual(['max_tokens', 'messages', 'model', 'system'])
+  })
+})
+
 describe('createAnthropicComplete onUsage', () => {
   it('reports tokens, stop reason and latency but never the text', async () => {
     stubFetch({ content: [{ text: 'SECRET REPLY' }], stop_reason: 'end_turn', usage: { input_tokens: 120, output_tokens: 45 } })

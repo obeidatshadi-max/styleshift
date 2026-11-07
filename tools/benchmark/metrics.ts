@@ -11,6 +11,7 @@ export interface CallRecord {
   outputTokens: number | null
   latencyMs: number
   stopReason: string | null
+  thinkingTokens: number | null
   /** The reply parsed into the expected top-level shape. */
   jsonValid: boolean
   /** Items the model produced, and how many survived grounding. */
@@ -155,6 +156,28 @@ export function pairedBootstrap(diffs: number[], iters = 4000, seed = 1): { mean
   }
   means.sort((a, b) => a - b)
   return { mean: diffs.reduce((a, b) => a + b, 0) / diffs.length, lo: means[Math.floor(iters * 0.025)], hi: means[Math.floor(iters * 0.975)] }
+}
+
+// ───────────────────────────── model variants ─────────────────────────────
+
+/** A benchmark "model" is a model id plus optional settings, written
+ * `claude-haiku-5-5@effort=low@mt=2`. Everything after the first @ is a setting. */
+export function baseModel(spec: string): string {
+  return spec.split('@')[0]
+}
+
+export interface VariantSettings { model: string; effort: string | null; maxTokensMultiplier: number | null }
+
+export function parseVariant(spec: string): VariantSettings {
+  const [model, ...rest] = spec.split('@')
+  let effort: string | null = null, mt: number | null = null
+  for (const part of rest) {
+    const [k, v] = part.split('=')
+    if (k === 'effort' && v) effort = v
+    else if (k === 'mt' && Number(v) > 0) mt = Number(v)
+    else throw new Error(`Unknown variant setting "${part}" in "${spec}" (use effort=low|medium|high or mt=<number>)`)
+  }
+  return { model, effort, maxTokensMultiplier: mt }
 }
 
 // ───────────────────────────── cost ─────────────────────────────

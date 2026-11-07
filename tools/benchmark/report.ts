@@ -1,6 +1,6 @@
 import type { BenchFixture } from './fixtures'
 import {
-  mean, pairedBootstrap, percentile, recordCost,
+  baseModel, mean, pairedBootstrap, percentile, recordCost,
   type AnalystRecord, type BenchRecord, type CoachRecord, type PricingFile,
 } from './metrics'
 
@@ -35,6 +35,7 @@ export interface ArmStats {
   truncated: number
   avgInputTokens: number | null
   avgOutputTokens: number | null
+  avgThinkingTokens: number | null
   avgLatencyMsPerRequest: number | null
   p50LatencyMs: number | null
   p95LatencyMs: number | null
@@ -49,7 +50,7 @@ export interface ArmStats {
 function common(model: string, rs: BenchRecord[], pricing: PricingFile): ArmStats {
   const calls = rs.flatMap(r => r.calls)
   const okCalls = calls.filter(c => c.ok)
-  const costs = rs.map(r => recordCost(pricing.models[model], r))
+  const costs = rs.map(r => recordCost(pricing.models[baseModel(model)], r))
   const allCosted = costs.length > 0 && costs.every(c => c !== null)
   const perSession = allCosted ? mean(costs as number[]) : null
   return {
@@ -62,6 +63,7 @@ function common(model: string, rs: BenchRecord[], pricing: PricingFile): ArmStat
     truncated: calls.filter(c => c.stopReason === 'max_tokens').length,
     avgInputTokens: mean(okCalls.map(c => c.inputTokens ?? 0)),
     avgOutputTokens: mean(okCalls.map(c => c.outputTokens ?? 0)),
+    avgThinkingTokens: mean(okCalls.map(c => c.thinkingTokens ?? 0)),
     avgLatencyMsPerRequest: mean(okCalls.map(c => c.latencyMs)),
     p50LatencyMs: percentile(okCalls.map(c => c.latencyMs), 0.5),
     p95LatencyMs: percentile(okCalls.map(c => c.latencyMs), 0.95),
@@ -294,7 +296,7 @@ export function buildReport(inp: SummaryInput): { markdown: string; decision: De
   const ms = (x: number | null) => (x === null ? 'n/a' : `${Math.round(x)} ms`)
 
   const lines: string[] = []
-  lines.push(`# Haiku 4.5 vs Haiku 5.5 — StyleShift benchmark`, '', `Run ${inp.runId}. Baseline: \`${models[0]}\`. Candidate: \`${models[1]}\`. Fixtures: ${fixtures.length} synthetic sessions (20 English, 20 Iraqi Arabic, 20 code-switched). Deterministic scoring unchanged; only the model varies.`, '')
+  lines.push(`# Haiku 4.5 vs Haiku 5.5 — StyleShift benchmark`, '', `Run ${inp.runId}. Baseline: \`${models[0]}\`. Candidate: \`${models[1]}\` (a model id followed by @setting means the same model with that request setting). Fixtures: ${fixtures.length} synthetic sessions (20 English, 20 Iraqi Arabic, 20 code-switched). Deterministic scoring unchanged; only the model varies.`, '')
   lines.push('## Executive Result', '', `**Recommendation: ${decision.recommendation}**`, '', ...decision.reasons.map(r => `- ${r}`), '', '| Gate | Result | Detail |', '|---|---|---|', ...decision.gates.map(g2 => `| ${g2.name} | ${g2.pass === null ? 'not measurable' : g2.pass ? 'pass' : 'FAIL'} | ${g2.detail} |`), '')
   lines.push('## Behavior Analyst', '', `| Metric | ${models[0]} | ${models[1]} |`, '|---|---|---|',
     row('Sessions run', s => String(s.n)), row('Completed OK', s => pct(s.okRate)), row('Upstream failures', s => String(s.upstreamFailures)),
@@ -303,7 +305,7 @@ export function buildReport(inp: SummaryInput): { markdown: string; decision: De
     row('Recall of expected behaviors (anywhere)', s => pct(s.recallBehavior)), row('Planted-trap hit rate', s => pct(s.trapRate)),
     row('Unsupported finding rate (trap hits / observations)', s => pct(s.unsupportedFindingRate)), row('Evidence from doctor lines only', s => pct(s.doctorOnlyEvidenceRate)),
     row('First attempt valid', s => pct(s.firstAttemptValidRate)), row('Retry rate', s => pct(s.retryRate)), row('Invalid JSON rate (first reply)', s => pct(s.invalidJsonRate)),
-    row('Truncated at max_tokens', s => String(s.truncated)), row('Avg input / output tokens', s => `${num(s.avgInputTokens, 0)} / ${num(s.avgOutputTokens, 0)}`),
+    row('Truncated at max_tokens', s => String(s.truncated)), row('Avg input / output tokens', s => `${num(s.avgInputTokens, 0)} / ${num(s.avgOutputTokens, 0)}`), row('Avg thinking tokens (inside output)', s => num(s.avgThinkingTokens, 0)),
     row('Latency p50 / p95 per request', s => `${ms(s.p50LatencyMs)} / ${ms(s.p95LatencyMs)}`), row('Cost per session', s => usd(s.costPerSession)), row('Cost per 1,000 sessions', s => usd(s.costPer1000)),
     row('Requests ≤100K / >100K input tokens', s => `${s.requestsLe100k} / ${s.requestsGt100k}`), '')
   lines.push(`Paired difference in recall per fixture (candidate minus baseline): ${boot ? `${(boot.mean * 100).toFixed(1)} points, 95% interval ${(boot.lo * 100).toFixed(1)} to ${(boot.hi * 100).toFixed(1)}` : 'n/a'} over ${diffs.length} fixtures. An interval that includes zero means the two models are not shown to differ.`, '')

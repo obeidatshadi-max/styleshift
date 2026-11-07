@@ -20,11 +20,17 @@ export interface CompleteUsage {
   stopReason: string | null
   /** HTTP status, or null when the request never completed. */
   status: number | null
+  /** Tokens spent on thinking (already included in outputTokens), when the model reports them. */
+  thinkingTokens: number | null
 }
 
 export interface AnthropicCompleteOptions {
   /** Defaults to DEFAULT_AGENT_MODEL, so existing callers behave exactly as before. */
   model?: string
+  /** Extra top-level request fields, for example { output_config: { effort: 'low' } }. Benchmark only. */
+  extraBody?: Record<string, unknown>
+  /** Multiplies the caller's max_tokens. Haiku 5.5 counts thinking tokens against max_tokens. Benchmark only. */
+  maxTokensMultiplier?: number
   /** Called once per request, success or failure. Not set in production. */
   onUsage?: (usage: CompleteUsage) => void
 }
@@ -35,13 +41,16 @@ export function createAnthropicComplete(apiKey: string, options: AnthropicComple
     let res: Response
     const started = Date.now()
     const report = (u: Partial<CompleteUsage>) => options.onUsage?.({
-      model, ok: false, inputTokens: null, outputTokens: null, latencyMs: Date.now() - started, stopReason: null, status: null, ...u,
+      model, ok: false, inputTokens: null, outputTokens: null, latencyMs: Date.now() - started, stopReason: null, status: null, thinkingTokens: null, ...u,
     })
     try {
       res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: 'user', content: prompt }] }),
+        body: JSON.stringify({
+          model, max_tokens: Math.round(maxTokens * (options.maxTokensMultiplier ?? 1)), system,
+          messages: [{ role: 'user', content: prompt }], ...options.extraBody,
+        }),
       })
     } catch (e) {
       report({})
@@ -57,14 +66,19 @@ export function createAnthropicComplete(apiKey: string, options: AnthropicComple
       return null
     }
     const data = await res.json().catch(() => null) as {
-      content?: { text?: string }[]; stop_reason?: string; usage?: { input_tokens?: number; output_tokens?: number }
+      content?: { type?: string; text?: string }[]; stop_reason?: string
+      usage?: { input_tokens?: number; output_tokens?: number; output_tokens_details?: { thinking_tokens?: number } }
     } | null
     report({
       ok: !!data, status: res.status, stopReason: data?.stop_reason ?? null,
       inputTokens: data?.usage?.input_tokens ?? null, outputTokens: data?.usage?.output_tokens ?? null,
+      thinkingTokens: data?.usage?.output_tokens_details?.thinking_tokens ?? null,
     })
     // A max_tokens stop means the JSON the callers parse is cut off.
     if (data?.stop_reason === 'max_tokens') console.error('[llm] anthropic truncated at max_tokens', maxTokens)
-    return data?.content?.[0]?.text ?? null
+    // Models that think (Haiku 5.5) put a `thinking` block before the answer, so the
+    // answer is every text block, never simply the first block. Haiku 4.5 returns one text block.
+    const text = (data?.content ?? []).filter(b => b.type === undefined || b.type === 'text').map(b => b.text ?? '').join('')
+    return text || null
   }
 }

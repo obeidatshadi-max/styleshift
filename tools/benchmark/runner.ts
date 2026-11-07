@@ -10,7 +10,7 @@ import { behaviorIndex, defaultScoringConfig } from '@/scoring/config'
 import { scoreSession } from '@/scoring/engine'
 import { FIXTURES, toSession, type BenchFixture } from './fixtures'
 import {
-  coachLanguageOk, coachTextFields, doctorOnlyEvidenceCount, mean, scoreAgainstKey,
+  coachLanguageOk, coachTextFields, doctorOnlyEvidenceCount, mean, parseVariant, scoreAgainstKey,
   type AnalystRecord, type CallRecord, type CoachRecord, type FinalStatus,
 } from './metrics'
 
@@ -22,7 +22,16 @@ export interface Backend {
 }
 
 export function liveBackend(apiKey: string): Backend {
-  return { make: (model, onUsage) => createAnthropicComplete(apiKey, { model, onUsage }) }
+  return {
+    make(spec, onUsage) {
+      const v = parseVariant(spec)
+      return createAnthropicComplete(apiKey, {
+        model: v.model, onUsage: u => onUsage({ ...u, model: spec }),
+        extraBody: v.effort ? { output_config: { effort: v.effort } } : undefined,
+        maxTokensMultiplier: v.maxTokensMultiplier ?? undefined,
+      })
+    },
+  }
 }
 
 const meta = (f: BenchFixture) => ({
@@ -68,7 +77,7 @@ function instrument(inner: CompleteFn, calls: CallRecord[], getUsage: () => Comp
     const u = getUsage()
     calls.push({
       ok: raw !== null, status: u?.status ?? null, inputTokens: u?.inputTokens ?? null, outputTokens: u?.outputTokens ?? null,
-      latencyMs: u?.latencyMs ?? 0, stopReason: u?.stopReason ?? null,
+      latencyMs: u?.latencyMs ?? 0, stopReason: u?.stopReason ?? null, thinkingTokens: u?.thinkingTokens ?? null,
       ...(raw === null ? { jsonValid: false, generated: 0, grounded: 0, dropped: 0 } : classify(raw)),
     })
     return raw
@@ -168,7 +177,7 @@ export function fakeBackend(): Backend {
   return {
     make(model, onUsage) {
       return async ({ prompt, system }) => {
-        onUsage({ model, ok: true, inputTokens: Math.round(prompt.length / 4), outputTokens: 400, latencyMs: 5, stopReason: 'end_turn', status: 200 })
+        onUsage({ model, ok: true, inputTokens: Math.round(prompt.length / 4), outputTokens: 400, latencyMs: 5, stopReason: 'end_turn', status: 200, thinkingTokens: null })
         if (system.includes('sales coach')) {
           const refs = [...new Set([...prompt.matchAll(/\[(c\d+)\]/g)].map(m => m[1]))]
           return JSON.stringify({ points: refs.map(ref => ({

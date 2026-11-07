@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { createAnthropicComplete, DEFAULT_AGENT_MODEL } from '@/agents/llm'
 import { FIXTURES, type BenchFixture } from './fixtures'
-import type { BenchRecord, PricingFile } from './metrics'
+import { parseVariant, type BenchRecord, type PricingFile } from './metrics'
 import { fakeBackend, liveBackend, runAnalystJob, runCoachJob } from './runner'
 import { buildReviewItems, leaksModelName, renderReviewHtml } from './review'
 import { buildReport, summarizeReview, type ReviewKey } from './report'
@@ -53,7 +53,7 @@ async function pool<T>(items: T[], size: number, fn: (x: T) => Promise<void>) {
 
 async function run(flags: Record<string, string | true>) {
   const models = (typeof flags.models === 'string' ? flags.models : `${DEFAULT_AGENT_MODEL},${CANDIDATE}`).split(',')
-  if (models.length !== 2) throw new Error('--models needs exactly two comma-separated model ids (baseline,candidate)')
+  if (models.length < 2) throw new Error('--models needs at least two comma-separated entries: the baseline first, then one or more candidates')
   const dry = flags['dry-run'] === true
   const arms = (typeof flags.arm === 'string' ? flags.arm : 'analyst,coach').split(',')
   const fixtures = select(flags.only, typeof flags.limit === 'string' ? Number(flags.limit) : null)
@@ -73,8 +73,12 @@ async function run(flags: Record<string, string | true>) {
     // Fail before spending anything if a model id is rejected.
     for (const m of models) {
       let status: number | null = null
-      const r = await createAnthropicComplete(key!, { model: m, onUsage: u => { status = u.status } })({ system: 'Reply with the single word ok.', prompt: 'ok', maxTokens: 5 })
-      if (r === null) throw new Error(`Preflight failed for model "${m}" (HTTP ${status ?? 'no response'}). Nothing was spent beyond this one tiny request. Check the model id and your access.`)
+      const v = parseVariant(m)
+      await createAnthropicComplete(key!, {
+        model: v.model, onUsage: u => { status = u.status },
+        extraBody: v.effort ? { output_config: { effort: v.effort } } : undefined,
+      })({ system: 'Reply with the single word ok.', prompt: 'ok', maxTokens: 300 })
+      if (status !== 200) throw new Error(`Preflight failed for "${m}" (HTTP ${status ?? 'no response'}). Nothing was spent beyond this one tiny request. Check the model id, the setting and your access.`)
       console.log(`  preflight ok: ${m}`)
     }
   }
@@ -100,29 +104,47 @@ async function run(flags: Record<string, string | true>) {
 
 function review(flags: Record<string, string | true>) {
   const dir = join(OUT_ROOT, String(flags.run))
-  const meta = JSON.parse(readFileSync(join(dir, 'run.json'), 'utf8')) as { models: [string, string] }
-  const items = buildReviewItems(loadRecords(dir), FIXTURES, meta.models, Number(flags['per-arm'] ?? 30))
+  const meta = JSON.parse(readFileSync(join(dir, 'run.json'), 'utf8')) as { models: string[] }
+  const pair = pickPair(meta.models, flags.candidate)
+  const items = buildReviewItems(loadRecords(dir), FIXTURES, pair, Number(flags['per-arm'] ?? 30))
   const html = renderReviewHtml(items, FIXTURES)
   if (leaksModelName(html, meta.models)) throw new Error('Refusing to write: the review form contains a model name.')
   writeFileSync(join(dir, 'review.html'), html, 'utf8')
+  writeFileSync(join(dir, 'review-pair.json'), JSON.stringify(pair))
   const key: ReviewKey[] = items.map(({ itemId, arm, fixtureId, isArabic, aModel, bModel }) => ({ itemId, arm, fixtureId, isArabic, aModel, bModel }))
   writeFileSync(join(dir, 'review-key.json'), JSON.stringify(key, null, 2))
   console.log(`Review form: ${join(dir, 'review.html')} (${items.length} items). Send ONLY that file to the reviewer. Keep review-key.json to yourself until scoring is complete.`)
 }
 
+function pickPair(models: string[], candidate: string | true | undefined): [string, string] {
+  const cands = models.slice(1)
+  if (typeof candidate === 'string') {
+    if (!cands.includes(candidate)) throw new Error(`--candidate must be one of: ${cands.join(', ')}`)
+    return [models[0], candidate]
+  }
+  if (cands.length > 1) throw new Error(`This run has several candidates. Pass --candidate with one of: ${cands.join(', ')}`)
+  return [models[0], cands[0]]
+}
+
 function report(flags: Record<string, string | true>) {
   const dir = join(OUT_ROOT, String(flags.run))
-  const meta = JSON.parse(readFileSync(join(dir, 'run.json'), 'utf8')) as { models: [string, string]; runId: string }
+  const meta = JSON.parse(readFileSync(join(dir, 'run.json'), 'utf8')) as { models: string[]; runId: string }
   const pricing = JSON.parse(readFileSync(join('tools', 'benchmark', 'pricing.json'), 'utf8')) as PricingFile
-  let rev = null
-  if (typeof flags.review === 'string') {
-    const key = JSON.parse(readFileSync(join(dir, 'review-key.json'), 'utf8')) as ReviewKey[]
-    rev = summarizeReview(readFileSync(flags.review, 'utf8'), key, meta.models)
+  const records = loadRecords(dir)
+  const candidates = typeof flags.candidate === 'string' ? [flags.candidate] : meta.models.slice(1)
+  for (const cand of candidates) {
+    const pair = pickPair(meta.models, cand)
+    let rev = null
+    if (typeof flags.review === 'string' && existsSync(join(dir, 'review-pair.json')) && JSON.parse(readFileSync(join(dir, 'review-pair.json'), 'utf8'))[1] === cand) {
+      const key = JSON.parse(readFileSync(join(dir, 'review-key.json'), 'utf8')) as ReviewKey[]
+      rev = summarizeReview(readFileSync(flags.review, 'utf8'), key, pair)
+    }
+    const out = buildReport({ records, fixtures: FIXTURES, models: pair, pricing, review: rev, runId: meta.runId })
+    const name = `REPORT-${cand.replace(/[^a-z0-9.=-]+/gi, '_')}.md`
+    writeFileSync(join(dir, name), out.markdown, 'utf8')
+    writeFileSync(join(dir, name.replace('.md', '.json').replace('REPORT', 'summary')), JSON.stringify(out.stats, null, 2))
+    console.log(`${cand}: ${out.decision.recommendation}  (${join(dir, name)})`)
   }
-  const out = buildReport({ records: loadRecords(dir), fixtures: FIXTURES, models: meta.models, pricing, review: rev, runId: meta.runId })
-  writeFileSync(join(dir, 'REPORT.md'), out.markdown, 'utf8')
-  writeFileSync(join(dir, 'summary.json'), JSON.stringify(out.stats, null, 2))
-  console.log(`Report: ${join(dir, 'REPORT.md')}\nRecommendation: ${out.decision.recommendation}`)
 }
 
 const { cmd, flags } = args()

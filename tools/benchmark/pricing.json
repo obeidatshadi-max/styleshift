@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "currency": "USD",
+  "_note": "USD per million tokens, standard (non-batch, no cache) prices. Update this file when Anthropic changes prices; the report reads it at run time and shows n/a for any null. Haiku 5.5 is priced by each request's own prompt length (100,000 input tokens or fewer vs more).",
+  "models": {
+    "claude-haiku-4-5-20251001": {
+      "inputPerMTok": { "le100k": 1.0, "gt100k": 1.0 },
+      "outputPerMTok": { "le100k": 5.0, "gt100k": 5.0 },
+      "verifiedAt": "2026-11-07",
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing (Claude Haiku 4.5 row)"
+    },
+    "claude-haiku-5-5": {
+      "inputPerMTok": { "le100k": 0.1, "gt100k": 0.5 },
+      "outputPerMTok": { "le100k": 0.5, "gt100k": 2.5 },
+      "verifiedAt": "2026-11-07",
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing (Claude Haiku 5.5 rows: up to / over 100,000 tokens)"
+    }
+  }
+}

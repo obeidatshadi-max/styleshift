@@ -52,3 +52,6 @@ next-env.d.ts
 .worktrees/
 # Supabase CLI local cache
 /supabase/.temp/
+
+# Model benchmark output (synthetic transcripts only, but keep results out of git)
+tools/benchmark/out/

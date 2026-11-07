@@ -8,7 +8,7 @@ import { createAnthropicComplete, DEFAULT_AGENT_MODEL } from '@/agents/llm'
 import { FIXTURES, type BenchFixture } from './fixtures'
 import { parseVariant, type BenchRecord, type PricingFile } from './metrics'
 import { fakeBackend, liveBackend, runAnalystJob, runCoachJob } from './runner'
-import { buildReviewItems, leaksModelName, renderReviewHtml } from './review'
+import { buildReviewItems, leaksModelName, renderFixtureReviewHtml, renderReviewHtml } from './review'
 import { buildReport, summarizeReview, type ReviewKey } from './report'
 
 const CANDIDATE = 'claude-haiku-5-5'
@@ -147,6 +147,13 @@ function report(flags: Record<string, string | true>) {
   }
 }
 
+function fixtures() {
+  mkdirSync(OUT_ROOT, { recursive: true })
+  const p = join(OUT_ROOT, 'fixture-check.html')
+  writeFileSync(p, renderFixtureReviewHtml(FIXTURES.filter(f => f.mix !== 'en')), 'utf8')
+  console.log(`Fixture check sheet (40 Arabic fixtures): ${p}`)
+}
+
 const { cmd, flags } = args()
-const go = cmd === 'run' ? run(flags) : cmd === 'review' ? Promise.resolve(review(flags)) : cmd === 'report' ? Promise.resolve(report(flags)) : Promise.reject(new Error('Usage: run | review | report'))
+const go = cmd === 'run' ? run(flags) : cmd === 'review' ? Promise.resolve(review(flags)) : cmd === 'report' ? Promise.resolve(report(flags)) : cmd === 'fixtures' ? Promise.resolve(fixtures()) : Promise.reject(new Error('Usage: run | review | report | fixtures'))
 go.catch(e => { console.error(e instanceof Error ? e.message : e); process.exit(1) })

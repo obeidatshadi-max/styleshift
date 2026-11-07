@@ -136,3 +136,33 @@ save();
 export function leaksModelName(html: string, models: string[]): boolean {
   return models.some(m => html.includes(m))
 }
+
+/** A sheet for the native-speaker colleague to check the Arabic fixtures
+ * themselves: is the wording natural Iraqi, and is each expected behavior and
+ * trap right? Separate from the blind model review. */
+export function renderFixtureReviewHtml(fixtures: BenchFixture[]): string {
+  const blocks = fixtures.map(f => {
+    const t = toSession(f).transcript.map(x => `[${x.turnIndex} ${x.role}] ${x.text}`).join('\n')
+    const keys = [
+      ...f.must.map(m => `EXPECTED  turn ${m.turn}: ${m.behavior}`),
+      ...f.mustNot.map(m => `TRAP      turn ${m.turn}: NOT ${m.behavior} (${m.why})`),
+    ].join('\n')
+    return `<section class="item" id="${f.id}"><h3>${f.id} <span>${f.mix} · ${f.style} · ${f.difficulty} · ${f.performance} · ${f.length}</span></h3>
+<pre dir="auto">${esc(t)}</pre><pre>${esc(keys)}</pre>${f.reviewNote ? `<p><b>Note:</b> ${esc(f.reviewNote)}</p>` : ''}
+<p>Wording natural? <select name="${f.id}|wording"><option value="">–</option><option>OK</option><option>Fix</option></select>
+Answer key right? <select name="${f.id}|key"><option value="">–</option><option>OK</option><option>Wrong</option></select>
+<input name="${f.id}|note" placeholder="What to change" size="60"></p></section>`
+  }).join('\n')
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>StyleShift fixture check</title>
+<style>body{font:15px/1.5 system-ui,Segoe UI,sans-serif;margin:0 auto;max-width:1000px;padding:16px;background:#f6f7f9;color:#1b2430}
+.item{background:#fff;border:1px solid #d5dae1;border-radius:8px;padding:12px 18px;margin:16px 0}h3 span{font-weight:400;color:#566277;font-size:13px;margin-left:8px}
+pre{white-space:pre-wrap;background:#f1f3f6;padding:10px;border-radius:6px;font:14px/1.5 system-ui,Segoe UI,sans-serif}.bar{position:sticky;top:0;background:#fff;border-bottom:1px solid #d5dae1;padding:10px 0}</style></head><body>
+<div class="bar"><b>Fixture check.</b> These are synthetic conversations written by an AI assistant. For each one, say whether the Arabic reads as natural Iraqi speech and whether the expected behaviors and traps are right. Answers stay in this browser. <button id="export">Export CSV</button></div>
+${blocks}
+<script>
+const K='ss-fixture-check-v1';let st={};try{st=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
+const els=[...document.querySelectorAll('select,input')];els.forEach(e=>{if(st[e.name]!==undefined)e.value=st[e.name];e.addEventListener('input',()=>{els.forEach(x=>st[x.name]=x.value);try{localStorage.setItem(K,JSON.stringify(st))}catch(_){}})});
+document.getElementById('export').onclick=()=>{const rows=[['fixture','field','value']];for(const k of Object.keys(st)){if(st[k]){const p=k.split('|');rows.push([p[0],p[1],st[k]])}}
+const csv='\ufeff'+rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='fixture-check.csv';document.body.appendChild(a);a.click()};
+</script></body></html>`
+}

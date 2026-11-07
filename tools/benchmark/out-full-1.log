@@ -1,0 +1,7 @@
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+Run full-1: 60 fixtures x 4 models x [analyst, coach] = 480 sessions (each may use one retry).
+  preflight ok: claude-haiku-4-5-20251001
+  preflight ok: claude-haiku-5-5
+  preflight ok: claude-haiku-5-5@effort=low
+  preflight ok: claude-haiku-5-5@mt=2
+  480 jobs to run (0 already done).

@@ -81,8 +81,9 @@ export const config = {
   // reachable unauthenticated — the service worker registers (and the
   // offline fallback renders) before there's necessarily any session, and
   // precisely when a session check might itself be unreachable.
-  // arena.html is the standalone StyleShift Arena classroom quiz; workshop
+  // arena.html is the standalone StyleShift Arena classroom quiz (arena-og.jpg is
+  // its link-preview image, fetched by WhatsApp and social crawlers); workshop
   // participants open it without a StyleShift account. Its API, /api/arena,
   // authenticates every request itself (trainer key or participant token).
-  matcher: ['/((?!_next/static|_next/image|fonts/|favicon.ico|opengraph-image|twitter-image|icon|apple-icon|robots.txt|sitemap.xml|manifest.webmanifest|sw.js|offline|arena.html|api/arena).*)'],
+  matcher: ['/((?!_next/static|_next/image|fonts/|favicon.ico|opengraph-image|twitter-image|icon|apple-icon|robots.txt|sitemap.xml|manifest.webmanifest|sw.js|offline|arena.html|arena-og.jpg|api/arena).*)'],
 }

@@ -26,6 +26,10 @@ export const EVALUATOR_MODEL = 'claude-haiku-4-5-20251001'
 // was cut off on 85 of 100 benchmark runs (every Arabic one), so Deep Analysis returned 422.
 // Measured 2026-11-12, docs/validation/repeat-run-2026-11-12.md.
 export const EVALUATOR_MAX_TOKENS = 6000
+// Temperature 0: at the provider default the same transcript scored up to 5.3 points apart
+// on average (more than 5 points of range on up to 79% of fixtures); at 0 the spread was 0.
+// 20 fixtures x 5 repeats, 2026-11-12, after the eval-2.0.0 repair.
+export const EVALUATOR_TEMPERATURE = 0
 export const EVALUATOR_RETRY_NOTE = '\n\nYour previous response was not valid JSON matching the exact shape requested. Return ONLY the JSON object, exactly as specified, with no markdown fences and no other text.'
 
 // ───────────────────────── ConversationObserver ─────────────────────────

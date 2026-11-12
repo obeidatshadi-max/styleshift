@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
 import {
   computeSessionSignals, buildEvaluatorPrompt, parseEvaluatorResponse, groundEvaluatorResult,
-  resolveDoctorStyleProfile, EVALUATOR_SYSTEM, EVALUATOR_MODEL, EVALUATOR_MAX_TOKENS, EVALUATOR_RETRY_NOTE, EVALUATOR_PROMPT_VERSION,
+  resolveDoctorStyleProfile, EVALUATOR_SYSTEM, EVALUATOR_MODEL, EVALUATOR_MAX_TOKENS, EVALUATOR_RETRY_NOTE, EVALUATOR_PROMPT_VERSION, EVALUATOR_TEMPERATURE,
 } from '@/lib/session-evaluator'
 import { computePressureShift } from '@/lib/pressure-shift'
 import type { ConversationTurn, Doctor } from '@/types/game'
@@ -20,6 +20,7 @@ async function callEvaluator(anthropicKey: string, prompt: string) {
     body: JSON.stringify({
       model: EVALUATOR_MODEL,
       max_tokens: EVALUATOR_MAX_TOKENS,
+      temperature: EVALUATOR_TEMPERATURE,
       system: EVALUATOR_SYSTEM,
       messages: [{ role: 'user', content: prompt }],
     }),

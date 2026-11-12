@@ -109,16 +109,17 @@ ${candidates.map(candidateBlock).join('\n\n')}
 
 For EACH point, write:
 - whatHappened: 1-2 neutral sentences on what the rep did, based on the evidence.
-- whyItMattered: 1-2 sentences on the effect on THIS doctor, using the doctor's next line.
+- whyItMattered: 1-2 sentences on the effect on THIS doctor, using the doctor's next line. State an effect as fact ONLY when the doctor's line says it ("I have no time for this"). Otherwise it is your reading: write "may have" or "possibly" (in Arabic "ربما" or "قد يكون").
 - whatToDoDifferently: for IMPROVE, the specific alternative behavior; for BUILD ON A STRENGTH, how to take the same behavior further.
 - betterResponseExample: what the rep could say instead, in their own voice, 1-3 sentences.
 - practiceAction: ONE concrete action for the next role-play (observable, doable in a few minutes).
+- successLooksLike: ONE sentence on what the rep would see in the next conversation if the change worked: an observable doctor reaction or behavior (for example "the doctor names which patients worry them"), never a score or a feeling.
 - objectiveId: the id of the learning objective this serves, or null.
 
 Return JSON exactly in this shape:
 {
   "points": [
-    { "ref": "c1", "whatHappened": "...", "whyItMattered": "...", "whatToDoDifferently": "...", "betterResponseExample": "...", "practiceAction": "...", "objectiveId": null }
+    { "ref": "c1", "whatHappened": "...", "whyItMattered": "...", "whatToDoDifferently": "...", "betterResponseExample": "...", "practiceAction": "...", "successLooksLike": "...", "objectiveId": null }
   ]
 }`
 }

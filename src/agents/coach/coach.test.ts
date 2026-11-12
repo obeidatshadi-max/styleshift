@@ -128,6 +128,21 @@ describe('groundCoaching', () => {
     expect(groundCoaching({ points: [{ ...goodText('c1'), practiceAction: '' }] }, cands, [])!.coaching).toHaveLength(0)
   })
 
+  it('keeps a clean successLooksLike, drops one with score talk, and never drops the point for it', () => {
+    const ok = groundCoaching({ points: [{ ...goodText('c1'), successLooksLike: 'The doctor names which patients worry them.' }] }, cands, [])!
+    expect(ok.coaching[0].successLooksLike).toBe('The doctor names which patients worry them.')
+    const scored = groundCoaching({ points: [{ ...goodText('c1'), successLooksLike: 'Your score rises to 80%.' }] }, cands, [])!
+    expect(scored.coaching).toHaveLength(1)
+    expect(scored.coaching[0].successLooksLike).toBeUndefined()
+    expect(groundCoaching({ points: [goodText('c1')] }, cands, [])!.coaching[0]).not.toHaveProperty('successLooksLike')
+  })
+
+  it('the prompt asks for a success test and marks inferred effects as possible', () => {
+    const prompt = buildCoachPrompt(s, cands)
+    expect(prompt).toContain('successLooksLike')
+    expect(prompt).toContain('"may have"')
+  })
+
   it('ignores unknown refs and duplicates; validates objectiveId', () => {
     const r = groundCoaching({ points: [goodText('zzz'), { ...goodText('c1'), objectiveId: 'obj1' }, goodText('c1')] }, cands, s.learningObjectives)!
     expect(r.coaching).toHaveLength(1)

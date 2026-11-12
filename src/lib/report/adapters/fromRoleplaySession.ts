@@ -52,7 +52,8 @@ export function adaptRoleplaySession(
       talkRatio: session.talk_ratio, rapidTurnSwitches: session.rapid_turn_switches,
       questionRatio: session.question_ratio, openQuestionRatio: session.open_question_ratio,
       paraphraseScore: session.paraphrase_score, activeListeningScore: session.active_listening_score,
-      repStyle: session.rep_style, adaptationScore: session.adaptation_score,
+      // rep_style / adaptation_score are acoustic style reads and are kept out of the prompt:
+      // the model must not be handed a style named from speaking speed and pitch.
     },
     qualityFlags: rows.length < 10 ? ['short_session'] : [], // MIN_RELIABLE_TURNS in roleplay-core.ts
   }

@@ -193,7 +193,7 @@ export function fakeBackend(): Backend {
           const refs = [...new Set([...prompt.matchAll(/\[(c\d+)\]/g)].map(m => m[1]))]
           return JSON.stringify({ points: refs.map(ref => ({
             ref, whatHappened: 'dry run', whyItMattered: 'dry run', whatToDoDifferently: 'dry run',
-            betterResponseExample: 'dry run', practiceAction: 'dry run',
+            betterResponseExample: 'dry run', practiceAction: 'dry run', successLooksLike: 'dry run',
           })) })
         }
         const f = FIXTURES.find(x => prompt.includes(x.turns[0].slice(2).trim()) && prompt.includes(x.turns[x.turns.length - 1].slice(2).trim()))

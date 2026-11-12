@@ -26,6 +26,12 @@ describe('adaptRoleplaySession', () => {
     expect(context.savedCounterpartStyle).toBeNull()
     expect(context.configuredPracticeStyle).toBeNull()
   })
+  it('keeps the acoustic style read and its adaptation score out of the model context', () => {
+    const { context } = adaptRoleplaySession(segmentRows, sessionRow)
+    expect(context.deterministicMetrics).not.toHaveProperty('repStyle')
+    expect(context.deterministicMetrics).not.toHaveProperty('adaptationScore')
+    expect(JSON.stringify(context)).not.toContain('driver')
+  })
   it('carries the saved doctor\'s style as a practice setting, and ignores anything that is not a style', () => {
     expect(adaptRoleplaySession(segmentRows, sessionRow, 'amiable').context.configuredPracticeStyle).toBe('amiable')
     expect(adaptRoleplaySession(segmentRows, sessionRow, 'amiable').context.savedCounterpartStyle).toBeNull()

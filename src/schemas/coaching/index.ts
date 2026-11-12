@@ -27,6 +27,9 @@ export interface CoachingRecommendation {
   betterResponseExample: string
   /** 6. One concrete practice action for the next session. */
   practiceAction: string
+  /** 7. What the rep would see in the next conversation if the change worked (an observable
+   * doctor reaction or behavior). Absent on coaching written before it existed. */
+  successLooksLike?: string
   /** Learning objective this point serves, if any. */
   objectiveId: string | null
 }

@@ -128,6 +128,21 @@ describe('groundCoaching', () => {
     expect(groundCoaching({ points: [{ ...goodText('c1'), practiceAction: '' }] }, cands, [])!.coaching).toHaveLength(0)
   })
 
+  it('keeps a clean successLooksLike, drops one with score talk, and never drops the point for it', () => {
+    const ok = groundCoaching({ points: [{ ...goodText('c1'), successLooksLike: 'The doctor names which patients worry them.' }] }, cands, [])!
+    expect(ok.coaching[0].successLooksLike).toBe('The doctor names which patients worry them.')
+    const scored = groundCoaching({ points: [{ ...goodText('c1'), successLooksLike: 'Your score rises to 80%.' }] }, cands, [])!
+    expect(scored.coaching).toHaveLength(1)
+    expect(scored.coaching[0].successLooksLike).toBeUndefined()
+    expect(groundCoaching({ points: [goodText('c1')] }, cands, [])!.coaching[0]).not.toHaveProperty('successLooksLike')
+  })
+
+  it('the prompt asks for a success test and marks inferred effects as possible', () => {
+    const prompt = buildCoachPrompt(s, cands)
+    expect(prompt).toContain('successLooksLike')
+    expect(prompt).toContain('"may have"')
+  })
+
   it('ignores unknown refs and duplicates; validates objectiveId', () => {
     const r = groundCoaching({ points: [goodText('zzz'), { ...goodText('c1'), objectiveId: 'obj1' }, goodText('c1')] }, cands, s.learningObjectives)!
     expect(r.coaching).toHaveLength(1)
@@ -135,6 +150,14 @@ describe('groundCoaching', () => {
     expect(groundCoaching({ points: [{ ...goodText('c1'), objectiveId: 'made-up' }] }, cands, s.learningObjectives)!.coaching[0].objectiveId).toBeNull()
   })
 
+  it('mentionsScore catches Arabic score talk and Arabic-Indic percentages', () => {
+    expect(mentionsScore('قل للطبيب إن ٦٠٪ من المرضى تحسنوا')).toBe(true)
+    expect(mentionsScore('تحسن ٦٠ ٪ من المرضى')).toBe(true)
+    expect(mentionsScore('درجتك كانت منخفضة في هذا الجزء')).toBe(true)
+    expect(mentionsScore('حصلت على ٧ من ١٠')).toBe(true)
+    expect(mentionsScore('اسأل الطبيب أولاً عن أكثر مريض يقلقه')).toBe(false)
+    expect(mentionsScore('جرّب جرعة واحدة يومياً لمدة أسبوع')).toBe(false)
+  })
   it('mentionsScore is precise', () => {
     expect(mentionsScore('7/10 overall')).toBe(true)
     expect(mentionsScore('Ask what matters to them first.')).toBe(false)

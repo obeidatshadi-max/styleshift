@@ -1,6 +1,7 @@
 import type { CoachingRecommendation } from '@/schemas/coaching'
 import type { LearningObjective } from '@/schemas/session'
 import type { CoachCandidate } from './select'
+import { normalizeForMatch as normalizeArabic } from '@/lib/arabic-normalize'
 
 const MAX_FIELD_CHARS = 700
 
@@ -9,8 +10,15 @@ const MAX_FIELD_CHARS = 700
  * would also be an invented statistic in a sample response). */
 const SCORE_TALK_RE = /\b(scores?|scored|rating|rated|grade[sd]?)\b|\b\d+(\.\d+)?\s*\/\s*(10|100)\b|\d+(\.\d+)?\s*%/i
 
+// Arabic score talk, matched on arabic-normalize output (Arabic-Indic digits become 0-9,
+// ta-marbuta becomes ه, punctuation becomes spaces). A percent sign after a digit is
+// checked on the raw text, so ٪ (U+066A) and Arabic-Indic digits count too.
+const SCORE_TALK_AR_RE = /(^| )(درجتك|درجته|درجه \d+|الدرجه \d+|تقييمك|نقاطك|علامتك|\d+ نقطه|\d+ نقاط|\d+ من (10|100))( |$)/
+const PERCENT_RE = /[0-9٠-٩۰-۹]\s*[٪%]/
+
 export function mentionsScore(text: string): boolean {
-  return SCORE_TALK_RE.test(text)
+  if (SCORE_TALK_RE.test(text) || PERCENT_RE.test(text)) return true
+  return SCORE_TALK_AR_RE.test(normalizeArabic(text))
 }
 
 export function extractJson(text: string): unknown | null {
@@ -53,6 +61,9 @@ export function groundCoaching(
       text[f] = v
     }
     if (!ok) { dropped++; continue }
+    // Optional: kept when present and clean, so a model that omits it never loses the whole point.
+    const success = typeof p.successLooksLike === 'string' ? p.successLooksLike.trim() : ''
+    const successLooksLike = success && success.length <= MAX_FIELD_CHARS && !mentionsScore(success) ? success : undefined
 
     used.add(candidate.ref)
     out.push({
@@ -62,6 +73,7 @@ export function groundCoaching(
       competency: candidate.competency,
       behavior: candidate.behavior,
       ...text,
+      ...(successLooksLike ? { successLooksLike } : {}),
       evidence: candidate.evidence,
       objectiveId: typeof p.objectiveId === 'string' && objectiveIds.has(p.objectiveId) ? p.objectiveId : null,
     })

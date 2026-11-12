@@ -48,6 +48,9 @@ export type VoiceMetric = typeof VOICE_METRICS[number]
 export const SIGNAL_CATEGORIES = [
   'directness', 'detail_request', 'results_focus', 'relationship_language',
   'possibility_interest', 'reassurance_request', 'pace_preference', 'time_limit',
+  // Asking for evidence, data or a study. Ordinary medical practice, not a style cue: it never
+  // supports a style claim on its own (groundReport.ts).
+  'evidence_request',
 ] as const
 export type SignalCategory = typeof SIGNAL_CATEGORIES[number]
 export function isSignalCategory(v: unknown): v is SignalCategory {

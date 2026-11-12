@@ -242,7 +242,8 @@ export function groundReport(
     const isSim = subject === 'customer' && context.isSimulation
     // The final reading: a claim that kept no evidence is already null here, and so cannot raise a
     // "differs from your saved profile" note below.
-    const finalStyle = strongestSignals.length > 0 ? claimedStyle : null
+    // Asking for evidence is ordinary medical practice: evidence_request signals alone never support a style.
+    const finalStyle = strongestSignals.some(sig => sig.category !== 'evidence_request') ? claimedStyle : null
     return {
       subject,
       strongestSignals,

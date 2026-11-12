@@ -62,8 +62,16 @@ describe('measurement consistency', () => {
       paraphrase_score: 0.2, active_listening_score: 71, rep_style: null, rep_confidence: null, adaptation_score: null,
     }
     expect(fromRoleplaySummary(s).metrics).toEqual({
-      talk_ratio: 62, open_question_ratio: 45, paraphrase_score: 20, active_listening: 71, adaptation_score: null,
+      talk_ratio: 62, open_question_ratio: 45, paraphrase_score: 20, active_listening: 71,
     })
+  })
+
+  it('does not track the acoustic roleplay adaptation score (a style read from speed and pitch)', () => {
+    const s: RoleplaySessionSummary = {
+      id: 'x', created_at: day(0), duration_sec: 300, talk_ratio: 0.5, question_ratio: 0.3, open_question_ratio: 0.4,
+      paraphrase_score: 0.2, active_listening_score: 60, rep_style: 'driver', rep_confidence: 73, adaptation_score: 88,
+    }
+    expect(fromRoleplaySummary(s).metrics).not.toHaveProperty('adaptation_score')
   })
 })
 

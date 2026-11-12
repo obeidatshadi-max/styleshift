@@ -19,7 +19,8 @@ export function fromRoleplaySummary(s: RoleplaySessionSummary, scenarioKey: stri
       open_question_ratio: pct(s.open_question_ratio),
       paraphrase_score: pct(s.paraphrase_score),
       active_listening: num(s.active_listening_score),
-      adaptation_score: num(s.adaptation_score),
+      // roleplay_sessions.adaptation_score is NOT read: it is the distance between two
+      // social-style reads made from speaking speed and pitch, not adaptation to a person.
     },
   }
 }

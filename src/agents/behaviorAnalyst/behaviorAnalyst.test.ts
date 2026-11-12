@@ -135,6 +135,7 @@ describe('behavior analyst agent', () => {
   })
 })
 
+claude/repeat-run-test
 describe('production analyst request', () => {
   it('runs at temperature 0 (repeat-run benchmark, 2026-11-12)', async () => {
     vi.stubEnv('ANTHROPIC_API_KEY', 'test-key')
@@ -144,5 +145,25 @@ describe('production analyst request', () => {
     await createDefaultBehaviorAnalystAgent()!.analyze(finished())
     expect(JSON.parse(fetcher.mock.calls[0][1].body).temperature).toBe(0)
     vi.unstubAllEnvs(); vi.unstubAllGlobals()
+describe('Arabic parity (validation audit 2026-11-12, item 4)', () => {
+  const arTurns = [turn(0, 'doctor', 'شنو عندك اليوم؟'), turn(1, 'rep', 'دكتور، شنو أكثر شي يقلقك بمرضى الضغط؟')]
+  const obs = (quote: string, observation = 'سأل المندوب سؤالاً مفتوحاً عن مخاوف الطبيب.') => ({ observations: [{
+    competency: 'questioning', behavior: 'open_question', observation,
+    evidence: [{ turnIndex: 1, quote }], direction: 'positive', confidence: 0.9,
+  }] })
+  it('grounds an Arabic quote that differs only in hamza or diacritics', () => {
+    const r = groundObservations(obs('شنو اكثر شي يقلقك بمرضى الضغط'), arTurns)!
+    expect(r.observations).toHaveLength(1)
+    expect(r.observations[0].evidence[0].quote).toBe('شنو اكثر شي يقلقك بمرضى الضغط') // the model's words are kept
+    expect(groundObservations(obs('شنو أكْثَر شي يقلقك'), arTurns)!.observations).toHaveLength(1)
+  })
+  it('still rejects an Arabic quote that is not in the transcript', () => {
+    expect(groundObservations(obs('شنو رأيك بالدواء الجديد'), arTurns)!.observations).toHaveLength(0)
+  })
+  it('drops Arabic advice phrased as an observation', () => {
+    expect(groundObservations(obs('شنو اكثر شي يقلقك', 'كان المفروض يسأل عن المرضى قبل العرض.'), arTurns)!.observations).toHaveLength(0)
+    expect(looksLikeCoaching('في المرة القادمة اسأل أولاً')).toBe(true)
+    expect(looksLikeCoaching('حاول المندوب أن يشرح الفائدة')).toBe(false) // past tense description, not advice
+main
   })
 })

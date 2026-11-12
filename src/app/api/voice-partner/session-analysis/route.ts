@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
 import {
   computeSessionSignals, buildEvaluatorPrompt, parseEvaluatorResponse, groundEvaluatorResult,
-  resolveDoctorStyleProfile, EVALUATOR_SYSTEM, EVALUATOR_MODEL, EVALUATOR_MAX_TOKENS, EVALUATOR_RETRY_NOTE,
+  resolveDoctorStyleProfile, EVALUATOR_SYSTEM, EVALUATOR_MODEL, EVALUATOR_MAX_TOKENS, EVALUATOR_RETRY_NOTE, EVALUATOR_PROMPT_VERSION,
 } from '@/lib/session-evaluator'
 import { computePressureShift } from '@/lib/pressure-shift'
 import type { ConversationTurn, Doctor } from '@/types/game'
@@ -100,7 +100,8 @@ export async function POST(req: Request) {
 
   const { error: scorecardError } = await supabase.from('session_scorecards').upsert({
     session_id: sessionId, rep_id: user.id, doctor_id: doctorId,
-    competencies, signals, model: EVALUATOR_MODEL, updated_at: new Date().toISOString(),
+    // The prompt version rides in `signals` (jsonb) so no migration is needed; the pilot reads it from there.
+    competencies, signals: { ...signals, evaluatorPromptVersion: EVALUATOR_PROMPT_VERSION }, model: EVALUATOR_MODEL, updated_at: new Date().toISOString(),
     adaptation, adaptation_score: adaptationScore, adaptation_recommendation: adaptationRecommendation,
     doctor_style_profile: styleProfile,
     pressure_shift_turn_index: pressureShift?.moment.turnIndex ?? null,

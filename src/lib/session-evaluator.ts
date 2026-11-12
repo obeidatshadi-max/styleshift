@@ -4,6 +4,7 @@ import { isClearStep, isObjectionType, langName, styleWeights, type ClearStep, t
 import { STYLES } from '@/lib/game-data'
 import type { PressureShiftResult } from '@/lib/pressure-shift'
 import { computeRealtimeSignals, type RealtimeSignals } from '@/lib/voice-partner-timing'
+import { CONTEXT_COACHING_RULES } from '@/lib/context-coaching'
 
 // ───────────────────────── Evaluator request ─────────────────────────
 // The exact request /api/voice-partner/session-analysis sends. Kept here, not in the
@@ -13,7 +14,13 @@ import { computeRealtimeSignals, type RealtimeSignals } from '@/lib/voice-partne
 // SYSTEM) — this call only coaches communication style from a given
 // transcript, but rationale/alternative text must not drift into inventing
 // clinical claims that were never in the conversation.
-export const EVALUATOR_SYSTEM = 'You are an objective sales-coaching evaluator, not a clinician. Score and comment on COMMUNICATION STYLE only. NEVER invent clinical data, efficacy numbers, statistics, trial results, or real/branded drug names — refer to evidence only as generically as the transcript itself does. Output ONLY a single valid JSON object, no markdown fences, no commentary.'
+// The shared context rules (never infer pace or tone from text, a temporary reaction
+// is not a trait...) are part of every analysis prompt; the evaluator was the one
+// prompt without them (validation audit 2026-11-12, W2).
+export const EVALUATOR_SYSTEM = 'You are an objective sales-coaching evaluator, not a clinician. Score and comment on COMMUNICATION STYLE only. NEVER invent clinical data, efficacy numbers, statistics, trial results, or real/branded drug names — refer to evidence only as generically as the transcript itself does. Output ONLY a single valid JSON object, no markdown fences, no commentary. ' + CONTEXT_COACHING_RULES
+/** Stored with each scorecard (in `signals`). Bump on any change to the evaluator prompt
+ * or grounding, so the validation pilot never pools scores from two versions. */
+export const EVALUATOR_PROMPT_VERSION = 'eval-2.0.0'
 export const EVALUATOR_MODEL = 'claude-haiku-4-5-20251001'
 export const EVALUATOR_MAX_TOKENS = 2000
 export const EVALUATOR_RETRY_NOTE = '\n\nYour previous response was not valid JSON matching the exact shape requested. Return ONLY the JSON object, exactly as specified, with no markdown fences and no other text.'
@@ -240,8 +247,31 @@ function styleNeedsLine(profile: DoctorStyleProfile): string {
     .filter(p => p.pct > 0)
     .sort((a, b) => b.pct - a.pct)
     .map(p => `${p.pct}% ${p.k} (${STYLES[p.k].blurb})`)
-  return `This doctor's communication-style profile: ${parts.join(', ')}. Score how well the REP's behavior adapted to what THIS specific blend calls for — not one generic "ideal" sales style. Example: a driver-leaning doctor wants brevity and directness even where warmth would help a different doctor; an analytical-leaning doctor wants evidence and detail even where that would feel slow to a different doctor.`
+  return `This doctor's configured communication-style profile (background only): ${parts.join(', ')}. Score adaptation against what THIS doctor visibly asked for or reacted to in THIS conversation (a stated time limit, a request for detail, a short reply, a question left unanswered). The profile can explain a reading but is never evidence by itself: when the doctor's lines show nothing to adapt to on a dimension, return null for it.`
 }
+
+/** Behavioral anchors per band, taken from the human rubric (docs/validation/human-rating-rubric.md
+ * section 3, hrr-1.0.0). The bands match the pilot's fixed cut points (rubric section 6), so
+ * the evaluator and the human raters use the same meaning for each band. */
+const EVALUATOR_ANCHORS = `Use these bands. They match the human raters' 1-5 scale: 0-19 = 1, 20-39 = 2, 40-59 = 3, 60-79 = 4, 80-100 = 5.
+- 80-100 (strong): repeated, clearly effective, context-appropriate behavior, shown MORE THAN ONCE. Needs at least two separate turnRefs. One good moment is 60-79 at most.
+- 60-79 (good): effective and appropriate in most of the conversation.
+- 40-59 (adequate): reasonable, with clear gaps or inconsistency.
+- 20-39 (weak): some attempt, mostly ineffective or inappropriate.
+- 0-19 (works against the aim): needs evidence of a problem, not just absence. If nothing happened, return null, not a low score.
+If unsure between two bands, give the lower one and say why in the rationale.
+Domain anchors:
+- opening: strong = purpose in one or two sentences that fits the doctor's stated time; adequate = purpose given but long or generic; works against = product pitch before saying why, or never says why.
+- questioning / discovery: strong = two or more open questions that change what is said next, with follow-up; adequate = some questions, mostly yes/no; works against = no questions, or only leading ones.
+- listening: strong = repeats back the doctor's point accurately more than once and responds to it; adequate = acknowledges but often answers a different point; works against = ignores or contradicts what the doctor said.
+- evidence_use / value_communication / relevance: strong = statements stay general to what the transcript supports and are tied to this doctor's concern, more than once; adequate = accurate but generic; works against = a clinical, safety or comparative claim the conversation does not support, or avoiding a direct safety question.
+- objection_handling: strong = asks what is behind the objection, restates it, then answers that point; adequate = answers the objection as stated without checking; works against = argues, dismisses, or answers a different objection.
+- closing: strong = a specific next step the doctor accepts, with who does what; adequate = a vague next step; works against = no next step although one was available. Null when the doctor ended the conversation first.
+- adaptation dimensions: strong = detail, directness, structure or questioning visibly change to fit what this doctor asked for, more than once; adequate = some adjustment, inconsistent; works against = same approach regardless of what the doctor asked for.`
+
+/** Pace and warmth are delivery: speed and tone. A text transcript shows neither, so both stay
+ * null unless real speech timing exists for the session. */
+const DELIVERY_ONLY_DIMENSIONS: readonly AdaptationDimension[] = ['pace', 'warmth']
 
 export const ADAPTATION_DIMENSIONS = [
   'pace', 'detail', 'evidence_orientation', 'questioning', 'structure', 'directness', 'warmth',
@@ -296,9 +326,12 @@ Objective signals already computed from the transcript (for your context, not fo
 Score these ${COMPETENCY_DIMENSIONS.length} dimensions: ${dims}.
 For each dimension, return a 0-100 score ONLY if the transcript actually gives you evidence for it — if this specific transcript doesn't exercise a dimension (e.g. the session ended before any closing attempt), return score: null and explain why in rationale rather than guessing a number. Cite 1-3 turnRefs (the [N] numbers above) that support your score — never cite a number not shown above.
 
+${EVALUATOR_ANCHORS}
+
 ${styleNeedsLine(styleProfile)}
-Separately, score these ${ADAPTATION_DIMENSIONS.length} ADAPTATION dimensions the same way (0-100 or null + turnRefs + rationale): ${adaptationDims}. Each answers "did the rep's behavior match what THIS doctor's style profile calls for" — not a generic sales ideal.
-Then write ONE concrete adaptationRecommendation sentence. It MUST name this doctor's specific dominant style and reference real transcript evidence — never a generic tip like "be more empathetic" that could apply to any doctor.
+Separately, score these ${ADAPTATION_DIMENSIONS.length} ADAPTATION dimensions the same way (0-100 or null + turnRefs + rationale): ${adaptationDims}. Each answers "did the rep adjust to what THIS doctor visibly asked for or reacted to in this conversation" — not a generic sales ideal, and not a style stereotype.
+${signals.realtimeSignals ? 'Real speech timing exists for this session, but you only see words: score pace and warmth only from what the doctor said about them (for example "slow down"), otherwise null.' : 'This is a text transcript with no speech timing: pace and warmth (speed and tone of delivery) cannot be observed. Return score: null for both.'}
+Then write ONE concrete adaptationRecommendation sentence. It MUST quote or point to what this doctor actually said or did in the transcript — never a generic tip like "be more empathetic" that could apply to any doctor, and never a style label as the reason on its own.
 
 Then identify 3 to 7 Critical Moments — points where the conversation materially changed (an objection landed, the rep missed an opening, a strong recovery, etc). For each: the turnIndex (one of the [N] numbers above), what the rep's behavior was (observedBehavior), what they missed if anything (missedOpportunity, or null if nothing was missed), and one concrete alternative response (alternative, or null if not applicable). Do NOT include the quoted text yourself — just the turnIndex; the exact words will be looked up separately.
 
@@ -393,10 +426,14 @@ export function groundEvaluatorResult(
   const byIndex = new Map(turns.map(t => [t.turn_index, t]))
   const validIndex = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && byIndex.has(n)
 
+  // Deterministic band rules from the human rubric, enforced here rather than trusted to the model:
+  // a score with no real turn behind it is null; the top band (80+) needs two separate turns.
   function groundDimension(entry: { score: unknown; turnRefs: unknown; rationale: unknown }) {
-    const score = typeof entry.score === 'number' && Number.isFinite(entry.score)
+    const turnRefs = Array.isArray(entry.turnRefs) ? [...new Set(entry.turnRefs.filter(validIndex))] : []
+    let score = typeof entry.score === 'number' && Number.isFinite(entry.score)
       ? Math.max(0, Math.min(100, Math.round(entry.score))) : null
-    const turnRefs = Array.isArray(entry.turnRefs) ? entry.turnRefs.filter(validIndex) : []
+    if (score !== null && turnRefs.length === 0) score = null
+    if (score !== null && score >= 80 && turnRefs.length < 2) score = 79
     const rationale = typeof entry.rationale === 'string' ? entry.rationale : ''
     return { score, turnRefs, rationale }
   }
@@ -404,8 +441,15 @@ export function groundEvaluatorResult(
   const competencies = {} as CompetencyScores
   for (const dim of COMPETENCY_DIMENSIONS) competencies[dim] = groundDimension(raw.competencies[dim])
 
+  // Pace and warmth are speed and tone. Without real speech timing they are not observable.
+  const hasTiming = computeRealtimeSignals(turns) !== null
   const adaptation = {} as AdaptationScores
-  for (const dim of ADAPTATION_DIMENSIONS) adaptation[dim] = groundDimension(raw.adaptation[dim])
+  for (const dim of ADAPTATION_DIMENSIONS) {
+    const g = groundDimension(raw.adaptation[dim])
+    adaptation[dim] = !hasTiming && DELIVERY_ONLY_DIMENSIONS.includes(dim)
+      ? { score: null, turnRefs: [], rationale: 'Not observable: speed and tone of delivery cannot be judged from a text transcript.' }
+      : g
+  }
   // Composite score is computed HERE, deterministically, from the grounded
   // per-dimension scores — never trusted as a number the model invents —
   // same "server derives, never trusts the model blindly" rule as the

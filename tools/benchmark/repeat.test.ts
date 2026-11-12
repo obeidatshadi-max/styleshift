@@ -69,7 +69,8 @@ describe('repeat-run pipeline (dry backend)', () => {
     const e = await runRepeatEvaluator(fakeBackend(), 'dry', f, 0)
     expect(e.status).toBe('ok')
     expect(e.scores.opening).toBeNull() // the fake says "not observable" for the first dimension
-    expect(e.scores['adapt.pace']).toBe(60)
+    expect(e.scores['adapt.pace']).toBeNull() // text transcript: pace is not observable
+    expect(e.scores['adapt.detail']).toBe(61)
     expect(Object.keys(e.scores)).toHaveLength(9 + 7 + 1)
   })
 

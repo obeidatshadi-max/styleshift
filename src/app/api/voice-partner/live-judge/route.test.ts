@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/supabase-server', () => ({ createClient: vi.fn() }))
 vi.mock('@/lib/rate-limit', () => ({ checkRateLimit: vi.fn() }))
+const adminInsert = vi.hoisted(() => vi.fn(async (_rows: unknown) => ({ error: null })))
+vi.mock('@/lib/supabase-admin', () => ({ createAdminClient: () => ({ from: () => ({ insert: adminInsert }) }) }))
 
 import { POST } from './route'
 import { createClient } from '@/lib/supabase-server'
@@ -68,18 +70,16 @@ describe('POST /api/voice-partner/live-judge', () => {
       transcript: [{ role: 'doctor', text: 'Too busy.' }, { role: 'rep', text: 'What is eating your time?' }],
     }))
     expect(res.status).toBe(200)
-    expect(await res.json()).toMatchObject({ objectionType: 'doubt', outcome: 'won', clearSteps: ['listen'], turnCount: 1 })
+    expect(await res.json()).toMatchObject({ objectionType: 'doubt', outcome: 'won', clearSteps: ['listen'], turnCount: 1, saved: true })
   })
-  it('signs the judged result so session-result can verify it came from the judge', async () => {
-    vi.stubEnv('AI_VOICE_PARTNER_LIVE_ENABLED', 'true'); vi.stubEnv('ANTHROPIC_API_KEY', 'key'); vi.stubEnv('VOICE_PARTNER_RESULT_SECRET', 'test-secret')
+  it('stores the judge verdict itself (a loss too), so the browser cannot drop or edit it', async () => {
+    vi.stubEnv('AI_VOICE_PARTNER_LIVE_ENABLED', 'true'); vi.stubEnv('ANTHROPIC_API_KEY', 'key')
     vi.mocked(createClient).mockResolvedValue(mockSupabase(doctor) as never)
     vi.mocked(checkRateLimit).mockResolvedValue(true)
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ content: [{ text: '{"objectionType":"doubt","outcome":"won","clearSteps":["listen"]}' }] })))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ content: [{ text: '{"objectionType":"doubt","outcome":"escalated","clearSteps":[]}' }] })))
     const sessionId = '11111111-1111-4111-8111-111111111111'
-    const res = await POST(request({ doctorId: 'd1', difficulty: 'realistic', sessionId, transcript: [{ role: 'rep', text: 'What is eating your time?' }] }))
-    const data = await res.json()
-    const { verifyResultToken } = await import('@/lib/voice-partner-result-token')
-    expect(verifyResultToken(data.resultToken)).toMatchObject({ userId: 'rep-1', doctorId: 'd1', sessionId, outcome: 'won', objectionType: 'doubt', turnCount: 1, clearSteps: ['listen'] })
+    await POST(request({ doctorId: 'd1', difficulty: 'realistic', sessionId, transcript: [{ role: 'rep', text: 'Hello doctor' }] }))
+    expect(adminInsert).toHaveBeenCalledWith(expect.objectContaining({ id: sessionId, rep_id: 'rep-1', doctor_id: 'd1', outcome: 'escalated', turn_count: 1, difficulty: 'realistic' }))
   })
 
   // --- live difficulty vocabulary (C1) ---
@@ -132,7 +132,7 @@ describe('POST /api/voice-partner/live-judge', () => {
   })
 
   // --- client-supplied sessionId (C2) ---
-  it('backfills conversation_turns under the client-supplied sessionId', async () => {
+  it('backfills conversation_turns under the client-supplied sessionId (written by the server, not as the rep)', async () => {
     vi.stubEnv('AI_VOICE_PARTNER_LIVE_ENABLED', 'true'); vi.stubEnv('ANTHROPIC_API_KEY', 'key')
     const insert = vi.fn(async (_rows: unknown) => ({ error: null }))
     vi.mocked(createClient).mockResolvedValue(mockSupabase(doctor, 'rep-1', insert) as never)
@@ -140,7 +140,7 @@ describe('POST /api/voice-partner/live-judge', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ content: [{ text: '{"objectionType":"doubt","outcome":"won","clearSteps":[]}' }] })))
     const sessionId = '11111111-2222-4333-8444-555555555555'
     await POST(request({ doctorId: 'd1', sessionId, transcript: [{ role: 'doctor', text: 'Too busy.' }, { role: 'rep', text: 'Understood.' }] }))
-    const rows = insert.mock.calls[0][0] as unknown as { session_id: string; turn_index: number }[]
+    const rows = adminInsert.mock.calls[0][0] as unknown as { session_id: string; turn_index: number }[]
     expect(rows).toHaveLength(2)
     expect(rows.every(r => r.session_id === sessionId)).toBe(true)
   })
@@ -151,7 +151,7 @@ describe('POST /api/voice-partner/live-judge', () => {
     vi.mocked(checkRateLimit).mockResolvedValue(true)
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ content: [{ text: '{"objectionType":"doubt","outcome":"won","clearSteps":[]}' }] })))
     await POST(request({ doctorId: 'd1', transcript: [{ role: 'rep', text: 'Understood.' }] }))
-    const rows = insert.mock.calls[0][0] as unknown as { session_id: string }[]
+    const rows = adminInsert.mock.calls[0][0] as unknown as { session_id: string }[]
     expect(rows[0].session_id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
   })
   it('rejects a malformed sessionId rather than writing it as a row id', async () => {

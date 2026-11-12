@@ -110,6 +110,8 @@ class VoicePartnerJudgeProcessor(FrameProcessor):
             "repText": rep_text,
             "objectionType": self._session["objectionType"],
             "state": json.dumps(self._state),
+            # The turn route stores the session result itself once the judge resolves it.
+            "difficulty": self._session.get("difficulty") or "",
             "clearStepsHit": json.dumps(self._clear_steps_hit),
         }
         if rep_started_at is not None:
@@ -142,9 +144,9 @@ class VoicePartnerJudgeProcessor(FrameProcessor):
         await self.push_frame(TTSSpeakFrame(data["doctorText"]))
 
         if data["outcome"] != "continue":
-            await self._resolve_session(data["outcome"], data.get("resultToken"))
+            await self._resolve_session(data["outcome"])
 
-    async def _resolve_session(self, outcome: str, result_token: str | None):
+    async def _resolve_session(self, outcome: str):
         await self._client.post("/api/voice-partner/session-result", json={
             "doctorId": self._session["doctorId"],
             "sessionId": self._session["sessionId"],
@@ -153,8 +155,6 @@ class VoicePartnerJudgeProcessor(FrameProcessor):
             "clearSteps": self._clear_steps_hit,
             "turnCount": self._turn_count,
             "difficulty": self._session.get("difficulty"),
-            # Signed by the turn route; session-result refuses a result without it.
-            "resultToken": result_token,
         })
         await self._broadcast({"type": "outcome", "outcome": outcome, "state": self._state})
         await asyncio.sleep(2)  # let the final TTS line finish playing

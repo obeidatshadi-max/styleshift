@@ -97,7 +97,7 @@ export default function VoicePartnerLive({ doctor, onDone }: Props) {
         method: 'POST', headers: { 'content-type': 'application/json' }, signal: controller.signal,
         body: JSON.stringify({ doctorId: doctor.id, sessionId, objectionType: data.objectionType,
           outcome: data.outcome, clearSteps: data.clearSteps, turnCount: data.turnCount,
-          difficulty: persistableDifficulty(difficulty), resultToken: data.resultToken }),
+          difficulty: persistableDifficulty(difficulty) }),
       }).then(r => r.ok).catch(() => false)
       setResult({ outcome: data.outcome, meta, sessionId, saved })
       if (saved && data.outcome === 'won') void awardXpOnWin().catch(() => {})

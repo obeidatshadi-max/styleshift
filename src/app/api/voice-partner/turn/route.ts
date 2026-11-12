@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
-import { signResultToken } from '@/lib/voice-partner-result-token'
+import { priorRepTurns, recordResolvedSession } from '@/lib/voice-partner-session-store'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { authenticateVoicePartnerRequest } from '@/lib/voice-partner-auth'
 import { buildHistoryContext } from '@/lib/doctor-context'
 import {
   SYSTEM, TURN_CAP, buildJudgePrompt, parseJudgeResponse, resolveTurn, isObjectionType, transcribeAudio,
-  applyStateDelta, isPhysicianState, isClearStep, type VoicePartnerTurn, type ClearStep,
+  applyStateDelta, isPhysicianState, isClearStep, isDifficulty, type VoicePartnerTurn, type ClearStep,
 } from '@/lib/voice-partner-core'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { validateAudioUpload } from '@/lib/audio-upload'
@@ -88,6 +88,7 @@ export async function POST(req: Request) {
   const repStartedAt = typeof repStartedAtRaw === 'string' && !Number.isNaN(Date.parse(repStartedAtRaw)) ? repStartedAtRaw : null
   const repEndedAt = typeof repEndedAtRaw === 'string' && !Number.isNaN(Date.parse(repEndedAtRaw)) ? repEndedAtRaw : null
 
+  const difficultyRaw = form.get('difficulty')
   const objectionTypeRaw = form.get('objectionType')
   if (typeof objectionTypeRaw !== 'string' || !isObjectionType(objectionTypeRaw)) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
@@ -168,12 +169,16 @@ export async function POST(req: Request) {
 
   const outcome = resolveTurn(turnCount, judged.personaState)
   const nextState = applyStateDelta(state, judged.stateDelta)
+  const admin = createAdminClient()
+  // Read before this turn's rows are written: what the server itself stored for this session.
+  const prior = outcome === 'continue' ? null : await priorRepTurns(admin, sessionId, user.id)
 
   // Best-effort evidence store (see open/route.ts's insert for the same
   // rationale) — insert the rep's line and the doctor's reply as two rows,
   // never blocking the turn response on it.
   const baseIndex = history.length
-  const { error: turnInsertError } = await supabase.from('conversation_turns').insert([
+  // Service role: reps have no insert right on conversation_turns (see voice-partner-session-store.ts).
+  const { error: turnInsertError } = await admin.from('conversation_turns').insert([
     {
       session_id: sessionId, rep_id: user.id, doctor_id: doctorId, turn_index: baseIndex,
       role: 'rep', text: repText, objection_type: objectionTypeRaw, clear_steps_hit: judged.clearSteps,
@@ -189,15 +194,20 @@ export async function POST(req: Request) {
   ])
   if (turnInsertError) console.warn('conversation_turns insert failed (turn):', turnInsertError.message)
 
-  // When the judge resolves the session, sign what it decided; session-result only stores a
-  // signed result. clearSteps = the client's running set plus this turn's, as the client merges them.
-  const resultToken = outcome === 'continue' ? undefined : signResultToken({
-    userId: user.id, doctorId, sessionId, objectionType: objectionTypeRaw, outcome, turnCount,
-    clearSteps: [...clearStepsHit, ...judged.clearSteps],
-  }) ?? undefined
+  // The judge resolved the session: the server stores the result itself, so a loss is kept
+  // whether or not the browser reports it. Turn count and CLEAR steps come from the rows the
+  // server stored, not from the browser. Only a session this server opened for this rep counts.
+  let saved: boolean | undefined
+  if (outcome !== 'continue' && prior) {
+    saved = prior.started && (await recordResolvedSession(admin, {
+      id: sessionId, repId: user.id, doctorId, style: (doctor as Doctor).style, objectionType: objectionTypeRaw, outcome,
+      clearSteps: [...prior.clearSteps, ...judged.clearSteps], turnCount: prior.count + 1,
+      difficulty: isDifficulty(difficultyRaw) ? difficultyRaw : null,
+    })) !== 'failed'
+  }
 
   return NextResponse.json({
     repText, doctorText: judged.doctorReply, outcome, turnCount, clearSteps: judged.clearSteps, state: nextState, vocalFeedback,
-    ...(resultToken ? { resultToken } : {}),
+    ...(saved !== undefined ? { saved } : {}),
   })
 }

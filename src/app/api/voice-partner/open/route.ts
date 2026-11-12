@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { createClient } from '@/lib/supabase-server'
 import { buildHistoryContext } from '@/lib/doctor-context'
 import {
@@ -79,7 +80,9 @@ export async function POST(req: Request) {
   // Best-effort: the evidence store must never block live practice. A
   // missing turn-0 row just means Phase 2+ analysis has a gap for this one
   // session; the client still gets its opening line either way.
-  const { error: turnInsertError } = await supabase.from('conversation_turns').insert({
+  // Written with the service role: reps have no insert right on conversation_turns (the server
+  // reads these rows back to rebuild turn count and CLEAR steps). rep_id is the authenticated user.
+  const { error: turnInsertError } = await createAdminClient().from('conversation_turns').insert({
     session_id: sessionId, rep_id: user.id, doctor_id: body.doctorId, turn_index: 0,
     role: 'doctor', text: doctorText, objection_type: objectionType, clear_steps_hit: [],
     trust: state.trust, skepticism: state.skepticism, engagement: state.engagement, time_pressure: state.timePressure,

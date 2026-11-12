@@ -22,7 +22,10 @@ export const EVALUATOR_SYSTEM = 'You are an objective sales-coaching evaluator, 
  * or grounding, so the validation pilot never pools scores from two versions. */
 export const EVALUATOR_PROMPT_VERSION = 'eval-2.0.0'
 export const EVALUATOR_MODEL = 'claude-haiku-4-5-20251001'
-export const EVALUATOR_MAX_TOKENS = 2000
+// 2000 was too small: the 16 scored dimensions plus critical moments ran past it and the JSON
+// was cut off on 85 of 100 benchmark runs (every Arabic one), so Deep Analysis returned 422.
+// Measured 2026-11-12, docs/validation/repeat-run-2026-11-12.md.
+export const EVALUATOR_MAX_TOKENS = 6000
 export const EVALUATOR_RETRY_NOTE = '\n\nYour previous response was not valid JSON matching the exact shape requested. Return ONLY the JSON object, exactly as specified, with no markdown fences and no other text.'
 
 // ───────────────────────── ConversationObserver ─────────────────────────
@@ -324,7 +327,7 @@ ${transcript}
 Objective signals already computed from the transcript (for your context, not for you to re-derive): ${signals.repTurnCount} rep turns, ${signals.questionCount} questions asked (${signals.openQuestionCount} open, ${signals.closedQuestionCount} closed), CLEAR steps hit: ${signals.clearStepsSequence.join(', ') || 'none'}.
 
 Score these ${COMPETENCY_DIMENSIONS.length} dimensions: ${dims}.
-For each dimension, return a 0-100 score ONLY if the transcript actually gives you evidence for it — if this specific transcript doesn't exercise a dimension (e.g. the session ended before any closing attempt), return score: null and explain why in rationale rather than guessing a number. Cite 1-3 turnRefs (the [N] numbers above) that support your score — never cite a number not shown above.
+For each dimension, return a 0-100 score ONLY if the transcript actually gives you evidence for it — if this specific transcript doesn't exercise a dimension (e.g. the session ended before any closing attempt), return score: null and explain why in rationale rather than guessing a number. Cite 1-3 turnRefs (the [N] numbers above) that support your score — never cite a number not shown above. Keep every rationale to ONE short sentence (at most 20 words).
 
 ${EVALUATOR_ANCHORS}
 

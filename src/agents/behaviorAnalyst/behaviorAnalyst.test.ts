@@ -135,7 +135,6 @@ describe('behavior analyst agent', () => {
   })
 })
 
-claude/repeat-run-test
 describe('production analyst request', () => {
   it('runs at temperature 0 (repeat-run benchmark, 2026-11-12)', async () => {
     vi.stubEnv('ANTHROPIC_API_KEY', 'test-key')
@@ -145,6 +144,9 @@ describe('production analyst request', () => {
     await createDefaultBehaviorAnalystAgent()!.analyze(finished())
     expect(JSON.parse(fetcher.mock.calls[0][1].body).temperature).toBe(0)
     vi.unstubAllEnvs(); vi.unstubAllGlobals()
+  })
+})
+
 describe('Arabic parity (validation audit 2026-11-12, item 4)', () => {
   const arTurns = [turn(0, 'doctor', 'شنو عندك اليوم؟'), turn(1, 'rep', 'دكتور، شنو أكثر شي يقلقك بمرضى الضغط؟')]
   const obs = (quote: string, observation = 'سأل المندوب سؤالاً مفتوحاً عن مخاوف الطبيب.') => ({ observations: [{
@@ -164,6 +166,5 @@ describe('Arabic parity (validation audit 2026-11-12, item 4)', () => {
     expect(groundObservations(obs('شنو اكثر شي يقلقك', 'كان المفروض يسأل عن المرضى قبل العرض.'), arTurns)!.observations).toHaveLength(0)
     expect(looksLikeCoaching('في المرة القادمة اسأل أولاً')).toBe(true)
     expect(looksLikeCoaching('حاول المندوب أن يشرح الفائدة')).toBe(false) // past tense description, not advice
-main
   })
 })

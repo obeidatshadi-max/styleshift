@@ -135,6 +135,14 @@ describe('groundCoaching', () => {
     expect(groundCoaching({ points: [{ ...goodText('c1'), objectiveId: 'made-up' }] }, cands, s.learningObjectives)!.coaching[0].objectiveId).toBeNull()
   })
 
+  it('mentionsScore catches Arabic score talk and Arabic-Indic percentages', () => {
+    expect(mentionsScore('قل للطبيب إن ٦٠٪ من المرضى تحسنوا')).toBe(true)
+    expect(mentionsScore('تحسن ٦٠ ٪ من المرضى')).toBe(true)
+    expect(mentionsScore('درجتك كانت منخفضة في هذا الجزء')).toBe(true)
+    expect(mentionsScore('حصلت على ٧ من ١٠')).toBe(true)
+    expect(mentionsScore('اسأل الطبيب أولاً عن أكثر مريض يقلقه')).toBe(false)
+    expect(mentionsScore('جرّب جرعة واحدة يومياً لمدة أسبوع')).toBe(false)
+  })
   it('mentionsScore is precise', () => {
     expect(mentionsScore('7/10 overall')).toBe(true)
     expect(mentionsScore('Ask what matters to them first.')).toBe(false)

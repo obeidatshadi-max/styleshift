@@ -1,21 +1,34 @@
 import { isCompetency, isDirection, type EvidenceRef, type Observation } from '@/schemas/observation'
 import type { TranscriptTurn } from '@/schemas/session'
 import { behaviorIndex, defaultScoringConfig, type ScoringConfig } from '@/scoring/config'
+import { normalizeForMatch as normalizeArabic } from '@/lib/arabic-normalize'
 
 export const MAX_OBSERVATIONS = 15
 const MIN_QUOTE_CHARS = 3
 
-/** Advisory phrasing the analyst must never emit. English-only screen; the
- * prompt forbids it in every language, this catches the obvious slips. */
+/** Advisory phrasing the analyst must never emit. The prompt forbids it in every
+ * language; these screens catch the obvious slips in English and Arabic. */
 const COACHING_RE = /\b(should|could have|would have|ought to|needs? to|try (to|asking|using)|next time|i recommend|recommend(ed|s)?|consider (asking|using|trying))\b/i
+// Matched on arabic-normalize output (alef/ya/ta-marbuta folded, punctuation to spaces).
+// "حاول"/"جرب" are left out on purpose: the same spelling is past tense ("the rep tried").
+const COACHING_AR = [
+  'كان يجب', 'كان ينبغي', 'كان لازم', 'كان المفروض', 'كان من المفروض', 'كان من الافضل', 'كان الافضل',
+  'المره الجايه', 'المره الجاي', 'المره القادمه', 'انصح', 'انصحك', 'نصيحتي', 'اوصي',
+  'يجب ان', 'ينبغي ان', 'عليك ان', 'عليه ان', 'يفضل ان', 'من الافضل ان',
+]
 
 export function looksLikeCoaching(text: string): boolean {
-  return COACHING_RE.test(text)
+  if (COACHING_RE.test(text)) return true
+  const t = ` ${normalizeArabic(text)} `
+  return COACHING_AR.some(p => t.includes(` ${p} `) || t.includes(` و${p} `))
 }
 
-/** Whitespace/case/quote-insensitive form used only to compare quotes. */
+/** Form used only to compare quotes: case, quote marks, whitespace, Arabic
+ * diacritics, hamza/alef/ya/ta-marbuta spelling variants, Iraqi letters and
+ * Arabic-Indic digits are all folded (lib/arabic-normalize), so a quote that
+ * differs from the transcript only in spelling variants still grounds. */
 export function normalizeForMatch(s: string): string {
-  return s.toLowerCase().replace(/[‘’“”"'`«»]/g, '').replace(/\s+/g, ' ').trim()
+  return normalizeArabic(s.replace(/[‘’“”`]/g, ''))
 }
 
 export function extractJson(text: string): unknown | null {

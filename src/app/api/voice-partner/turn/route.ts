@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { priorRepTurns, recordResolvedSession } from '@/lib/voice-partner-session-store'
+import { sessionState, recordResolvedSession } from '@/lib/voice-partner-session-store'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { authenticateVoicePartnerRequest } from '@/lib/voice-partner-auth'
@@ -140,7 +140,15 @@ export async function POST(req: Request) {
       ])
   if (!repText) return NextResponse.json({ error: 'upstream' }, { status: 502 })
 
-  const turnCount = history.filter(h => h.role === 'rep').length + 1
+  // The session as the server stored it. A turn must belong to a session this server opened for
+  // this rep and this doctor, and a resolved session takes no more turns. When the opening row is
+  // missing (its insert is best-effort) practice continues, but no result is stored for it.
+  const admin = createAdminClient()
+  const stored = await sessionState(admin, sessionId, user.id)
+  if (stored.started && stored.doctorId !== doctorId) return NextResponse.json({ error: 'session_mismatch' }, { status: 409 })
+  if (stored.resolved || (stored.started && stored.count >= TURN_CAP)) return NextResponse.json({ error: 'session_resolved' }, { status: 409 })
+  // Turn count comes from the server's rows when it has them, never from the resent history.
+  const turnCount = (stored.started ? stored.count : history.filter(h => h.role === 'rep').length) + 1
   const ihiaContext = await voiceVocabulary(supabase)
   const prompt = buildJudgePrompt(
     doctor as Doctor, style, lang, historyContext, history, repText, turnCount, objectionTypeRaw, state, clarifyUnlocked,
@@ -169,14 +177,11 @@ export async function POST(req: Request) {
 
   const outcome = resolveTurn(turnCount, judged.personaState)
   const nextState = applyStateDelta(state, judged.stateDelta)
-  const admin = createAdminClient()
-  // Read before this turn's rows are written: what the server itself stored for this session.
-  const prior = outcome === 'continue' ? null : await priorRepTurns(admin, sessionId, user.id)
 
   // Best-effort evidence store (see open/route.ts's insert for the same
   // rationale) — insert the rep's line and the doctor's reply as two rows,
   // never blocking the turn response on it.
-  const baseIndex = history.length
+  const baseIndex = stored.started ? stored.rowCount : history.length
   // Service role: reps have no insert right on conversation_turns (see voice-partner-session-store.ts).
   const { error: turnInsertError } = await admin.from('conversation_turns').insert([
     {
@@ -198,10 +203,10 @@ export async function POST(req: Request) {
   // whether or not the browser reports it. Turn count and CLEAR steps come from the rows the
   // server stored, not from the browser. Only a session this server opened for this rep counts.
   let saved: boolean | undefined
-  if (outcome !== 'continue' && prior) {
-    saved = prior.started && (await recordResolvedSession(admin, {
+  if (outcome !== 'continue') {
+    saved = stored.started && (await recordResolvedSession(admin, {
       id: sessionId, repId: user.id, doctorId, style: (doctor as Doctor).style, objectionType: objectionTypeRaw, outcome,
-      clearSteps: [...prior.clearSteps, ...judged.clearSteps], turnCount: prior.count + 1,
+      clearSteps: [...stored.clearSteps, ...judged.clearSteps], turnCount,
       difficulty: isDifficulty(difficultyRaw) ? difficultyRaw : null,
     })) !== 'failed'
   }

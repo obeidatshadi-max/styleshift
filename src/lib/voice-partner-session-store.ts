@@ -14,15 +14,36 @@ import { isClearStep, type ClearStep, type ObjectionType } from '@/lib/voice-par
 
 type Admin = ReturnType<typeof createAdminClient>
 
-/** The rep turns the server itself stored for this session so far. `started` is false when
- * the server never opened this session for this rep (no turn rows at all). */
-export async function priorRepTurns(admin: Admin, sessionId: string, repId: string): Promise<{ started: boolean; count: number; clearSteps: ClearStep[] }> {
-  const { data } = await admin.from('conversation_turns').select('role, clear_steps_hit')
-    .eq('session_id', sessionId).eq('rep_id', repId)
-  const rows = (data ?? []) as { role: string; clear_steps_hit: unknown }[]
+export interface SessionState {
+  /** The server opened this session for this rep (it stored at least one turn row). */
+  started: boolean
+  /** Doctor of the session's first stored row, or null when not started. */
+  doctorId: string | null
+  /** Turn rows the server stored: the next turn's index. */
+  rowCount: number
+  /** Rep turns the server stored. */
+  count: number
+  clearSteps: ClearStep[]
+  /** The judge already resolved this session (its result row exists). */
+  resolved: boolean
+}
+
+/** What the server itself stored for this session so far. Everything here comes from rows
+ * written with the service role, never from what the browser resends. */
+export async function sessionState(admin: Admin, sessionId: string, repId: string): Promise<SessionState> {
+  const [turns, result] = await Promise.all([
+    admin.from('conversation_turns').select('turn_index, role, clear_steps_hit, doctor_id')
+      .eq('session_id', sessionId).eq('rep_id', repId),
+    admin.from('voice_partner_sessions').select('id').eq('id', sessionId).maybeSingle(),
+  ])
+  const rows = ((turns.data ?? []) as { turn_index: number; role: string; clear_steps_hit: unknown; doctor_id: string | null }[])
+    .sort((a, b) => a.turn_index - b.turn_index)
   const rep = rows.filter(r => r.role === 'rep')
   const steps = rep.flatMap(r => (Array.isArray(r.clear_steps_hit) ? r.clear_steps_hit.filter(isClearStep) : []))
-  return { started: rows.length > 0, count: rep.length, clearSteps: [...new Set(steps)] }
+  return {
+    started: rows.length > 0, doctorId: rows[0]?.doctor_id ?? null, rowCount: rows.length,
+    count: rep.length, clearSteps: [...new Set(steps)], resolved: !!result.data,
+  }
 }
 
 export interface ResolvedSession {

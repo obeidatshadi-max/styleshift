@@ -5,6 +5,19 @@ import { STYLES } from '@/lib/game-data'
 import type { PressureShiftResult } from '@/lib/pressure-shift'
 import { computeRealtimeSignals, type RealtimeSignals } from '@/lib/voice-partner-timing'
 
+// ───────────────────────── Evaluator request ─────────────────────────
+// The exact request /api/voice-partner/session-analysis sends. Kept here, not in the
+// route, so tools/benchmark repeat runs score with the same prompt the product uses.
+
+// Same hard guardrail as the live judge/opening prompts (voice-partner-core's
+// SYSTEM) — this call only coaches communication style from a given
+// transcript, but rationale/alternative text must not drift into inventing
+// clinical claims that were never in the conversation.
+export const EVALUATOR_SYSTEM = 'You are an objective sales-coaching evaluator, not a clinician. Score and comment on COMMUNICATION STYLE only. NEVER invent clinical data, efficacy numbers, statistics, trial results, or real/branded drug names — refer to evidence only as generically as the transcript itself does. Output ONLY a single valid JSON object, no markdown fences, no commentary.'
+export const EVALUATOR_MODEL = 'claude-haiku-4-5-20251001'
+export const EVALUATOR_MAX_TOKENS = 2000
+export const EVALUATOR_RETRY_NOTE = '\n\nYour previous response was not valid JSON matching the exact shape requested. Return ONLY the JSON object, exactly as specified, with no markdown fences and no other text.'
+
 // ───────────────────────── ConversationObserver ─────────────────────────
 // Phase 2 ("every score has evidence" — docs/ai-doctor-phase-1-plan.md's
 // Deferred list). Pure, deterministic signal extraction from the persisted

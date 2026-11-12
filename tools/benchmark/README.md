@@ -28,6 +28,19 @@ npx vite-node --config vitest.config.ts tools/benchmark/run.ts -- fixtures      
 
 Results go to `tools/benchmark/out/<run>/` (git-ignored). A run resumes if interrupted. The run checks every model id and setting with one tiny request before spending anything.
 
+## Repeat-run reliability
+
+Scores the same fixtures several times with identical input and reports how much each score moves. Two scorers, each called exactly as production calls it: the Behavior Analyst plus the deterministic engine (text simulation), and the session evaluator (Deep Analysis, the AI side of the validation pilot).
+
+```
+npx vite-node --config vitest.config.ts tools/benchmark/run.ts -- repeat --dry-run
+npx vite-node --config vitest.config.ts tools/benchmark/run.ts -- repeat --models "claude-haiku-4-5-20251001,claude-haiku-4-5-20251001@t=0" --repeats 5 --limit 20 --run-id R --env-file <env>
+```
+
+Defaults: 20 fixtures drawn evenly from English, Iraqi and code-switched; 5 repeats; both scorers (`--arm analyst|evaluator` to pick one). `@t=0` sets temperature 0; without it the provider default applies, as in production today. Output: `out/<run>/REPEAT-REPORT.md` and `repeat-summary.json`.
+
+Per dimension it reports mean, 90th-percentile and max spread (sample standard deviation across repeats, in points), the share of fixtures whose range exceeds the improvement engine's 5-point noise floor, and how often a score flips between "not observable" and a number. For the analyst it also reports how often the first coaching point changes and how much the found behavior sets overlap. Verdict STABLE = mean spread under 2 points on every dimension and 90th percentile under 5.
+
 ## Blind review
 
 `review` writes `review.html` (no model names inside) and `review-key.json` (keep it back). Give the colleague only `review.html`. They score each output 1-5 on six criteria and press Export CSV. Pass that file to `report --review`, which unblinds by joining with the key.

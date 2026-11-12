@@ -161,23 +161,34 @@ export function pairedBootstrap(diffs: number[], iters = 4000, seed = 1): { mean
 // ───────────────────────────── model variants ─────────────────────────────
 
 /** A benchmark "model" is a model id plus optional settings, written
- * `claude-haiku-5-5@effort=low@mt=2`. Everything after the first @ is a setting. */
+ * `claude-haiku-5-5@effort=low@mt=2@t=0`. Everything after the first @ is a setting.
+ * `t` sets the request temperature; without it the provider default applies, which
+ * is what production does today (no route sets temperature). */
 export function baseModel(spec: string): string {
   return spec.split('@')[0]
 }
 
-export interface VariantSettings { model: string; effort: string | null; maxTokensMultiplier: number | null }
+export interface VariantSettings { model: string; effort: string | null; maxTokensMultiplier: number | null; temperature: number | null }
 
 export function parseVariant(spec: string): VariantSettings {
   const [model, ...rest] = spec.split('@')
-  let effort: string | null = null, mt: number | null = null
+  let effort: string | null = null, mt: number | null = null, temperature: number | null = null
   for (const part of rest) {
     const [k, v] = part.split('=')
     if (k === 'effort' && v) effort = v
     else if (k === 'mt' && Number(v) > 0) mt = Number(v)
-    else throw new Error(`Unknown variant setting "${part}" in "${spec}" (use effort=low|medium|high or mt=<number>)`)
+    else if (k === 't' && v !== undefined && v !== '' && Number(v) >= 0 && Number(v) <= 1) temperature = Number(v)
+    else throw new Error(`Unknown variant setting "${part}" in "${spec}" (use effort=low|medium|high, mt=<number> or t=<0..1>)`)
   }
-  return { model, effort, maxTokensMultiplier: mt }
+  return { model, effort, maxTokensMultiplier: mt, temperature }
+}
+
+/** The request fields a variant adds on top of model and max_tokens. */
+export function variantExtraBody(v: VariantSettings): Record<string, unknown> | undefined {
+  const body: Record<string, unknown> = {}
+  if (v.effort) body.output_config = { effort: v.effort }
+  if (v.temperature !== null) body.temperature = v.temperature
+  return Object.keys(body).length ? body : undefined
 }
 
 // ───────────────────────────── cost ─────────────────────────────

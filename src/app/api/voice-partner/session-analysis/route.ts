@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
 import {
   computeSessionSignals, buildEvaluatorPrompt, parseEvaluatorResponse, groundEvaluatorResult,
-  resolveDoctorStyleProfile,
+  resolveDoctorStyleProfile, EVALUATOR_SYSTEM, EVALUATOR_MODEL, EVALUATOR_MAX_TOKENS, EVALUATOR_RETRY_NOTE,
 } from '@/lib/session-evaluator'
 import { computePressureShift } from '@/lib/pressure-shift'
 import type { ConversationTurn, Doctor } from '@/types/game'
@@ -13,22 +13,14 @@ function isUuid(value: unknown): value is string {
   return typeof value === 'string' && UUID_RE.test(value)
 }
 
-const RETRY_NOTE = '\n\nYour previous response was not valid JSON matching the exact shape requested. Return ONLY the JSON object, exactly as specified, with no markdown fences and no other text.'
-
-// Same hard guardrail as the live judge/opening prompts (voice-partner-core's
-// SYSTEM) — this call only coaches communication style from a given
-// transcript, but rationale/alternative text must not drift into inventing
-// clinical claims that were never in the conversation.
-const SYSTEM = 'You are an objective sales-coaching evaluator, not a clinician. Score and comment on COMMUNICATION STYLE only. NEVER invent clinical data, efficacy numbers, statistics, trial results, or real/branded drug names — refer to evidence only as generically as the transcript itself does. Output ONLY a single valid JSON object, no markdown fences, no commentary.'
-
 async function callEvaluator(anthropicKey: string, prompt: string) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2000,
-      system: SYSTEM,
+      model: EVALUATOR_MODEL,
+      max_tokens: EVALUATOR_MAX_TOKENS,
+      system: EVALUATOR_SYSTEM,
       messages: [{ role: 'user', content: prompt }],
     }),
   })
@@ -99,7 +91,7 @@ export async function POST(req: Request) {
   let text = await callEvaluator(anthropicKey, prompt)
   let raw = text ? parseEvaluatorResponse(text) : null
   if (!raw) {
-    text = await callEvaluator(anthropicKey, prompt + RETRY_NOTE)
+    text = await callEvaluator(anthropicKey, prompt + EVALUATOR_RETRY_NOTE)
     raw = text ? parseEvaluatorResponse(text) : null
   }
   if (!raw) return NextResponse.json({ error: 'invalid' }, { status: 422 })
@@ -108,7 +100,7 @@ export async function POST(req: Request) {
 
   const { error: scorecardError } = await supabase.from('session_scorecards').upsert({
     session_id: sessionId, rep_id: user.id, doctor_id: doctorId,
-    competencies, signals, model: 'claude-haiku-4-5-20251001', updated_at: new Date().toISOString(),
+    competencies, signals, model: EVALUATOR_MODEL, updated_at: new Date().toISOString(),
     adaptation, adaptation_score: adaptationScore, adaptation_recommendation: adaptationRecommendation,
     doctor_style_profile: styleProfile,
     pressure_shift_turn_index: pressureShift?.moment.turnIndex ?? null,

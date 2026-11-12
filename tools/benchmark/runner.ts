@@ -8,9 +8,10 @@ import type { Observation } from '@/schemas/observation'
 import type { StyleShiftSession } from '@/schemas/session'
 import { behaviorIndex, defaultScoringConfig } from '@/scoring/config'
 import { scoreSession } from '@/scoring/engine'
+import { ADAPTATION_DIMENSIONS, COMPETENCY_DIMENSIONS } from '@/lib/session-evaluator'
 import { FIXTURES, toSession, type BenchFixture } from './fixtures'
 import {
-  coachLanguageOk, coachTextFields, doctorOnlyEvidenceCount, mean, parseVariant, scoreAgainstKey,
+  coachLanguageOk, coachTextFields, doctorOnlyEvidenceCount, mean, parseVariant, scoreAgainstKey, variantExtraBody,
   type AnalystRecord, type CallRecord, type CoachRecord, type FinalStatus,
 } from './metrics'
 
@@ -27,7 +28,7 @@ export function liveBackend(apiKey: string): Backend {
       const v = parseVariant(spec)
       return createAnthropicComplete(apiKey, {
         model: v.model, onUsage: u => onUsage({ ...u, model: spec }),
-        extraBody: v.effort ? { output_config: { effort: v.effort } } : undefined,
+        extraBody: variantExtraBody(v),
         maxTokensMultiplier: v.maxTokensMultiplier ?? undefined,
       })
     },
@@ -178,6 +179,16 @@ export function fakeBackend(): Backend {
     make(model, onUsage) {
       return async ({ prompt, system }) => {
         onUsage({ model, ok: true, inputTokens: Math.round(prompt.length / 4), outputTokens: 400, latencyMs: 5, stopReason: 'end_turn', status: 200, thinkingTokens: null })
+        if (system.includes('sales-coaching evaluator')) {
+          // Fixed scores, so a dry repeat run shows zero spread: it tests the plumbing only.
+          const dim = (score: number | null) => ({ score, turnRefs: [1], rationale: 'dry run' })
+          return JSON.stringify({
+            competencies: Object.fromEntries(COMPETENCY_DIMENSIONS.map((d, i) => [d, dim(i === 0 ? null : 50 + i)])),
+            adaptation: Object.fromEntries(ADAPTATION_DIMENSIONS.map((d, i) => [d, dim(60 + i)])),
+            adaptationRecommendation: 'dry run', criticalMoments: [{ turnIndex: 1, observedBehavior: 'dry run', missedOpportunity: null, alternative: null }],
+            pressureShiftInsight: '',
+          })
+        }
         if (system.includes('sales coach')) {
           const refs = [...new Set([...prompt.matchAll(/\[(c\d+)\]/g)].map(m => m[1]))]
           return JSON.stringify({ points: refs.map(ref => ({

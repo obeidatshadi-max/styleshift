@@ -61,6 +61,9 @@ export function groundCoaching(
       text[f] = v
     }
     if (!ok) { dropped++; continue }
+    // Optional: kept when present and clean, so a model that omits it never loses the whole point.
+    const success = typeof p.successLooksLike === 'string' ? p.successLooksLike.trim() : ''
+    const successLooksLike = success && success.length <= MAX_FIELD_CHARS && !mentionsScore(success) ? success : undefined
 
     used.add(candidate.ref)
     out.push({
@@ -70,6 +73,7 @@ export function groundCoaching(
       competency: candidate.competency,
       behavior: candidate.behavior,
       ...text,
+      ...(successLooksLike ? { successLooksLike } : {}),
       evidence: candidate.evidence,
       objectiveId: typeof p.objectiveId === 'string' && objectiveIds.has(p.objectiveId) ? p.objectiveId : null,
     })

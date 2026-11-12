@@ -81,3 +81,5 @@ The AI scores 0 to 100. To compare, the pilot converts those scores to 1 to 5 us
 ## 8. Versioning
 
 This rubric is `hrr-1.0.0`. Any change to the scale, anchors or domains creates a new version. Every rating records the version it used, and results are never pooled across versions without saying so.
+
+**AI evaluator version.** The session evaluator's prompt and grounding carry their own version (`EVALUATOR_PROMPT_VERSION` in `src/lib/session-evaluator.ts`, stored in each scorecard's `signals.evaluatorPromptVersion`). `eval-2.0.0` (2026-11-12) adds the shared context rules, the section 1 and 3 anchors with the section 6 bands, the "80+ needs two separate turns" and "no evidence = null" rules (enforced in code), and returns null for pace and warmth when there is no speech timing. Scorecards without a version predate it (`eval-1`). AI-human agreement is never pooled across evaluator versions.

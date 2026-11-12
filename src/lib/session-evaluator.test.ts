@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest'
 import {
   computeSessionSignals, buildEvaluatorPrompt, parseEvaluatorResponse, groundEvaluatorResult,
   resolveDoctorStyleProfile, COMPETENCY_DIMENSIONS, ADAPTATION_DIMENSIONS, type DoctorStyleProfile,
+  EVALUATOR_SYSTEM, EVALUATOR_PROMPT_VERSION,
 } from './session-evaluator'
+import { CONTEXT_COACHING_RULES } from './context-coaching'
 import type { ConversationTurn, Doctor } from '@/types/game'
 
 const evenProfile: DoctorStyleProfile = resolveDoctorStyleProfile({ style: null, style_driver: null, style_expressive: null, style_amiable: null, style_analytical: null })
@@ -206,7 +208,7 @@ describe('groundEvaluatorResult', () => {
     for (const dim of COMPETENCY_DIMENSIONS) competencies[dim] = { score: 80, turnRefs: [1, 999], rationale: 'ok' }
     const raw = {
       competencies: competencies as never,
-      adaptation: adaptationBlock({ pace: { score: 80, turnRefs: [1, 999], rationale: 'ok' } }) as never,
+      adaptation: adaptationBlock({ detail: { score: 80, turnRefs: [1, 999], rationale: 'ok' } }) as never,
       adaptationRecommendation: 'x',
       criticalMoments: [
         { turnIndex: 999, observedBehavior: 'invented', missedOpportunity: null, alternative: null },
@@ -215,7 +217,8 @@ describe('groundEvaluatorResult', () => {
     }
     const grounded = groundEvaluatorResult(raw, sampleSession)
     expect(grounded.competencies.opening.turnRefs).toEqual([1])
-    expect(grounded.adaptation.pace.turnRefs).toEqual([1])
+    expect(grounded.adaptation.detail.turnRefs).toEqual([1])
+    expect(grounded.competencies.opening.score).toBe(79) // 80+ needs two real turns; only one survived
     expect(grounded.criticalMoments).toHaveLength(1)
     expect(grounded.criticalMoments[0].turnIndex).toBe(3)
   })
@@ -267,9 +270,46 @@ describe('groundEvaluatorResult', () => {
     expect(moment.observedBehavior).toBe('strong recovery')
   })
 
+  it('applies the rubric band rules: no real turn means null, and 80+ needs two separate turns', () => {
+    const competencies: Record<string, unknown> = {}
+    for (const dim of COMPETENCY_DIMENSIONS) competencies[dim] = { score: 60, turnRefs: [1], rationale: '' }
+    competencies.opening = { score: 90, turnRefs: [1, 1], rationale: 'same turn twice' }
+    competencies.questioning = { score: 90, turnRefs: [1, 3], rationale: 'two turns' }
+    competencies.listening = { score: 30, turnRefs: [], rationale: 'no evidence cited' }
+    const raw = { competencies: competencies as never, adaptation: adaptationBlock() as never, adaptationRecommendation: 'x', criticalMoments: [] }
+    const g = groundEvaluatorResult(raw, sampleSession)
+    expect(g.competencies.opening.score).toBe(79)
+    expect(g.competencies.questioning.score).toBe(90)
+    expect(g.competencies.listening.score).toBeNull()
+    expect(g.competencies.closing.score).toBe(60)
+  })
+
+  it('never scores pace or warmth from a text transcript with no speech timing', () => {
+    const competencies: Record<string, unknown> = {}
+    for (const dim of COMPETENCY_DIMENSIONS) competencies[dim] = { score: 60, turnRefs: [1], rationale: '' }
+    const raw = {
+      competencies: competencies as never,
+      adaptation: adaptationBlock({ pace: { score: 70, turnRefs: [1, 3], rationale: 'fast' }, warmth: { score: 65, turnRefs: [1], rationale: 'warm' }, detail: { score: 70, turnRefs: [1], rationale: 'ok' } }) as never,
+      adaptationRecommendation: 'x', criticalMoments: [],
+    }
+    const g = groundEvaluatorResult(raw, sampleSession)
+    expect(g.adaptation.pace.score).toBeNull()
+    expect(g.adaptation.warmth.score).toBeNull()
+    expect(g.adaptation.detail.score).toBe(70)
+  })
+
+  it('carries the shared context rules, the rubric anchors and a prompt version', () => {
+    expect(EVALUATOR_SYSTEM).toContain(CONTEXT_COACHING_RULES)
+    expect(EVALUATOR_PROMPT_VERSION).toMatch(/^eval-\d+\.\d+\.\d+$/)
+    const prompt = buildEvaluatorPrompt(sampleSession, computeSessionSignals(sampleSession, false), resolveDoctorStyleProfile({ style: 'driver', style_driver: null, style_expressive: null, style_amiable: null, style_analytical: null }), 'en')
+    expect(prompt).toContain('0-19 = 1, 20-39 = 2, 40-59 = 3, 60-79 = 4, 80-100 = 5')
+    expect(prompt).toContain('Return score: null for both')
+    expect(prompt).not.toContain('a driver-leaning doctor wants brevity')
+  })
+
   it('clamps out-of-range scores and preserves null (insufficient data) scores', () => {
     const competencies: Record<string, unknown> = {}
-    for (const dim of COMPETENCY_DIMENSIONS) competencies[dim] = { score: 150, turnRefs: [], rationale: '' }
+    for (const dim of COMPETENCY_DIMENSIONS) competencies[dim] = { score: 150, turnRefs: [1, 3], rationale: '' }
     competencies.closing = { score: null, turnRefs: [], rationale: 'session ended before a close was attempted' }
     const raw = { competencies: competencies as never, adaptation: adaptationBlock() as never, adaptationRecommendation: 'x', criticalMoments: [] }
     const grounded = groundEvaluatorResult(raw, sampleSession)

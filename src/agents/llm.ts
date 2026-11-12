@@ -27,7 +27,8 @@ export interface CompleteUsage {
 export interface AnthropicCompleteOptions {
   /** Defaults to DEFAULT_AGENT_MODEL, so existing callers behave exactly as before. */
   model?: string
-  /** Extra top-level request fields, for example { output_config: { effort: 'low' } }. Benchmark only. */
+  /** Extra top-level request fields, for example { temperature: 0 } (the analyst, see ANALYST_REQUEST)
+   * or { output_config: { effort: 'low' } } (benchmark). */
   extraBody?: Record<string, unknown>
   /** Multiplies the caller's max_tokens. Haiku 5.5 counts thinking tokens against max_tokens. Benchmark only. */
   maxTokensMultiplier?: number

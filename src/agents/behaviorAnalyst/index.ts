@@ -43,7 +43,13 @@ export function createBehaviorAnalystAgent(complete: CompleteFn) {
   return { agent, analyze }
 }
 
+/** The analyst runs at temperature 0. Measured 2026-11-12 (tools/benchmark repeat run,
+ * 20 fixtures x 5 repeats, Haiku 4.5): at the provider default the app's first coaching
+ * point changed between repeats on 85% of fixtures and found behaviors overlapped 63%;
+ * at temperature 0, 5% and 98%. The doctor persona and the coach keep the default. */
+export const ANALYST_REQUEST = { extraBody: { temperature: 0 } } as const
+
 export function createDefaultBehaviorAnalystAgent() {
   const key = process.env.ANTHROPIC_API_KEY
-  return key ? createBehaviorAnalystAgent(createAnthropicComplete(key)) : null
+  return key ? createBehaviorAnalystAgent(createAnthropicComplete(key, ANALYST_REQUEST)) : null
 }

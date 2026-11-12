@@ -138,6 +138,8 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
       form.append('objectionType', objectionType)
       form.append('state', JSON.stringify(physicianState))
       form.append('clearStepsHit', JSON.stringify(clearStepsHit))
+      // The turn route stores the result itself when the judge resolves the session.
+      if (difficulty) form.append('difficulty', difficulty)
 
       const res = await fetch('/api/voice-partner/turn', { method: 'POST', body: form })
       if (res.status === 503) { setPhase('notconfigured'); logVoiceEvent('objection', lang, 'not_configured', { endpoint: 'turn' }); return }
@@ -182,7 +184,7 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
       setErrorKind('network')
       logVoiceEvent('objection', lang, 'network_error', { endpoint: 'turn' })
     }
-  }, [doctorId, lang, transcript, turnCount, awardXpOnWin, objectionType, clearStepsHit, saveSessionResult, recorder, sessionId, physicianState])
+  }, [doctorId, lang, transcript, turnCount, awardXpOnWin, objectionType, clearStepsHit, saveSessionResult, recorder, sessionId, physicianState, difficulty])
 
   const reset = useCallback(() => {
     recorder.abort()

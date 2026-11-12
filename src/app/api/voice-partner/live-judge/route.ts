@@ -1,5 +1,7 @@
 // src/app/api/voice-partner/live-judge/route.ts
 import { NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { recordResolvedSession } from '@/lib/voice-partner-session-store'
 import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { SYSTEM } from '@/lib/voice-partner-core'
@@ -97,10 +99,19 @@ export async function POST(req: Request) {
   // Best-effort evidence store, same rationale as turn/route.ts's insert —
   // never blocks the response on it.
   const sessionId = body.sessionId ?? crypto.randomUUID()
-  const { error: turnInsertError } = await supabase.from('conversation_turns').insert(
+  // Service role: reps have no insert right on conversation_turns or voice_partner_sessions.
+  const admin = createAdminClient()
+  const { error: turnInsertError } = await admin.from('conversation_turns').insert(
     transcriptToConversationTurns(transcript, { sessionId, repId: user.id, doctorId: body.doctorId, objectionType: judged.objectionType }),
   )
   if (turnInsertError) console.warn('conversation_turns insert failed (live-judge):', turnInsertError.message)
 
-  return NextResponse.json({ ...judged, turnCount })
+  // The judge's verdict is stored by the server, so the browser cannot choose to drop a loss
+  // or edit the outcome. The transcript itself still comes from the browser (known gap, W5).
+  const saved = (await recordResolvedSession(admin, {
+    id: sessionId, repId: user.id, doctorId: body.doctorId, style, objectionType: judged.objectionType, outcome: judged.outcome,
+    clearSteps: judged.clearSteps, turnCount, difficulty: isLiveDifficulty(body.difficulty) ? body.difficulty : null,
+  })) !== 'failed'
+
+  return NextResponse.json({ ...judged, turnCount, sessionId, saved })
 }

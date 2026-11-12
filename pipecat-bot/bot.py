@@ -110,6 +110,8 @@ class VoicePartnerJudgeProcessor(FrameProcessor):
             "repText": rep_text,
             "objectionType": self._session["objectionType"],
             "state": json.dumps(self._state),
+            # The turn route stores the session result itself once the judge resolves it.
+            "difficulty": self._session.get("difficulty") or "",
             "clearStepsHit": json.dumps(self._clear_steps_hit),
         }
         if rep_started_at is not None:

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { createClient } from '@/lib/supabase-server'
 import { isPhysicianState } from '@/lib/voice-partner-core'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -44,7 +45,9 @@ export async function POST(req: Request) {
   // Best-effort, same tolerance as open/route.ts's own turn_index=0 insert —
   // a missing row just means a gap in this one replay session's evidence,
   // never a reason to block the retry itself.
-  const { error: turnInsertError } = await supabase.from('conversation_turns').insert({
+  // Service role: reps have no insert right on conversation_turns. The source row was read
+  // through RLS above, so it is the rep's own.
+  const { error: turnInsertError } = await createAdminClient().from('conversation_turns').insert({
     session_id: sessionId, rep_id: user.id, doctor_id: row.doctor_id, turn_index: 0,
     role: 'doctor', text: row.text, objection_type: row.objection_type, clear_steps_hit: [],
     trust: state.trust, skepticism: state.skepticism, engagement: state.engagement, time_pressure: state.timePressure,

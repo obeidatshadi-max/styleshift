@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
+import { sessionState, recordResolvedSession } from '@/lib/voice-partner-session-store'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { authenticateVoicePartnerRequest } from '@/lib/voice-partner-auth'
 import { buildHistoryContext } from '@/lib/doctor-context'
 import {
   SYSTEM, TURN_CAP, buildJudgePrompt, parseJudgeResponse, resolveTurn, isObjectionType, transcribeAudio,
-  applyStateDelta, isPhysicianState, isClearStep, type VoicePartnerTurn, type ClearStep,
+  applyStateDelta, isPhysicianState, isClearStep, isDifficulty, type VoicePartnerTurn, type ClearStep,
 } from '@/lib/voice-partner-core'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { validateAudioUpload } from '@/lib/audio-upload'
@@ -87,6 +88,7 @@ export async function POST(req: Request) {
   const repStartedAt = typeof repStartedAtRaw === 'string' && !Number.isNaN(Date.parse(repStartedAtRaw)) ? repStartedAtRaw : null
   const repEndedAt = typeof repEndedAtRaw === 'string' && !Number.isNaN(Date.parse(repEndedAtRaw)) ? repEndedAtRaw : null
 
+  const difficultyRaw = form.get('difficulty')
   const objectionTypeRaw = form.get('objectionType')
   if (typeof objectionTypeRaw !== 'string' || !isObjectionType(objectionTypeRaw)) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
@@ -138,7 +140,15 @@ export async function POST(req: Request) {
       ])
   if (!repText) return NextResponse.json({ error: 'upstream' }, { status: 502 })
 
-  const turnCount = history.filter(h => h.role === 'rep').length + 1
+  // The session as the server stored it. A turn must belong to a session this server opened for
+  // this rep and this doctor, and a resolved session takes no more turns. When the opening row is
+  // missing (its insert is best-effort) practice continues, but no result is stored for it.
+  const admin = createAdminClient()
+  const stored = await sessionState(admin, sessionId, user.id)
+  if (stored.started && stored.doctorId !== doctorId) return NextResponse.json({ error: 'session_mismatch' }, { status: 409 })
+  if (stored.resolved || (stored.started && stored.count >= TURN_CAP)) return NextResponse.json({ error: 'session_resolved' }, { status: 409 })
+  // Turn count comes from the server's rows when it has them, never from the resent history.
+  const turnCount = (stored.started ? stored.count : history.filter(h => h.role === 'rep').length) + 1
   const ihiaContext = await voiceVocabulary(supabase)
   const prompt = buildJudgePrompt(
     doctor as Doctor, style, lang, historyContext, history, repText, turnCount, objectionTypeRaw, state, clarifyUnlocked,
@@ -171,8 +181,9 @@ export async function POST(req: Request) {
   // Best-effort evidence store (see open/route.ts's insert for the same
   // rationale) — insert the rep's line and the doctor's reply as two rows,
   // never blocking the turn response on it.
-  const baseIndex = history.length
-  const { error: turnInsertError } = await supabase.from('conversation_turns').insert([
+  const baseIndex = stored.started ? stored.rowCount : history.length
+  // Service role: reps have no insert right on conversation_turns (see voice-partner-session-store.ts).
+  const { error: turnInsertError } = await admin.from('conversation_turns').insert([
     {
       session_id: sessionId, rep_id: user.id, doctor_id: doctorId, turn_index: baseIndex,
       role: 'rep', text: repText, objection_type: objectionTypeRaw, clear_steps_hit: judged.clearSteps,
@@ -188,7 +199,20 @@ export async function POST(req: Request) {
   ])
   if (turnInsertError) console.warn('conversation_turns insert failed (turn):', turnInsertError.message)
 
+  // The judge resolved the session: the server stores the result itself, so a loss is kept
+  // whether or not the browser reports it. Turn count and CLEAR steps come from the rows the
+  // server stored, not from the browser. Only a session this server opened for this rep counts.
+  let saved: boolean | undefined
+  if (outcome !== 'continue') {
+    saved = stored.started && (await recordResolvedSession(admin, {
+      id: sessionId, repId: user.id, doctorId, style: (doctor as Doctor).style, objectionType: objectionTypeRaw, outcome,
+      clearSteps: [...stored.clearSteps, ...judged.clearSteps], turnCount,
+      difficulty: isDifficulty(difficultyRaw) ? difficultyRaw : null,
+    })) !== 'failed'
+  }
+
   return NextResponse.json({
     repText, doctorText: judged.doctorReply, outcome, turnCount, clearSteps: judged.clearSteps, state: nextState, vocalFeedback,
+    ...(saved !== undefined ? { saved } : {}),
   })
 }

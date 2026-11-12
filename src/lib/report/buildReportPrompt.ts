@@ -168,6 +168,7 @@ ${JSON.stringify(context.deterministicMetrics)}
 
 ${formatSignals('Counterpart social-style signals (deterministically detected)', counterpartSignals)}
 ${formatSignals('Rep social-style signals (deterministically detected)', repSignals)}
+A signal in category evidence_request (asking for evidence, data or a study) is ordinary clinical practice, not a sign of any social style. Never base a possibleStyle on evidence_request signals alone.
 
 Return a single JSON object in EXACTLY this shape${part === 'all' ? '' : ' (just these top-level keys; the rest of the report is produced separately)'}. Use these exact field names — a report with
 renamed or missing fields is discarded. ${REQUIRED_NOTE[part]} criticalMoments: max 5. Use [] or null when

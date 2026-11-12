@@ -52,7 +52,7 @@ describe('CallsSideBySide', () => {
     expect(cols[0].textContent).toContain('I have one minute.')
     expect(cols[0].textContent).toContain('Mentioned limited time')
     expect(cols[1].textContent).toContain('What does the data show?')
-    expect(cols[1].textContent).toContain('Mentioned evidence, data or a comparison')
+    expect(cols[1].textContent).toContain('Asked for evidence or more detail')
     expect(cols[2].textContent).toContain('No report for this call yet.')
   })
 
@@ -67,7 +67,7 @@ describe('CallsSideBySide', () => {
     wrap()
     const first = (await screen.findAllByTestId('call-column'))[0].textContent ?? ''
     expect(first).toContain('Mentioned limited time')
-    expect(first).toContain('Mentioned evidence, data or a comparison')
+    expect(first).toContain('Asked for evidence or more detail')
     expect(first.split('One minute, but leave the study.')).toHaveLength(2)
   })
 

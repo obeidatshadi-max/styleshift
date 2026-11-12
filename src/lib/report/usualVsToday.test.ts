@@ -41,14 +41,14 @@ const REP = seg(1, 'rep', 'Here is the one-page trial summary.')
 const THREE = [ONE_MINUTE, REP, seg(2, 'counterpart', 'Fine, go on.'), seg(3, 'rep', 'The main result is the lower event rate.')]
 
 describe('1. saved analytical tendency, explicit one-minute limit', () => {
-  const r = raw({ possibleStyle: 'analytical', strongestSignals: [sig(0, 'time_limit'), sig(0, 'detail_request')], alternativeExplanation: 'They may only be short of time today.', coachingCard: card },
+  const r = raw({ possibleStyle: 'analytical', strongestSignals: [sig(0, 'time_limit'), sig(0, 'evidence_request')], alternativeExplanation: 'They may only be short of time today.', coachingCard: card },
     { coachingCard: card })
   const s = view(r, THREE, ctx({ savedCounterpartStyle: 'analytical' }))
 
   it('keeps the saved tendency and shows the need for brevity as an observation, with the real quote', () => {
     expect(s.usualVsToday?.usual).toEqual({ style: 'analytical', source: 'rep_recorded' })
     const cats = s.usualVsToday!.observations.map(o => o.category)
-    expect(cats).toEqual(['time_limit', 'detail_request'])
+    expect(cats).toEqual(['time_limit', 'evidence_request'])
     for (const o of s.usualVsToday!.observations) expect(o.evidence.quote).toBe(ONE_MINUTE.text)
   })
   it('does not call it a changed trait, and offers an adjustment and a phrase', () => {
@@ -104,7 +104,7 @@ describe('3. no saved profile', () => {
 describe('4. mixed signals in one segment', () => {
   it('extracts each distinct category once, with the exact original wording', () => {
     const found = extractSocialSignals([ONE_MINUTE], 'counterpart')
-    expect(found.map(f => f.category).sort()).toEqual(['detail_request', 'time_limit'])
+    expect(found.map(f => f.category).sort()).toEqual(['evidence_request', 'time_limit'])
     for (const f of found) expect(f.text).toBe(ONE_MINUTE.text)
   })
   it('never counts a category twice for the same line, and keeps rep lines separate', () => {
@@ -113,12 +113,12 @@ describe('4. mixed signals in one segment', () => {
     expect(extractSocialSignals(lines, 'counterpart').every(f => f.evidence.speakerRole === 'counterpart')).toBe(true)
   })
   it('the view shows a repeated (line, category) once', () => {
-    const s = view(raw({ possibleStyle: null, strongestSignals: [sig(0, 'time_limit'), sig(0, 'time_limit'), sig(0, 'detail_request')] }), THREE, ctx())
-    expect(s.usualVsToday!.observations.map(o => o.category)).toEqual(['time_limit', 'detail_request'])
+    const s = view(raw({ possibleStyle: null, strongestSignals: [sig(0, 'time_limit'), sig(0, 'time_limit'), sig(0, 'evidence_request')] }), THREE, ctx())
+    expect(s.usualVsToday!.observations.map(o => o.category)).toEqual(['time_limit', 'evidence_request'])
   })
   it('understands Iraqi Arabic time limits and evidence requests, and stays quiet on ordinary clinical talk', () => {
     expect(extractSocialSignals([seg(0, 'counterpart', 'عندي دقيقة بس، اختصر لي')], 'counterpart').map(f => f.category)).toContain('time_limit')
-    expect(extractSocialSignals([seg(0, 'counterpart', 'شنو الدراسة اللي تدعم هذا؟')], 'counterpart').map(f => f.category)).toContain('detail_request')
+    expect(extractSocialSignals([seg(0, 'counterpart', 'شنو الدراسة اللي تدعم هذا؟')], 'counterpart').map(f => f.category)).toContain('evidence_request')
     expect(extractSocialSignals([seg(0, 'counterpart', 'What is the dose for a child?')], 'counterpart')).toEqual([])
   })
 })
@@ -217,5 +217,17 @@ describe('a colleague playing one of the rep saved doctors', () => {
   it('with no saved doctor chosen, shows no usual pattern at all', () => {
     const none = view(raw({ possibleStyle: 'driver', strongestSignals: [sig(0, 'time_limit')] }), THREE, ctx())
     expect(none.usualVsToday!.usual).toEqual({ style: null, source: 'none' })
+  })
+})
+
+describe('6. asking for evidence is not a style', () => {
+  it('drops a style claim whose only support is an evidence request', () => {
+    const lines = [seg(0, 'counterpart', 'Do you have a study on this?'), REP]
+    const s = view(raw({ possibleStyle: 'analytical', strongestSignals: [sig(0, 'evidence_request')] }), lines, ctx())
+    expect(s.customer.possibleStyle).toBeNull()
+  })
+  it('keeps a style claim that also has a non-evidence signal', () => {
+    const s = view(raw({ possibleStyle: 'analytical', strongestSignals: [sig(0, 'time_limit'), sig(0, 'evidence_request')] }), THREE, ctx())
+    expect(s.customer.possibleStyle).toBe('analytical')
   })
 })

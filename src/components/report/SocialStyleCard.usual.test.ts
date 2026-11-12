@@ -43,7 +43,7 @@ describe('usual pattern / this conversation / helpful adjustment, in English', (
     ] }))
     const text = screen.getByTestId('usual-today').textContent ?? ''
     expect(text).toContain('Mentioned limited time')
-    expect(text).toContain('Mentioned evidence, data or a comparison')
+    expect(text).toContain('Asked for evidence or more detail')
     expect(text.split(QUOTE)).toHaveLength(2)
   })
   it('words a difference from the profile neutrally', () => {

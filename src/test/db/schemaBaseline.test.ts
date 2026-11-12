@@ -24,13 +24,8 @@ const map = JSON.parse(readFileSync(join(BASELINE_DIR, 'migration-history-map.js
 
 /** Differences from production that are known and waiting for the owner to run a file in the SQL editor. */
 // Empty since the owner applied 030_ai_doctor_realtime_timing and 20261106150000_sessions_manager_read_fix on
-// 2026-11-06 and the snapshot was re-captured. Add an entry here only for a difference waiting on the owner.
-// Owner-pending: 20261112120000 drops the rep insert policies on these two tables. Apply it in the
-// SQL editor after the server-writes change is deployed, re-capture the snapshot, then empty this list.
-const KNOWN_TABLE_DRIFT: { table: string; parts: string[] }[] = [
-  { table: 'conversation_turns', parts: ['policies'] },
-  { table: 'voice_partner_sessions', parts: ['policies'] },
-]
+// 2026-11-06, and 20261112120000_voice_partner_sessions_server_only_insert on 2026-11-12, and the snapshot was re-captured. Add an entry here only for a difference waiting on the owner.
+const KNOWN_TABLE_DRIFT: { table: string; parts: string[] }[] = []
 const KNOWN_FUNCTION_DRIFT: string[] = []
 
 describe('schema baseline: files vs production snapshot', () => {
@@ -86,7 +81,6 @@ describe('migration history map', () => {
 
   it('no file marked recorded or unrecorded is a migration that changes production state without being applied', () => {
     const notApplied = Object.entries(map.files).filter(([, e]) => e.status === 'not-applied').map(([f]) => f)
-    // the owner applied the validation migration on 2026-11-06; the server-only insert one is pending (KNOWN_TABLE_DRIFT)
-    expect(notApplied).toEqual(['20261112120000_voice_partner_sessions_server_only_insert.sql'])
+    expect(notApplied).toEqual([])  // validation migration applied 2026-11-06; server-only insert applied 2026-11-12
   })
 })

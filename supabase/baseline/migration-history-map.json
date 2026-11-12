@@ -243,8 +243,8 @@
       "note": "applied by the owner in the SQL editor on 2026-11-06; not in the history table. Verified by fingerprint."
     },
     "20261112120000_voice_partner_sessions_server_only_insert.sql": {
-      "status": "not-applied",
-      "note": "written 2026-11-12; drops the rep insert policies on voice_partner_sessions and conversation_turns. Apply in the SQL editor AFTER the server-writes change is deployed (before that, the old routes still insert as the rep)."
+      "status": "unrecorded",
+      "note": "applied by the owner in the SQL editor on 2026-11-12 after the server-writes deploy; not in the history table. Verified: no INSERT policies remain on either table, and both tables' fingerprints were re-captured from production and match the files."
     }
   },
   "prodOnly": {

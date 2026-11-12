@@ -134,3 +134,15 @@ describe('behavior analyst agent', () => {
     expect(await createBehaviorAnalystAgent(vi.fn().mockResolvedValue('garbage')).analyze(finished())).toEqual({ error: 'invalid' })
   })
 })
+
+describe('production analyst request', () => {
+  it('runs at temperature 0 (repeat-run benchmark, 2026-11-12)', async () => {
+    vi.stubEnv('ANTHROPIC_API_KEY', 'test-key')
+    const fetcher = vi.fn().mockResolvedValue(Response.json({ content: [{ type: 'text', text: '{"observations":[]}' }], stop_reason: 'end_turn' }))
+    vi.stubGlobal('fetch', fetcher)
+    const { createDefaultBehaviorAnalystAgent } = await import('./index')
+    await createDefaultBehaviorAnalystAgent()!.analyze(finished())
+    expect(JSON.parse(fetcher.mock.calls[0][1].body).temperature).toBe(0)
+    vi.unstubAllEnvs(); vi.unstubAllGlobals()
+  })
+})

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { createAnthropicComplete } from '@/agents/llm'
-import { createBehaviorAnalystAgent } from '@/agents/behaviorAnalyst'
+import { createBehaviorAnalystAgent, ANALYST_REQUEST } from '@/agents/behaviorAnalyst'
 import { drillRegistry } from '@/lib/drill-templates'
 import { assessDrillResponse, drillSession, MAX_DRILL_RESPONSE_CHARS, observedBehaviors } from '@/lib/drill-run'
 import { retryState, summarizeDrillHistory } from '@/lib/drill-registry'
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   const today = attemptsToday(attempts, template.id, new Date())
   if (!retryState(template, today).canRetry) return NextResponse.json({ error: 'retry_limit' }, { status: 429 })
 
-  const analyst = createBehaviorAnalystAgent(createAnthropicComplete(key))
+  const analyst = createBehaviorAnalystAgent(createAnthropicComplete(key, ANALYST_REQUEST))
   const analysis = await analyst.analyze(drillSession(template, response, lang, user.id))
   // Zero grounded observations is indistinguishable from a bad model reply: say "could not assess", never score 0 by guess.
   if ('error' in analysis) return NextResponse.json({ error: 'could_not_assess' }, { status: 502 })

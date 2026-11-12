@@ -1,6 +1,6 @@
 import { createAnthropicComplete } from '@/agents/llm'
 import { createDoctorAgent } from '@/agents/doctor'
-import { createBehaviorAnalystAgent } from '@/agents/behaviorAnalyst'
+import { createBehaviorAnalystAgent, ANALYST_REQUEST } from '@/agents/behaviorAnalyst'
 import { createCoachAgent } from '@/agents/coach'
 import { createOrchestrator, type OrchestratorDeps, type OrchestratorOptions } from './index'
 import type { PersonaLoader, SessionStore } from './types'
@@ -17,7 +17,7 @@ export function createDefaultOrchestrator(
   return createOrchestrator({
     store, personas,
     doctor: createDoctorAgent(complete),
-    analyst: createBehaviorAnalystAgent(complete),
+    analyst: createBehaviorAnalystAgent(createAnthropicComplete(key, ANALYST_REQUEST)),
     coach: createCoachAgent(complete),
     ...extra,
   }, options)

@@ -2,14 +2,14 @@ import type { RoleplaySessionSummary } from '@/types/game'
 import { metricValue, SCALE, type RoleplayMetricKey } from './roleplay-aggregate'
 import { andButOnGoal } from './roleplay-language'
 import {
-  TALK_RATIO_THRESHOLD, ADAPTATION_THRESHOLD, QUESTION_RATIO_THRESHOLD,
+  TALK_RATIO_THRESHOLD, QUESTION_RATIO_THRESHOLD,
   OPEN_QUESTION_RATIO_THRESHOLD, PARAPHRASE_THRESHOLD, ACTIVE_LISTENING_THRESHOLD,
 } from './roleplay-insight'
 
 // Same order buildRoleplayInsight uses, so the "last time" tip here and the
 // Coach's Tip shown right after that session never disagree.
-const FOCUS_ORDER: RoleplayMetricKey[] = ['talkRatio', 'adaptationScore', 'questionRatio', 'openQuestionRatio', 'paraphraseScore', 'activeListening']
-const STRENGTH_ORDER: RoleplayMetricKey[] = ['activeListening', 'adaptationScore', 'openQuestionRatio', 'paraphraseScore', 'questionRatio', 'talkRatio']
+const FOCUS_ORDER: RoleplayMetricKey[] = ['talkRatio', 'questionRatio', 'openQuestionRatio', 'paraphraseScore', 'activeListening']
+const STRENGTH_ORDER: RoleplayMetricKey[] = ['activeListening', 'openQuestionRatio', 'paraphraseScore', 'questionRatio', 'talkRatio']
 
 /** A session's value for one metric as the rep sees it: percent, or a 0-100 score. */
 export function displayValue(s: RoleplaySessionSummary, key: RoleplayMetricKey): number | null {
@@ -17,16 +17,15 @@ export function displayValue(s: RoleplaySessionSummary, key: RoleplayMetricKey):
   return v == null ? null : Math.round(v * SCALE[key])
 }
 
-/** "%" for ratios, "/100" for the two scores. */
+/** "%" for ratios, "/100" for the active-listening score. */
 export function metricUnit(key: RoleplayMetricKey): '%' | '/100' {
-  return key === 'activeListening' || key === 'adaptationScore' ? '/100' : '%'
+  return key === 'activeListening' ? '/100' : '%'
 }
 
 /** Whether a displayed value is on the good side of the coaching goal. */
 export function meetsGoal(key: RoleplayMetricKey, shown: number): boolean {
   switch (key) {
     case 'talkRatio': return shown <= TALK_RATIO_THRESHOLD * 100
-    case 'adaptationScore': return shown >= ADAPTATION_THRESHOLD
     case 'questionRatio': return shown >= QUESTION_RATIO_THRESHOLD * 100
     case 'openQuestionRatio': return shown >= OPEN_QUESTION_RATIO_THRESHOLD * 100
     case 'paraphraseScore': return shown >= PARAPHRASE_THRESHOLD * 100

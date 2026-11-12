@@ -10,10 +10,9 @@ const METRIC_LABEL_KEY: Record<RoleplayMetricKey, string> = {
   openQuestionRatio: 'roleplay.openQuestionRatio',
   paraphraseScore: 'roleplay.paraphraseScore',
   activeListening: 'roleplay.activeListeningTitle',
-  adaptationScore: 'roleplay.adaptationTitle',
 }
 
-const METRIC_ORDER: RoleplayMetricKey[] = ['talkRatio', 'questionRatio', 'openQuestionRatio', 'paraphraseScore', 'activeListening', 'adaptationScore']
+const METRIC_ORDER: RoleplayMetricKey[] = ['talkRatio', 'questionRatio', 'openQuestionRatio', 'paraphraseScore', 'activeListening']
 
 const TREND_TIP_KEY: Record<RoleplayMetricKey, string> = {
   talkRatio: 'roleplay.trendTip.talkRatio',
@@ -21,7 +20,6 @@ const TREND_TIP_KEY: Record<RoleplayMetricKey, string> = {
   openQuestionRatio: 'roleplay.trendTip.openQuestionRatio',
   paraphraseScore: 'roleplay.trendTip.paraphraseScore',
   activeListening: 'roleplay.trendTip.activeListening',
-  adaptationScore: 'roleplay.trendTip.adaptationScore',
 }
 
 type LanguageSkillKey = ReturnType<typeof missedLanguageSkills>[number]

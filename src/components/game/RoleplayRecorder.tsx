@@ -213,7 +213,6 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
           <p style={{ fontSize: 16, lineHeight: 1.7, color: 'var(--ink)' }}>
             {t('roleplay.interactionSummaryDuration', { mmss: `${String(Math.floor(r.durationSec / 60)).padStart(2, '0')}:${String(Math.round(r.durationSec) % 60).padStart(2, '0')}` })}
             {' '}{t('roleplay.interactionSummaryQuestions', { count: r.questionCount })}
-            {r.adaptationScore && <> {t('roleplay.interactionSummaryToneMatch', { pct: r.adaptationScore.score })}</>}
             {' '}{t(r.termOverlap < 0.2 ? 'roleplay.interactionSummaryTermOverlapLow' : 'roleplay.interactionSummaryTermOverlap', { pct: Math.round(r.termOverlap * 100) })}
           </p>
           {isLowSampleSession(r.turnCount) && (
@@ -287,13 +286,10 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
           <p style={{ fontSize: 14, color: 'var(--ink-dim)', lineHeight: 1.5, marginTop: 6 }}>{t('roleplay.rapidSwitchesHint')}</p>
         </div>
 
-        <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 16 }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)', marginBottom: 6 }}>{t('roleplay.styleReadTitle')}</div>
-          {r.repRead
-            ? <div style={{ fontSize: 16 }}>{r.repRead.style} · {r.repRead.confidence}%</div>
-            : <p style={{ fontSize: 16, color: 'var(--ink-dim)', lineHeight: 1.5 }}>{t('roleplay.noStyleRead')}</p>}
-        </div>
-
+        {/* No social style is shown here. repRead/partnerRead are still computed and
+            stored (rep_style, adaptation_score) but a style is never named from speaking
+            speed, hesitations or pitch: fast speech or a wide pitch range does not
+            establish a style (context-coaching.ts). Only the raw delivery measures show. */}
         {r.repRead && (
           <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 16 }}>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('roleplay.tonalityTitle')}</div>
@@ -309,23 +305,6 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
             </p>
           </div>
         )}
-
-        <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 16 }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', textTransform: 'none', color: 'var(--ink-dim)', marginBottom: 8 }}>{t('roleplay.adaptationTitle')}</div>
-          {r.adaptationScore && r.repRead && r.partnerRead ? (
-            <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, marginBottom: 6 }}>
-                <span>{t('roleplay.adaptationYouVsPartner', { you: r.repRead.style, partner: r.partnerRead.style })}</span>
-                <span style={{ fontFamily: 'var(--mono)', fontWeight: 700 }}>{r.adaptationScore.score}%</span>
-              </div>
-              <p style={{ fontSize: 14, color: 'var(--ink-dim)', lineHeight: 1.5 }}>
-                {t(`roleplay.adaptationLabel.${r.adaptationScore.label}`)}
-              </p>
-            </>
-          ) : (
-            <p style={{ fontSize: 16, color: 'var(--ink-dim)', lineHeight: 1.5 }}>{t('roleplay.noAdaptationRead')}</p>
-          )}
-        </div>
 
         <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, marginBottom: 6 }}>

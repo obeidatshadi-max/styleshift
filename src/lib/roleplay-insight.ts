@@ -1,7 +1,7 @@
 import type { RoleplayResult } from './roleplay-core'
 
 export type RoleplayInsightMetric =
-  | 'talkRatio' | 'adaptationScore' | 'questionRatio' | 'openQuestionRatio'
+  | 'talkRatio' | 'questionRatio' | 'openQuestionRatio'
   | 'paraphraseScore' | 'activeListening' | 'rapidSwitches'
 
 export interface RoleplayInsight {
@@ -12,7 +12,6 @@ export interface RoleplayInsight {
 }
 
 export const TALK_RATIO_THRESHOLD = 0.65
-export const ADAPTATION_THRESHOLD = 45
 export const QUESTION_RATIO_THRESHOLD = 0.2
 export const OPEN_QUESTION_RATIO_THRESHOLD = 0.3
 export const PARAPHRASE_THRESHOLD = 0.2
@@ -30,9 +29,6 @@ const RAPID_SWITCHES_PER_MIN_THRESHOLD = 6
 export function buildRoleplayInsight(result: RoleplayResult): RoleplayInsight | null {
   if (result.talkRatio.repRatio > TALK_RATIO_THRESHOLD) {
     return { metric: 'talkRatio', value: Math.round(result.talkRatio.repRatio * 100) }
-  }
-  if (result.adaptationScore && result.adaptationScore.score < ADAPTATION_THRESHOLD) {
-    return { metric: 'adaptationScore', value: result.adaptationScore.score }
   }
   if (result.questionRatio < QUESTION_RATIO_THRESHOLD) {
     return { metric: 'questionRatio', value: Math.round(result.questionRatio * 100) }

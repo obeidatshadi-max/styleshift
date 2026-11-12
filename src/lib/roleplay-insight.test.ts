@@ -37,9 +37,9 @@ describe('buildRoleplayInsight', () => {
     expect(insight).toEqual({ metric: 'talkRatio', value: 70 })
   })
 
-  it('flags a low adaptation score when talk ratio is fine', () => {
-    const r = result({ adaptationScore: { score: 30, label: 'mismatched' } })
-    expect(buildRoleplayInsight(r)).toEqual({ metric: 'adaptationScore', value: 30 })
+  it('never coaches on the acoustic adaptation score, even when it is low', () => {
+    const r = result({ adaptationScore: { score: 5, label: 'mismatched' } })
+    expect(buildRoleplayInsight(r)?.metric).not.toBe('adaptationScore')
   })
 
   it('flags a low question ratio', () => {

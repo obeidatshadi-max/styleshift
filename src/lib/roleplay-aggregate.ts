@@ -1,6 +1,6 @@
 import type { RoleplaySessionSummary } from '@/types/game'
 
-export type RoleplayMetricKey = 'talkRatio' | 'questionRatio' | 'openQuestionRatio' | 'paraphraseScore' | 'activeListening' | 'adaptationScore'
+export type RoleplayMetricKey = 'talkRatio' | 'questionRatio' | 'openQuestionRatio' | 'paraphraseScore' | 'activeListening'
 
 // Whether a higher number is the better outcome for this metric. talk_ratio
 // is the one exception — the coaching goal (see sps "Field Action Tip") is
@@ -11,19 +11,19 @@ const HIGHER_IS_BETTER: Record<RoleplayMetricKey, boolean> = {
   openQuestionRatio: true,
   paraphraseScore: true,
   activeListening: true,
-  adaptationScore: true,
 }
 
 // Ratios (talk/question/openQuestion/paraphrase) are stored 0-1 and compared
-// in percentage points; active listening and adaptation score are already
-// stored 0-100.
+// in percentage points; active listening is already stored 0-100. The
+// acoustic adaptation_score column is deliberately not a metric: it compares
+// two social-style reads made from speaking speed and pitch, and a style is
+// never inferred from delivery (see context-coaching.ts).
 export const SCALE: Record<RoleplayMetricKey, number> = {
   talkRatio: 100,
   questionRatio: 100,
   openQuestionRatio: 100,
   paraphraseScore: 100,
   activeListening: 1,
-  adaptationScore: 1,
 }
 
 export function metricValue(s: RoleplaySessionSummary, key: RoleplayMetricKey): number | null {
@@ -33,7 +33,6 @@ export function metricValue(s: RoleplaySessionSummary, key: RoleplayMetricKey): 
     case 'openQuestionRatio': return s.open_question_ratio
     case 'paraphraseScore': return s.paraphrase_score
     case 'activeListening': return s.active_listening_score
-    case 'adaptationScore': return s.adaptation_score
   }
 }
 
@@ -54,7 +53,7 @@ export interface RoleplayHistorySummary {
   trend: RoleplayTrend | null
 }
 
-const METRICS: RoleplayMetricKey[] = ['talkRatio', 'questionRatio', 'openQuestionRatio', 'paraphraseScore', 'activeListening', 'adaptationScore']
+const METRICS: RoleplayMetricKey[] = ['talkRatio', 'questionRatio', 'openQuestionRatio', 'paraphraseScore', 'activeListening']
 
 // A trend needs at least this many display-scale points of movement to be
 // worth surfacing — otherwise session-to-session noise reads as a "trend".

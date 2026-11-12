@@ -39,7 +39,7 @@ In `report.ts` (`THRESHOLDS`): grounding rate may drop at most 3 points, planted
 ## Known limits
 
 - Fixtures are authored, not real. Real Iraqi recordings are still needed before relying on Arabic results.
-- Quote matching lower-cases and strips quote marks only. Arabic spelling variants are not normalised.
-- The English-only filters in `groundObservations` and `groundCoaching` (advice and score words) do not screen Arabic output.
+- Quote matching folds Arabic spelling variants (hamza, alef, ya, ta marbuta, diacritics, Arabic-Indic digits) via `lib/arabic-normalize`.
+- The advice and score-word filters in `groundObservations` and `groundCoaching` cover English and a short Arabic list; the Arabic list still needs a native reviewer.
 - All fixtures are far below 100K tokens, so Haiku 5.5's higher long-prompt price tier is not exercised.
 - `pricing.json` was checked on 2026-11-07 against the official pricing page. Update it when prices change.

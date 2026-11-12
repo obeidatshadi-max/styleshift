@@ -68,7 +68,18 @@ describe('POST /api/voice-partner/live-judge', () => {
       transcript: [{ role: 'doctor', text: 'Too busy.' }, { role: 'rep', text: 'What is eating your time?' }],
     }))
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ objectionType: 'doubt', outcome: 'won', clearSteps: ['listen'], turnCount: 1 })
+    expect(await res.json()).toMatchObject({ objectionType: 'doubt', outcome: 'won', clearSteps: ['listen'], turnCount: 1 })
+  })
+  it('signs the judged result so session-result can verify it came from the judge', async () => {
+    vi.stubEnv('AI_VOICE_PARTNER_LIVE_ENABLED', 'true'); vi.stubEnv('ANTHROPIC_API_KEY', 'key'); vi.stubEnv('VOICE_PARTNER_RESULT_SECRET', 'test-secret')
+    vi.mocked(createClient).mockResolvedValue(mockSupabase(doctor) as never)
+    vi.mocked(checkRateLimit).mockResolvedValue(true)
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ content: [{ text: '{"objectionType":"doubt","outcome":"won","clearSteps":["listen"]}' }] })))
+    const sessionId = '11111111-1111-4111-8111-111111111111'
+    const res = await POST(request({ doctorId: 'd1', difficulty: 'realistic', sessionId, transcript: [{ role: 'rep', text: 'What is eating your time?' }] }))
+    const data = await res.json()
+    const { verifyResultToken } = await import('@/lib/voice-partner-result-token')
+    expect(verifyResultToken(data.resultToken)).toMatchObject({ userId: 'rep-1', doctorId: 'd1', sessionId, outcome: 'won', objectionType: 'doubt', turnCount: 1, clearSteps: ['listen'] })
   })
 
   // --- live difficulty vocabulary (C1) ---

@@ -89,12 +89,13 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
 
   const saveSessionResult = useCallback(async (
     finalOutcome: 'won' | 'escalated', finalTurnCount: number, finalClearSteps: ClearStep[], type: ObjectionType,
+    resultToken: string | undefined,
   ) => {
     try {
       const res = await fetch('/api/voice-partner/session-result', {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          doctorId, objectionType: type, outcome: finalOutcome, clearSteps: finalClearSteps, turnCount: finalTurnCount,
+          doctorId, objectionType: type, outcome: finalOutcome, clearSteps: finalClearSteps, turnCount: finalTurnCount, resultToken,
           ...(sessionId ? { sessionId } : {}), ...(difficulty ? { difficulty } : {}),
         }),
       })
@@ -144,7 +145,7 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
       if (res.status === 429) { setPhase('ratelimited'); logVoiceEvent('objection', lang, 'rate_limited', { endpoint: 'turn' }); return }
       if (!res.ok) { setPhase('error'); setErrorKind('api'); logVoiceEvent('objection', lang, 'api_error', { endpoint: 'turn', status: res.status }); return }
       const data = await res.json().catch(() => null) as {
-        repText?: string; doctorText?: string; outcome?: TurnOutcome; turnCount?: number; clearSteps?: unknown; state?: PhysicianState; vocalFeedback?: VocalFeedback | null
+        repText?: string; doctorText?: string; outcome?: TurnOutcome; turnCount?: number; clearSteps?: unknown; state?: PhysicianState; vocalFeedback?: VocalFeedback | null; resultToken?: string
       } | null
       if (!data?.repText || !data.doctorText || !data.outcome) { setPhase('error'); setErrorKind('bad_response'); logVoiceEvent('objection', lang, 'bad_response', { endpoint: 'turn' }); return }
       if (isPhysicianState(data.state)) setPhysicianState(data.state)
@@ -164,7 +165,7 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
       // non-terminal 'continue' must leave it null so the mic stays available.
       if (data.outcome !== 'continue') {
         setOutcome(data.outcome)
-        void saveSessionResult(data.outcome, nextTurnCount, mergedSteps, objectionType)
+        void saveSessionResult(data.outcome, nextTurnCount, mergedSteps, objectionType, typeof data.resultToken === 'string' ? data.resultToken : undefined)
         logVoiceEvent('objection', lang, 'session_complete', { outcome: data.outcome, turnCount: nextTurnCount })
       } else {
         logVoiceEvent('objection', lang, 'turn_complete', { turnCount: nextTurnCount })

@@ -1,5 +1,6 @@
 // src/app/api/voice-partner/live-judge/route.ts
 import { NextResponse } from 'next/server'
+import { signResultToken } from '@/lib/voice-partner-result-token'
 import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { SYSTEM } from '@/lib/voice-partner-core'
@@ -102,5 +103,10 @@ export async function POST(req: Request) {
   )
   if (turnInsertError) console.warn('conversation_turns insert failed (live-judge):', turnInsertError.message)
 
-  return NextResponse.json({ ...judged, turnCount })
+  const resultToken = turnCount >= 1 ? signResultToken({
+    userId: user.id, doctorId: body.doctorId, sessionId, objectionType: judged.objectionType, outcome: judged.outcome,
+    turnCount, clearSteps: judged.clearSteps,
+  }) : null
+
+  return NextResponse.json({ ...judged, turnCount, sessionId, ...(resultToken ? { resultToken } : {}) })
 }

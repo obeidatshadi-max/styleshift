@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { signResultToken } from '@/lib/voice-partner-result-token'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { authenticateVoicePartnerRequest } from '@/lib/voice-partner-auth'
@@ -188,7 +189,15 @@ export async function POST(req: Request) {
   ])
   if (turnInsertError) console.warn('conversation_turns insert failed (turn):', turnInsertError.message)
 
+  // When the judge resolves the session, sign what it decided; session-result only stores a
+  // signed result. clearSteps = the client's running set plus this turn's, as the client merges them.
+  const resultToken = outcome === 'continue' ? undefined : signResultToken({
+    userId: user.id, doctorId, sessionId, objectionType: objectionTypeRaw, outcome, turnCount,
+    clearSteps: [...clearStepsHit, ...judged.clearSteps],
+  }) ?? undefined
+
   return NextResponse.json({
     repText, doctorText: judged.doctorReply, outcome, turnCount, clearSteps: judged.clearSteps, state: nextState, vocalFeedback,
+    ...(resultToken ? { resultToken } : {}),
   })
 }

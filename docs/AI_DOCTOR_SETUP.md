@@ -68,6 +68,7 @@ already implemented and committed on `feat/ai-voice-partner-realtime`.
    ```
    PIPECAT_CLOUD_API_KEY=...
    VOICE_PARTNER_BOT_TOKEN_SECRET=...   # any long random string, e.g. `openssl rand -hex 32`
+   VOICE_PARTNER_RESULT_SECRET=...      # required: signs session results (openssl rand -hex 32)
    PIPECAT_AGENT_NAME=styleshift-voice-partner   # optional, this is the default
    ```
 

@@ -6,6 +6,7 @@ import { authenticateVoicePartnerRequest } from '@/lib/voice-partner-auth'
 import { isObjectionType, isClearStep, isDifficulty, type ClearStep } from '@/lib/voice-partner-core'
 import { isLiveDifficulty } from '@/lib/voice-live-core'
 import type { Doctor } from '@/types/game'
+import { normalizeClearSteps, verifyResultToken } from '@/lib/voice-partner-result-token'
 
 // Stricter than voice-partner-core's AI-judge-output parsing: this route
 // rejects the whole request if ANY element is invalid, rather than silently
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null) as {
     doctorId?: string; objectionType?: string; outcome?: string; clearSteps?: unknown; turnCount?: number
-    sessionId?: string; difficulty?: string
+    sessionId?: string; difficulty?: string; resultToken?: string
   } | null
   if (!body?.doctorId) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   if (!isObjectionType(body.objectionType)) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
@@ -58,6 +59,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   }
 
+  // The result must be one the server's judge produced (turn or live-judge route signs it).
+  // Every field the client repeats must match the signed claims, and only signed values are stored.
+  // Replays are refused by the primary key: the signed sessionId becomes the row id.
+  const claims = verifyResultToken(body.resultToken)
+  if (!claims
+    || claims.userId !== user.id || claims.doctorId !== body.doctorId
+    || (body.sessionId !== undefined && claims.sessionId !== body.sessionId)
+    || claims.objectionType !== body.objectionType || claims.outcome !== body.outcome || claims.turnCount !== body.turnCount
+    || JSON.stringify(claims.clearSteps) !== JSON.stringify(normalizeClearSteps(clearSteps))) {
+    return NextResponse.json({ error: 'unverified_result' }, { status: 403 })
+  }
+
   // RLS ensures the rep can only read their own doctor; look style up
   // server-side rather than trusting a client-supplied value.
   const { data: doctor } = await supabase.from('doctors').select('*')
@@ -65,14 +78,14 @@ export async function POST(req: Request) {
   if (!doctor) return NextResponse.json({ error: 'not_found' }, { status: 404 })
 
   const { error } = await supabase.from('voice_partner_sessions').insert({
-    ...(body.sessionId ? { id: body.sessionId } : {}),
+    id: claims.sessionId,
     rep_id: user.id,
-    doctor_id: body.doctorId,
+    doctor_id: claims.doctorId,
     style: (doctor as Doctor).style,
-    objection_type: body.objectionType,
-    outcome: body.outcome,
-    clear_steps_hit: clearSteps,
-    turn_count: body.turnCount,
+    objection_type: claims.objectionType,
+    outcome: claims.outcome,
+    clear_steps_hit: claims.clearSteps,
+    turn_count: claims.turnCount,
     ...(body.difficulty ? { difficulty: body.difficulty } : {}),
   })
   if (error) return NextResponse.json({ error: 'insert_failed' }, { status: 500 })

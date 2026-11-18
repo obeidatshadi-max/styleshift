@@ -1,7 +1,8 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
-import { diarizeAudio, DiarizationError, type DiarizationJob, type DiarizedUtterance } from '@/lib/assemblyai-client'
+import { diarizeAudioWithMeta, DiarizationError, MAX_ROLEPLAY_AUDIO_BYTES, type DiarizationJob, type DiarizationMeta, type DiarizedUtterance } from '@/lib/assemblyai-client'
+import { buildTranscriptQuality } from '@/lib/conversation-coach/quality'
 import {
   buildRoleplayResult, type PitchSample, type SilencePeriod, type Utterance, type RoleplayResult,
 } from '@/lib/roleplay-core'
@@ -10,7 +11,10 @@ import { persistTranscriptSegments } from '@/lib/transcript-segments'
 import { MAX_RECORDING_SEC, RECORDING_BITS_PER_SECOND, RECORDING_SIZE_GUARD_BYTES } from '@/lib/roleplay-limits'
 
 export type RecorderPhase = 'idle' | 'recording' | 'processing' | 'pick-speaker' | 'done' | 'error'
-export type RecorderError = 'mic' | 'diarize' | 'session' | 'speakers' | 'timeout' | 'too_large' | 'mic_lost'
+export type RecorderError = 'mic' | 'diarize' | 'session' | 'speakers' | 'timeout' | 'too_large' | 'mic_lost' | 'no_speech' | 'bad_file'
+
+/** Audio types the upload path accepts (what MediaRecorder and common phone recorders produce). */
+export const ACCEPTED_AUDIO = /^(audio\/|video\/webm|video\/mp4)/
 
 export interface RawSpeakerPreview { speaker: string; sample: string }
 
@@ -108,6 +112,9 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
   const pitchIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const utterancesRef = useRef<DiarizedUtterance[]>([])
+  const metaRef = useRef<DiarizationMeta>({ languageCode: null, audioDurationSec: null })
+  // 'upload' when the rep chose an existing file: no on-device pitch/pause capture exists for it.
+  const captureRef = useRef<'device' | 'upload'>('device')
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
   // True from start() until stop() is called or the recorder dies on its own
   // (iOS Safari silently kills mic capture on screen-lock/backgrounding
@@ -173,6 +180,7 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     setAutoStopped(false)
     autoStopRequestedRef.current = false
     bytesRecordedRef.current = 0
+    captureRef.current = 'device'
 
     // Fail fast if the session is already gone — otherwise the rep records
     // the whole roleplay and only finds out it can't be saved at the end.
@@ -327,9 +335,16 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     setError(null)
     setPhase('processing')
     try {
-      const utterances = await diarizeAudio(blob, jobRef.current, controller.signal)
+      const { utterances, meta } = await diarizeAudioWithMeta(blob, jobRef.current, controller.signal)
       if (controller.signal.aborted) return
       utterancesRef.current = utterances
+      metaRef.current = meta
+      if (utterances.length === 0 || utterances.every(u => !u.text.trim())) {
+        // Silence, noise only, or speech too faint for the provider to find any words.
+        setError('no_speech')
+        setPhase('error')
+        return
+      }
       const speakers = Array.from(new Set(utterances.map(u => u.speaker)))
       if (speakers.length < 2) {
         console.error(`roleplay stop: diarization found ${speakers.length} distinct speaker(s), ${utterances.length} utterance(s) — one voice was likely too quiet/far from the mic, or only one person spoke`)
@@ -392,6 +407,26 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     await analyzeRecording()
   }, [cleanupCapture, analyzeRecording])
 
+  /** Analyse an existing recording file instead of recording live. Same size limit as live recordings. */
+  const startFromFile = useCallback(async (file: File) => {
+    setError(null)
+    setAutoStopped(false)
+    if (!file.size) { setError('no_speech'); setPhase('error'); return }
+    if (!ACCEPTED_AUDIO.test(file.type)) { setError('bad_file'); setPhase('error'); return }
+    if (file.size > MAX_ROLEPLAY_AUDIO_BYTES) { setError('too_large'); setPhase('error'); return }
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) { setError('session'); setPhase('error'); return }
+    captureRef.current = 'upload'
+    pitchSamplesRef.current = []
+    silencePeriodsRef.current = []
+    jobRef.current = {}
+    blobRef.current = file
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current)
+    previewRef.current = URL.createObjectURL(file)
+    setPreviewUrl(previewRef.current)
+    await analyzeRecording()
+  }, [supabase, analyzeRecording])
+
   // requestAutoStop is defined before stop, so it calls stop through this ref.
   useEffect(() => { stopRef.current = stop }, [stop])
 
@@ -428,7 +463,12 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
           // history later without re-running acoustic analysis.
           // language (empathy/paraphrasing/and-but/build-on-positive counts) is stored
           // even when no style read exists, so history can show it for every session.
-          rep_metrics: { ...(built.repRead ?? {}), warmth: built.warmth, predicates: built.predicates, language: built.language ?? null },
+          // transcriptQuality: the provider's own word confidence, language and duration (no content beyond
+          // the few uncertain words themselves), so the report can flag drug names, doses and numbers to check.
+          rep_metrics: {
+            ...(built.repRead ?? {}), warmth: built.warmth, predicates: built.predicates, language: built.language ?? null,
+            transcriptQuality: buildTranscriptQuality(utterancesRef.current, metaRef.current), capture: captureRef.current,
+          },
           partner_style: built.partnerRead?.style ?? null,
           partner_confidence: built.partnerRead?.confidence ?? null,
           adaptation_score: built.adaptationScore?.score ?? null,
@@ -518,5 +558,5 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     try { window.sessionStorage.removeItem(storageKey) } catch { /* ignore */ }
   }, [cleanupCapture, storageKey])
 
-  return { phase, error, previewUrl, saveError, autoStopped, retryAnalysis: analyzeRecording, elapsedSec, speakerPreviews, result, sessionId, start, stop, pickSpeaker, backToPickSpeaker, reset }
+  return { phase, error, previewUrl, saveError, autoStopped, retryAnalysis: analyzeRecording, elapsedSec, speakerPreviews, result, sessionId, start, startFromFile, stop, pickSpeaker, backToPickSpeaker, reset }
 }

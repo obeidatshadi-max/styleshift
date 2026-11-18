@@ -15,6 +15,8 @@ import { adaptCustomerVisit } from '@/lib/report/adapters/fromCustomerVisit'
 import { createOpenAiJsonComplete } from '@/agents/openai-complete'
 import { approvedKnowledge, ihiaEnabled } from '@/lib/ihia/server'
 import { recordingDialectContext, RECORDING_LANGUAGE_RULES } from '@/lib/ihia/recording'
+import { buildCoachPrompt } from '@/lib/conversation-coach/prompt'
+import { groundCoach } from '@/lib/conversation-coach/ground'
 
 export const maxDuration = 60
 
@@ -82,7 +84,7 @@ export async function POST(request: Request) {
   if (!(await checkRateLimit('report-generate', user.id, 20, 3600)))
     return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 })
 
-  const body = await request.json().catch(() => null) as { sessionType?: string; sessionId?: string; lang?: string; analysisConsent?: boolean } | null
+  const body = await request.json().catch(() => null) as { sessionType?: string; sessionId?: string; lang?: string; analysisConsent?: boolean; partialRecording?: boolean } | null
   if (!body || !isReportSessionType(body.sessionType) || typeof body.sessionId !== 'string')
     return NextResponse.json({ error: 'Invalid sessionType or sessionId' }, { status: 400 })
 
@@ -120,6 +122,27 @@ export async function POST(request: Request) {
       built[part].prompt += `\n\n${languageContext}`
     }
   }
+  const lang = body.lang === 'ar' ? 'ar' : 'en'
+  // Recorded two-person conversations also get the cue -> response coach. It runs alongside the other
+  // parts but is optional: if it fails, the report is still saved and the coach shows only measured data.
+  const wantsCoach = body.sessionType === 'human_partner' || body.sessionType === 'customer_visit'
+  const coachPrompt = wantsCoach ? buildCoachPrompt(segments, { lang, partialRecording: body.partialRecording === true, productContext: context.productContext }) : null
+  if (coachPrompt && ihiaRecording) {
+    coachPrompt.system += `
+
+${RECORDING_LANGUAGE_RULES}`
+    coachPrompt.prompt += `
+
+${languageContext}`
+  }
+  let coachRaw: Record<string, unknown> | null = null
+  const runCoach = async (attempt: number) => {
+    if (!coachPrompt || coachRaw) return
+    const raw = await complete({ system: coachPrompt.system, prompt: coachPrompt.prompt + (attempt > 0 ? RETRY_NOTE : ''), maxTokens: coachPrompt.maxTokens })
+    const start = raw ? raw.indexOf('{') : -1, end = raw ? raw.lastIndexOf('}') : -1
+    if (!raw || start === -1 || end <= start) { console.error(`[reports/generate] coach attempt ${attempt + 1}: no JSON object`); return }
+    try { coachRaw = JSON.parse(raw.slice(start, end + 1)) } catch { console.error(`[reports/generate] coach attempt ${attempt + 1}: JSON parse failed (${raw.length} chars)`) }
+  }
   const parsedParts: Partial<Record<ReportPart, Record<string, unknown>>> = {}
   let report = null
   const attempts = ['', RETRY_NOTE]
@@ -127,7 +150,7 @@ export async function POST(request: Request) {
     // Reasons only — no transcript or model text in logs (rep conversations are private).
     const tag = `[reports/generate] ${body.sessionType} attempt ${attempt + 1}/${attempts.length}, ${segments.length} segments`
     // Only the halves that haven't produced valid JSON yet are (re)requested.
-    await Promise.all(parts.filter(part => !parsedParts[part]).map(async part => {
+    await Promise.all([runCoach(attempt), ...parts.filter(part => !parsedParts[part]).map(async part => {
       const { system, prompt, maxTokens } = built[part]
       const raw = await complete({ system, prompt: prompt + suffix, maxTokens })
       if (!raw) { console.error(`${tag} [${part}]: no LLM response`); return }
@@ -135,7 +158,7 @@ export async function POST(request: Request) {
       if (start === -1 || end <= start) { console.error(`${tag} [${part}]: no JSON object in response (${raw.length} chars)`); return }
       try { parsedParts[part] = JSON.parse(raw.slice(start, end + 1)) }
       catch { console.error(`${tag} [${part}]: JSON parse failed (${raw.length} chars)`) }
-    }))
+    })])
     if (!parts.every(part => parsedParts[part])) continue
     report = groundReport(mergeReportParts(parsedParts), segments, context, { sessionType: body.sessionType, transcriptVersion, lang: body.lang === 'ar' ? 'ar' : 'en' })
     if (report) break
@@ -146,6 +169,12 @@ export async function POST(request: Request) {
   // Never replace a failed analysis with a plausible demo result — a real
   // failure surfaces as an error the rep can retry, not a silently invented report.
   if (!report) return NextResponse.json({ error: 'Report generation failed. Please try again.' }, { status: 502 })
+  if (wantsCoach) {
+    report.coach = groundCoach(coachRaw, segments, {
+      lang, partialRecording: body.partialRecording === true,
+      transcriptQuality: context.transcriptQuality ?? null, delivery: context.deliveryMetrics ?? null,
+    })
+  }
 
   const saved = await persistReport(supabase, report, body.sessionType, body.sessionId, user.id)
   if (!saved.ok) return NextResponse.json({ error: 'Report generated but could not be saved' }, { status: 500 })

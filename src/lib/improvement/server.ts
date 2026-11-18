@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { getBehavioralTrendsForReps } from '@/lib/behavioral-trends-dashboard'
 import type { DrillAttempt } from '@/schemas/drill'
 import type { RoleplaySessionSummary } from '@/types/game'
+import { REPLAY_DRILL_PREFIX } from '@/lib/conversation-coach/progress'
 import {
   BASELINE_WINDOW, MIN_BASELINE, buildImprovementReport, fromDrillAttempt, fromRoleplaySummary, fromScorecard,
   mean, normalizeRecords, round1, series,
@@ -44,6 +45,8 @@ export async function loadPracticeRecords(admin: Admin, repIds: string[]): Promi
     out.get(row.rep_id)?.push(fromRoleplaySummary(row))
   }
   for (const r of (drills.data ?? []) as { drill_id: string; drill_version: number; rep_id: string; attempt_no: number; created_at: string; observed_behaviors: string[]; score: number | null; passed: boolean; lang: 'en' | 'ar' }[]) {
+    // Replay-practice attempts (conversation coach) are criterion checks with no score; they are not drills.
+    if (r.drill_id.startsWith(REPLAY_DRILL_PREFIX)) continue
     const a: DrillAttempt = {
       drillId: r.drill_id, drillVersion: r.drill_version, repId: r.rep_id, attemptNo: r.attempt_no, at: r.created_at,
       observedBehaviors: r.observed_behaviors, score: r.score, passed: r.passed, lang: r.lang,

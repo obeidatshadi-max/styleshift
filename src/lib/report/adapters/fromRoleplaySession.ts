@@ -1,5 +1,6 @@
 import type { TranscriptSegment, ReportContext, SocialStyle } from '@/schemas/conversationReport'
 import { isSocialStyle } from '@/schemas/conversationReport'
+import { isTranscriptQuality } from '@/lib/conversation-coach/quality'
 
 export interface TranscriptSegmentRow {
   segment_index: number
@@ -21,6 +22,8 @@ export interface RoleplaySessionRow {
   adaptation_score: number | null
   /** The saved doctor the colleague was asked to play, when the rep chose one. */
   doctor_id?: string | null
+  /** JSONB: the rep's acoustic proof, language counts and (since the conversation coach) transcriptQuality. */
+  rep_metrics?: unknown
 }
 
 /**
@@ -41,6 +44,7 @@ export function adaptRoleplaySession(
     createdAt: null,
   }))
 
+  const metrics = (session.rep_metrics && typeof session.rep_metrics === 'object' ? session.rep_metrics : {}) as Record<string, unknown>
   const context: ReportContext = {
     objective: null,
     productContext: null,
@@ -56,6 +60,9 @@ export function adaptRoleplaySession(
       // the model must not be handed a style named from speaking speed and pitch.
     },
     qualityFlags: rows.length < 10 ? ['short_session'] : [], // MIN_RELIABLE_TURNS in roleplay-core.ts
+    transcriptQuality: isTranscriptQuality(metrics.transcriptQuality) ? metrics.transcriptQuality : null,
+    // Rep-only delivery numbers measured on the device. Only shown as measurements, never sent to the model as a style.
+    deliveryMetrics: metrics.proof && typeof metrics.proof === 'object' ? metrics.proof as Record<string, unknown> : null,
   }
   return { segments, context }
 }

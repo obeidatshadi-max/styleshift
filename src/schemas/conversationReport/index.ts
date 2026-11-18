@@ -1,5 +1,6 @@
 import type { VaguePattern } from '@/lib/precision-language'
 import type { QuestionKind } from '@/lib/question-kind'
+import type { ConversationCoach, TranscriptQuality } from '@/lib/conversation-coach/types'
 export const REPORT_SESSION_TYPES = ['human_partner', 'ai_doctor_voice', 'ai_doctor_text', 'customer_visit'] as const
 export type ReportSessionType = typeof REPORT_SESSION_TYPES[number]
 export function isReportSessionType(v: unknown): v is ReportSessionType {
@@ -262,6 +263,8 @@ export interface ConversationReport {
   strength: Strength
   socialStyle: SocialStyleSection
   qualityFlags: string[]
+  /** Cue -> response coaching for recorded two-person conversations. Additive: older saved reports remain readable. */
+  coach?: ConversationCoach | null
 }
 
 export interface ReportKnowledge {
@@ -287,4 +290,8 @@ export interface ReportContext {
   deterministicMetrics: Record<string, number | string | boolean | null>
   qualityFlags: string[]
   knowledge?: ReportKnowledge | null
+  /** Provider word confidence stored with a recording (rep_metrics.transcriptQuality). Never model-written. */
+  transcriptQuality?: TranscriptQuality | null
+  /** Device-measured rep delivery numbers (rep_metrics.proof): wpm, pitchRange, totalHesitations. */
+  deliveryMetrics?: Record<string, unknown> | null
 }

@@ -14,13 +14,19 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook, waitFor } from '@testing-library/react'
 
 vi.mock('@/lib/supabase-browser', () => ({ createClient: vi.fn() }))
-vi.mock('@/lib/assemblyai-client', () => ({
-  diarizeAudio: vi.fn(),
-  DiarizationError: class extends Error {
-    code: string
-    constructor(code: string, message: string) { super(message); this.code = code }
-  },
-}))
+vi.mock('@/lib/assemblyai-client', () => {
+  const diarizeAudio = vi.fn()
+  return {
+    diarizeAudio,
+    // The hook calls the metadata variant; it delegates to the same mock so existing tests stay as written.
+    diarizeAudioWithMeta: vi.fn(async (...args: unknown[]) => ({ utterances: await diarizeAudio(...args), meta: { languageCode: 'en', audioDurationSec: 2 } })),
+    MAX_ROLEPLAY_AUDIO_BYTES: 4 * 1024 * 1024,
+    DiarizationError: class extends Error {
+      code: string
+      constructor(code: string, message: string) { super(message); this.code = code }
+    },
+  }
+})
 
 import { useRoleplayRecorder } from './useRoleplayRecorder'
 import { createClient } from '@/lib/supabase-browser'
@@ -174,5 +180,42 @@ describe('useRoleplayRecorder automatic stop', () => {
 
     await waitFor(() => expect(result.current.phase).toBe('pick-speaker'))
     expect(result.current.autoStopped).toBe(false)
+  })
+})
+
+describe('useRoleplayRecorder silent audio and uploaded files', () => {
+  it('reports no_speech (not a speaker error) when the provider finds no words', async () => {
+    setupBrowserMocks()
+    mockSupabaseSession()
+    vi.mocked(diarizeAudio).mockResolvedValue([])
+    const { result } = renderHook(() => useRoleplayRecorder('doc-1', null))
+    await act(async () => { await result.current.start() })
+    await act(async () => { await result.current.stop() })
+    await waitFor(() => expect(result.current.phase).toBe('error'))
+    expect(result.current.error).toBe('no_speech')
+  })
+
+  it('rejects an empty file, a non-audio file and an oversize file before any upload', async () => {
+    setupBrowserMocks()
+    mockSupabaseSession()
+    const { result } = renderHook(() => useRoleplayRecorder('doc-1', null))
+    await act(async () => { await result.current.startFromFile(new File([], 'empty.webm', { type: 'audio/webm' })) })
+    expect(result.current.error).toBe('no_speech')
+    await act(async () => { await result.current.startFromFile(new File(['x'], 'notes.pdf', { type: 'application/pdf' })) })
+    expect(result.current.error).toBe('bad_file')
+    await act(async () => { await result.current.startFromFile(new File([new Uint8Array(4 * 1024 * 1024 + 1)], 'big.m4a', { type: 'audio/mp4' })) })
+    expect(result.current.error).toBe('too_large')
+    expect(diarizeAudio).not.toHaveBeenCalled()
+  })
+
+  it('analyses a valid uploaded file through the same speaker-picking flow', async () => {
+    setupBrowserMocks()
+    mockSupabaseSession()
+    vi.mocked(diarizeAudio).mockResolvedValue(twoSpeakers)
+    const { result } = renderHook(() => useRoleplayRecorder('doc-1', null))
+    await act(async () => { await result.current.startFromFile(new File(['abc'], 'visit.m4a', { type: 'audio/mp4' })) })
+    await waitFor(() => expect(result.current.phase).toBe('pick-speaker'))
+    expect(result.current.previewUrl).toBe('blob:mock')
+    expect(result.current.speakerPreviews.map(p => p.speaker)).toEqual(['A', 'B'])
   })
 })

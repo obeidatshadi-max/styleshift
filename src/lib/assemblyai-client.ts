@@ -7,14 +7,20 @@ export type DiarizationErrorCode = 'session' | 'timeout' | 'too_large' | 'diariz
 export class DiarizationError extends Error {
   constructor(public code: DiarizationErrorCode, message: string) { super(message) }
 }
-export interface DiarizedWord { text: string; speaker: string; start: number; end: number }
+/** confidence is the provider's own 0-1 score when it sends one; never filled in by the app. */
+export interface DiarizedWord { text: string; speaker: string; start: number; end: number; confidence?: number }
 export interface DiarizedUtterance { speaker: string; text: string; start: number; end: number; words: DiarizedWord[] }
 export interface DiarizationJob { uploadUrl?: string; transcriptId?: string }
 interface TranscriptStatus {
   status: 'queued' | 'processing' | 'completed' | 'error'
   utterances?: DiarizedUtterance[]
+  language_code?: string | null
+  audio_duration?: number | null
   error?: string
 }
+
+/** Provider facts about the finished transcript, used for the recording-quality notes. */
+export interface DiarizationMeta { languageCode: string | null; audioDurationSec: number | null }
 
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -133,6 +139,13 @@ async function discardRemoteCopy(transcriptId: string, signal?: AbortSignal): Pr
 
 /** Retain job between retries so slow polling resumes without another paid upload/job. */
 export async function diarizeAudio(blob: Blob, job: DiarizationJob = {}, signal?: AbortSignal): Promise<DiarizedUtterance[]> {
+  return (await diarizeAudioWithMeta(blob, job, signal)).utterances
+}
+
+/** Same as diarizeAudio, plus the provider's language code and audio duration when it reports them. */
+export async function diarizeAudioWithMeta(
+  blob: Blob, job: DiarizationJob = {}, signal?: AbortSignal,
+): Promise<{ utterances: DiarizedUtterance[]; meta: DiarizationMeta }> {
   if (!blob.size) throw new DiarizationError('diarize', 'The recording is empty.')
   if (blob.size > MAX_ROLEPLAY_AUDIO_BYTES) throw new DiarizationError('too_large', 'Recording is too large to upload.')
   void retryPendingDeletes(signal)
@@ -155,7 +168,13 @@ export async function diarizeAudio(blob: Blob, job: DiarizationJob = {}, signal?
       await discardRemoteCopy(job.transcriptId, signal)
       delete job.transcriptId
       delete job.uploadUrl
-      return result.utterances
+      return {
+        utterances: result.utterances,
+        meta: {
+          languageCode: typeof result.language_code === 'string' ? result.language_code : null,
+          audioDurationSec: typeof result.audio_duration === 'number' ? result.audio_duration : null,
+        },
+      }
     }
     if (result.status === 'error') {
       // A failed job still holds the uploaded audio at the provider, so ask for it to be removed too.

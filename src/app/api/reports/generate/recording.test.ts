@@ -56,7 +56,8 @@ describe('IHIA connection to existing human recording reports', () => {
     expect(data.report.transcriptVersion).toBe(2)
     expect(db.filters).toContainEqual(['rep_id', 'u'])
     expect(db.writes).toEqual(['conversation_reports'])
-    expect(m.complete).toHaveBeenCalledTimes(4)
+    // Four report parts plus the conversation-coach part, all with the same IHIA rules and context.
+    expect(m.complete).toHaveBeenCalledTimes(5)
     for (const [args] of m.complete.mock.calls) {
       expect(args.system).toContain('IHIA Iraqi-language support')
       expect(args.system).toContain('Never replace a quote with a translation')

@@ -45,8 +45,17 @@ export async function getVoiceHistoryCounts(userId: string): Promise<VoiceHistor
   return result
 }
 
-/** Deletes every practice-history row belonging to this rep, across all history tables. */
+/** Practice session types whose saved transcripts and AI reports go with the practice history. Customer
+ * visits are excluded: they follow their own retention setting (customer_visits.retention_policy). */
+const PRACTICE_REPORT_TYPES = ['human_partner', 'ai_doctor_voice', 'ai_doctor_text'] as const
+
+/** Deletes every practice-history row belonging to this rep, across all history tables, plus the transcripts
+ * and AI reports derived from those practice sessions (they hold quoted words, so they must not outlive them). */
 export async function deleteVoiceHistory(userId: string): Promise<void> {
   const admin = createAdminClient()
-  await Promise.all(HISTORY_TABLES.map(table => admin.from(table).delete().eq('rep_id', userId)))
+  await Promise.all([
+    ...HISTORY_TABLES.map(table => admin.from(table).delete().eq('rep_id', userId)),
+    admin.from('transcript_segments').delete().eq('rep_id', userId).eq('session_type', 'human_partner'),
+    admin.from('conversation_reports').delete().eq('rep_id', userId).in('session_type', [...PRACTICE_REPORT_TYPES]),
+  ])
 }

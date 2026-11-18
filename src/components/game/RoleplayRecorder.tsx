@@ -13,7 +13,7 @@ interface Props { doctorId: string | null; colleagueId: string | null; onDone: (
 
 export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Props) {
   const t = useT()
-  const { phase, error, previewUrl, saveError, autoStopped, retryAnalysis, elapsedSec, speakerPreviews, result, sessionId, start, stop, pickSpeaker, backToPickSpeaker, reset } = useRoleplayRecorder(doctorId, colleagueId)
+  const { phase, error, previewUrl, saveError, autoStopped, retryAnalysis, elapsedSec, speakerPreviews, result, sessionId, start, startFromFile, stop, pickSpeaker, backToPickSpeaker, reset } = useRoleplayRecorder(doctorId, colleagueId)
   const [consentChecked, setConsentChecked] = useState(false)
   const [consented, setConsented] = useState(false)
 
@@ -88,6 +88,12 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
             onClick={() => { setConsented(true); start() }}>
             {t('roleplay.consentAgree')}
           </button>
+          <label style={{ ...btnGhost, display: 'block', textAlign: 'center', opacity: consentChecked ? 1 : 0.5, cursor: consentChecked ? 'pointer' : 'not-allowed' }}>
+            {t('roleplay.uploadInstead')}
+            <input type="file" accept="audio/*,video/webm,video/mp4" disabled={!consentChecked} style={{ display: 'none' }}
+              onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) { setConsented(true); void startFromFile(f) } }} />
+          </label>
+          <p style={{ fontSize: 14, color: 'var(--ink-dim)', lineHeight: 1.5, marginTop: 6 }}>{t('roleplay.uploadHint')}</p>
           <button style={btnGhost} onClick={onDone}>{t('roleplay.consentCancel')}</button>
         </div>
       </div>
@@ -106,13 +112,15 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
               : error === 'timeout' ? t('roleplay.errorTimeout')
               : error === 'too_large' ? t('roleplay.errorTooLarge')
               : error === 'mic_lost' ? t('roleplay.errorMicLost')
+              : error === 'no_speech' ? t('roleplay.errorNoSpeech')
+              : error === 'bad_file' ? t('roleplay.errorBadFile')
               : t('roleplay.errorDiarize')}
           </p>
           {previewUrl && (
             <>
               <audio controls src={previewUrl} style={{ width: '100%', marginBottom: 12 }} />
               <a href={previewUrl} download="styleshift-roleplay" style={{ display: 'block', marginBottom: 16, color: 'var(--cyan)' }}>{t('roleplay.saveRecording')}</a>
-              {error !== 'speakers' && error !== 'too_large' && error !== 'session' && (
+              {error !== 'speakers' && error !== 'too_large' && error !== 'session' && error !== 'no_speech' && error !== 'bad_file' && (
                 <button style={btnPrimary} onClick={retryAnalysis}>{t('roleplay.retryAnalysis')}</button>
               )}
             </>
@@ -203,7 +211,7 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
         <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 16 }}>{t('roleplay.resultTitle')}</h2>
         {autoStopped && <p role="status" style={{ color: 'var(--amber)', marginBottom: 16 }}>{t('roleplay.autoStopped', { minutes: MAX_RECORDING_SEC / 60 })}</p>}
         {saveError && <p role="alert" style={{ color: 'var(--amber)', marginBottom: 16 }}>{t('roleplay.errorSave')}</p>}
-        {sessionId && <RecordedConversationAnalysis key={sessionId} sessionId={sessionId} />}
+        {sessionId && <RecordedConversationAnalysis key={sessionId} sessionId={sessionId} audioUrl={previewUrl} />}
 
         {/* Whole-interaction framing before the "You vs. partner" breakdown
             below — surfaced here because reps found the per-metric cards

@@ -70,3 +70,62 @@ describe('POST /api/reports/generate: the doctor a colleague played', () => {
     expect(lookups).toEqual([['id', 'doc-1'], ['rep_id', 'rep-1']])
   })
 })
+
+describe('POST /api/reports/generate: conversation coach (synthetic fixture, mocked model)', () => {
+  async function run(coachReply: string, body: Record<string, unknown> = {}) {
+    const { SYNTHETIC_EN, SYNTHETIC_EN_MODEL_OUTPUT } = await import('@/lib/conversation-coach/fixtures')
+    const inserted: Array<Record<string, unknown>> = []
+    const base = mockSupabaseForRoleplay('rep-1')
+    vi.mocked(createClient).mockResolvedValue({
+      ...base,
+      from: (table: string) => {
+        if (table === 'transcript_segments') return { select: () => ({ eq: () => ({ eq: () => ({ eq: () => ({ order: async () => ({
+          data: SYNTHETIC_EN.map(s => ({ segment_index: s.segmentIndex, speaker_role: s.speakerRole, text: s.text, start_ms: s.startMs, end_ms: s.endMs })), error: null,
+        }) }) }) }) }) }
+        if (table === 'conversation_reports') return {
+          insert: (row: Record<string, unknown>) => { inserted.push(row); return { select: () => ({ single: async () => ({ data: { id: 'report-1' }, error: null }) }) } },
+          update: () => ({ eq: () => ({ eq: () => ({ lt: async () => ({ error: null }) }) }) }),
+        }
+        return base.from(table)
+      },
+    } as never)
+    vi.mocked(checkRateLimit).mockResolvedValue(true)
+    vi.stubEnv('ANTHROPIC_API_KEY', 'key')
+    // Every ordinary report part gets the same small valid object; the coach part gets `coachReply`.
+    const part = { visitSummary: { summary: 'A short synthetic visit.', objectiveStatus: 'insufficient_evidence', objectiveStatusReason: '', evidence: [{ segmentIndex: 3 }] },
+      coachingPriority: { behavior: 'Clarify first.', betterPhrase: 'Which side effects?', practiceExercise: 'x', successLooksLike: 'y', evidence: [{ segmentIndex: 4 }] },
+      strength: { behavior: 'Asked an open question.', evidence: [{ segmentIndex: 2 }] } }
+    const prompts: string[] = []
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: { body: string }) => {
+      const prompt = JSON.parse(init.body).messages[0].content as string
+      prompts.push(prompt)
+      const text = prompt.includes('<<<TRANSCRIPT') ? coachReply : JSON.stringify(part)
+      return { ok: true, status: 200, json: async () => ({ content: [{ type: 'text', text }], stop_reason: 'end_turn' }) }
+    }))
+    const res = await POST(request({ sessionType: 'human_partner', sessionId: 's1', lang: 'en', ...body }))
+    return { res, json: await res.json(), inserted, prompts, fixture: SYNTHETIC_EN_MODEL_OUTPUT }
+  }
+
+  it('adds grounded key moments to the saved report', async () => {
+    const { SYNTHETIC_EN_MODEL_OUTPUT } = await import('@/lib/conversation-coach/fixtures')
+    const { res, json, inserted } = await run(JSON.stringify(SYNTHETIC_EN_MODEL_OUTPUT))
+    expect(res.status).toBe(200)
+    expect(json.report.coach.keyMoments).toHaveLength(2)
+    expect(json.report.coach.synthetic).toBe(false)
+    expect((inserted[0].report as { coach: unknown }).coach).toBeTruthy()
+  })
+
+  it('still saves the report when the coach part returns nothing usable, marked insufficient', async () => {
+    const { res, json } = await run('not json at all')
+    expect(res.status).toBe(200)
+    expect(json.report.coach.insufficientEvidence).toBe(true)
+    expect(json.report.coach.keyMoments).toEqual([])
+    expect(json.report.coach.interaction.available).toBe(true)
+  })
+
+  it('passes the partial-visit flag into the coach prompt and the result', async () => {
+    const { json, prompts } = await run('{}', { partialRecording: true })
+    expect(prompts.some(p => p.includes('ONLY PART of the visit'))).toBe(true)
+    expect(json.report.coach.structure.partialRecording).toBe(true)
+  })
+})

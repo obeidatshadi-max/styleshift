@@ -34,6 +34,9 @@ export async function proxy(request: NextRequest) {
   // (/auth/confirm) must run to create the session — bouncing it to /login here
   // would discard the activation token before it's ever exchanged.
   const publicPaths = ['/login', '/auth', '/invite', '/join-group', '/api/rep-join', '/api/rep-login', '/api/rep-signup', '/api/manager-signup', '/verify', '/welcome', '/reset-link']
+  // Synthetic development fixtures (no user data) are viewable without signing in, in development only.
+  // The pages themselves return 404 in a production build.
+  if (process.env.NODE_ENV !== 'production') publicPaths.push('/dev/')
   // '/' is the public landing page; match it exactly, since every path starts with '/'.
   if (!user && path !== '/' && !publicPaths.some(p => path.startsWith(p))) {
     const url = request.nextUrl.clone()

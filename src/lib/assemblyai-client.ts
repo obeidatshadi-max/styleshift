@@ -3,7 +3,14 @@ import { createClient } from '@/lib/supabase-browser'
 const PROXY_URL = '/.netlify/functions/assemblyai-proxy'
 // Base64 expands bytes by 4/3; keep JSON below Netlify's request limit.
 export const MAX_ROLEPLAY_AUDIO_BYTES = 4 * 1024 * 1024
-export type DiarizationErrorCode = 'session' | 'timeout' | 'too_large' | 'diarize'
+export type DiarizationErrorCode = 'session' | 'timeout' | 'upload_slow' | 'too_large' | 'diarize'
+/** Every call gets this long; the upload gets extra time per MB so a long recording on a weak signal can finish. */
+const REQUEST_TIMEOUT_MS = 60_000
+const UPLOAD_MS_PER_MB = 45_000
+const MAX_UPLOAD_TIMEOUT_MS = 300_000
+export function uploadTimeoutMs(payloadChars: number): number {
+  return Math.min(MAX_UPLOAD_TIMEOUT_MS, REQUEST_TIMEOUT_MS + Math.ceil(payloadChars / (1024 * 1024)) * UPLOAD_MS_PER_MB)
+}
 export class DiarizationError extends Error {
   constructor(public code: DiarizationErrorCode, message: string) { super(message) }
 }
@@ -31,14 +38,14 @@ function blobToBase64(blob: Blob): Promise<string> {
   })
 }
 
-async function request<T>(body: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
+async function request<T>(body: Record<string, unknown>, signal?: AbortSignal, timeoutMs = REQUEST_TIMEOUT_MS, timeoutCode: DiarizationErrorCode = 'timeout'): Promise<T> {
   const { data: { session } } = await createClient().auth.getSession()
   if (!session) throw new DiarizationError('session', 'Not signed in.')
   signal?.throwIfAborted()
   const controller = new AbortController()
   const abort = () => controller.abort()
   signal?.addEventListener('abort', abort, { once: true })
-  const timeout = setTimeout(abort, 60_000)
+  const timeout = setTimeout(abort, timeoutMs)
   try {
     const res = await fetch(PROXY_URL, {
       method: 'POST', signal: controller.signal,
@@ -54,7 +61,7 @@ async function request<T>(body: Record<string, unknown>, signal?: AbortSignal): 
     return data as T
   } catch (error) {
     if (controller.signal.aborted && !signal?.aborted) {
-      throw new DiarizationError('timeout', 'Analysis request timed out.')
+      throw new DiarizationError(timeoutCode, timeoutCode === 'upload_slow' ? 'Upload timed out.' : 'Analysis request timed out.')
     }
     throw error
   } finally {
@@ -150,7 +157,8 @@ export async function diarizeAudioWithMeta(
   if (blob.size > MAX_ROLEPLAY_AUDIO_BYTES) throw new DiarizationError('too_large', 'Recording is too large to upload.')
   void retryPendingDeletes(signal)
   if (!job.transcriptId && !job.uploadUrl) {
-    const data = await request<{ upload_url?: string }>({ action: 'upload', audio: await blobToBase64(blob) }, signal)
+    const audio = await blobToBase64(blob)
+    const data = await request<{ upload_url?: string }>({ action: 'upload', audio }, signal, uploadTimeoutMs(audio.length), 'upload_slow')
     if (!data.upload_url) throw new DiarizationError('diarize', 'Upload returned no audio URL.')
     job.uploadUrl = data.upload_url
   }

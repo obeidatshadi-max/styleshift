@@ -169,6 +169,34 @@ describe('useRoleplayRecorder automatic stop', () => {
     expect(diarizeAudio).toHaveBeenCalledTimes(1)
   })
 
+  it('shows the real limit when the phone records more bytes per second than asked, and reports where it stopped', async () => {
+    vi.useFakeTimers()
+    setupBrowserMocks()
+    mockSupabaseSession()
+    vi.mocked(diarizeAudio).mockResolvedValue(twoSpeakers)
+    const { result } = renderHook(() => useRoleplayRecorder('doc-1', null))
+
+    await act(async () => { await result.current.start() })
+    expect(result.current.limitSec).toBe(MAX_RECORDING_SEC)
+    // 20 seconds at 4x the planned rate: the size guard, not the clock, will end this recording.
+    const perSec = Math.ceil(RECORDING_SIZE_GUARD_BYTES / 200)
+    for (let s = 0; s < 20; s++) {
+      await act(async () => {
+        lastRecorder?.ondataavailable?.({ data: new Blob([new Uint8Array(perSec)]) })
+        await vi.advanceTimersByTimeAsync(1000)
+      })
+    }
+    expect(result.current.limitSec).toBeGreaterThanOrEqual(195)
+    expect(result.current.limitSec).toBeLessThanOrEqual(205)
+
+    await act(async () => {
+      lastRecorder?.ondataavailable?.({ data: new Blob([new Uint8Array(RECORDING_SIZE_GUARD_BYTES)]) })
+    })
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(result.current.autoStopped).toBe(true)
+    expect(result.current.stoppedAtSec).toBe(20)
+  })
+
   it('does not mark a rep-pressed Stop as automatic', async () => {
     setupBrowserMocks()
     mockSupabaseSession()

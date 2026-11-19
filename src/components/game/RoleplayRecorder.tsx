@@ -5,7 +5,7 @@ import RoleplayLanguageCards from './RoleplayLanguageCards'
 import { useRoleplayRecorder } from '@/hooks/useRoleplayRecorder'
 import { buildRoleplayInsight } from '@/lib/roleplay-insight'
 import { isLowSampleSession } from '@/lib/roleplay-core'
-import { MAX_RECORDING_SEC, RECORDING_WARNING_SEC } from '@/lib/roleplay-limits'
+import { formatMinSec, MAX_RECORDING_SEC, RECORDING_WARNING_SEC } from '@/lib/roleplay-limits'
 import type { RepAssignment } from '@/types/game'
 import RecordedConversationAnalysis from './RecordedConversationAnalysis'
 
@@ -13,7 +13,7 @@ interface Props { doctorId: string | null; colleagueId: string | null; onDone: (
 
 export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Props) {
   const t = useT()
-  const { phase, error, previewUrl, saveError, autoStopped, retryAnalysis, elapsedSec, speakerPreviews, result, sessionId, start, startFromFile, stop, pickSpeaker, backToPickSpeaker, reset } = useRoleplayRecorder(doctorId, colleagueId)
+  const { phase, error, previewUrl, saveError, autoStopped, limitSec, stoppedAtSec, retryAnalysis, elapsedSec, speakerPreviews, result, sessionId, start, startFromFile, stop, pickSpeaker, backToPickSpeaker, reset } = useRoleplayRecorder(doctorId, colleagueId)
   const [consentChecked, setConsentChecked] = useState(false)
   const [consented, setConsented] = useState(false)
 
@@ -110,6 +110,7 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
               : error === 'session' ? t('roleplay.errorSession')
               : error === 'speakers' ? t('roleplay.errorSpeakers')
               : error === 'timeout' ? t('roleplay.errorTimeout')
+              : error === 'upload_slow' ? t('roleplay.errorUploadSlow')
               : error === 'too_large' ? t('roleplay.errorTooLarge')
               : error === 'mic_lost' ? t('roleplay.errorMicLost')
               : error === 'no_speech' ? t('roleplay.errorNoSpeech')
@@ -139,10 +140,12 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
           <div style={{ fontFamily: 'var(--mono)', fontSize: 44, fontWeight: 700, color: 'var(--red)', textAlign: 'center', margin: '10px 0 20px' }}>
             {String(Math.floor(elapsedSec / 60)).padStart(2, '0')}:{String(elapsedSec % 60).padStart(2, '0')}
           </div>
-          <p role="status" style={{ color: elapsedSec >= MAX_RECORDING_SEC - RECORDING_WARNING_SEC ? 'var(--amber)' : 'var(--ink-dim)', fontSize: 14, textAlign: 'center', marginBottom: 16 }}>
-            {elapsedSec >= MAX_RECORDING_SEC - RECORDING_WARNING_SEC
-              ? t('roleplay.limitSoon', { seconds: Math.max(0, MAX_RECORDING_SEC - elapsedSec) })
-              : t('roleplay.limitHint', { minutes: MAX_RECORDING_SEC / 60 })}
+          <p role="status" style={{ color: elapsedSec >= limitSec - RECORDING_WARNING_SEC ? 'var(--amber)' : 'var(--ink-dim)', fontSize: 14, textAlign: 'center', marginBottom: 16 }}>
+            {elapsedSec >= limitSec - RECORDING_WARNING_SEC
+              ? t('roleplay.limitSoon', { seconds: Math.max(0, limitSec - elapsedSec) })
+              : limitSec < MAX_RECORDING_SEC
+                ? t('roleplay.limitHintDevice', { time: formatMinSec(limitSec) })
+                : t('roleplay.limitHint', { minutes: MAX_RECORDING_SEC / 60 })}
           </p>
           <button style={{ ...btnPrimary, borderColor: 'var(--red)', background: 'var(--red)', boxShadow: 'none' }} onClick={stop}>{t('roleplay.stop')}</button>
         </div>
@@ -166,7 +169,7 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
       <div style={wrap}>
         <div style={card}>
           {eyebrow(t('roleplay.pickSpeakerTitle'))}
-          {autoStopped && <p role="status" style={{ color: 'var(--amber)', fontSize: 15, marginBottom: 14 }}>{t('roleplay.autoStopped', { minutes: MAX_RECORDING_SEC / 60 })}</p>}
+          {autoStopped && <p role="status" style={{ color: 'var(--amber)', fontSize: 15, marginBottom: 14 }}>{t('roleplay.autoStopped', { time: formatMinSec(stoppedAtSec ?? MAX_RECORDING_SEC) })}</p>}
           <p style={{ color: 'var(--ink-dim)', fontSize: 16, marginBottom: 14 }}>{t('roleplay.pickSpeakerHint')}</p>
           {speakerPreviews.map(p => (
             <button key={p.speaker} onClick={() => pickSpeaker(p.speaker)}
@@ -209,7 +212,7 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
       <div style={{ ...card, maxWidth: 520 }}>
         {eyebrow(t('roleplay.resultEyebrow'))}
         <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 16 }}>{t('roleplay.resultTitle')}</h2>
-        {autoStopped && <p role="status" style={{ color: 'var(--amber)', marginBottom: 16 }}>{t('roleplay.autoStopped', { minutes: MAX_RECORDING_SEC / 60 })}</p>}
+        {autoStopped && <p role="status" style={{ color: 'var(--amber)', marginBottom: 16 }}>{t('roleplay.autoStopped', { time: formatMinSec(stoppedAtSec ?? MAX_RECORDING_SEC) })}</p>}
         {saveError && <p role="alert" style={{ color: 'var(--amber)', marginBottom: 16 }}>{t('roleplay.errorSave')}</p>}
         {sessionId && <RecordedConversationAnalysis key={sessionId} sessionId={sessionId} audioUrl={previewUrl} />}
 

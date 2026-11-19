@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { diarizeAudio, pendingRemoteDeleteIds, MAX_ROLEPLAY_AUDIO_BYTES, type DiarizationJob } from './assemblyai-client'
+import { diarizeAudio, pendingRemoteDeleteIds, MAX_ROLEPLAY_AUDIO_BYTES, uploadTimeoutMs, type DiarizationJob } from './assemblyai-client'
 import { buildRoleplayResult } from './roleplay-core'
 const auth = vi.hoisted(() => ({ getSession: vi.fn() }))
 vi.mock('@/lib/supabase-browser', () => ({ createClient: () => ({ auth }) }))
@@ -142,6 +142,24 @@ describe('roleplay analysis recovery', () => {
     const large = new Blob([new Uint8Array(MAX_ROLEPLAY_AUDIO_BYTES + 1)])
     await expect(diarizeAudio(large)).rejects.toMatchObject({ code: 'too_large' })
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+  it('gives a long recording more upload time than a short one, within a hard cap', () => {
+    expect(uploadTimeoutMs(100_000)).toBe(105_000)
+    const fiveMin = uploadTimeoutMs(Math.ceil(1_700_000 * 4 / 3)) // ~5 minutes at 48 kbps, as base64
+    expect(fiveMin).toBeGreaterThanOrEqual(150_000)
+    expect(uploadTimeoutMs(50 * 1024 * 1024)).toBe(300_000)
+  })
+  it('reports a stalled upload as a slow upload, not as slow analysis', async () => {
+    vi.useFakeTimers()
+    fetchMock.mockImplementation((_url, options) => new Promise((_resolve, reject) => {
+      options.signal.addEventListener('abort', () => reject(new Error('aborted')))
+    }))
+    vi.stubGlobal('FileReader', class { result = 'data:audio/webm;base64,AAAA'; onload: (() => void) | null = null; readAsDataURL() { queueMicrotask(() => this.onload?.()) } })
+    const pending = expect(diarizeAudio(audio)).rejects.toMatchObject({ code: 'upload_slow' })
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(fetchMock).toHaveBeenCalledTimes(1) // still uploading: a 60s cut-off no longer applies to the upload
+    await vi.advanceTimersByTimeAsync(60_000)
+    await pending
   })
   it('bounds a stalled HTTP request without losing the job', async () => {
     vi.useFakeTimers()

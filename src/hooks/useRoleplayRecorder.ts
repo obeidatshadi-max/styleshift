@@ -8,10 +8,10 @@ import {
 } from '@/lib/roleplay-core'
 import { XP_VALUES } from '@/lib/game-data'
 import { persistTranscriptSegments } from '@/lib/transcript-segments'
-import { MAX_RECORDING_SEC, RECORDING_BITS_PER_SECOND, RECORDING_SIZE_GUARD_BYTES } from '@/lib/roleplay-limits'
+import { effectiveLimitSec, MAX_RECORDING_SEC, RECORDING_BITS_PER_SECOND, RECORDING_SIZE_GUARD_BYTES } from '@/lib/roleplay-limits'
 
 export type RecorderPhase = 'idle' | 'recording' | 'processing' | 'pick-speaker' | 'done' | 'error'
-export type RecorderError = 'mic' | 'diarize' | 'session' | 'speakers' | 'timeout' | 'too_large' | 'mic_lost' | 'no_speech' | 'bad_file'
+export type RecorderError = 'mic' | 'diarize' | 'session' | 'speakers' | 'timeout' | 'upload_slow' | 'too_large' | 'mic_lost' | 'no_speech' | 'bad_file'
 
 /** Audio types the upload path accepts (what MediaRecorder and common phone recorders produce). */
 export const ACCEPTED_AUDIO = /^(audio\/|video\/webm|video\/mp4)/
@@ -88,6 +88,11 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
   // True when the recorder stopped itself at the time or size limit, so the
   // screens can tell the rep the analysis covers the first part of the call.
   const [autoStopped, setAutoStopped] = useState(false)
+  // Where the recording will really end on this phone (time limit, or earlier
+  // when the phone records more bytes per second than asked), and where an
+  // automatic stop actually happened, so the screens never claim "10 minutes".
+  const [limitSec, setLimitSec] = useState(MAX_RECORDING_SEC)
+  const [stoppedAtSec, setStoppedAtSec] = useState<number | null>(null)
   const autoStopRequestedRef = useRef(false)
   const bytesRecordedRef = useRef(0)
   const stopRef = useRef<() => Promise<void>>(async () => {})
@@ -172,12 +177,15 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     if (!recordingActiveRef.current || autoStopRequestedRef.current) return
     autoStopRequestedRef.current = true
     setAutoStopped(true)
+    setStoppedAtSec(Math.round((Date.now() - startTimeRef.current) / 1000))
     void stopRef.current()
   }, [])
 
   const start = useCallback(async () => {
     setError(null)
     setAutoStopped(false)
+    setStoppedAtSec(null)
+    setLimitSec(MAX_RECORDING_SEC)
     autoStopRequestedRef.current = false
     bytesRecordedRef.current = 0
     captureRef.current = 'device'
@@ -264,6 +272,7 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     elapsedIntervalRef.current = setInterval(() => {
       const elapsedMs = Date.now() - startTimeRef.current
       setElapsedSec(Math.round(elapsedMs / 1000))
+      setLimitSec(effectiveLimitSec(elapsedMs / 1000, bytesRecordedRef.current))
       if (elapsedMs >= MAX_RECORDING_SEC * 1000) requestAutoStop()
     }, 500)
 
@@ -552,11 +561,13 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     setError(null)
     setElapsedSec(0)
     setAutoStopped(false)
+    setStoppedAtSec(null)
+    setLimitSec(MAX_RECORDING_SEC)
     autoStopRequestedRef.current = false
     bytesRecordedRef.current = 0
     setPhase('idle')
     try { window.sessionStorage.removeItem(storageKey) } catch { /* ignore */ }
   }, [cleanupCapture, storageKey])
 
-  return { phase, error, previewUrl, saveError, autoStopped, retryAnalysis: analyzeRecording, elapsedSec, speakerPreviews, result, sessionId, start, startFromFile, stop, pickSpeaker, backToPickSpeaker, reset }
+  return { phase, error, previewUrl, saveError, autoStopped, limitSec, stoppedAtSec, retryAnalysis: analyzeRecording, elapsedSec, speakerPreviews, result, sessionId, start, startFromFile, stop, pickSpeaker, backToPickSpeaker, reset }
 }

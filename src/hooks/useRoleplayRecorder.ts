@@ -8,6 +8,7 @@ import {
 } from '@/lib/roleplay-core'
 import { XP_VALUES } from '@/lib/game-data'
 import { persistTranscriptSegments } from '@/lib/transcript-segments'
+import { buildSpeakerPreviews, type SpeakerPreview } from '@/lib/speaker-previews'
 import { effectiveLimitSec, MAX_RECORDING_SEC, RECORDING_BITS_PER_SECOND, RECORDING_SIZE_GUARD_BYTES } from '@/lib/roleplay-limits'
 
 export type RecorderPhase = 'idle' | 'recording' | 'processing' | 'pick-speaker' | 'done' | 'error'
@@ -16,7 +17,7 @@ export type RecorderError = 'mic' | 'diarize' | 'session' | 'speakers' | 'timeou
 /** Audio types the upload path accepts (what MediaRecorder and common phone recorders produce). */
 export const ACCEPTED_AUDIO = /^(audio\/|video\/webm|video\/mp4)/
 
-export interface RawSpeakerPreview { speaker: string; sample: string }
+export type RawSpeakerPreview = SpeakerPreview
 
 // ── Pitch/silence capture, ported from Verbal Mirror (ssm-app's
 // dev/voice-logic.js live-capture section, already shipped in
@@ -361,10 +362,7 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
         setPhase('error')
         return
       }
-      setSpeakerPreviews(speakers.map(speaker => ({
-        speaker,
-        sample: utterances.find(u => u.speaker === speaker)?.text ?? '',
-      })))
+      setSpeakerPreviews(buildSpeakerPreviews(utterances))
       setPhase('pick-speaker')
     } catch (err) {
       if (controller.signal.aborted) return

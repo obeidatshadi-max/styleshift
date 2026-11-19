@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useT } from '@/lib/i18n'
 import RoleplayLanguageCards from './RoleplayLanguageCards'
 import { useRoleplayRecorder } from '@/hooks/useRoleplayRecorder'
@@ -16,6 +16,19 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
   const { phase, error, previewUrl, saveError, autoStopped, limitSec, stoppedAtSec, retryAnalysis, elapsedSec, speakerPreviews, result, sessionId, start, startFromFile, stop, pickSpeaker, backToPickSpeaker, reset } = useRoleplayRecorder(doctorId, colleagueId)
   const [consentChecked, setConsentChecked] = useState(false)
   const [consented, setConsented] = useState(false)
+
+  // Plays one speaker's clip from the in-memory recording on the "Which voice is you?" screen.
+  const clipAudioRef = useRef<HTMLAudioElement | null>(null)
+  const clipStopRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (!previewUrl) return
+    const a = new Audio(previewUrl)
+    const onTime = () => { if (clipStopRef.current !== null && a.currentTime >= clipStopRef.current) { a.pause(); clipStopRef.current = null } }
+    a.addEventListener('timeupdate', onTime)
+    clipAudioRef.current = a
+    return () => { a.pause(); a.removeEventListener('timeupdate', onTime); clipAudioRef.current = null }
+  }, [previewUrl])
+  useEffect(() => { if (phase !== 'pick-speaker') clipAudioRef.current?.pause() }, [phase])
 
   // The active assignment, fetched once — lets the results screen offer a
   // "Share with manager" button without the doctor/colleague prep screens
@@ -165,21 +178,50 @@ export default function RoleplayRecorder({ doctorId, colleagueId, onDone }: Prop
   }
 
   if (phase === 'pick-speaker') {
+    const playClip = (start: number, end: number) => {
+      const a = clipAudioRef.current
+      if (!a) return
+      a.currentTime = Math.max(0, start - 0.2)
+      clipStopRef.current = end + 0.2
+      void a.play().catch(() => {})
+    }
     return (
       <div style={wrap}>
         <div style={card}>
           {eyebrow(t('roleplay.pickSpeakerTitle'))}
           {autoStopped && <p role="status" style={{ color: 'var(--amber)', fontSize: 15, marginBottom: 14 }}>{t('roleplay.autoStopped', { time: formatMinSec(stoppedAtSec ?? MAX_RECORDING_SEC) })}</p>}
           <p style={{ color: 'var(--ink-dim)', fontSize: 16, marginBottom: 14 }}>{t('roleplay.pickSpeakerHint')}</p>
-          {speakerPreviews.map(p => (
-            <button key={p.speaker} onClick={() => pickSpeaker(p.speaker)}
-              style={{ display: 'block', width: '100%', textAlign: 'start', cursor: 'pointer', color: 'var(--ink)', fontFamily: 'var(--sans)', fontSize: 16, lineHeight: 1.4, border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', background: 'var(--surface-subtle)', marginBottom: 10, touchAction: 'manipulation' }}>
-              <b style={{ color: 'var(--cyan)', display: 'block', fontFamily: 'var(--mono)', fontSize: 14, marginBottom: 4 }}>
-                {t('roleplay.speakerLabel', { letter: p.speaker })}
-              </b>
-              &ldquo;{p.sample}&rdquo;
-            </button>
-          ))}
+          {speakerPreviews.map((p, i) => {
+            // Each voice gets its own colour, a few of its own lines, how much it spoke, and a clip to hear:
+            // one line alone was often not enough to tell two colleagues apart.
+            const color = i % 2 === 0 ? 'var(--cyan)' : 'var(--pink)'
+            return (
+              <div key={p.speaker} style={{ border: `2px solid ${color}`, borderRadius: 12, padding: '12px 14px', background: 'var(--surface-subtle)', marginBottom: 12 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <b style={{ color, fontFamily: 'var(--mono)', fontSize: 16 }}>{t('roleplay.speakerLabel', { letter: p.speaker })}</b>
+                  {p.spokeFirst && <span style={{ fontSize: 13, border: `1px solid ${color}`, color, borderRadius: 20, padding: '1px 8px' }}>{t('roleplay.spokeFirst')}</span>}
+                  <span style={{ fontSize: 14, color: 'var(--ink-dim)' }}>{t('roleplay.speakerStats', { percent: p.talkPercent, turns: p.turns })}</span>
+                </div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 10px' }}>
+                  {p.lines.map((line, j) => (
+                    <li key={j} dir="auto" style={{ fontSize: 16, lineHeight: 1.5, color: 'var(--ink)', borderInlineStart: `3px solid ${color}`, paddingInlineStart: 10, marginBottom: 6 }}>{line}</li>
+                  ))}
+                </ul>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {previewUrl && p.clip && (
+                    <button type="button" onClick={() => playClip(p.clip!.start, p.clip!.end)}
+                      style={{ flex: '0 0 auto', cursor: 'pointer', fontSize: 15, fontWeight: 700, padding: '11px 14px', borderRadius: 10, border: `2px solid ${color}`, background: 'transparent', color, touchAction: 'manipulation' }}>
+                      ▶ {t('roleplay.listenVoice')}
+                    </button>
+                  )}
+                  <button type="button" onClick={() => pickSpeaker(p.speaker)}
+                    style={{ flex: 1, cursor: 'pointer', fontSize: 16, fontWeight: 800, padding: '11px 14px', borderRadius: 10, border: `2px solid ${color}`, background: color, color: 'var(--on-accent)', touchAction: 'manipulation' }}>
+                    {t('roleplay.thisIsMe')}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
     )

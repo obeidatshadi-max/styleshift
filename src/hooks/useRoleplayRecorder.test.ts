@@ -21,6 +21,7 @@ vi.mock('@/lib/assemblyai-client', () => {
     // The hook calls the metadata variant; it delegates to the same mock so existing tests stay as written.
     diarizeAudioWithMeta: vi.fn(async (...args: unknown[]) => ({ utterances: await diarizeAudio(...args), meta: { languageCode: 'en', audioDurationSec: 2 } })),
     MAX_ROLEPLAY_AUDIO_BYTES: 4 * 1024 * 1024,
+    MAX_FILE_AUDIO_BYTES: 25 * 1024 * 1024,
     DiarizationError: class extends Error {
       code: string
       constructor(code: string, message: string) { super(message); this.code = code }
@@ -231,7 +232,7 @@ describe('useRoleplayRecorder silent audio and uploaded files', () => {
     expect(result.current.error).toBe('no_speech')
     await act(async () => { await result.current.startFromFile(new File(['x'], 'notes.pdf', { type: 'application/pdf' })) })
     expect(result.current.error).toBe('bad_file')
-    await act(async () => { await result.current.startFromFile(new File([new Uint8Array(4 * 1024 * 1024 + 1)], 'big.m4a', { type: 'audio/mp4' })) })
+    await act(async () => { await result.current.startFromFile(new File([new Uint8Array(25 * 1024 * 1024 + 1)], 'big.m4a', { type: 'audio/mp4' })) })
     expect(result.current.error).toBe('too_large')
     expect(diarizeAudio).not.toHaveBeenCalled()
   })

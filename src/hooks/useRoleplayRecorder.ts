@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
-import { diarizeAudioWithMeta, DiarizationError, MAX_ROLEPLAY_AUDIO_BYTES, type DiarizationJob, type DiarizationMeta, type DiarizedUtterance } from '@/lib/assemblyai-client'
+import { diarizeAudioWithMeta, DiarizationError, MAX_FILE_AUDIO_BYTES, type DiarizationJob, type DiarizationMeta, type DiarizedUtterance } from '@/lib/assemblyai-client'
 import { buildTranscriptQuality } from '@/lib/conversation-coach/quality'
 import {
   buildRoleplayResult, type PitchSample, type SilencePeriod, type Utterance, type RoleplayResult,
@@ -422,7 +422,7 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
     setAutoStopped(false)
     if (!file.size) { setError('no_speech'); setPhase('error'); return }
     if (!ACCEPTED_AUDIO.test(file.type)) { setError('bad_file'); setPhase('error'); return }
-    if (file.size > MAX_ROLEPLAY_AUDIO_BYTES) { setError('too_large'); setPhase('error'); return }
+    if (file.size > MAX_FILE_AUDIO_BYTES) { setError('too_large'); setPhase('error'); return }
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { setError('session'); setPhase('error'); return }
     captureRef.current = 'upload'

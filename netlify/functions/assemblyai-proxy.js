@@ -14,8 +14,14 @@
 //    { action: 'poll', transcript_id: string }
 //      -> { status: 'queued'|'processing'|'completed'|'error',
 //           utterances?: [{ speaker, text, start, end, words }], error?: string }
-//    { action: 'delete', transcript_id: string }
+//    { action: 'delete', transcript_id: string, storage_path?: string }
 //      -> { deleted: boolean }   (also removes the uploaded audio)
+//    { action: 'submit_storage', storage_path: string }
+//      -> { id: string, status: 'queued' }
+//         For files over the 4 MB body limit: the browser has put the file in the
+//         private 'roleplay-audio' bucket under its own uid folder; this signs a
+//         short-lived URL for AssemblyAI to fetch. 'poll' and 'delete' remove the
+//         file again when given the same storage_path.
 // ═══════════════════════════════════════════════════════════
 
 const { createClient } = require('@supabase/supabase-js')
@@ -28,6 +34,28 @@ const SAFE_ID = /^[a-zA-Z0-9_-]{1,128}$/
 // (from our own 'upload' call) — never an arbitrary attacker-supplied URL,
 // which would make AssemblyAI's servers fetch it on our behalf (SSRF).
 const ASSEMBLYAI_UPLOAD_HOST = /^https:\/\/cdn\.assemblyai\.com\//
+const AUDIO_BUCKET = 'roleplay-audio'
+// "<uid>/<random>.<ext>" inside the private bucket: the uid folder must be the caller's own.
+const STORAGE_FILE = /^[0-9a-f-]{36}\/[A-Za-z0-9_-]{8,64}\.[a-z0-9]{2,5}$/
+const SIGNED_URL_SECONDS = 60 * 60
+
+function ownStoragePath(path, userId) {
+  return typeof path === 'string' && STORAGE_FILE.test(path) && path.startsWith(`${userId}/`)
+}
+
+function transcriptRequest(audioUrl) {
+  // speakers_expected hints AssemblyAI's diarization clustering — this
+  // recording is always exactly one rep + one practice partner, and
+  // without the hint short/close-together same-mic recordings were
+  // consistently clustering both voices into a single speaker.
+  return JSON.stringify({
+    audio_url: audioUrl,
+    speech_models: ['universal-3-pro', 'universal-2'],
+    language_detection: true,
+    speaker_labels: true,
+    speakers_expected: 2,
+  })
+}
 
 exports.handler = async function (event) {
   const headers = {
@@ -94,22 +122,39 @@ exports.handler = async function (event) {
       const response = await fetch('https://api.assemblyai.com/v2/transcript', {
         method: 'POST',
         headers: { authorization: apiKey, 'Content-Type': 'application/json' },
-        // speakers_expected hints AssemblyAI's diarization clustering — this
-        // recording is always exactly one rep + one practice partner, and
-        // without the hint short/close-together same-mic recordings were
-        // consistently clustering both voices into a single speaker.
-        body: JSON.stringify({
-          audio_url: body.audio_url,
-          speech_models: ['universal-3-pro', 'universal-2'],
-          language_detection: true,
-          speaker_labels: true,
-          speakers_expected: 2,
-        }),
+        body: transcriptRequest(body.audio_url),
       })
       const data = await response.json()
       if (!response.ok) console.error('assemblyai submit failed:', response.status, JSON.stringify(data))
       else console.log('assemblyai submit ok, transcript id:', data.id)
       return { statusCode: response.status, headers, body: JSON.stringify(data) }
+    }
+
+    if (body.action === 'submit_storage') {
+      if (!ownStoragePath(body.storage_path, user.id)) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid storage_path.' }) }
+      }
+      const { data: signed, error: signError } = await admin.storage.from(AUDIO_BUCKET).createSignedUrl(body.storage_path, SIGNED_URL_SECONDS)
+      if (signError || !signed?.signedUrl) {
+        console.error('roleplay-audio sign failed:', signError?.message)
+        return { statusCode: 502, headers, body: JSON.stringify({ error: 'Could not prepare the recording for analysis.' }) }
+      }
+      const response = await fetch('https://api.assemblyai.com/v2/transcript', {
+        method: 'POST',
+        headers: { authorization: apiKey, 'Content-Type': 'application/json' },
+        body: transcriptRequest(signed.signedUrl),
+      })
+      const data = await response.json()
+      if (!response.ok) console.error('assemblyai submit (storage) failed:', response.status, JSON.stringify(data))
+      else console.log('assemblyai submit (storage) ok, transcript id:', data.id)
+      return { statusCode: response.status, headers, body: JSON.stringify(data) }
+    }
+
+    // Removes a large-file upload from the private bucket. Never blocks the answer on failure.
+    const removeStoredAudio = async () => {
+      if (!ownStoragePath(body.storage_path, user.id)) return
+      const { error } = await admin.storage.from(AUDIO_BUCKET).remove([body.storage_path])
+      if (error) console.error('roleplay-audio remove failed:', error.message)
     }
 
     if (body.action === 'poll') {
@@ -120,6 +165,8 @@ exports.handler = async function (event) {
         headers: { authorization: apiKey },
       })
       const data = await response.json()
+      // Once AssemblyAI has finished (or failed) it no longer needs the file, so the stored copy goes now.
+      if (response.ok && (data.status === 'completed' || data.status === 'error')) await removeStoredAudio()
       if (!response.ok) {
         console.error('assemblyai poll failed:', response.status, JSON.stringify(data))
       } else if (data.status === 'completed') {
@@ -146,6 +193,7 @@ exports.handler = async function (event) {
         method: 'DELETE',
         headers: { authorization: apiKey },
       })
+      await removeStoredAudio()
       if (!response.ok) console.error('assemblyai delete failed:', response.status)
       else console.log('assemblyai delete ok, transcript id:', body.transcript_id)
       return { statusCode: response.ok ? 200 : response.status, headers, body: JSON.stringify({ deleted: response.ok }) }

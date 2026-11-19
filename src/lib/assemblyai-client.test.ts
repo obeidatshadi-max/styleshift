@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { diarizeAudio, pendingRemoteDeleteIds, MAX_ROLEPLAY_AUDIO_BYTES, uploadTimeoutMs, type DiarizationJob } from './assemblyai-client'
+import { diarizeAudio, pendingRemoteDeleteIds, MAX_ROLEPLAY_AUDIO_BYTES, MAX_FILE_AUDIO_BYTES, uploadTimeoutMs, type DiarizationJob } from './assemblyai-client'
 import { buildRoleplayResult } from './roleplay-core'
 const auth = vi.hoisted(() => ({ getSession: vi.fn() }))
-vi.mock('@/lib/supabase-browser', () => ({ createClient: () => ({ auth }) }))
+const storage = vi.hoisted(() => ({ upload: vi.fn(), bucket: '' }))
+vi.mock('@/lib/supabase-browser', () => ({ createClient: () => ({ auth, storage: { from: (b: string) => { storage.bucket = b; return { upload: storage.upload } } } }) }))
 const utterances = [
   { speaker: 'A', text: 'What concerns would you like to discuss?', start: 0, end: 5000, words: [] },
   { speaker: 'B', text: 'I need more time to review the evidence.', start: 6000, end: 11000, words: [] },
@@ -10,7 +11,8 @@ const utterances = [
 ]
 let fetchMock: ReturnType<typeof vi.fn>
 beforeEach(() => {
-  auth.getSession.mockResolvedValue({ data: { session: { access_token: 'test-token' } } })
+  auth.getSession.mockResolvedValue({ data: { session: { access_token: 'test-token', user: { id: '11111111-2222-3333-4444-555555555555' } } } })
+  storage.upload.mockReset().mockResolvedValue({ data: {}, error: null })
   fetchMock = vi.fn()
   vi.stubGlobal('fetch', fetchMock)
   const store = new Map<string, string>()
@@ -138,8 +140,32 @@ describe('roleplay analysis recovery', () => {
       expect(sent[sent.length - 1]).toEqual({ action: 'delete', transcript_id: 'transcript-4' })
     })
   })
+  it('sends a file over the proxy limit through the private bucket, never as base64, and resumes without re-uploading', async () => {
+    const big = new Blob([new Uint8Array(MAX_ROLEPLAY_AUDIO_BYTES + 1)], { type: 'audio/mp4' })
+    const job: DiarizationJob = {}
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ id: 'tx-1' }) })
+      .mockRejectedValueOnce(new Error('network'))
+    await expect(diarizeAudio(big, job)).rejects.toThrow()
+    expect(storage.bucket).toBe('roleplay-audio')
+    expect(storage.upload).toHaveBeenCalledTimes(1)
+    const [path] = storage.upload.mock.calls[0]
+    expect(path).toMatch(/^11111111-2222-3333-4444-555555555555\/[a-z0-9]{32}\.m4a$/)
+    const submit = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(submit).toEqual({ action: 'submit_storage', storage_path: path })
+    expect(fetchMock.mock.calls.every(c => !String(c[1].body).includes('"action":"upload"'))).toBe(true)
+    expect(job).toMatchObject({ transcriptId: 'tx-1', storagePath: path })
+
+    fetchMock.mockReset()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ status: 'completed', utterances }) })
+      .mockResolvedValue({ ok: true, status: 200, json: async () => ({ deleted: true }) })
+    await expect(diarizeAudio(big, job)).resolves.toEqual(utterances)
+    expect(storage.upload).toHaveBeenCalledTimes(1) // resumed the same job
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ action: 'poll', transcript_id: 'tx-1', storage_path: path })
+    expect(job.storagePath).toBeUndefined()
+  })
   it('rejects oversized audio before upload', async () => {
-    const large = new Blob([new Uint8Array(MAX_ROLEPLAY_AUDIO_BYTES + 1)])
+    const large = new Blob([new Uint8Array(MAX_FILE_AUDIO_BYTES + 1)])
     await expect(diarizeAudio(large)).rejects.toMatchObject({ code: 'too_large' })
     expect(fetchMock).not.toHaveBeenCalled()
   })

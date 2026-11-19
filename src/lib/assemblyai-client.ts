@@ -3,6 +3,16 @@ import { createClient } from '@/lib/supabase-browser'
 const PROXY_URL = '/.netlify/functions/assemblyai-proxy'
 // Base64 expands bytes by 4/3; keep JSON below Netlify's request limit.
 export const MAX_ROLEPLAY_AUDIO_BYTES = 4 * 1024 * 1024
+/** Larger files skip the proxy body: they go to the private 'roleplay-audio' bucket and AssemblyAI fetches them there.
+ * Same as the bucket's own file_size_limit (migration 20261119120000_roleplay_audio_bucket). */
+export const MAX_FILE_AUDIO_BYTES = 25 * 1024 * 1024
+const AUDIO_BUCKET = 'roleplay-audio'
+const EXT_BY_TYPE: [RegExp, string][] = [
+  [/webm/, 'webm'], [/ogg|opus/, 'ogg'], [/mpeg|mp3/, 'mp3'], [/wav/, 'wav'], [/aac/, 'aac'], [/mp4|m4a|x-m4a/, 'm4a'],
+]
+function storageExt(type: string): string {
+  return EXT_BY_TYPE.find(([re]) => re.test(type))?.[1] ?? 'bin'
+}
 export type DiarizationErrorCode = 'session' | 'timeout' | 'upload_slow' | 'too_large' | 'diarize'
 /** Every call gets this long; the upload gets extra time per MB so a long recording on a weak signal can finish. */
 const REQUEST_TIMEOUT_MS = 60_000
@@ -17,7 +27,7 @@ export class DiarizationError extends Error {
 /** confidence is the provider's own 0-1 score when it sends one; never filled in by the app. */
 export interface DiarizedWord { text: string; speaker: string; start: number; end: number; confidence?: number }
 export interface DiarizedUtterance { speaker: string; text: string; start: number; end: number; words: DiarizedWord[] }
-export interface DiarizationJob { uploadUrl?: string; transcriptId?: string }
+export interface DiarizationJob { uploadUrl?: string; transcriptId?: string; storagePath?: string }
 interface TranscriptStatus {
   status: 'queued' | 'processing' | 'completed' | 'error'
   utterances?: DiarizedUtterance[]
@@ -144,6 +154,33 @@ async function discardRemoteCopy(transcriptId: string, signal?: AbortSignal): Pr
   } catch { return 'not_acknowledged' }
 }
 
+/**
+ * Files over the proxy's body limit: upload to the rep's own folder in the private bucket (kept in job, so a retry
+ * does not upload again), then ask the proxy to start the transcript from a short-lived signed URL.
+ */
+async function submitViaStorage(blob: Blob, job: DiarizationJob, signal?: AbortSignal): Promise<string> {
+  const supabase = createClient()
+  if (!job.storagePath) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new DiarizationError('session', 'Not signed in.')
+    signal?.throwIfAborted()
+    const path = `${session.user.id}/${crypto.randomUUID().replace(/-/g, '')}.${storageExt(blob.type)}`
+    const upload = supabase.storage.from(AUDIO_BUCKET).upload(path, blob, { contentType: blob.type || 'application/octet-stream', upsert: false })
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const timedOut = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new DiarizationError('upload_slow', 'Upload timed out.')), uploadTimeoutMs(blob.size))
+    })
+    try {
+      const { error } = await Promise.race([upload, timedOut])
+      if (error) throw new DiarizationError('diarize', 'Could not upload the recording.')
+    } finally { clearTimeout(timer) }
+    job.storagePath = path
+  }
+  const data = await request<{ id?: string }>({ action: 'submit_storage', storage_path: job.storagePath }, signal)
+  if (!data.id) throw new DiarizationError('diarize', 'Analysis returned no job ID.')
+  return data.id
+}
+
 /** Retain job between retries so slow polling resumes without another paid upload/job. */
 export async function diarizeAudio(blob: Blob, job: DiarizationJob = {}, signal?: AbortSignal): Promise<DiarizedUtterance[]> {
   return (await diarizeAudioWithMeta(blob, job, signal)).utterances
@@ -154,8 +191,11 @@ export async function diarizeAudioWithMeta(
   blob: Blob, job: DiarizationJob = {}, signal?: AbortSignal,
 ): Promise<{ utterances: DiarizedUtterance[]; meta: DiarizationMeta }> {
   if (!blob.size) throw new DiarizationError('diarize', 'The recording is empty.')
-  if (blob.size > MAX_ROLEPLAY_AUDIO_BYTES) throw new DiarizationError('too_large', 'Recording is too large to upload.')
+  if (blob.size > MAX_FILE_AUDIO_BYTES) throw new DiarizationError('too_large', 'Recording is too large to upload.')
   void retryPendingDeletes(signal)
+  if (!job.transcriptId && blob.size > MAX_ROLEPLAY_AUDIO_BYTES) {
+    job.transcriptId = await submitViaStorage(blob, job, signal)
+  }
   if (!job.transcriptId && !job.uploadUrl) {
     const audio = await blobToBase64(blob)
     const data = await request<{ upload_url?: string }>({ action: 'upload', audio }, signal, uploadTimeoutMs(audio.length), 'upload_slow')
@@ -170,12 +210,13 @@ export async function diarizeAudioWithMeta(
   const deadline = Date.now() + 5 * 60_000
   while (Date.now() < deadline) {
     signal?.throwIfAborted()
-    const result = await request<TranscriptStatus>({ action: 'poll', transcript_id: job.transcriptId }, signal)
+    const result = await request<TranscriptStatus>({ action: 'poll', transcript_id: job.transcriptId, ...(job.storagePath ? { storage_path: job.storagePath } : {}) }, signal)
     if (result.status === 'completed') {
       if (!Array.isArray(result.utterances)) throw new DiarizationError('diarize', 'Analysis returned no speaker data.')
       await discardRemoteCopy(job.transcriptId, signal)
       delete job.transcriptId
       delete job.uploadUrl
+      delete job.storagePath // the poll that reported 'completed' removed the stored file
       return {
         utterances: result.utterances,
         meta: {
@@ -188,6 +229,7 @@ export async function diarizeAudioWithMeta(
       // A failed job still holds the uploaded audio at the provider, so ask for it to be removed too.
       await discardRemoteCopy(job.transcriptId, signal)
       delete job.transcriptId
+      delete job.storagePath // removed by the poll that reported the error; a retry uploads again
       throw new DiarizationError('diarize', result.error || 'Diarization failed')
     }
     if (result.status !== 'queued' && result.status !== 'processing') {

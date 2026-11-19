@@ -7,7 +7,7 @@ interface Loaded { transcriptVersion: number; canProposePhrases: boolean; segmen
 
 const COPY = {
   en: {
-    open: 'Check the transcript', hint: 'The speech engine can mishear Iraqi words or mix up who spoke. Fix a line, or tap the speaker label to switch it. Your corrections change the analysis and help us teach the app Iraqi phrases.',
+    open: 'Check the transcript', invite: 'Help build the Iraqi phrase bank: fix any word the app misheard. Your fixes also make this report more accurate.', hint: 'The speech engine can mishear Iraqi words or mix up who spoke. Fix a line, or tap the speaker label to switch it. Your corrections change the analysis and help us teach the app Iraqi phrases.',
     loading: 'Loading the transcript…', failed: 'Could not load the transcript.', rep: 'You', other: 'Other person',
     share: 'Share the corrected words with the Iraqi phrase reviewers (only the changed words, never the whole line or any names)',
     save: 'Save corrections', saving: 'Saving…', saved: (v: number) => `Saved as version ${v}. Create the analysis again to use it.`,
@@ -15,7 +15,7 @@ const COPY = {
     switchSpeaker: 'Switch speaker',
   },
   ar: {
-    open: 'راجع نص المحادثة', hint: 'قد يخطئ البرنامج في سماع الكلمات العراقية أو في تحديد من تكلّم. صحّح السطر، أو اضغط على اسم المتحدث لتبديله. تصحيحاتك تغيّر التحليل وتساعدنا على تعليم التطبيق العبارات العراقية.',
+    open: 'راجع نص المحادثة', invite: 'ساعد في بناء بنك العبارات العراقية: صحّح أي كلمة أخطأ التطبيق في سماعها. تصحيحاتك تجعل هذا التقرير أدق أيضاً.', hint: 'قد يخطئ البرنامج في سماع الكلمات العراقية أو في تحديد من تكلّم. صحّح السطر، أو اضغط على اسم المتحدث لتبديله. تصحيحاتك تغيّر التحليل وتساعدنا على تعليم التطبيق العبارات العراقية.',
     loading: 'جاري تحميل النص…', failed: 'تعذّر تحميل النص.', rep: 'أنت', other: 'الطرف الآخر',
     share: 'شارك الكلمات المصحّحة مع مراجعي العبارات العراقية (الكلمات المتغيّرة فقط، دون السطر كاملاً أو أي أسماء)',
     save: 'احفظ التصحيحات', saving: 'جاري الحفظ…', saved: (v: number) => `تم الحفظ كنسخة ${v}. أعد إنشاء التحليل لاستخدامها.`,
@@ -85,10 +85,13 @@ export default function TranscriptCorrection({ sessionId, onSaved }: { sessionId
     } catch { setMessage(c.saveFailed) } finally { setBusy(false) }
   }
 
-  return <section aria-label={c.open} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 14, marginBottom: 16 }}>
+  // The rep's corrections are the app's main source of Iraqi phrases, so this is the most visible action on the screen.
+  return <section aria-label={c.open} style={{ border: '2px solid var(--cyan)', borderRadius: 12, padding: 14, marginBottom: 16 }}>
+    {!open && <p dir="auto" style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.6, margin: '0 0 10px', color: 'var(--ink)' }}>{c.invite}</p>}
     <button type="button" onClick={toggle} aria-expanded={open}
-      style={{ cursor: 'pointer', padding: '12px 16px', borderRadius: 10, background: 'transparent', color: 'var(--cyan)', border: '1px solid var(--cyan)', width: '100%', fontSize: 16 }}>
-      {open ? c.hide : c.open}
+      style={{ cursor: 'pointer', padding: '14px 16px', borderRadius: 10, width: '100%', fontSize: 18, fontWeight: 800, letterSpacing: 'normal',
+        background: open ? 'transparent' : 'var(--cyan)', color: open ? 'var(--cyan)' : 'var(--on-accent)', border: '2px solid var(--cyan)' }}>
+      {open ? c.hide : <><span aria-hidden="true">✎ </span>{c.open}</>}
     </button>
     {open && <div style={{ marginTop: 12 }}>
       <p style={{ fontSize: 16, lineHeight: 1.7, margin: '0 0 12px' }}>{c.hint}</p>
@@ -110,11 +113,11 @@ export default function TranscriptCorrection({ sessionId, onSaved }: { sessionId
               style={{ display: 'block', width: '100%', padding: 10, fontSize: 16, lineHeight: 1.6, background: 'var(--panel)', color: 'var(--ink)', border: '1px solid var(--line)', borderRadius: 8 }} />
           </div>)}
         </div>
-        {loaded?.canProposePhrases && <label style={{ display: 'block', margin: '12px 0', fontSize: 15, lineHeight: 1.6 }}>
+        {loaded?.canProposePhrases && <label style={{ display: 'block', margin: '12px 0', fontSize: 16, fontWeight: 700, lineHeight: 1.6 }}>
           <input type="checkbox" checked={share} onChange={e => setShare(e.target.checked)} /> {c.share}
         </label>}
         <button type="button" disabled={busy || !dirty || emptyLine} onClick={() => void save()}
-          style={{ cursor: 'pointer', padding: '12px 16px', borderRadius: 10, background: 'var(--cyan)', color: 'var(--on-accent)', border: '1px solid var(--cyan)', width: '100%', marginTop: 8 }}>
+          style={{ cursor: 'pointer', padding: '14px 16px', borderRadius: 10, background: 'var(--cyan)', color: 'var(--on-accent)', border: '2px solid var(--cyan)', width: '100%', marginTop: 8, fontSize: 17, fontWeight: 800 }}>
           {busy ? c.saving : c.save}
         </button>
       </>}

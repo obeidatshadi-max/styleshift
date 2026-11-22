@@ -67,7 +67,6 @@ export default function Colleagues({ onExit }: Props) {
       <>
         <div style={{ display:'flex', justifyContent:'space-between' }}>
           <button onClick={() => { setConfirmingDelete(false); setView({ mode: 'list' }) }} style={{ ...ghostBtn, alignSelf:'flex-start', border:'none', padding:'4px 0', color:'var(--ink-dim)' }}>{t('perform.backToList')}</button>
-          <button onClick={onExit} style={{ ...ghostBtn, border:'none', color:'var(--ink-dim)', padding:'4px 0' }}>{t('home')}</button>
         </div>
         {panel(c.name,
           <>
@@ -100,9 +99,6 @@ export default function Colleagues({ onExit }: Props) {
   // list
   return wrap(
     <>
-      <div style={{ display:'flex', justifyContent:'flex-end' }}>
-        <button onClick={onExit} style={{ ...ghostBtn, border:'none', color:'var(--ink-dim)', padding:'4px 0' }}>{t('home')}</button>
-      </div>
       {panel(t('perform.title'),
         <>
           <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.5, marginBottom:14 }}>{t('perform.subtitle')}</div>

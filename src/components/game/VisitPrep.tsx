@@ -181,7 +181,6 @@ export default function VisitPrep({ onExit, initialDoctorId = '' }: Props) {
       <>
         <div style={{ display:'flex', justifyContent:'space-between' }}>
           <button onClick={() => setView({ mode: 'list' })} style={{ ...ghostBtn, alignSelf:'flex-start', border:'none', padding:'4px 0', color:'var(--ink-dim)' }}>{t('prep.backToList')}</button>
-          <button onClick={onExit} style={{ ...ghostBtn, border:'none', color:'var(--ink-dim)', padding:'4px 0' }}>{t('home')}</button>
         </div>
         {panel(t('prep.prepFor', { name: d.name }),
           <>
@@ -330,9 +329,6 @@ export default function VisitPrep({ onExit, initialDoctorId = '' }: Props) {
   // ───────────────────────── LIST ─────────────────────────
   return wrap(
     <>
-      <div style={{ display:'flex', justifyContent:'flex-end' }}>
-        <button onClick={onExit} style={{ ...ghostBtn, border:'none', color:'var(--ink-dim)', padding:'4px 0' }}>{t('home')}</button>
-      </div>
       {panel(t('prep.title'),
         <>
           <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.5, marginBottom:14 }}>{t('prep.subtitle')}</div>

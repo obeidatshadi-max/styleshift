@@ -34,14 +34,14 @@ it('serves the classroom arena page and its self-authenticating API without a se
   expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: '/dashboard' })).toBe(true)
 })
 it('lets anyone open a certificate check page, while other pages still need a session', async () => {
-  mocks.createServerClient.mockReturnValue({ auth: { getUser: async () => ({ data: { user: null } }) } })
+  mocks.createServerClient.mockReturnValue({ auth: { getClaims: async () => ({ data: null }) } })
   const verify = await proxy(new NextRequest('https://style-shift.netlify.app/verify/ABCDEFGHJKMN'))
   expect(verify.headers.get('location')).toBeNull()
   const dashboard = await proxy(new NextRequest('https://style-shift.netlify.app/dashboard'))
   expect(dashboard.headers.get('location')).toContain('/login')
 })
 it('shows the home page at /welcome to anyone, signed in or not', async () => {
-  mocks.createServerClient.mockReturnValue({ auth: { getUser: async () => ({ data: { user: null } }) } })
+  mocks.createServerClient.mockReturnValue({ auth: { getClaims: async () => ({ data: null }) } })
   const res = await proxy(new NextRequest('https://style-shift.netlify.app/welcome'))
   expect(res.headers.get('location')).toBeNull()
 })

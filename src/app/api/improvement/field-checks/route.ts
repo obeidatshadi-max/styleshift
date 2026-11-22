@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -10,7 +11,7 @@ import { parseFieldCheckRequest } from '@/lib/improvement/permissions'
  */
 export async function POST(request: Request) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   if (!(await checkRateLimit('improvement-write', user.id, 60, 3600))) return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
   const req = parseFieldCheckRequest(await request.json().catch(() => null))

@@ -1,4 +1,5 @@
 ﻿import { NextResponse } from 'next/server'
+import { getAuthUser } from '@/lib/auth-user'
 import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { isLiveDifficulty, type LiveDifficulty } from '@/lib/voice-live-core'
@@ -13,7 +14,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'pipecat_not_configured' }, { status: 503 })
   }
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   // Same shared bucket/params as every other voice-partner route (open, turn,

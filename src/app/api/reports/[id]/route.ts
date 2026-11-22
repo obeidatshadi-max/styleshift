@@ -1,11 +1,12 @@
 // src/app/api/reports/[id]/route.ts
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
 
   const { data, error } = await supabase.from('conversation_reports').select('report, superseded_by, status, failure_reason').eq('id', id).single()

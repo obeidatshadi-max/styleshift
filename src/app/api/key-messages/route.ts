@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
@@ -8,7 +9,7 @@ import { createKeyMessage, listForUser } from '@/lib/key-message-service'
 
 async function caller() {
   if (!keyMessageEnabled()) return { response: NextResponse.json({ error: 'not_found' }, { status: 404 }) }
-  const { data: { user } } = await (await createClient()).auth.getUser()
+  const user = await getAuthUser(await createClient())
   if (!user) return { response: NextResponse.json({ error: 'unauthorized' }, { status: 401 }) }
   return { userId: user.id }
 }

@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
@@ -12,7 +13,7 @@ const uuid = (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-
 /** A rep submits a written attempt in one style and gets feedback. The first attempt marks the message done. */
 export async function POST(req: Request, { params }: Ctx) {
   if (!keyMessageEnabled()) return NextResponse.json({ error: 'not_found' }, { status: 404 })
-  const { data: { user } } = await (await createClient()).auth.getUser()
+  const user = await getAuthUser(await createClient())
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const { id } = await params
   if (!uuid(id)) return NextResponse.json({ error: 'invalid_id' }, { status: 400 })

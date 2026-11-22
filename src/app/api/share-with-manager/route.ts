@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
@@ -7,7 +8,7 @@ import { parseShareRequest, SHARE_TABLE } from '@/lib/manager-share'
 /** Current sharing state of one of the rep's own items (so a reopened report shows the right checkbox). */
 export async function GET(req: Request) {
   const db = await createClient()
-  const { data: { user } } = await db.auth.getUser()
+  const user = await getAuthUser(db)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const params = new URL(req.url).searchParams
   const request = parseShareRequest({ kind: params.get('kind'), id: params.get('id'), shared: false })
@@ -22,7 +23,7 @@ export async function GET(req: Request) {
 /** A rep shares (or stops sharing) one of their own debriefs or text simulations with their manager. */
 export async function POST(req: Request) {
   const db = await createClient()
-  const { data: { user } } = await db.auth.getUser()
+  const user = await getAuthUser(db)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const request = parseShareRequest(await req.json().catch(() => null))
   if (!request) return NextResponse.json({ error: 'invalid_input' }, { status: 400 })

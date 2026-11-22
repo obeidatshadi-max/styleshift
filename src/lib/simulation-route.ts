@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -23,7 +24,7 @@ export async function simulationContext() {
     return { response: NextResponse.json({ error: 'not_configured' }, { status: 503 }) } as const
   }
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) return { response: NextResponse.json({ error: 'unauthorized' }, { status: 401 }) } as const
 
   // Own bucket: a simulation is many small calls (1 per message, 3 to finish),

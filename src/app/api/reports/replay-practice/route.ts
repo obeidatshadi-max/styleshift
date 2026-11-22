@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -21,7 +22,7 @@ const RATE_WINDOW_SEC = 3600
  */
 export async function POST(request: Request) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   if (!(await checkRateLimit('replay-practice', user.id, RATE_LIMIT, RATE_WINDOW_SEC)))
     return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 })

@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { ihiaEnabled, isReviewer } from '@/lib/ihia/server'
@@ -6,7 +7,7 @@ import { validateEntry } from '@/lib/ihia/core'
 async function context() {
   if (!ihiaEnabled()) return { response: NextResponse.json({ error: 'not_found' }, { status: 404 }) }
   const db = await createClient()
-  const { data: { user } } = await db.auth.getUser()
+  const user = await getAuthUser(db)
   if (!user) return { response: NextResponse.json({ error: 'unauthorized' }, { status: 401 }) }
   if (!(await isReviewer(db, user.id))) return { response: NextResponse.json({ error: 'forbidden' }, { status: 403 }) }
   return { db, user }

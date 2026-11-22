@@ -1,4 +1,5 @@
 // src/app/api/voice-partner/live-judge/route.ts
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { recordResolvedSession } from '@/lib/voice-partner-session-store'
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
   }
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   // Shared bucket with the rest of voice-partner traffic (see open/route.ts).

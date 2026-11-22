@@ -1,4 +1,5 @@
 // src/app/api/transcript-segments/route.ts
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { ihiaEnabled } from '@/lib/ihia/server'
@@ -6,7 +7,7 @@ import { ihiaEnabled } from '@/lib/ihia/server'
 /** The newest transcript version of one of the caller's own recordings, for the correction screen. */
 export async function GET(request: Request) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
 
   const url = new URL(request.url)

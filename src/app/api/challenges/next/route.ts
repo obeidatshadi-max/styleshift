@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { adaptiveChallengesEnabled, loadChallengeData, nextChallenge, type NextChallenge } from '@/lib/challenge-load'
@@ -13,7 +14,7 @@ function publicShape(n: NextChallenge) {
 export async function GET(req: Request) {
   if (!adaptiveChallengesEnabled()) return NextResponse.json({ error: 'not_found' }, { status: 404 })
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const lang = new URL(req.url).searchParams.get('lang') === 'ar' ? 'ar' : 'en'
   return NextResponse.json(publicShape(nextChallenge(await loadChallengeData(supabase, user.id), lang)))

@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { validationEnabled } from '@/lib/validation/assessor-service'
@@ -8,7 +9,7 @@ export const dynamic = 'force-dynamic'
 export default async function RatePage() {
   if (!validationEnabled()) redirect('/play')
   const db = await createClient()
-  const { data: { user } } = await db.auth.getUser()
+  const user = await getAuthUser(db)
   if (!user) redirect('/login')
   return <main style={{ position: 'relative', maxWidth: 850, margin: 'auto', padding: 24 }}>
     <a href="/play">← StyleShift</a>

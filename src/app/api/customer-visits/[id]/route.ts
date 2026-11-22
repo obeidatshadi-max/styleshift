@@ -1,4 +1,5 @@
 // src/app/api/customer-visits/[id]/route.ts
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 
@@ -9,7 +10,7 @@ const VALID_STATUSES = ['recording', 'transcribing', 'pick_speaker', 'ready', 'f
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
 
   const body = await request.json().catch(() => null) as {

@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
@@ -8,7 +9,7 @@ import { validationEnabled, type AssessorStore, type Result } from './assessor-s
 export async function assessorContext(): Promise<{ response: NextResponse } | { store: AssessorStore }> {
   if (!validationEnabled()) return { response: NextResponse.json({ error: 'not_found' }, { status: 404 }) }
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) return { response: NextResponse.json({ error: 'unauthorized' }, { status: 401 }) }
   return { store: supabaseAssessorStore(supabase, createAdminClient(), user.id) }
 }

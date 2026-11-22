@@ -40,5 +40,6 @@ export async function GET() {
     }
   })
 
-  return withServerTiming(NextResponse.json({ ok: true, region: process.env.AWS_REGION ?? null }), timer)
+  const timing = timer.header()
+  return withServerTiming(NextResponse.json({ ok: true, region: process.env.AWS_REGION ?? null, timing }), timer)
 }

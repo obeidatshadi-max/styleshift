@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { createServerTimer, withServerTiming } from '@/lib/server-timing'
+import { createServerTimer } from '@/lib/server-timing'
 
 export async function proxy(request: NextRequest) {
   // This function checks its own Bearer token; do not turn JSON into login HTML.
@@ -81,8 +81,10 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Durations only (see server-timing.ts); prefixed so they read apart from the route's own steps.
-  return withServerTiming(supabaseResponse, timer, 'proxy')
+  // Durations only (see server-timing.ts). Own header name: a Server-Timing header set here
+  // replaces the route's Server-Timing header instead of joining it.
+  supabaseResponse.headers.set('X-Proxy-Timing', timer.header())
+  return supabaseResponse
 }
 
 export const config = {

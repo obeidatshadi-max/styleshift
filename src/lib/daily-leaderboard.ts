@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase-admin'
+import type { ServerTimer } from '@/lib/server-timing'
 import { computeStreak, dailyPicks, isDayComplete, todayKey } from '@/lib/daily'
 
 export interface DailyStanding {
@@ -24,23 +25,25 @@ export interface DailyLeaderboard {
  * have no company yet). Read with the service-role admin client, so no
  * cross-company RLS policy is needed.
  */
-export async function getDailyLeaderboard(userId: string): Promise<DailyLeaderboard> {
+export async function getDailyLeaderboard(userId: string, timer?: ServerTimer): Promise<DailyLeaderboard> {
   const admin = createAdminClient()
+  // Optional step timing for the Server-Timing header; plain await when no timer is passed.
+  const step = <T,>(name: string, fn: () => PromiseLike<T>): PromiseLike<T> => (timer ? timer.time(name, fn) : fn())
 
-  const { data: me } = await admin
+  const { data: me } = await step('db-me', () => admin
     .from('profiles')
     .select('company_id, display_name')
     .eq('id', userId)
-    .single()
+    .single())
 
   // Peers = everyone in the same company; otherwise just the caller.
   const names = new Map<string, string | null>()
   let repIds: string[] = [userId]
   if (me?.company_id) {
-    const { data: peers } = await admin
+    const { data: peers } = await step('db-peers', () => admin
       .from('profiles')
       .select('id, display_name')
-      .eq('company_id', me.company_id)
+      .eq('company_id', me.company_id))
     if (peers?.length) {
       repIds = peers.map(p => p.id)
       for (const p of peers) names.set(p.id, p.display_name)
@@ -52,11 +55,11 @@ export async function getDailyLeaderboard(userId: string): Promise<DailyLeaderbo
   since.setUTCDate(since.getUTCDate() - 90)
   const sinceKey = since.toISOString().slice(0, 10)
 
-  const { data: rows } = await admin
+  const { data: rows } = await step('db-daily', () => admin
     .from('daily_challenges')
     .select('rep_id, challenge_date, level')
     .in('rep_id', repIds)
-    .gte('challenge_date', sinceKey)
+    .gte('challenge_date', sinceKey))
 
   // rep → date → set of levels answered that day
   const byRep = new Map<string, Map<string, Set<number>>>()

@@ -36,6 +36,8 @@ interface LevelState {
   xpEarned: number
   avgMs: number
   meters?: { quota: number; morale: number; risk: number }
+  /** The level was already cleared before this run (a replay). */
+  replay?: boolean
 }
 
 export default function GameShell() {
@@ -228,7 +230,7 @@ export default function GameShell() {
       await markAssignmentDone()
     }
 
-    setLevelState({ level: activeLevel, results, xpEarned, avgMs, meters })
+    setLevelState({ level: activeLevel, results, xpEarned, avgMs, meters, replay: earnedLevels.includes(activeLevel) })
     setScreen('result')
   }
 
@@ -310,6 +312,7 @@ export default function GameShell() {
         meters={levelState.meters}
         spsKey={profile?.sps_top_key}
         xpEarned={levelState.xpEarned}
+        replay={levelState.replay}
         onHome={handleHome}
       />
     )

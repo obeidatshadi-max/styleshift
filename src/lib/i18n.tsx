@@ -154,6 +154,7 @@ const EN: Dict = {
   'result.complete': 'Level {level} complete',
   'result.nextOpen': 'Level {next} is now open.',
   'result.allDone': 'You finished all four levels. Replay any level from the list on the home screen.',
+  'result.replayDone': 'Extra practice. Each replay makes reading the style faster.',
   'result.lessonLabel': 'Remember',
   'result.lesson.1': 'Look at how the person talks and what they ask for. Fast and direct means Driver; stories and big ideas mean Expressive; warm and careful means Amiable; data and details mean Analytical.',
   'result.lesson.2': 'Under stress each style needs something different: a Driver wants options and control, an Expressive wants recognition, an Amiable wants safety and support, an Analytical wants exact data.',
@@ -1307,7 +1308,7 @@ const EN: Dict = {
   'sps.complianceLevel.moderate': 'Medium',
   'sps.complianceLevel.elevated': 'High',
   'sps.disclaimer': 'This is based on your own answers. It is not a certified personality test or a performance review. Use it to start coaching conversations. If you see your style differently, talk about it with your manager.',
-  'sps.continue': 'Continue to StyleShift →',
+  'sps.continue': 'Continue to StyleShift',
   // roleplay verbal mirror
   'roleplay.eyebrow': 'Roleplay Practice',
   'roleplay.title': 'Record a Live Roleplay',
@@ -1684,6 +1685,7 @@ const AR: Dict = {
   'result.complete': 'اكتمل المستوى {level}',
   'result.nextOpen': 'المستوى {next} مفتوح الآن.',
   'result.allDone': 'أنهيت المستويات الأربعة. أعد أي مستوى من القائمة في الصفحة الرئيسية.',
+  'result.replayDone': 'تدريب إضافي. كل تكرار يقوّي القراءة السريعة للأسلوب.',
   'result.lessonLabel': 'تذكّر',
   'result.lesson.1': 'انتبه لطريقة الكلام وما يطلبه الشخص. السريع والمباشر مسيطر، والقصص والأفكار الكبيرة تعبيري، والدافئ الحذر ودود، والبيانات والتفاصيل تحليلي.',
   'result.lesson.2': 'تحت الضغط يحتاج كل أسلوب شيئاً مختلفاً: المسيطر يريد خيارات وتحكماً، والتعبيري يريد التقدير، والودود يريد الأمان والدعم، والتحليلي يريد بيانات دقيقة.',
@@ -2826,7 +2828,7 @@ const AR: Dict = {
   'sps.complianceLevel.moderate': 'متوسط',
   'sps.complianceLevel.elevated': 'مرتفع',
   'sps.disclaimer': 'هذا تقييم سلوكي ذاتي، وليس اختبارًا نفسيًا معتمدًا أو تقييم أداء رسمي. إنه نقطة انطلاق لمحادثات التدريب — وإذا كان تصورك لأسلوبك مختلفًا، فمن المفيد مناقشة ذلك مع مديرك.',
-  'sps.continue': 'المتابعة إلى StyleShift ←',
+  'sps.continue': 'المتابعة إلى StyleShift',
   // roleplay verbal mirror
   'roleplay.eyebrow': 'تمرين تمثيل الأدوار',
   'roleplay.title': 'سجّل تمرين تمثيل أدوار حي',

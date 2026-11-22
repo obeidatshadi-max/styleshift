@@ -11,10 +11,12 @@ interface Props {
   spsKey?: SpsKey | null
   /** XP this run earned. */
   xpEarned?: number
+  /** The level was already cleared before this run, so nothing new opened. */
+  replay?: boolean
   onHome: (confidence: number) => void
 }
 
-export default function LevelResult({ level, results, meters, spsKey, xpEarned, onHome }: Props) {
+export default function LevelResult({ level, results, meters, spsKey, xpEarned, replay, onHome }: Props) {
   const t = useT()
   const { SPS_PROFILES_TEXT } = useSpsData()
   const total = results.length
@@ -33,7 +35,7 @@ export default function LevelResult({ level, results, meters, spsKey, xpEarned, 
           <div style={{ fontFamily:'var(--mono)', fontSize:44, fontWeight:700, color:'var(--cyan)', textShadow:'var(--glow-cyan)' }}>{acc}%</div>
           <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--ink-dim)' }}>{t('result.subtitle', { level, got, total })}</div>
           <div style={{ marginTop:10, fontSize:16, fontWeight:700, color:'var(--green)' }}>✓ {t('result.complete', { level })}{xpEarned ? ` · +${xpEarned} XP` : ''}</div>
-          <div style={{ marginTop:4, fontSize:14, color:'var(--ink-dim)' }}>{level < 4 ? t('result.nextOpen', { next: level + 1 }) : t('result.allDone')}</div>
+          <div style={{ marginTop:4, fontSize:14, color:'var(--ink-dim)' }}>{replay ? t('result.replayDone') : level < 4 ? t('result.nextOpen', { next: level + 1 }) : t('result.allDone')}</div>
         </div>
         <div style={{ marginBottom:14, borderRadius:12, padding:'13px 14px', fontSize:16, lineHeight:1.5, border:'1px solid var(--line)', background:'var(--surface-subtle)' }}>
           <b style={{ display:'block', fontSize:14, marginBottom:5, color:'var(--ink)' }}>{t('result.lessonLabel')}</b>

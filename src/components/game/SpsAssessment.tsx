@@ -52,7 +52,7 @@ export default function SpsAssessment({ onComplete, initialResult }: Props) {
 
   if (phase === 'intro') {
     return (
-      <div style={{ position: 'relative', zIndex: 1, width: '100%', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ position: 'relative', zIndex: 1, width: '100%', margin: '0 auto', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 16 }}>
         <div style={card}>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}><LangToggle /></div>
           {eyebrow(t('sps.eyebrow'))}
@@ -67,7 +67,7 @@ export default function SpsAssessment({ onComplete, initialResult }: Props) {
   if (phase === 'quiz') {
     const q = SPS_QUESTIONS_TEXT[qIndex]
     return (
-      <div style={{ position: 'relative', zIndex: 1, width: '100%', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ position: 'relative', zIndex: 1, width: '100%', margin: '0 auto', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 16 }}>
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <span style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', color: 'var(--ink-dim)' }}>{t('sps.progress', { n: qIndex + 1, total })}</span>
@@ -96,7 +96,7 @@ export default function SpsAssessment({ onComplete, initialResult }: Props) {
   const order: SpsKey[] = ['go', 'connect', 'plan', 'support']
 
   return (
-    <div style={{ position: 'relative', zIndex: 1, width: '100%', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+    <div style={{ position: 'relative', zIndex: 1, width: '100%', margin: '0 auto', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 16 }}>
       <div style={{ ...card, maxWidth: 520 }}>
         {eyebrow(t('sps.resultEyebrow'))}
         <div style={{ background: 'var(--panel2)', borderBlockStart: `4px solid ${p.color}`, borderRadius: 14, padding: '18px 18px 16px', marginBottom: 16 }}>

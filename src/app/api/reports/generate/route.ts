@@ -10,6 +10,7 @@ import { groundReport } from '@/lib/report/groundReport'
 import { persistReport } from '@/lib/report/persistReport'
 import { adaptRoleplaySession } from '@/lib/report/adapters/fromRoleplaySession'
 import { adaptConversationTurns } from '@/lib/report/adapters/fromConversationTurns'
+import type { SessionRecord } from '@/agents/orchestrator/types'
 import { adaptAgentSession } from '@/lib/report/adapters/fromAgentSession'
 import { adaptCustomerVisit } from '@/lib/report/adapters/fromCustomerVisit'
 import { createOpenAiJsonComplete } from '@/agents/openai-complete'
@@ -71,7 +72,12 @@ async function loadSessionData(
   if (sessionType === 'ai_doctor_text') {
     const { data: row } = await supabase.from('agent_sessions').select('*').eq('id', sessionId).eq('rep_id', repId).single()
     if (!row || !row.record) return null
-    const { segments, context } = adaptAgentSession(row.record)
+    // The rep's saved next-visit plan for this doctor is the visit objective (it was ignored before).
+    const doctorId = (row.record as SessionRecord).session?.physician?.doctorId
+    const { data: plan } = doctorId
+      ? await supabase.from('doctors').select('plan_objective, plan_success_measure').eq('id', doctorId).eq('rep_id', repId).maybeSingle()
+      : { data: null }
+    const { segments, context } = adaptAgentSession(row.record, plan ? { objective: plan.plan_objective, successMeasure: plan.plan_success_measure } : null)
     return { segments, context, transcriptVersion: 1 }
   }
   return null

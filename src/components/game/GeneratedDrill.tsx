@@ -4,6 +4,7 @@ import { useT, useGameData } from '@/lib/i18n'
 import type { GeneratedScenario } from '@/types/game'
 import { biasForCategory } from '@/lib/cognitive-biases'
 import { OptBtn, Feedback, BiasCallout } from './helpers'
+import { withShuffledOptions } from '@/lib/scenario-engine'
 
 interface Props {
   scenario: GeneratedScenario
@@ -12,7 +13,9 @@ interface Props {
 
 const COLOR: Record<string, string> = { driver:'var(--purple)', expressive:'var(--green)', amiable:'var(--pink)', analytical:'var(--cyan)' }
 
-export default function GeneratedDrill({ scenario, onDone }: Props) {
+export default function GeneratedDrill({ scenario: raw, onDone }: Props) {
+  // AI-written scenarios also tend to list the winning answer first.
+  const scenario = withShuffledOptions(raw, raw.crisis)
   const t = useT()
   const { STYLES } = useGameData()
   const [chosen, setChosen] = useState<number | null>(null)

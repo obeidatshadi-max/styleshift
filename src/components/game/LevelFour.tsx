@@ -3,7 +3,7 @@ import { useState, useRef } from 'react'
 import { XP_VALUES } from '@/lib/game-data'
 import { bestL4Index, clamp, sign } from '@/lib/game-logic'
 import { useGameData, useT } from '@/lib/i18n'
-import { pickScenarios } from '@/lib/scenario-engine'
+import { pickScenarios, withShuffledOptions } from '@/lib/scenario-engine'
 import type { BadgeName } from '@/types/game'
 import { Topline, OptBtn, Feedback, NextRow, Meter } from './helpers'
 
@@ -29,7 +29,7 @@ export default function LevelFour({ onComplete, onBack }: Props) {
   const msRef = useRef<number[]>([])
   const badgesRef = useRef<BadgeName[]>([])
 
-  const item = scenarios[idx]
+  const item = withShuffledOptions(scenarios[idx], `L4-${scenarios[idx].id}`)
   const best = bestL4Index(item.opts)
 
   function choose(i: number) {

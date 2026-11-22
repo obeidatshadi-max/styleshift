@@ -204,7 +204,9 @@ step, preferably a respectful clarifying question when the need is unclear. sugg
 phrase the rep could say. Never claim the rep caused a later reaction because it came after the rep's turn.
 
 In every text field, never write segment numbers or bracketed references such as [3] — the app shows the
-evidence itself; refer to moments in words ("when the doctor asked about interactions").
+evidence itself; refer to moments in words ("when the doctor asked about interactions"). Never write the
+word "segment". Call the other person "the doctor" (or by name); never guess their gender, so do not use
+"he", "she", "his" or "her" for them.
 
 ${LANGUAGE_RULE[lang]}
 

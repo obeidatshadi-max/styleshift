@@ -7,7 +7,7 @@ import VoiceRecorder from './VoiceRecorder'
 
 interface Msg { id: string; text: string; mode: string; versions: Versions | null; dueDate: string | null; doctorId: string | null; fromManager: boolean; completed: boolean }
 interface Doc { id: string; name: string; style: KmStyle | null }
-interface Data { role: string; messages: Msg[]; doctors: Doc[] }
+interface Data { role: string; messages: Msg[]; doctors: Doc[]; noCompany?: boolean }
 
 const field: React.CSSProperties = { background: 'var(--surface-subtle)', border: '1px solid var(--line)', borderRadius: 10, padding: 10, color: 'var(--ink)', width: '100%', fontFamily: 'var(--sans)' }
 
@@ -37,7 +37,9 @@ export default function KeyMessagePractice() {
   }, [])
   useEffect(() => { void load() }, [load])
 
-  if (!data) return null
+  // Key messages belong to a company (a manager approves the wording). A solo rep has none, and the
+  // server refuses to create one, so do not show a form that can only fail.
+  if (!data || data.noCompany) return null
 
   const styleOf = (m: Msg) => data.doctors.find(d => d.id === m.doctorId)
   const toggle = (m: Msg) => {

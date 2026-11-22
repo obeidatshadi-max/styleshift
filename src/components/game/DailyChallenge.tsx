@@ -3,6 +3,7 @@ import { useState, useRef } from 'react'
 import { useGameData, useT } from '@/lib/i18n'
 import type { StyleKey } from '@/types/game'
 import { OptBtn, Feedback } from './helpers'
+import { withShuffledOptions } from '@/lib/scenario-engine'
 
 interface Props {
   level: number
@@ -95,7 +96,7 @@ export default function DailyChallenge({ level, scenarioId, onComplete, title, o
 
   // ── Level 2 · defuse the objection ──
   if (level === 2) {
-    const item = L2.find(s => s.id === scenarioId) ?? L2[0]
+    const item = withShuffledOptions(L2.find(s => s.id === scenarioId) ?? L2[0], `D2-${scenarioId}`)
     const s = STYLES[item.style]
     const c = COLOR[item.style]
     const winIdx = item.opts.findIndex(o => o.r === 'win')
@@ -119,7 +120,7 @@ export default function DailyChallenge({ level, scenarioId, onComplete, title, o
   }
 
   // ── Level 3 · satisfy the drive ──
-  const item = L3.find(s => s.id === scenarioId) ?? L3[0]
+  const item = withShuffledOptions(L3.find(s => s.id === scenarioId) ?? L3[0], `D3-${scenarioId}`)
   const accent = item.style ? COLOR[item.style] : 'var(--green)'
   const icon = item.style ? STYLES[item.style].icon : STYLES.expressive.icon
   return panel(

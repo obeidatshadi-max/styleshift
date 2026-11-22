@@ -3,7 +3,8 @@ import type { TranscriptSegment, ReportContext } from '@/schemas/conversationRep
 import { isSocialStyle } from '@/schemas/conversationReport'
 import { findProhibitedClaimHits, knowledgeSectionFor } from '@/lib/knowledge-pack'
 
-export function adaptAgentSession(record: SessionRecord): { segments: TranscriptSegment[]; context: ReportContext } {
+/** `plan` is the next-visit goal the rep saved for this doctor in Visit Prep; it is the visit objective the report judges against. */
+export function adaptAgentSession(record: SessionRecord, plan?: { objective?: string | null; successMeasure?: string | null } | null): { segments: TranscriptSegment[]; context: ReportContext } {
   const { session } = record
   const segments: TranscriptSegment[] = session.transcript.map(t => ({
     segmentIndex: t.turnIndex,
@@ -16,7 +17,7 @@ export function adaptAgentSession(record: SessionRecord): { segments: Transcript
 
   const dominant = session.socialStyle.dominant
   const context: ReportContext = {
-    objective: session.learningObjectives?.map(o => o.label).join('; ') || null,
+    objective: planObjective(plan) ?? (session.learningObjectives?.map(o => o.label).join('; ') || null),
     productContext: null,
     isSimulation: true,
     simulationPersona: {
@@ -40,4 +41,11 @@ export function adaptAgentSession(record: SessionRecord): { segments: Transcript
     if (analystSection || coachSection || prohibitedHits.length) context.knowledge = { analystSection, coachSection, prohibitedHits }
   }
   return { segments, context }
+}
+
+function planObjective(plan?: { objective?: string | null; successMeasure?: string | null } | null): string | null {
+  const goal = plan?.objective?.trim()
+  if (!goal) return null
+  const measure = plan?.successMeasure?.trim()
+  return measure ? `${goal} (success: ${measure})` : goal
 }

@@ -1,7 +1,7 @@
 'use client'
 import { useT, useLang } from '@/lib/i18n'
 import { summarizeRoleplayHistory, type RoleplayMetricKey } from '@/lib/roleplay-aggregate'
-import { buildRoleplayBriefing, displayValue, meetsGoal, metricUnit, missedLanguageSkills } from '@/lib/roleplay-briefing'
+import { TALK_RATIO_MIN, buildRoleplayBriefing, displayValue, meetsGoal, metricUnit, missedLanguageSkills } from '@/lib/roleplay-briefing'
 import type { RoleplaySessionSummary } from '@/types/game'
 
 const METRIC_LABEL_KEY: Record<RoleplayMetricKey, string> = {
@@ -57,7 +57,7 @@ export default function RoleplayHistorySummaryCard({ sessions, name }: { session
         </p>
         {brief.focus ? (
           <p style={{ margin: '0 0 6px', color: 'var(--amber)' }}>
-            <strong>{t('roleplay.brief.workOn')}</strong> {t(`roleplay.insight.${brief.focus.metric}`, { value: brief.focus.value })}
+            <strong>{t('roleplay.brief.workOn')}</strong> {t(brief.focus.metric === 'talkRatio' && brief.focus.value < TALK_RATIO_MIN * 100 ? 'roleplay.insight.talkRatioLow' : `roleplay.insight.${brief.focus.metric}`, { value: brief.focus.value })}
           </p>
         ) : (
           <p style={{ margin: '0 0 6px', color: 'var(--green)' }}>{t('roleplay.brief.allGood')}</p>
@@ -96,7 +96,7 @@ export default function RoleplayHistorySummaryCard({ sessions, name }: { session
         <div style={{ marginTop: 8, fontSize: 14, color: summary.trend.direction === 'improving' ? 'var(--green)' : 'var(--amber)' }}>
           {t(summary.trend.direction === 'improving' ? 'roleplay.trendImproving' : 'roleplay.trendDeclining', {
             metric: t(METRIC_LABEL_KEY[summary.trend.metric]),
-            delta: summary.trend.delta,
+            delta: Math.round(summary.trend.delta),
           })}
         </div>
       )}

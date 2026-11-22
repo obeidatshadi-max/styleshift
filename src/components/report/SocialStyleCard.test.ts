@@ -51,7 +51,7 @@ describe('SocialStyleCard', () => {
       const text = screen.getByTestId('self-check-result').textContent ?? ''
       expect(text).toContain('Relationship-focused and steady')
       expect(text).toContain('Direct and results-focused')
-      expect(text).toContain('not a verdict')
+      expect(text).toContain('not a final judgment')
     })
 
     it('skip reveals the read with no comparison', () => {

@@ -18,7 +18,7 @@ describe('Landing', () => {
   it('leads with the whole-visit promise, not training', () => {
     wrap(<Landing />)
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Walk into every visit prepared. Walk out knowing your next step.')
-    for (const step of ['Prepare', 'Practice', 'Debrief', 'Follow through']) expect(screen.getByRole('heading', { name: step })).toBeTruthy()
+    for (const step of ['Prepare', 'Practice', 'Review', 'Follow up']) expect(screen.getByRole('heading', { name: step })).toBeTruthy()
     expect(screen.getByText(/Read each doctor's style, shift yours to fit/)).toBeTruthy()
     const order = ['Before, during and after every visit', 'Read every doctor in the first minute', 'Built for reps. Built for the people who lead them.']
     const tops = order.map(h => screen.getByRole('heading', { name: h }).compareDocumentPosition(screen.getByRole('heading', { name: order[0] })))

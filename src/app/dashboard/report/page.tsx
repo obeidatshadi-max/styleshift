@@ -105,7 +105,7 @@ export default async function ReportPage() {
         <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 10px' }}>Skill Gap by Level</h2>
         <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 26 }}>
           <thead>
-            <tr><th style={th}>Level</th><th style={{ ...th, textAlign: 'right' }}>Team Avg Accuracy</th></tr>
+            <tr><th style={th}>Level</th><th style={{ ...th, textAlign: 'right' }}>Team Average Accuracy</th></tr>
           </thead>
           <tbody>
             {stats.levelAccuracy.map(l => (

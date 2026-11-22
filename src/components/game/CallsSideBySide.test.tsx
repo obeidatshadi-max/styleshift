@@ -73,7 +73,7 @@ describe('CallsSideBySide', () => {
 
   it('says plainly that it is not a score and does not describe a trait', async () => {
     seed(); wrap()
-    expect((await screen.findByTestId('calls-side-by-side')).textContent).toContain('This is not a score and it does not describe a trait.')
+    expect((await screen.findByTestId('calls-side-by-side')).textContent).toContain('This is not a score and it does not describe who they are.')
   })
 
   it('shows no number, percentage or score for any call', async () => {

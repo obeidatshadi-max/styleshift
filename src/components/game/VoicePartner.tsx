@@ -149,7 +149,7 @@ export default function VoicePartner({ doctor, onDone }: Props) {
                   <summary style={{ cursor: 'pointer' }}>Vocal delivery</summary>
                   {turn.vocalFeedback.emotions.length > 0 && <p>Emotion signals: {turn.vocalFeedback.emotions.map(item => `${item.label} (${Math.round(item.score * 100)}%)`).join(', ')}</p>}
                   {turn.vocalFeedback.styles.length > 0 && <p>Speaking style: {turn.vocalFeedback.styles.map(item => `${item.label} (${Math.round(item.score * 100)}%)`).join(', ')}</p>}
-                  <p>Oruk model scores describe this recording's vocal expression, not your feelings or Social Style. Each signal is scored independently.</p>
+                  <p>Oruk scores describe how the voice sounds in this recording. They do not describe your feelings or your Social Style. Each signal has its own score.</p>
                 </details>
               )}
             </div>

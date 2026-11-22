@@ -53,7 +53,7 @@ export default function BehavioralTrendsPanel({ reps, trendsByRep }: Props) {
   if (!anyRepHasEnoughHistory) {
     return (
       <div style={{ color: 'var(--ink-dim)', fontSize: 12.5, lineHeight: 1.5 }}>
-        No patterns detected yet — Behavioral Gravity and Unused Resource findings need at least a few completed AI Doctor sessions per rep with Deep Analysis run. This fills in as reps practice and review their sessions.
+        No patterns found yet. Each rep needs a few finished AI Doctor sessions with Deep Analysis before Behavioral Gravity and Unused Resources can show anything. This fills in as reps practise and review their sessions.
       </div>
     )
   }
@@ -63,7 +63,7 @@ export default function BehavioralTrendsPanel({ reps, trendsByRep }: Props) {
       <div>
         <div style={sectionLabelStyle}>Behavioral Gravity</div>
         {gravityRows.length === 0 ? (
-          <div style={{ color: 'var(--ink-dim)', fontSize: 12.5 }}>No recurring maladaptive pattern found yet for any rep.</div>
+          <div style={{ color: 'var(--ink-dim)', fontSize: 12.5 }}>No repeated unhelpful habit found yet for any rep.</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {gravityRows.map(({ rep, patterns }) => (
@@ -84,7 +84,7 @@ export default function BehavioralTrendsPanel({ reps, trendsByRep }: Props) {
       <div>
         <div style={sectionLabelStyle}>Unused Resources</div>
         {unusedRows.length === 0 ? (
-          <div style={{ color: 'var(--ink-dim)', fontSize: 12.5 }}>No idle capability found yet for any rep.</div>
+          <div style={{ color: 'var(--ink-dim)', fontSize: 12.5 }}>No unused skill found yet for any rep.</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {unusedRows.map(({ rep, findings }) => (

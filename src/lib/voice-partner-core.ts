@@ -2,6 +2,7 @@ import type { Doctor, StyleKey, Specialty } from '@/types/game'
 import type { VocalFeedback } from '@/lib/oruk'
 import { DRIVE } from '@/lib/doctor-context'
 import { SPECIALTIES, SPECIALTY_ORDER } from '@/lib/game-data'
+import { PLAIN_SPEECH_RULE } from '@/lib/plain-english'
 
 export const TURN_CAP = 5
 
@@ -291,7 +292,7 @@ export function personaLines(d: Doctor, style: StyleKey, lang: 'en' | 'ar'): str
   const phrases = d.key_phrases?.trim() ? `They often say things like: "${d.key_phrases.trim()}".` : ''
   const objections = d.objections?.length ? `Objection theme(s) they are likely to raise: ${d.objections.join(', ')}.` : ''
   const descriptor = styleDescriptor(styleWeights(d), style)
-  const languageLine = lang === 'ar' ? IRAQI_DIALECT_LINE : `Write ALL text in ${langName(lang)}.`
+  const languageLine = lang === 'ar' ? IRAQI_DIALECT_LINE : `Write ALL text in ${langName(lang)}. ${PLAIN_SPEECH_RULE}`
   return `You are ${d.name}${specialty}, ${descriptor}. ${languageLine}
 ${domainFlavor}
 ${phrases}

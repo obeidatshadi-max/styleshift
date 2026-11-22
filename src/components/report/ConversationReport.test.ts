@@ -69,7 +69,7 @@ describe('ConversationReport', () => {
   it('renders the visit summary without inventing an objective when none was supplied', () => {
     renderReport({ report: minimalReport(), outdated: false })
     expect(screen.getByText('Short intro visit.')).toBeTruthy()
-    expect(screen.queryByText(/objective:/i)?.textContent).not.toMatch(/undefined|null/i)
+    expect(screen.queryByText(/goal:/i)?.textContent).not.toMatch(/undefined|null/i)
   })
   it('shows an outdated banner when outdated=true', () => {
     renderReport({ report: minimalReport(), outdated: true })

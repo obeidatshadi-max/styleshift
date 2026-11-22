@@ -60,8 +60,8 @@ export interface PushMessage { title: string; body: string; url: string }
 // Deliberately generic: a lock screen can be read by anyone, so no doctor names or plan text.
 const COPY = {
   en: {
-    planned_visit: { title: 'How did your visit go?', body: 'You set a goal for a visit. A one-minute debrief keeps the learning.' },
-    open_promise: { title: 'A promise is waiting', body: 'You told a doctor you would follow up on something. Keep it, then tick it off.' },
+    planned_visit: { title: 'How did your visit go?', body: 'You set a goal for a visit. A one-minute debrief helps you keep what you learned.' },
+    open_promise: { title: 'A promise is waiting', body: 'You told a doctor you would follow up on something. Do it, then mark it as done.' },
     open_action: { title: 'Your next step is waiting', body: 'Your coach set a next step after your last debrief. Did you try it?' },
     quiet: { title: 'Keep the habit going', body: 'One minute is enough: what happened on your last visit?' },
   },

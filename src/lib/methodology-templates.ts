@@ -21,7 +21,7 @@ export const METHODOLOGY_TEMPLATES: MethodologyTemplate[] = [
       stages: [
         stage('opening', 1, 'Opening', 'Start from the doctor\'s patients, not the product.',
           ['problem_first_opening', 'open_question'], ['product_first_opening'], 1,
-          ['A patient type or problem named in the first minute'], ['What patient situation would make this doctor lean in?']),
+          ['A patient type or problem named in the first minute'], ['What patient situation would make this doctor interested?']),
         stage('explore', 2, 'Explore', 'Understand the situation before presenting anything.',
           ['clarification', 'need_uncovered', 'specifying_question', 'criteria_question', 'paraphrasing'],
           ['premature_pitch', 'leading_question', 'forbidden_question', 'interruption'], 2,
@@ -55,7 +55,7 @@ export const METHODOLOGY_TEMPLATES: MethodologyTemplate[] = [
           ['The reason behind the doctor\'s position'], ['What have you assumed that you have not yet checked?']),
         stage('evidence', 3, 'Evidence', 'Support what you say with approved evidence.',
           ['evidence_referenced', 'benefit_tied_to_need', 'resolution_checked'], ['unsupported_claim', 'generic_claim', 'used_but_contradiction'], 2,
-          ['Approved evidence named, with the limits of what it shows'], ['Which claim would you struggle to source?']),
+          ['Approved evidence named, with the limits of what it shows'], ['Which claim would be hard to support with a source?']),
         stage('agree', 4, 'Agree', 'Leave with an agreement both sides can name.',
           ['next_step_proposed', 'summarized', 'agreement_then_commitment'], ['premature_close', 'no_next_step'], 1.5,
           ['An agreed next step the doctor confirmed'], ['Would the doctor describe the next step the way you would?']),

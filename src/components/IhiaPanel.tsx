@@ -132,7 +132,7 @@ export default function IhiaPanel({ reviewer }: { reviewer: boolean }) {
         <button disabled={busy}>Interpret</button>
       </form>
       {result && <div aria-live="polite"><p dir="auto">{String(result.response)}</p><p>{String(result.uncertainty)}</p>
-        <details><summary>Evidence and original utterance</summary><pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(result, null, 2)}</pre></details></div>}
+        <details><summary>Evidence and the original words</summary><pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(result, null, 2)}</pre></details></div>}
     </section>
     <p role="status">{busy ? 'Working…' : message}</p>
     {reviewer && proposals.length > 0 && <section style={box} aria-label="Phrases corrected by reps">
@@ -156,7 +156,7 @@ export default function IhiaPanel({ reviewer }: { reviewer: boolean }) {
         <button disabled={busy}>Save draft</button>{edit && <button type="button" onClick={() => { setEdit(null); setDraft(blank) }}>Cancel</button>}
       </form>
       <h2 style={{ marginTop: 24 }}>Review queue and approved vocabulary</h2>
-      <p>Sources must support the contextual meaning. Do not enter patient information.</p>
+      <p>Sources must support the meaning in this situation. Do not enter patient information.</p>
       {entries.map(entry => <article key={entry.id} style={box}>
         <h3 dir="auto">{entry.expression}</h3><p>{entry.status} · version {entry.version} · {entry.region} · {entry.specialty}</p>
         <p dir="auto">Literal: {entry.literal_meaning}</p><p dir="auto">Context: {entry.contextual_meaning}</p>

@@ -20,7 +20,7 @@ export default function Error({
       </div>
       <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 10, color: 'var(--ink)' }}>Something went wrong</h1>
       <p style={{ color: 'var(--ink-dim)', fontSize: 13.5, lineHeight: 1.5, marginBottom: 20 }}>
-        This page hit an unexpected error. Trying again usually fixes it.
+        This page had an unexpected error. Trying again usually fixes it.
       </p>
       {error.digest && (
         <p style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-dim)', marginBottom: 20 }}>

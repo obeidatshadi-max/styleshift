@@ -29,7 +29,7 @@
     "active_listening": {
       "weight": 1,
       "behaviors": {
-        "paraphrasing":         { "points": 8,  "source": "user",     "description": "Restated or reflected the doctor's words or concern back to them." },
+        "paraphrasing":         { "points": 8,  "source": "user",     "description": "Restated or reflected the doctor's words or concern back to them in the rep's own words, for example 'What I understand from what you said is...'." },
         "empathy_statement":    { "points": 6,  "source": "proposed", "description": "Acknowledged how the doctor feels or thinks about the issue." },
         "interruption":         { "points": -6, "source": "user",     "description": "Cut in on or talked over the doctor before they finished." },
         "mirrored_last_words":  { "points": 4,  "source": "proposed", "description": "Repeated the doctor's last few words back so they would say more." },
@@ -40,7 +40,7 @@
     "discovery": {
       "weight": 1.2,
       "behaviors": {
-        "clarification":        { "points": 7,  "source": "user",     "description": "Asked the doctor to clarify or expand on a concern, need or statement." },
+        "clarification":        { "points": 7,  "source": "user",     "description": "Asked the doctor to clarify or expand on a concern, need or statement, for example 'Tell me more about that' or 'What do you mean by...?'." },
         "need_uncovered":       { "points": 8,  "source": "proposed", "description": "Drew out a specific need, patient type or reason behind an objection." },
         "premature_pitch":      { "points": -5, "source": "user",     "description": "Pitched the product before understanding the doctor's situation." },
         "problem_first_opening": { "points": 5,  "source": "proposed", "description": "Opened with a specific patient type or problem relevant to this doctor." },

@@ -31,7 +31,7 @@ export const DRILL_TEMPLATES: unknown[] = [
     physicianStyle: null, expectedResponse: 'short_text', passMark: 0.6,
     objective: { en: 'Check what you heard before you respond.' },
     prompt: { en: 'The doctor says: "Patients just do not stay on these treatments."' },
-    hint: { en: 'Say back what you understood, then ask what is behind it.' },
+    hint: { en: 'Say back what you understood (for example: "What I understand from what you said is..."), then ask what is behind it.' },
     criteria: [
       c('paraphrasing', 1, false, 'You restated the concern in your own words.', 'Restate the concern first so the doctor knows you heard it.'),
       c('clarification', 2, true, 'You asked what is behind the statement.', 'Ask what makes patients stop, rather than assuming.'),

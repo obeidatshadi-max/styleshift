@@ -6,6 +6,7 @@ import { langName } from '@/lib/voice-partner-core'
 import { countHedges } from '@/lib/hedging'
 import { knowledgeSectionFor } from '@/lib/knowledge-pack'
 import { findUnanchoredComparatives } from '@/lib/comparatives'
+import { isClarifyRequest, isParaphrase, reusedKeyWords } from '@/lib/listening-signals'
 import { defaultScoringConfig, type ScoringConfig } from '@/scoring/config'
 import { SCORED_COMPETENCIES } from '@/schemas/scoring'
 import type { StyleKey } from '@/types/game'
@@ -88,6 +89,25 @@ export function comparativeMeasurements(session: StyleShiftSession): string {
     : ''
 }
 
+/** Measured listening signals in REP turns (paraphrase lead-ins, "tell me more" requests, reuse of the
+ * doctor's own key words), so each one is reported and none is missed in a long transcript. */
+export function listeningMeasurements(session: StyleShiftSession): string {
+  const lines: string[] = []
+  let lastDoctor: string | undefined
+  for (const t of session.transcript) {
+    if (t.role !== 'rep') { lastDoctor = t.text; continue }
+    const found: string[] = []
+    if (isParaphrase(t.text)) found.push('paraphrase lead-in (for example "what I understand...")')
+    if (isClarifyRequest(t.text)) found.push('asked the doctor to say more (for example "tell me more")')
+    const reused = reusedKeyWords(t.text, lastDoctor)
+    if (reused.length >= 2) found.push(`reused the doctor's own key words: ${reused.slice(0, 5).join(', ')}`)
+    if (found.length) lines.push(`- turn ${t.turnIndex}: ${found.join('; ')}`)
+  }
+  return lines.length
+    ? `\nMeasured listening signals in rep turns (text match only, a review indicator not a verdict). Check each in context: report "paraphrasing" when the rep really restated the doctor's point in their own words, "clarification" when the rep really asked the doctor to say more, and "mirrored_last_words" or "paraphrasing" when reusing the doctor's key words showed the rep was following. Report each such turn as its own observation, so repeated good listening is counted every time:\n${lines.join('\n')}\n`
+    : ''
+}
+
 /** Keeps the new precision-questioning keys from being double-counted with older, broader ones. */
 const PRECISION_KEYS_NOTE = `Precision questioning (from The Structure of Magic): use "specifying_question" when the rep asked which/who/what exactly/how/compared with what about the doctor's OWN vague words; use "clarification" for a general request to say more. Use "what_stops_question" for "what stops you?" / "what would happen if…?" after a "can't" or a closed decision. Use "checked_interpretation" when the rep offered a tentative reading and invited the doctor to confirm or correct it. Use "accepted_vague_objection" only when the doctor voiced a vague objection and the rep's very next turn answered or moved on without asking what was meant. Never report two of these for the same rep turn.`
 
@@ -105,7 +125,7 @@ ${competencies}
 
 Transcript (each line is "[turn N | speaker] text"):
 ${session.transcript.length ? formatTranscript(session) : '(empty)'}
-${hedgeMeasurements(session)}${comparativeMeasurements(session)}
+${hedgeMeasurements(session)}${comparativeMeasurements(session)}${listeningMeasurements(session)}
 ${knowledgeSectionFor(session.knowledge, 'analyst', session.lang) ? `\n${knowledgeSectionFor(session.knowledge, 'analyst', session.lang)}\n` : ''}
 ${PRECISION_KEYS_NOTE}
 

@@ -7,6 +7,7 @@
 // is new — StyleShift-specific, not present in ssm-app.
 
 import { computeLanguageSignals, type LanguageSignals } from './roleplay-language'
+import { questionKind } from '@/lib/listening-signals'
 
 export interface PitchSample { f0: number; vol: number; t: number }
 export interface SilencePeriod { start: number; end: number }
@@ -181,19 +182,7 @@ export function computeRapidTurnSwitches(turns: Turn[], thresholdMs = 400): numb
   return count
 }
 
-// Unicode boundaries work with Arabic; speech transcripts may omit punctuation.
-function questionKind(text: string): 'open' | 'closed' | null {
-  const normalized = text.normalize('NFKC').replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[أإآ]/g, 'ا').trim()
-  const clauses = normalized.split(/[.!؟?،,;؛\n]+/).map(part => part.trim().replace(/^(?:(?:دكتور|دكتورة|يا دكتور|يا دكتورة|طيب|تمام|لو سمحت|شكرا|doctor|sure|okay|thanks)\s+)+/iu, ''))
-  const openAr = /^(?:و?(?:ماذا|كيف|متى|لماذا|اين|كم|شو|ايش|ليش|وين|مين|شلون|ازاي|ايه)|اخبرني|احكيلي|احكي لي|خبرني|اشرح لي)(?![\p{L}\p{N}])/u
-  const closedAr = /^(?:هل|ممكن|بتقدر|تقدر|يمكنك)(?![\p{L}\p{N}])/u
-  const openEn = /^(?:what|how|why|when|where|which|who|tell me|walk me through|describe|explain)\b/i
-  const closedEn = /^(?:can|could|would|will|do|does|did|is|are|have|has|should)\s+(?:you|we|i|it|this|that|there|your|the)\b/i
-  if (clauses.some(part => openAr.test(part) || openEn.test(part) || (/^من(?![\p{L}\p{N}])/u.test(part) && /[?؟]/.test(text)))) return 'open'
-  if (clauses.some(part => closedAr.test(part) || closedEn.test(part)) || /[?؟]/.test(text)) return 'closed'
-  return null
-}
-
+// One question checker for the whole app (also used by the AI doctor): see listening-signals.ts.
 export function computeQuestionRatio(turns: Turn[], repSpeaker: string): number {
   const repTurns = turns.filter(t => t.speaker === repSpeaker)
   return repTurns.length ? repTurns.filter(t => questionKind(t.text) !== null).length / repTurns.length : 0

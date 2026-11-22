@@ -96,6 +96,10 @@ function workshopCues(shape: RepTurnShape): string[] {
   if (shape.labeledFeeling) cues.push('The rep offered an interpretation of your feelings or concern. Check it against what you actually expressed. Acknowledge it only if accurate; otherwise correct it naturally. Do not agree or warm up merely because they named a feeling.')
   if (shape.specifyingQuestion) cues.push('The rep asked you to be specific about something you said in general terms (which patients, what exactly happened, compared with what, or what stops you). That is a fair question: answer with one concrete detail, such as a patient type or what you actually saw, instead of repeating the general statement.')
   if (shape.mirrored) cues.push('The rep echoed your last words back. It invites you to say more: elaborate on that point a little.')
+  if (shape.paraphrased) cues.push('The rep said back, in their own words, what they understood from you. Check it against what you said. If it is right, confirm it ("Yes, exactly") and add one more detail; if it is wrong, correct it. Either way you feel listened to.')
+  if (shape.clarifyRequest) cues.push('The rep asked you to say more about your point. Give one more concrete detail or example, in your own style.')
+  if (shape.namedPatientProblem) cues.push('The rep named a real problem your patients have. That matters to you: show interest and ask what their product can actually do about that problem.')
+  if (!shape.mirrored && shape.reusedKeyWords.length >= 2) cues.push(`The rep used your own words (${shape.reusedKeyWords.slice(0, 3).join(', ')}). You feel they are following you.`)
   if (shape.usedBut) cues.push('The rep said they understood and then added "but". That makes your concern feel brushed aside: become a little more defensive.')
   return cues
 }

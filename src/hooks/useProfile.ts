@@ -22,25 +22,19 @@ export function useProfile() {
       .from('profiles')
       .upsert({ id: user.id }, { onConflict: 'id', ignoreDuplicates: true })
 
-    const { data: p } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-
-    const { data: b } = await supabase
-      .from('badges')
-      .select('badge_name')
-      .eq('rep_id', user.id)
-
-    const { data: sess } = await supabase
-      .from('sessions')
-      .select('level')
-      .eq('rep_id', user.id)
+    // Independent reads, so fetch them together: one after another they kept "Loading…" up ~1 s longer.
+    const [{ data: p }, { data: b }, { data: sess }] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', user.id).single(),
+      supabase.from('badges').select('badge_name').eq('rep_id', user.id),
+      supabase.from('sessions').select('level').eq('rep_id', user.id),
+    ])
     if (sess) setCompletedLevels([...new Set(sess.map((s: { level: number }) => s.level))])
 
     if (p) setProfile(p as Profile)
     if (b) setBadges(b.map((r: { badge_name: string }) => r.badge_name as BadgeName))
+
+    // The home screen can show now; the daily-visit bookkeeping below finishes in the background.
+    setLoading(false)
 
     const today = new Date().toISOString().slice(0, 10)
     if (p && p.last_visit && p.last_visit !== today) {
@@ -52,8 +46,6 @@ export function useProfile() {
     } else if (p && !p.last_visit) {
       await supabase.from('profiles').update({ last_visit: today }).eq('id', user.id)
     }
-
-    setLoading(false)
   }, [supabase])
 
   useEffect(() => { load() }, [load])

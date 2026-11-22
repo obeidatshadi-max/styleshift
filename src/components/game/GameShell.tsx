@@ -55,7 +55,8 @@ export default function GameShell() {
     setCoachDoctorId('')
     setPrepDoctorId('')
     setSection(s)
-    setScreen('home')
+    // The AI Doctor and Roleplay tabs used to show a page with a single button to their hub; open the hub directly.
+    setScreen(s === 'rehearse' ? 'prep' : s === 'perform' ? 'perform' : 'home')
   }
   const [daily, setDaily] = useState<DailyLeaderboard | null>(null)
   const [standings, setStandings] = useState<Standings | null>(null)
@@ -182,7 +183,7 @@ export default function GameShell() {
     if (NO_NAV_SCREENS.includes(screen)) return <div className="field-ui">{el}</div>
     return (
       <div className="field-ui game-shell">
-        <AppNav activeSection={section} onSelectSection={goToSection} showBack={screen !== 'home'} onBack={() => setScreen('home')} />
+        <AppNav activeSection={section} onSelectSection={goToSection} showBack={screen !== 'home'} onBack={() => (screen === 'prep' || screen === 'perform') ? goToSection('train') : setScreen('home')} />
         {el}
       </div>
     )

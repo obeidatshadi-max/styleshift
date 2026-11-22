@@ -37,11 +37,6 @@ export default function DailyChallenge({ level, scenarioId, onComplete, title, o
             <span style={{ width:9, height:9, borderRadius:'50%', background:'var(--amber)', boxShadow:'0 0 14px var(--amber)', display:'inline-block' }} />
             {title ?? t('daily.title')}
           </div>
-          {onExit && (
-            <button onClick={onExit} style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--ink-dim)' }}>
-              {t('home')}
-            </button>
-          )}
         </div>
         {children}
       </div>

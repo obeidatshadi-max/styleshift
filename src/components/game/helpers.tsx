@@ -92,13 +92,13 @@ export function BiasCallout({ bias }: { bias: BiasKey }) {
   )
 }
 
-export function NextRow({ onNext, onBack, isLast }: { onNext: ()=>void; onBack: ()=>void; isLast: boolean }) {
+// onBack is kept for callers; leaving a level now uses the top menu's Back/Home.
+export function NextRow({ onNext, isLast }: { onNext: ()=>void; onBack?: ()=>void; isLast: boolean }) {
   const t = useT()
   const btnBase: React.CSSProperties = { display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', borderRadius:10, padding:'12px 18px', touchAction:'manipulation' }
   return (
     <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginTop:14 }}>
       <button onClick={onNext} style={{ ...btnBase, border:'1px solid var(--cyan)', color:'var(--on-accent)', background:'var(--cyan)', boxShadow:'var(--glow-cyan)' }}>{isLast ? t('seeResults') : t('next')}</button>
-      <button onClick={onBack} style={{ ...btnBase, border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent' }}>{t('home')}</button>
     </div>
   )
 }

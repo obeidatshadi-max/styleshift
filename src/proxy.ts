@@ -26,7 +26,12 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // getClaims verifies the session JWT locally against the project's cached JWKS (ES256 signing keys), and
+  // refreshes the session first when the token is about to expire. getUser made a round trip to the Auth
+  // server on every page and API request, which added ~0.4 s to each one.
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const sub = claimsData?.claims?.sub
+  const user = typeof sub === 'string' && sub ? { id: sub } : null
   const path = request.nextUrl.pathname
 
   // Unauthenticated → /login.

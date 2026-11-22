@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLang, useT } from '@/lib/i18n'
 import { card, ghostBtn, primaryBtn, sectionLabel, bodyText, smallLabel } from './TextSimulation'
 import type { CriterionFeedback } from '@/lib/drill-run'
@@ -39,6 +39,9 @@ export default function MicroPractice({ focusDrillId, onClose }: { focusDrillId?
   const [reply, setReply] = useState('')
   const [result, setResult] = useState<AttemptResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // The drill replaces the list in place; on a long home page it opened below the fold, so bring it into view.
+  const drillRef = useRef<HTMLDivElement>(null)
+  useEffect(() => { if (active) drillRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }) }, [active])
 
   async function load() {
     const res = await fetch(`/api/micro-practice?lang=${lang}`).catch(() => null)
@@ -79,7 +82,7 @@ export default function MicroPractice({ focusDrillId, onClose }: { focusDrillId?
 
   if (active) {
     return (
-      <div style={card}>
+      <div ref={drillRef} style={{ ...card, scrollMarginTop: 90 }}>
         <div style={sectionLabel}>{t(`mp.type.${active.type}`)}</div>
         <p style={{ ...bodyText, marginBottom: 6 }}>{active.objective}</p>
         {prompts[active.id] && <p dir="auto" style={{ ...bodyText, border: '1px solid var(--line)', borderRadius: 10, padding: 10 }}>{prompts[active.id]}</p>}

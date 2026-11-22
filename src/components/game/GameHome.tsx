@@ -68,10 +68,12 @@ interface Props {
   /** True once the profile has loaded and the style quiz has not been taken. */
   spsPending: boolean
   onTakeSps: () => void
+  /** Opens the saved selling-style result; absent until the check is done. */
+  onViewSps?: () => void
   tab: Section
 }
 
-export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, onAssignmentShared, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onShowPerform, onShowFieldCards, onOpenCoach, onOpenDoctor, onStartLevel, spsPending, onTakeSps, tab }: Props) {
+export default function GameHome({ xp, badges, earnedLevels, decisions, correct, totalReactionMs, reactionCount, confidence, role, daily, standings, assignment, onStartAssignment, onAssignmentShared, avatarUrl, displayName, onUploadAvatar, onStartDaily, onShowHow, onShowPrep, onShowPerform, onShowFieldCards, onOpenCoach, onOpenDoctor, onStartLevel, spsPending, onTakeSps, onViewSps, tab }: Props) {
   const [moreOpen, setMoreOpen] = useState(false)
 
   const unlocked = [1, ...earnedLevels.map(n => n + 1)].filter(n => n <= 4)
@@ -104,6 +106,54 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
     </section>
   )
 
+  const dailyDone = !!daily && daily.todayLevelsDone.length >= daily.picks.length
+  // Today's challenge: up top once it is done (score, streak, team), in "More" while the next-action card still offers it.
+  const dailyPanel = (
+    daily && panel(t('daily.title'),
+      <>
+        <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.5, marginBottom:12 }}>{t('daily.subtitle')}</div>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap', marginBottom:14 }}>
+          <div style={{ fontFamily:'var(--mono)', fontSize:16, letterSpacing: 'normal', color:(daily.self?.streak ?? 0) > 0 ? 'var(--amber)' : 'var(--ink-dim)' }}>
+            {(daily.self?.streak ?? 0) > 0 ? t('daily.streakActive', { n: daily.self!.streak }) : t('daily.streakNone')}
+          </div>
+          {daily.todayLevelsDone.length >= daily.picks.length ? (
+            <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', color:'var(--green)' }}>{t('daily.doneToday')}</div>
+          ) : (
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', color:'var(--ink-dim)' }}>
+                {t('daily.todayProgress', { done: daily.todayLevelsDone.length, total: daily.picks.length })}
+              </span>
+              <button onClick={onStartDaily}
+                style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--amber)', color:'var(--on-accent)', background:'var(--amber)', borderRadius:10, padding:'11px 16px', boxShadow:'none', touchAction:'manipulation' }}>
+                {daily.todayLevelsDone.length > 0 ? t('daily.continue') : t('daily.play')}
+              </button>
+            </div>
+          )}
+        </div>
+        {(daily.self?.streak ?? 0) >= 2 && daily.todayLevelsDone.length < daily.picks.length && (
+          <div style={{ border:'1px solid var(--red)', borderRadius:10, padding:'9px 12px', marginBottom:12, background:'rgba(255,93,108,.08)', color:'var(--red)', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal' }}>
+            {t('daily.streakRisk', { n: daily.self!.streak })}
+          </div>
+        )}
+        <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--ink-dim)', marginBottom:8 }}>{t('daily.leaderboard')}</div>
+        {daily.standings.length === 0 ? (
+          <div style={{ color:'var(--ink-dim)', fontSize:14 }}>{t('daily.empty')}</div>
+        ) : (
+          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            {daily.standings.slice(0, 6).map((st, i) => (
+              <div key={st.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:10, border:'1px solid var(--line)', background: st.isSelf ? 'var(--accent-soft)' : 'var(--surface-subtle)' }}>
+                <span style={{ fontFamily:'var(--mono)', fontSize:14, color:'var(--ink-dim)', width:18, textAlign:'center' }}>{i + 1}</span>
+                <span style={{ flex:1, fontSize:16, color: st.isSelf ? 'var(--cyan)' : 'var(--ink)' }}>{st.isSelf ? t('daily.you') : (st.name || '—')}</span>
+                {st.doneToday && <span style={{ color:'var(--green)', fontSize:14 }}>✓</span>}
+                <span style={{ fontFamily:'var(--mono)', fontSize:14, color: st.streak > 0 ? 'var(--amber)' : 'var(--ink-dim)' }}>🔥 {st.streak}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </>
+    )
+  )
+
   return (
     <div style={{ position:'relative', zIndex:1, maxWidth:1040, margin:'0 auto', padding:14 }}>
       <div className="home-appbar">
@@ -127,6 +177,8 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
           onShowPrep={onShowPrep}
         />
 
+        {dailyDone && dailyPanel}
+
         {spsPending && panel(t('sps.title'),
           <>
             <div style={{ color:'var(--ink-dim)', fontSize:16, lineHeight:1.55, marginBottom:12 }}>{t('sps.intro')}</div>
@@ -145,6 +197,52 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
         <ProgressCard />
 
+        {panel(t('home.mastery'),
+          <>
+            <RankBar xp={xp} />
+            {onViewSps && (
+              <button onClick={onViewSps} style={{ cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent', borderRadius:10, padding:'9px 14px', marginBottom:14, touchAction:'manipulation' }}>
+                {t('sps.viewProfile')}
+              </button>
+            )}
+            <KpiPanel decisions={decisions} correct={correct} totalReactionMs={totalReactionMs} reactionCount={reactionCount} confidence={confidence} />
+            <div style={{ marginTop:14 }}>
+              {ALL_BADGES.map(name => (
+                <span key={name} style={{ display:'inline-flex', alignItems:'center', gap:7, fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:`1px solid ${badges.includes(name) ? 'var(--green)' : 'var(--line)'}`, color: badges.includes(name) ? 'var(--green)' : 'var(--ink-dim)', borderRadius:20, padding:'5px 11px', background: badges.includes(name) ? 'rgba(62,224,143,.08)' : 'transparent', margin:'4px 4px 0 0' }}>
+                  {badges.includes(name) ? '★' : '☆'} {badgeLabel(name)}
+                </span>
+              ))}
+            </div>
+            <AvatarUploader avatarUrl={avatarUrl} name={displayName} onUpload={onUploadAvatar} />
+          </>
+        )}
+
+        {panel(t('home.ladder'),
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            {LEVELS.map(l => {
+              const isUnlocked = unlocked.includes(l.n)
+              const isDone = earnedLevels.includes(l.n)
+              return (
+                <button key={l.n} disabled={!isUnlocked} onClick={() => onStartLevel(l.n)}
+                  style={{ display:'flex', alignItems:'center', gap:14, textAlign:'start', width:'100%', cursor: isUnlocked ? 'pointer' : 'not-allowed', background:'linear-gradient(90deg,var(--accent-soft),var(--surface-subtle))', border:'1px solid var(--line)', borderRadius:12, padding:14, color:'var(--ink)', fontFamily:'var(--sans)', opacity: isUnlocked ? 1 : .4, touchAction:'manipulation' }}>
+                  <span style={{ fontFamily:'var(--mono)', fontSize:18, fontWeight:700, width:42, height:42, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:10, border:'1px solid var(--line)', background:'var(--surface-subtle)', color:'var(--cyan)' }}>{l.n}</span>
+                  <span style={{ flex:1 }}>
+                    <b style={{ display:'block', fontSize:16, letterSpacing: 'normal' }}>{l.title}</b>
+                    <span style={{ fontSize:14, color:'var(--ink-dim)' }}>{l.sub}</span>
+                  </span>
+                  <span style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color: isDone ? 'var(--green)' : isUnlocked ? 'var(--cyan)' : 'var(--ink-dim)', marginInlineStart:'auto' }}>
+                    {isDone ? t('status.cleared') : isUnlocked ? t('status.ready') : t('status.locked')}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        <CapabilityCard />
+
+        <MyImprovementPlan />
+
         <PracticeMyDoctor />
 
         <KeyMessagePractice />
@@ -156,11 +254,12 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
         {moreOpen && <>
 
+        {!dailyDone && dailyPanel}
+
         <NextChallengeCard />
 
         <PatternMemoryCard />
 
-        <CapabilityCard />
 
         <MethodologyCard />
 
@@ -173,11 +272,10 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
         <MyCoachingInsights />
 
-        <MyImprovementPlan />
 
         <MyCertificates />
 
-        {standings && standings.standings.length > 0 && panel(t('rank.title'),
+        {standings && standings.standings.length > 1 && panel(t('rank.title'),
           <>
             <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.5, marginBottom:12 }}>
               {standings.selfRank
@@ -206,49 +304,6 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
         {panel(t('group.title'), <GroupPanel />)}
 
-        {daily && panel(t('daily.title'),
-          <>
-            <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.5, marginBottom:12 }}>{t('daily.subtitle')}</div>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap', marginBottom:14 }}>
-              <div style={{ fontFamily:'var(--mono)', fontSize:16, letterSpacing: 'normal', color:(daily.self?.streak ?? 0) > 0 ? 'var(--amber)' : 'var(--ink-dim)' }}>
-                {(daily.self?.streak ?? 0) > 0 ? t('daily.streakActive', { n: daily.self!.streak }) : t('daily.streakNone')}
-              </div>
-              {daily.todayLevelsDone.length >= daily.picks.length ? (
-                <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', color:'var(--green)' }}>{t('daily.doneToday')}</div>
-              ) : (
-                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                  <span style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', color:'var(--ink-dim)' }}>
-                    {t('daily.todayProgress', { done: daily.todayLevelsDone.length, total: daily.picks.length })}
-                  </span>
-                  <button onClick={onStartDaily}
-                    style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--amber)', color:'var(--on-accent)', background:'var(--amber)', borderRadius:10, padding:'11px 16px', boxShadow:'none', touchAction:'manipulation' }}>
-                    {daily.todayLevelsDone.length > 0 ? t('daily.continue') : t('daily.play')}
-                  </button>
-                </div>
-              )}
-            </div>
-            {(daily.self?.streak ?? 0) >= 2 && daily.todayLevelsDone.length < daily.picks.length && (
-              <div style={{ border:'1px solid var(--red)', borderRadius:10, padding:'9px 12px', marginBottom:12, background:'rgba(255,93,108,.08)', color:'var(--red)', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal' }}>
-                {t('daily.streakRisk', { n: daily.self!.streak })}
-              </div>
-            )}
-            <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--ink-dim)', marginBottom:8 }}>{t('daily.leaderboard')}</div>
-            {daily.standings.length === 0 ? (
-              <div style={{ color:'var(--ink-dim)', fontSize:14 }}>{t('daily.empty')}</div>
-            ) : (
-              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-                {daily.standings.slice(0, 6).map((st, i) => (
-                  <div key={st.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:10, border:'1px solid var(--line)', background: st.isSelf ? 'var(--accent-soft)' : 'var(--surface-subtle)' }}>
-                    <span style={{ fontFamily:'var(--mono)', fontSize:14, color:'var(--ink-dim)', width:18, textAlign:'center' }}>{i + 1}</span>
-                    <span style={{ flex:1, fontSize:16, color: st.isSelf ? 'var(--cyan)' : 'var(--ink)' }}>{st.isSelf ? t('daily.you') : (st.name || '—')}</span>
-                    {st.doneToday && <span style={{ color:'var(--green)', fontSize:14 }}>✓</span>}
-                    <span style={{ fontFamily:'var(--mono)', fontSize:14, color: st.streak > 0 ? 'var(--amber)' : 'var(--ink-dim)' }}>🔥 {st.streak}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
 
         {panel(t('home.archetypes'),
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:12 }}>
@@ -270,42 +325,7 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
           </div>
         )}
 
-        {panel(t('home.ladder'),
-          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-            {LEVELS.map(l => {
-              const isUnlocked = unlocked.includes(l.n)
-              const isDone = earnedLevels.includes(l.n)
-              return (
-                <button key={l.n} disabled={!isUnlocked} onClick={() => onStartLevel(l.n)}
-                  style={{ display:'flex', alignItems:'center', gap:14, textAlign:'start', width:'100%', cursor: isUnlocked ? 'pointer' : 'not-allowed', background:'linear-gradient(90deg,var(--accent-soft),var(--surface-subtle))', border:'1px solid var(--line)', borderRadius:12, padding:14, color:'var(--ink)', fontFamily:'var(--sans)', opacity: isUnlocked ? 1 : .4, touchAction:'manipulation' }}>
-                  <span style={{ fontFamily:'var(--mono)', fontSize:18, fontWeight:700, width:42, height:42, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:10, border:'1px solid var(--line)', background:'var(--surface-subtle)', color:'var(--cyan)' }}>{l.n}</span>
-                  <span style={{ flex:1 }}>
-                    <b style={{ display:'block', fontSize:16, letterSpacing: 'normal' }}>{l.title}</b>
-                    <span style={{ fontSize:14, color:'var(--ink-dim)' }}>{l.sub}</span>
-                  </span>
-                  <span style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color: isDone ? 'var(--green)' : isUnlocked ? 'var(--cyan)' : 'var(--ink-dim)', marginInlineStart:'auto' }}>
-                    {isDone ? t('status.cleared') : isUnlocked ? t('status.ready') : t('status.locked')}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        )}
 
-        {panel(t('home.mastery'),
-          <>
-            <RankBar xp={xp} />
-            <KpiPanel decisions={decisions} correct={correct} totalReactionMs={totalReactionMs} reactionCount={reactionCount} confidence={confidence} />
-            <div style={{ marginTop:14 }}>
-              {ALL_BADGES.map(name => (
-                <span key={name} style={{ display:'inline-flex', alignItems:'center', gap:7, fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:`1px solid ${badges.includes(name) ? 'var(--green)' : 'var(--line)'}`, color: badges.includes(name) ? 'var(--green)' : 'var(--ink-dim)', borderRadius:20, padding:'5px 11px', background: badges.includes(name) ? 'rgba(62,224,143,.08)' : 'transparent', margin:'4px 4px 0 0' }}>
-                  {badges.includes(name) ? '★' : '☆'} {badgeLabel(name)}
-                </span>
-              ))}
-            </div>
-            <AvatarUploader avatarUrl={avatarUrl} name={displayName} onUpload={onUploadAvatar} />
-          </>
-        )}
 
         {panel(t('privacy.title'), <PrivacyPanel />)}
 

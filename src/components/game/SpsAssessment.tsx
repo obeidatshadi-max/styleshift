@@ -4,19 +4,23 @@ import { useLang, useT, useSpsData } from '@/lib/i18n'
 import { SPS_QUESTIONS, SPS_OPPOSITE, scoreSps, type SpsResult, type SpsKey } from '@/lib/sps-core'
 import LangToggle from '@/components/LangToggle'
 
-interface Props { onComplete: (result: SpsResult) => void }
+interface Props {
+  onComplete: (result: SpsResult) => void
+  /** A saved result: open straight on the result screen so the rep can read their profile again. */
+  initialResult?: SpsResult | null
+}
 
 const LETTERS = ['A', 'B', 'C', 'D']
 
-export default function SpsAssessment({ onComplete }: Props) {
+export default function SpsAssessment({ onComplete, initialResult }: Props) {
   const t = useT()
   const { dir } = useLang()
   const { SPS_QUESTIONS_TEXT, SPS_PROFILES_TEXT } = useSpsData()
   const fwd = dir === 'rtl' ? '←' : '→'
 
-  const [phase, setPhase] = useState<'intro' | 'quiz' | 'result'>('intro')
+  const [phase, setPhase] = useState<'intro' | 'quiz' | 'result'>(initialResult ? 'result' : 'quiz')
   const [answers, setAnswers] = useState<number[]>([])
-  const [result, setResult] = useState<SpsResult | null>(null)
+  const [result, setResult] = useState<SpsResult | null>(initialResult ?? null)
 
   const qIndex = answers.length
   const total = SPS_QUESTIONS.length
@@ -48,7 +52,7 @@ export default function SpsAssessment({ onComplete }: Props) {
 
   if (phase === 'intro') {
     return (
-      <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ position: 'relative', zIndex: 1, width: '100%', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
         <div style={card}>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}><LangToggle /></div>
           {eyebrow(t('sps.eyebrow'))}
@@ -63,7 +67,7 @@ export default function SpsAssessment({ onComplete }: Props) {
   if (phase === 'quiz') {
     const q = SPS_QUESTIONS_TEXT[qIndex]
     return (
-      <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ position: 'relative', zIndex: 1, width: '100%', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <span style={{ fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: 'normal', color: 'var(--ink-dim)' }}>{t('sps.progress', { n: qIndex + 1, total })}</span>
@@ -92,7 +96,7 @@ export default function SpsAssessment({ onComplete }: Props) {
   const order: SpsKey[] = ['go', 'connect', 'plan', 'support']
 
   return (
-    <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+    <div style={{ position: 'relative', zIndex: 1, width: '100%', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div style={{ ...card, maxWidth: 520 }}>
         {eyebrow(t('sps.resultEyebrow'))}
         <div style={{ background: 'var(--panel2)', borderBlockStart: `4px solid ${p.color}`, borderRadius: 14, padding: '18px 18px 16px', marginBottom: 16 }}>

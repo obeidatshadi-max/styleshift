@@ -24,7 +24,7 @@ import type { BadgeName, RepAssignment } from '@/types/game'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 import type { Standings } from '@/lib/standings'
 
-type Screen = 'home' | 'level' | 'result' | 'daily' | 'how' | 'prep' | 'perform' | 'assignment' | 'sps' | 'fieldcards'
+type Screen = 'home' | 'level' | 'result' | 'daily' | 'how' | 'prep' | 'perform' | 'assignment' | 'sps' | 'spsView' | 'fieldcards'
 // Screens shown without the nav: the one-time intro carousel. The style quiz keeps the nav so
 // a rep who opens it from the home screen can still leave without answering every question.
 const NO_NAV_SCREENS: Screen[] = ['how']
@@ -238,6 +238,10 @@ export default function GameShell() {
     setScreen('home')
   }
 
+  if (screen === 'spsView' && profile?.sps_profile) {
+    return withNav(<SpsAssessment initialResult={profile.sps_profile} onComplete={() => setScreen('home')} />)
+  }
+
   if (screen === 'sps') {
     return withNav(
       <SpsAssessment
@@ -305,6 +309,7 @@ export default function GameShell() {
         results={levelState.results}
         meters={levelState.meters}
         spsKey={profile?.sps_top_key}
+        xpEarned={levelState.xpEarned}
         onHome={handleHome}
       />
     )
@@ -347,6 +352,7 @@ export default function GameShell() {
       onStartLevel={startLevel}
       spsPending={!!profile && !profile.sps_top_key}
       onTakeSps={() => setScreen('sps')}
+      onViewSps={profile?.sps_profile ? () => setScreen('spsView') : undefined}
       tab={section}
     />
   )

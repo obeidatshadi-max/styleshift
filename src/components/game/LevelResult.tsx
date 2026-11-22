@@ -9,18 +9,22 @@ interface Props {
   results: boolean[]
   meters?: { quota: number; morale: number; risk: number }
   spsKey?: SpsKey | null
+  /** XP this run earned. */
+  xpEarned?: number
   onHome: (confidence: number) => void
 }
 
-export default function LevelResult({ level, results, meters, spsKey, onHome }: Props) {
+export default function LevelResult({ level, results, meters, spsKey, xpEarned, onHome }: Props) {
   const t = useT()
   const { SPS_PROFILES_TEXT } = useSpsData()
   const total = results.length
   const got = results.filter(Boolean).length
   const acc = Math.round(got / total * 100)
-  const [conf, setConf] = useState(acc)
+  // Start in the middle: the rep rates their own readiness; the score above must not set it for them.
+  const [conf, setConf] = useState(50)
   const apexClear = meters ? meters.quota >= 60 && meters.morale >= 50 && meters.risk <= 50 : false
-  const spsTip = spsKey ? SPS_PROFILES_TEXT[spsKey] : null
+  // The selling-style tip shows once (level 1); every level then gets its own lesson instead of the same tip.
+  const spsTip = spsKey && level === 1 ? SPS_PROFILES_TEXT[spsKey] : null
 
   return (
     <div style={{ position:'relative', zIndex:1, maxWidth:1040, margin:'0 auto', padding:14 }}>
@@ -28,6 +32,12 @@ export default function LevelResult({ level, results, meters, spsKey, onHome }: 
         <div style={{ textAlign:'center', padding:'6px 0 14px' }}>
           <div style={{ fontFamily:'var(--mono)', fontSize:44, fontWeight:700, color:'var(--cyan)', textShadow:'var(--glow-cyan)' }}>{acc}%</div>
           <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--ink-dim)' }}>{t('result.subtitle', { level, got, total })}</div>
+          <div style={{ marginTop:10, fontSize:16, fontWeight:700, color:'var(--green)' }}>✓ {t('result.complete', { level })}{xpEarned ? ` · +${xpEarned} XP` : ''}</div>
+          <div style={{ marginTop:4, fontSize:14, color:'var(--ink-dim)' }}>{level < 4 ? t('result.nextOpen', { next: level + 1 }) : t('result.allDone')}</div>
+        </div>
+        <div style={{ marginBottom:14, borderRadius:12, padding:'13px 14px', fontSize:16, lineHeight:1.5, border:'1px solid var(--line)', background:'var(--surface-subtle)' }}>
+          <b style={{ display:'block', fontSize:14, marginBottom:5, color:'var(--ink)' }}>{t('result.lessonLabel')}</b>
+          {t(`result.lesson.${level}`)}
         </div>
         {level === 4 && meters && (
           <>
@@ -46,7 +56,8 @@ export default function LevelResult({ level, results, meters, spsKey, onHome }: 
             {spsTip.tip}
           </div>
         )}
-        <div style={{ fontFamily:'var(--mono)', fontSize:16, color:'var(--ink-dim)', letterSpacing: 'normal', marginBottom:10 }}>{t('result.confidence')}</div>
+        <div style={{ fontFamily:'var(--mono)', fontSize:16, color:'var(--ink-dim)', letterSpacing: 'normal', marginBottom:4 }}>{t('result.confidence')}</div>
+        <div style={{ fontSize:14, color:'var(--ink-dim)', marginBottom:10 }}>{t('result.confidenceHint')}</div>
         <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
           <input type="range" min={0} max={100} value={conf} onChange={e => setConf(+e.target.value)} aria-label={t('result.confidence')} style={{ flex:1, accentColor:'var(--cyan)' }} />
           <span style={{ fontFamily:'var(--mono)', fontSize:18, color:'var(--cyan)', width:48, textAlign:'end' as const }}>{conf}%</span>

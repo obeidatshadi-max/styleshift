@@ -279,11 +279,11 @@ describe('computeTermOverlap', () => {
 
 describe('spoken question detection regressions', () => {
   const turn = (text: string, speaker = 'rep') => ({ text, speaker, start: 0, end: 1000, durationMs: 1000 })
-  it.each(['كيف تتعامل مع هذه الحالات', 'دكتور شو اهم تحدي عندك', 'طيب، ليش بتفضل هذا الخيار', 'وَكَيْفَ تتعامل مع المرضى', 'احكيلي عن تجربتك', 'Doctor what concerns you most'])('recognizes unpunctuated open questions: %s', text => {
+  it.each(['كيف تتعامل مع هذه الحالات', 'دكتور شو اهم تحدي عندك', 'طيب، ليش بتفضل هذا الخيار', 'وَكَيْفَ تتعامل مع المرضى', 'احكيلي عن تجربتك', 'Doctor what concerns you most', 'Can you explain your concern', 'Could you tell me more about your patients', 'Tell me more about that'])('recognizes unpunctuated open questions: %s', text => {
     expect(classifyQuestions([turn(text)], 'rep')).toEqual({ total: 1, open: 1, closed: 0, openRatio: 1 })
     expect(computeQuestionRatio([turn(text)], 'rep')).toBe(1)
   })
-  it.each(['هل هذا يناسبك', 'ممكن نحدد موعد', 'Can you explain your concern', 'هل يمكنني الحصول على عينة من هذا الدواء؟'])('recognizes closed questions: %s', text => {
+  it.each(['هل هذا يناسبك', 'ممكن نحدد موعد', 'Can you prescribe it this week', 'هل يمكنني الحصول على عينة من هذا الدواء؟'])('recognizes closed questions: %s', text => {
     expect(classifyQuestions([turn(text)], 'rep').closed).toBe(1)
   })
   it.each(['من المهم الالتزام بالعلاج', 'كمية الدواء مناسبة', 'هذا يوضح كيف يعمل العلاج', 'I know what you mean'])('does not score statements as questions: %s', text => {

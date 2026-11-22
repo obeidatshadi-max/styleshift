@@ -368,8 +368,8 @@ Rep: ${repReply}
 This is rep reply #${turnCount} of a maximum ${TURN_CAP}. React as the doctor would, in character, given your persona and internal state above.${hasVocalData ? ' Some rep lines carry a bracketed [vocal delivery] note from independent voice analysis — weigh it as you would tone of voice, alongside the words themselves, never instead of them.' : ''}
 
 Separately (as an objective observer, not a judgment of the rep), identify which of the CLEAR objection-handling steps the rep's reply demonstrated, if any:
-- "clarify": asked an open-ended question to understand your concern better
-- "listen": paraphrased, reflected back, or repeated the last few words of what you said
+- "clarify": asked an open-ended question to understand your concern better ("tell me more" and "what do you mean?" count)
+- "listen": paraphrased (for example "what I understand from you is..."), reflected back, repeated the last few words, or reused your own key words
 - "empathy": acknowledged how you feel or think about this
 - "answer": gave a substantive response addressing the objection (in the way appropriate to its type)
 - "recheck": asked whether their answer resolved your concern or if anything remains

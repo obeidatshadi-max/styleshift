@@ -1,5 +1,6 @@
 import { applyStateDelta, type PhysicianState, type StateDelta } from '@/lib/voice-partner-core'
 import { countHedges } from '@/lib/hedging'
+import { isClarifyRequest, isParaphrase, namesPatientProblem, questionKind, reusedKeyWords } from '@/lib/listening-signals'
 
 /** What the rep's line LOOKS like to a busy doctor — length and question
  * shape only. Deterministic, no LLM: this drives how the doctor reacts (state
@@ -28,6 +29,14 @@ export interface RepTurnShape {
   /** Asks the doctor to make something specific: which patients, what exactly, compared with what, what stops you
    * (Structure of Magic I, pp. 47-51, 66). */
   specifyingQuestion: boolean
+  /** Restates the doctor's point in the rep's own words ("What I understand from you is..."). */
+  paraphrased: boolean
+  /** "Tell me more", "What do you mean?": asks the doctor to keep talking. */
+  clarifyRequest: boolean
+  /** After the opening, names a concrete problem the doctor's patients have. */
+  namedPatientProblem: boolean
+  /** The doctor's own key words reused in this reply (2+ shows the rep is following). */
+  reusedKeyWords: string[]
 }
 
 /** What the caller knows beyond the rep's own line. */
@@ -40,10 +49,6 @@ export interface RepTurnContext {
 
 export const LONG_TURN_WORDS = 70
 export const VERY_LONG_TURN_WORDS = 130
-
-const OPEN_EN = /\b(what|how|why|tell me|walk me through|help me understand|could you (explain|share)|can you (explain|share)|when do you|which)\b/i
-// Iraqi/Levantine/MSA interrogatives: شنو ليش شلون كيف شكو متى ماذا لماذا وين اي (which)
-const OPEN_AR = /(شنو|ليش|شلون|كيف|شكو|متى|ماذا|لماذا|وين|أي |اي |احجيلي|اشرح)/
 
 // Workshop rules (3P selling model): two questions to avoid, two to ask, start from the customer's
 // patients not the product, label feelings, and never undo an acknowledgement with "but".
@@ -79,13 +84,16 @@ function echoesDoctor(repText: string, doctorText: string | undefined): boolean 
 export function analyzeRepTurn(text: string, context: RepTurnContext = {}): RepTurnShape {
   const trimmed = text.trim()
   const words = trimmed ? trimmed.split(/\s+/).length : 0
-  const askedQuestion = /[?؟]/.test(trimmed)
-  const askedOpenQuestion = askedQuestion && (OPEN_EN.test(trimmed) || OPEN_AR.test(trimmed))
+  // One question checker for the app (shared with the reports), so the doctor and the report never disagree.
+  const kind = questionKind(trimmed)
+  const askedQuestion = kind !== null
+  const askedOpenQuestion = kind === 'open'
+  const criteria = askedQuestion && (CRITERIA_EN.test(trimmed) || CRITERIA_AR.test(trimmed))
   const productFirst = !!context.firstRepTurn && (PRODUCT_FIRST_EN.test(trimmed) || PRODUCT_FIRST_AR.test(trimmed))
   return {
     words, askedQuestion, askedOpenQuestion, talkedTooLong: words >= LONG_TURN_WORDS,
     forbiddenQuestion: FORBIDDEN_EN.test(trimmed) || FORBIDDEN_AR.test(trimmed),
-    criteriaQuestion: askedQuestion && (CRITERIA_EN.test(trimmed) || CRITERIA_AR.test(trimmed)),
+    criteriaQuestion: criteria,
     productFirstOpening: productFirst,
     problemFirstOpening: !!context.firstRepTurn && !productFirst && PATIENT_WORDS.test(trimmed),
     labeledFeeling: LABEL_EN.test(trimmed) || LABEL_AR.test(trimmed),
@@ -93,6 +101,10 @@ export function analyzeRepTurn(text: string, context: RepTurnContext = {}): RepT
     usedBut: BUT_EN.test(trimmed) || BUT_AR.test(trimmed),
     hedgeCount: countHedges(trimmed).count,
     specifyingQuestion: askedQuestion && (SPECIFYING_EN.test(trimmed) || SPECIFYING_AR.test(trimmed)),
+    paraphrased: isParaphrase(trimmed),
+    clarifyRequest: isClarifyRequest(trimmed),
+    namedPatientProblem: !context.firstRepTurn && !productFirst && !criteria && namesPatientProblem(trimmed),
+    reusedKeyWords: reusedKeyWords(trimmed, context.lastDoctorText),
   }
 }
 
@@ -109,6 +121,10 @@ export function repTurnToDelta(shape: RepTurnShape): StateDelta {
   if (shape.productFirstOpening) adds.push({ trustDelta: -1, skepticismDelta: 1, engagementDelta: -4 })
   if (shape.problemFirstOpening) adds.push({ trustDelta: 2, skepticismDelta: -1, engagementDelta: 4 })
   if (shape.mirrored) adds.push({ trustDelta: 1, skepticismDelta: 0, engagementDelta: 3 })
+  if (shape.paraphrased) adds.push({ trustDelta: 3, skepticismDelta: -1, engagementDelta: 3 })
+  if (shape.clarifyRequest) adds.push({ trustDelta: 1, skepticismDelta: -1, engagementDelta: 3 })
+  if (shape.namedPatientProblem) adds.push({ trustDelta: 2, skepticismDelta: -1, engagementDelta: 5 })
+  if (!shape.mirrored && shape.reusedKeyWords.length >= 2) adds.push({ trustDelta: 2, skepticismDelta: 0, engagementDelta: 2 })
   if (shape.usedBut) adds.push({ trustDelta: -2, skepticismDelta: 2, engagementDelta: -1 })
   // applyStateDelta clamps each total to the engine's -10..+10 range.
   return adds.reduce<StateDelta>((sum, d) => ({

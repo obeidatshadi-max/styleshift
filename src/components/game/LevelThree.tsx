@@ -2,7 +2,7 @@
 import { useState, useRef } from 'react'
 import { XP_VALUES } from '@/lib/game-data'
 import { useGameData, useT } from '@/lib/i18n'
-import { pickScenarios } from '@/lib/scenario-engine'
+import { pickScenarios, withShuffledOptions } from '@/lib/scenario-engine'
 import type { BadgeName } from '@/types/game'
 import { Topline, OptBtn, Feedback, NextRow } from './helpers'
 
@@ -29,7 +29,7 @@ export default function LevelThree({ onComplete, onBack }: Props) {
   const msRef = useRef<number[]>([])
   const badgesRef = useRef<BadgeName[]>([])
 
-  const item = scenarios[idx]
+  const item = withShuffledOptions(scenarios[idx], `L3-${scenarios[idx].id}`)
 
   function choose(i: number) {
     if (chosen !== null) return

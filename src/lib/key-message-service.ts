@@ -27,7 +27,7 @@ async function me(db: SupabaseClient, userId: string): Promise<Me | null> {
 /** Rep: messages addressed to them or written by them, with their doctors for the style hint. Manager: the messages they set, with completion counts. */
 export async function listForUser(db: SupabaseClient, userId: string): Promise<Result> {
   const profile = await me(db, userId)
-  if (!profile?.company_id) return { status: 200, body: { role: profile?.role ?? 'rep', messages: [], doctors: [] } }
+  if (!profile?.company_id) return { status: 200, body: { role: profile?.role ?? 'rep', messages: [], doctors: [], noCompany: true } }
   // The audience filter goes in the query, before the cap, so other people's messages can never push
   // someone's own out of the 100-row window. userId comes from the session and is a uuid.
   const base = db.from('key_messages').select('*').eq('company_id', profile.company_id).eq('active', true)

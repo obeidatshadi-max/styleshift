@@ -231,7 +231,7 @@ export function ConversationReport({ report, outdated, audioAvailable = false }:
         ))}
       </Accordion>
 
-      <Accordion title={t('report.voiceMeasurements.title')}>
+      {report.voiceMeasurements.some(m => m.available) && <Accordion title={t('report.voiceMeasurements.title')}>
         {report.voiceMeasurements.filter(m => m.available).map((m, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
             <div>
@@ -241,7 +241,7 @@ export function ConversationReport({ report, outdated, audioAvailable = false }:
             <div style={{ fontFamily: 'var(--mono)', fontSize: 'max(14px, var(--voice-min-font, 0px))', color: 'var(--cyan)', whiteSpace: 'nowrap' }}>{m.value} {m.unit}</div>
           </div>
         ))}
-      </Accordion>
+      </Accordion>}
 
       <Accordion title={t('report.commitments.title')}>
         {(['agreed', 'proposed', 'ai_recommended'] as const).map(status => {
@@ -253,7 +253,7 @@ export function ConversationReport({ report, outdated, audioAvailable = false }:
               {items.map((c, i) => (
                 <div key={i} style={{ marginBottom: 8 }}>
                   <p style={{ ...bodyText, fontSize: 'max(13px, var(--voice-min-font, 0px))' }}>
-                    {c.action}{c.owner && ` — ${c.owner}`}{c.date && ` (${c.date})`}
+                    {c.action}{c.owner && ` — ${ownerLabel(c.owner, t)}`}{c.date && ` (${c.date})`}
                   </p>
                   {c.evidence.map((e, j) => <Evidence key={j} evidence={e} audioAvailable={audioAvailable} />)}
                 </div>
@@ -268,4 +268,12 @@ export function ConversationReport({ report, outdated, audioAvailable = false }:
       </Accordion>
     </div>
   )
+}
+
+/** The model writes the owner as the transcript role ("rep" / "counterpart"); show it the way the rep reads it. */
+function ownerLabel(owner: string, t: (k: string) => string): string {
+  const o = owner.trim().toLowerCase()
+  if (o === "rep" || o === "you") return t("report.role.rep")
+  if (o === "counterpart" || o === "doctor" || o === "customer") return t("report.role.counterpart")
+  return owner
 }

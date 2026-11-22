@@ -1,3 +1,4 @@
+import { isClarifyRequest, questionKind } from '@/lib/listening-signals'
 import { isVaguePattern } from '@/lib/precision-language'
 import { classifyDoctorQuestion, isQuestionKind } from '@/lib/question-kind'
 import { buildUsualVsToday } from '@/lib/report/usualVsToday'
@@ -38,7 +39,14 @@ function groundEvidenceList(raw: unknown, segments: TranscriptSegment[]): Eviden
  * segments — so strip bracketed segment refs from every free-text field. */
 const REF = String.raw`\[\d+(?:\s*[,;&]\s*\d+)*\]`
 const SEGMENT_REFS = new RegExp(String.raw`\s*\(\s*${REF}(?:\s*[,;&]\s*${REF})*\s*\)|\s*${REF}(?:\s*[,;&]\s*${REF})*`, 'g')
-export function stripSegmentRefs(text: string): string { return text.replace(SEGMENT_REFS, '').trim() }
+// The model also writes the index in words: "In segment 7, you asked…", "(segment 3)". Same meaning, same fix.
+const WORD_REFS = /\s*\(\s*segments?\s+\d+(?:\s*(?:,|and|&)\s*\d+)*\s*\)|\b(?:in|at|from|during|by)\s+segments?\s+\d+(?:\s*(?:,|and|&)\s*\d+)*\s*,?\s*/gi
+export function stripSegmentRefs(text: string): string {
+  return text.replace(SEGMENT_REFS, '')
+    // where the removed phrase opened a sentence, the next word becomes the sentence start
+    .replace(new RegExp(String.raw`(^|[.!?]\s+)(?:${WORD_REFS.source})([a-z])`, 'gi'), (_, p: string, c: string) => p + c.toUpperCase())
+    .replace(WORD_REFS, ' ').replace(/\s{2,}/g, ' ').trim()
+}
 
 function str(v: unknown, fallback = ''): string { return typeof v === 'string' ? stripSegmentRefs(v) : fallback }
 function strOrNull(v: unknown): string | null {
@@ -197,6 +205,9 @@ export function groundReport(
     seenFit.add(evidence.segmentIndex)
     const reply = [...segments].sort((x, y) => x.segmentIndex - y.segmentIndex)
       .find(seg => seg.segmentIndex > evidence.segmentIndex && seg.speakerRole === 'rep')
+    // Asking the doctor to say more ("Tell me more…", "What exactly worries you?") before answering is good
+    // practice, not a wrong form of answer, so it is never reported here.
+    if (reply && (isClarifyRequest(reply.text) || questionKind(reply.text) === 'open')) return null
     return { evidence, kind: classifyDoctorQuestion(evidence.quote) ?? a.kind, repReply: reply ? groundEvidence(reply, segments) : null, suggestion }
   }).filter((x): x is NonNullable<typeof x> => x !== null).slice(0, 2)
 

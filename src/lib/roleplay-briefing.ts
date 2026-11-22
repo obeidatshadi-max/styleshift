@@ -6,6 +6,9 @@ import {
   OPEN_QUESTION_RATIO_THRESHOLD, PARAPHRASE_THRESHOLD, ACTIVE_LISTENING_THRESHOLD,
 } from './roleplay-insight'
 
+/** Below this share of the talking the rep was hardly in the conversation. */
+export const TALK_RATIO_MIN = 0.25
+
 // Same order buildRoleplayInsight uses, so the "last time" tip here and the
 // Coach's Tip shown right after that session never disagree.
 const FOCUS_ORDER: RoleplayMetricKey[] = ['talkRatio', 'questionRatio', 'openQuestionRatio', 'paraphraseScore', 'activeListening']
@@ -25,7 +28,8 @@ export function metricUnit(key: RoleplayMetricKey): '%' | '/100' {
 /** Whether a displayed value is on the good side of the coaching goal. */
 export function meetsGoal(key: RoleplayMetricKey, shown: number): boolean {
   switch (key) {
-    case 'talkRatio': return shown <= TALK_RATIO_THRESHOLD * 100
+    // A band, not a ceiling: speaking 1% of the time means the rep barely took part (or the speakers were mixed up).
+    case 'talkRatio': return shown >= TALK_RATIO_MIN * 100 && shown <= TALK_RATIO_THRESHOLD * 100
     case 'questionRatio': return shown >= QUESTION_RATIO_THRESHOLD * 100
     case 'openQuestionRatio': return shown >= OPEN_QUESTION_RATIO_THRESHOLD * 100
     case 'paraphraseScore': return shown >= PARAPHRASE_THRESHOLD * 100

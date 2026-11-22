@@ -60,8 +60,8 @@ describe('usual pattern / this conversation / helpful adjustment, in English', (
   it('labels a simulation as a configured practice tendency, not a real doctor', () => {
     render_(section({ ...full, usual: { style: 'driver', source: 'practice_setting' }, differsFromUsual: false }))
     const text = screen.getByTestId('usual-pattern').textContent ?? ''
-    expect(text).toContain('Practice setting')
-    expect(text).toContain("not a real doctor's habit")
+    expect(text).toContain('Style the practice doctor played')
+    expect(text).toContain('not what the real doctor did')
     expect(text).not.toContain('Your saved profile')
   })
   it('says so when there is nothing clear to describe, and leaves out empty parts', () => {

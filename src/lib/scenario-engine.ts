@@ -21,6 +21,36 @@ export function shuffle<T>(arr: readonly T[]): T[] {
   return a
 }
 
+// One random salt per page load: answer order changes every session, but stays the same while the rep
+// plays (and when they switch language mid-level, since EN and AR options share the same order).
+const ORDER_SALT = Math.floor(Math.random() * 0x7fffffff)
+
+/** Deterministic Fisher-Yates driven by a small seeded generator (mulberry32). */
+function seededShuffle<T>(arr: readonly T[], seed: number): T[] {
+  let s = seed >>> 0
+  const rand = () => {
+    s = (s + 0x6d2b79f5) >>> 0
+    let t = s
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+  const a = arr.slice()
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+/** The scenario with its answer options in a session-random order. The content files list the best answer
+ * first, so without this a rep could pass every level by always choosing the first option. */
+export function withShuffledOptions<T extends { opts: readonly unknown[] }>(item: T, key: string | number, salt = ORDER_SALT): T {
+  let h = salt
+  for (const ch of String(key)) h = (Math.imul(h, 31) + ch.charCodeAt(0)) | 0
+  return { ...item, opts: seededShuffle(item.opts, h) }
+}
+
 export function getSeen(level: number): number[] {
   if (typeof window === 'undefined') return []
   try {

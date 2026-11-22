@@ -20,7 +20,7 @@ export default function SkillHeatmap({ levelAccuracy }: Props) {
             <div style={{ height: '100%', width: `${l.avg}%`, borderRadius: 6, background: l.avg >= 90 ? 'var(--green)' : l.avg >= 70 ? 'var(--amber)' : 'var(--red)', transition: 'width .6s ease' }} />
           </div>
           {l.avg > 0 && l.avg < 70 && (
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--red)', marginTop: 3 }}>⚠ Below 70% — recommend drilling this level</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--red)', marginTop: 3 }}>⚠ Below 70% — practise this level more</div>
           )}
         </div>
       ))}

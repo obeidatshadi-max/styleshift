@@ -12,7 +12,7 @@ export default function LeagueBoardPanel({ board }: { board: LeagueBoard }) {
           <tr style={{ color: 'var(--ink-dim)', textAlign: 'left' }}>
             <th style={{ padding: '6px 8px' }}>Rank</th>
             <th style={{ padding: '6px 8px' }}>Team</th>
-            <th style={{ padding: '6px 8px', textAlign: 'right' }}>Avg XP / rep</th>
+            <th style={{ padding: '6px 8px', textAlign: 'right' }}>Average XP per rep</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Reps</th>
           </tr>
         </thead>

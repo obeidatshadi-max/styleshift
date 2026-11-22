@@ -29,7 +29,7 @@ describe('usual pattern / this conversation / helpful adjustment, in English', (
     render_(section(full))
     expect(screen.getByText('Usual pattern')).toBeTruthy()
     expect(screen.getByTestId('usual-pattern').textContent).toContain('Your saved profile: Detail-focused and cautious')
-    expect(screen.getByTestId('usual-pattern').textContent).toContain('A tendency you recorded')
+    expect(screen.getByTestId('usual-pattern').textContent).toContain('What you usually see, as you recorded it')
     expect(screen.getByTestId('usual-today').textContent).toContain('Mentioned limited time')
     expect(screen.getByTestId('usual-today').textContent).toContain(QUOTE)
     expect(screen.getByText('What remains uncertain')).toBeTruthy()
@@ -61,7 +61,7 @@ describe('usual pattern / this conversation / helpful adjustment, in English', (
     render_(section({ ...full, usual: { style: 'driver', source: 'practice_setting' }, differsFromUsual: false }))
     const text = screen.getByTestId('usual-pattern').textContent ?? ''
     expect(text).toContain('Practice setting')
-    expect(text).toContain('not a trait of a real doctor')
+    expect(text).toContain("not a real doctor's habit")
     expect(text).not.toContain('Your saved profile')
   })
   it('says so when there is nothing clear to describe, and leaves out empty parts', () => {
@@ -77,7 +77,7 @@ describe('usual pattern / this conversation / helpful adjustment, in English', (
   })
   it('shows the limited-reading note for a short conversation', () => {
     render_(section({ ...full, differsFromUsual: false, limited: true }))
-    expect(screen.getByTestId('usual-uncertain').textContent).toContain('limited reading')
+    expect(screen.getByTestId('usual-uncertain').textContent).toContain('this result is limited')
   })
   it('does not repeat the old coaching card next to the new view', () => {
     const card = { observedSignals: 'a', possiblePreference: 'b', evidenceAndAlternative: 'c', repResponse: 'd', mostUsefulAdjustment: 'e', suggestedWordingNextVisit: 'f' }

@@ -23,7 +23,7 @@ export const DRILL_TEMPLATES: unknown[] = [
     criteria: [
       c('clarification', 2, true, 'You asked the doctor to be more specific.', 'Ask what "mixed" means for their patients before saying anything about your product.'),
       c('open_question', 1, false, 'Your question invited the doctor to explain.', 'Use a question that cannot be answered yes or no.'),
-      c('leading_question', 1, false, 'You did not steer the doctor toward your answer.', 'Your question pushed toward a preferred answer; ask without a built-in conclusion.'),
+      c('leading_question', 1, false, 'You did not steer the doctor toward your answer.', 'Your question pushed the doctor toward one answer. Ask without suggesting the answer.'),
     ],
   },
   {
@@ -46,8 +46,8 @@ export const DRILL_TEMPLATES: unknown[] = [
     hint: { en: 'Acknowledge it, then ask which patients they have in mind.' },
     criteria: [
       c('objection_acknowledged', 2, true, 'You acknowledged the objection first.', 'Acknowledge the objection before you respond to it.'),
-      c('clarification', 1, false, 'You asked what sits behind the objection.', 'Ask what would make it relevant, or what they have seen.'),
-      c('argued_with_doctor', 1, false, 'You did not argue the point.', 'You countered the doctor head-on; explore first.'),
+      c('clarification', 1, false, 'You asked what is behind the objection.', 'Ask what would make it relevant, or what they have seen.'),
+      c('argued_with_doctor', 1, false, 'You did not argue the point.', 'You argued directly with the doctor. Ask questions first.'),
     ],
   },
   {
@@ -57,7 +57,7 @@ export const DRILL_TEMPLATES: unknown[] = [
     prompt: { en: 'The doctor says: "That could help a few of my patients. What would starting look like?"' },
     hint: { en: 'The doctor asked about starting. Answer simply, then propose one concrete next step.' },
     criteria: [
-      c('next_step_proposed', 2, true, 'You proposed a concrete next step.', 'The doctor signalled interest - propose a specific next step.'),
+      c('next_step_proposed', 2, true, 'You proposed a concrete next step.', 'The doctor showed interest. Propose a specific next step.'),
       c('benefit_tied_to_need', 1, false, 'You tied it to the patients the doctor mentioned.', 'Link your answer to the patients the doctor just described.'),
       c('generic_claim', 1, false, 'You stayed specific.', 'You added a broad claim the doctor did not ask for.'),
     ],
@@ -89,7 +89,7 @@ export const DRILL_TEMPLATES: unknown[] = [
   {
     ...common, id: 'evidence-response-1', type: 'evidence_response', difficulty: 'standard', durationMin: 3,
     physicianStyle: 'analytical', expectedResponse: 'short_text', passMark: 0.6,
-    objective: { en: 'Answer an evidence challenge without overclaiming.' },
+    objective: { en: 'Answer an evidence challenge without claiming more than the evidence shows.' },
     prompt: { en: 'The doctor says: "Where is the evidence for that? I want to see it, not hear it."' },
     hint: { en: 'Point to the approved evidence you have, say what it does and does not show, and offer to bring the source.' },
     criteria: [
@@ -105,7 +105,7 @@ export const DRILL_TEMPLATES: unknown[] = [
     prompt: { en: 'The doctor says: "A minute ago you said yours is better than the other brand. On what basis?"' },
     hint: { en: 'If you cannot support it, say so, restate what you can support, and offer to follow up.' },
     criteria: [
-      c('objection_acknowledged', 2, true, 'You owned the challenge instead of defending it.', 'Own the question first - the doctor is right to ask.'),
+      c('objection_acknowledged', 2, true, 'You accepted the question instead of defending yourself.', 'Accept the question first. The doctor is right to ask.'),
       c('unsupported_claim', 1, false, 'You did not repeat the claim.', 'You repeated a comparison without support.'),
       c('next_step_proposed', 1, false, 'You offered a follow-up.', 'Offer to come back with the source.'),
     ],
@@ -142,8 +142,8 @@ export const DRILL_TEMPLATES: unknown[] = [
     hint: { en: 'Find out which patients are not doing fine before comparing anything.' },
     criteria: [
       c('clarification', 2, true, 'You asked about patients who are not doing fine.', 'Ask whether any patients are not doing as well as hoped.'),
-      c('need_uncovered', 1, false, 'You uncovered a specific need.', 'Draw out a specific patient type or need.'),
-      c('argued_with_doctor', 1, false, 'You did not push back.', 'You countered the doctor\'s view head-on.'),
+      c('need_uncovered', 1, false, 'You uncovered a specific need.', 'Get the doctor to name a specific patient type or need.'),
+      c('argued_with_doctor', 1, false, 'You did not argue back.', 'You argued directly against the doctor\'s view.'),
     ],
   },
   {
@@ -177,9 +177,9 @@ export const DRILL_TEMPLATES: unknown[] = [
     prompt: { en: 'The doctor says: "Get to the point. What exactly do you want from me?"' },
     hint: { en: 'One sentence on why it matters to their patients, one clear ask.' },
     criteria: [
-      c('style_matched', 2, true, 'You were brief and direct.', 'Cut it down: one reason, one ask.'),
+      c('style_matched', 2, true, 'You were brief and direct.', 'Make it shorter: one reason, one ask.'),
       c('next_step_proposed', 1, false, 'You made a clear ask.', 'State exactly what you want from the doctor.'),
-      c('hedged_delivery', 1, false, 'Your delivery was confident.', 'Hedges and fillers weakened your message.'),
+      c('hedged_delivery', 1, false, 'Your delivery was confident.', 'Filler words like "maybe" and "kind of" made your message weaker.'),
     ],
   },
   {
@@ -187,7 +187,7 @@ export const DRILL_TEMPLATES: unknown[] = [
     physicianStyle: 'amiable', expectedResponse: 'short_text', passMark: 0.6,
     objective: { en: 'Repair trust after a missed promise.' },
     prompt: { en: 'The doctor says: "Last time you promised to follow up and I never heard from you."' },
-    hint: { en: 'Own it without excuses, then make one small commitment you can keep.' },
+    hint: { en: 'Accept it without excuses, then make one small promise you can keep.' },
     criteria: [
       c('objection_acknowledged', 2, true, 'You owned the missed promise.', 'Acknowledge what went wrong before anything else.'),
       c('empathy_statement', 1, false, 'You recognised the impact on the doctor.', 'Recognise how this affected the doctor.'),

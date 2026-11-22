@@ -94,7 +94,7 @@ export default function ScenarioEditorPanel() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ color: 'var(--ink-dim)', fontSize: 12.5, lineHeight: 1.5 }}>
-        Author objection drills specific to your products and territory. Draft it, then approve it — only approved scenarios reach reps.
+        Write objection drills for your own products and territory. Draft it, then approve it — only approved scenarios reach reps.
       </div>
 
       {scenarios === null ? (
@@ -146,7 +146,7 @@ export default function ScenarioEditorPanel() {
             </div>
           </div>
           <div>
-            <span style={labelStyle}>Objection category — drives the bias callout the rep sees</span>
+            <span style={labelStyle}>Objection category — decides which bias tip the rep sees</span>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {OBJECTION_CATEGORIES.map(k => (
                 <button key={k} style={chip(category === k, 'var(--purple)')} onClick={() => setCategory(k)}>{CATEGORY_LABEL[k]}</button>
@@ -154,7 +154,7 @@ export default function ScenarioEditorPanel() {
             </div>
           </div>
           <div><span style={labelStyle}>Scenario name</span>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Dr. Rossi — pricing pushback" style={inputStyle} />
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Dr. Rossi — price objection" style={inputStyle} />
           </div>
           <div><span style={labelStyle}>Objection / crisis line (what the doctor says)</span>
             <textarea value={crisis} onChange={e => setCrisis(e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical' as const }} />
@@ -175,7 +175,7 @@ export default function ScenarioEditorPanel() {
                     )}
                   </div>
                   <input value={o.t} onChange={e => updateOpt(i, { t: e.target.value })} placeholder="What the rep says" style={inputStyle} />
-                  <input value={o.why} onChange={e => updateOpt(i, { why: e.target.value })} placeholder="Why this works or backfires" style={inputStyle} />
+                  <input value={o.why} onChange={e => updateOpt(i, { why: e.target.value })} placeholder="Why this works or fails" style={inputStyle} />
                 </div>
               ))}
               {opts.length < 4 && (

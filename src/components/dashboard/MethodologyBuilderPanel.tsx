@@ -156,7 +156,7 @@ export default function MethodologyBuilderPanel() {
           </div>
         ))}
 
-        <div style={{ ...labelStyle, marginTop: 18 }}>Your names for the five capability scores</div>
+        <div style={{ ...labelStyle, marginTop: 18 }}>Your names for the six capability scores</div>
         {CAPABILITY_DIMENSIONS.map(d => (
           <div key={d} style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr 1fr', gap: 8, alignItems: 'center', marginBottom: 6 }}>
             <span style={{ fontSize: 12.5 }}>{d}</span>

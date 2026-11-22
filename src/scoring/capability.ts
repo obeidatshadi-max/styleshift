@@ -1,7 +1,7 @@
 import { behaviorIndex, defaultScoringConfig } from '@/scoring/config'
 import rawConfig from './capability.config.json'
 
-export const CAPABILITY_DIMENSIONS = ['interaction', 'clinical', 'adaptation', 'discovery', 'commitment'] as const
+export const CAPABILITY_DIMENSIONS = ['interaction', 'clinical', 'adaptation', 'discovery', 'customer_focus', 'commitment'] as const
 export type CapabilityDimension = typeof CAPABILITY_DIMENSIONS[number]
 
 export type Band = 'developing' | 'building' | 'strong' | 'advanced'

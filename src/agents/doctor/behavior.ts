@@ -1,6 +1,7 @@
 import { applyStateDelta, type PhysicianState, type StateDelta } from '@/lib/voice-partner-core'
 import { countHedges } from '@/lib/hedging'
 import { isClarifyRequest, isParaphrase, namesPatientProblem, questionKind, reusedKeyWords } from '@/lib/listening-signals'
+import { buildsCommonGround, generalisesObjection, linksFeatureToBenefit, minimisesObjection } from '@/lib/value-signals'
 
 /** What the rep's line LOOKS like to a busy doctor — length and question
  * shape only. Deterministic, no LLM: this drives how the doctor reacts (state
@@ -37,6 +38,14 @@ export interface RepTurnShape {
   namedPatientProblem: boolean
   /** The doctor's own key words reused in this reply (2+ shows the rep is following). */
   reusedKeyWords: string[]
+  /** Names a product feature and what it means for the patient. */
+  featureBenefit: boolean
+  /** Puts a real side effect or limit in proportion (mild, short, uncommon, small next to the benefit). */
+  minimisedObjection: boolean
+  /** Says the issue is shared by the whole drug class (only fair when approved information says so). */
+  generalisedObjection: boolean
+  /** Names a goal or interest the rep shares with the doctor. */
+  commonGround: boolean
 }
 
 /** What the caller knows beyond the rep's own line. */
@@ -105,6 +114,10 @@ export function analyzeRepTurn(text: string, context: RepTurnContext = {}): RepT
     clarifyRequest: isClarifyRequest(trimmed),
     namedPatientProblem: !context.firstRepTurn && !productFirst && !criteria && namesPatientProblem(trimmed),
     reusedKeyWords: reusedKeyWords(trimmed, context.lastDoctorText),
+    featureBenefit: linksFeatureToBenefit(trimmed),
+    minimisedObjection: minimisesObjection(trimmed),
+    generalisedObjection: generalisesObjection(trimmed),
+    commonGround: buildsCommonGround(trimmed),
   }
 }
 
@@ -125,6 +138,10 @@ export function repTurnToDelta(shape: RepTurnShape): StateDelta {
   if (shape.clarifyRequest) adds.push({ trustDelta: 1, skepticismDelta: -1, engagementDelta: 3 })
   if (shape.namedPatientProblem) adds.push({ trustDelta: 2, skepticismDelta: -1, engagementDelta: 5 })
   if (!shape.mirrored && shape.reusedKeyWords.length >= 2) adds.push({ trustDelta: 2, skepticismDelta: 0, engagementDelta: 2 })
+  if (shape.featureBenefit) adds.push({ trustDelta: 1, skepticismDelta: -1, engagementDelta: 3 })
+  if (shape.commonGround) adds.push({ trustDelta: 3, skepticismDelta: -1, engagementDelta: 2 })
+  // Proportion and class effects are judged in context by the doctor prompt (honest vs dismissive, believable vs not):
+  // no automatic bonus, so a rep cannot win by saying "it is nothing" or "all drugs do this".
   if (shape.usedBut) adds.push({ trustDelta: -2, skepticismDelta: 2, engagementDelta: -1 })
   // applyStateDelta clamps each total to the engine's -10..+10 range.
   return adds.reduce<StateDelta>((sum, d) => ({

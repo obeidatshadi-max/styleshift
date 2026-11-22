@@ -20,7 +20,7 @@ const drill = (over: Record<string, unknown> = {}) => ({
 })
 
 describe('drill templates and registry', () => {
-  it('declares the 15 requested drill types', () => { expect(DRILL_TYPES).toHaveLength(15) })
+  it('declares the 17 requested drill types', () => { expect(DRILL_TYPES).toHaveLength(17) })
 
   it('builds a registry and filters by language and style', () => {
     const reg = createDrillRegistry([drill(), drill({ id: 'pq-2', languages: ['en', 'ar'], objective: { en: 'a', ar: 'ب' }, prompt: { en: 'a', ar: 'ب' }, physicianStyle: null })])

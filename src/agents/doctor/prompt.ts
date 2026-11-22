@@ -100,6 +100,10 @@ function workshopCues(shape: RepTurnShape): string[] {
   if (shape.clarifyRequest) cues.push('The rep asked you to say more about your point. Give one more concrete detail or example, in your own style.')
   if (shape.namedPatientProblem) cues.push('The rep named a real problem your patients have. That matters to you: show interest and ask what their product can actually do about that problem.')
   if (!shape.mirrored && shape.reusedKeyWords.length >= 2) cues.push(`The rep used your own words (${shape.reusedKeyWords.slice(0, 3).join(', ')}). You feel they are following you.`)
+  if (shape.featureBenefit) cues.push('The rep linked a product feature to what it means for your patients. That is useful to you: if it fits your patients, show it makes sense and ask one practical question about it.')
+  if (shape.minimisedObjection) cues.push('The rep put your concern in proportion (how mild, short or uncommon it is, or how it compares with the benefit for your patients). If they first accepted your concern as real and stayed honest and specific, your worry eases a little. If it sounds like they are brushing your patients\' experience aside, it does not.')
+  if (shape.generalisedObjection) cues.push('The rep said this is a known effect of the whole drug class. If it sounds specific and believable, accept that it is not unique to their product; if you doubt it, ask what the source is. Never confirm a medical fact yourself.')
+  if (shape.commonGround) cues.push('The rep named a goal or interest you share. If it truly matches what you care about, you feel more on the same side and a little warmer.')
   if (shape.usedBut) cues.push('The rep said they understood and then added "but". That makes your concern feel brushed aside: become a little more defensive.')
   return cues
 }

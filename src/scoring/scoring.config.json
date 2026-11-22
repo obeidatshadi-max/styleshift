@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Tunable rules for turning Behavior Analyst observations into 0-100 competency scores. Each behavior has fixed points; edit numbers here, no code change needed. source=user marks values you specified; source=proposed marks defaults added to fill the catalog - review them.",
   "baseScore": 50,
   "minScore": 0,
@@ -53,7 +53,8 @@
       "behaviors": {
         "style_matched":        { "points": 8,  "source": "proposed", "description": "Pace, depth and tone fit this doctor's style and current mood." },
         "adjusted_to_reaction": { "points": 6,  "source": "proposed", "description": "Visibly changed approach after the doctor's reaction changed." },
-        "style_mismatch":       { "points": -6, "source": "proposed", "description": "Kept a pace or depth that clashed with the doctor's style or mood." }
+        "style_mismatch":       { "points": -6, "source": "proposed", "description": "Kept a pace or depth that clashed with the doctor's style or mood." },
+        "common_ground":        { "points": 6,  "source": "user",     "description": "Named a goal, value or interest the rep shares with the doctor, such as the same treatment goal for the patients or something the doctor said they care about ('We both want your patients to...')." }
       }
     },
     "objection_handling": {
@@ -65,13 +66,17 @@
         "ignored_objection":      { "points": -8, "source": "user",     "description": "Passed over or dismissed an objection the doctor raised." },
         "argued_with_doctor":     { "points": -6, "source": "proposed", "description": "Countered the doctor's stated reason head-on instead of exploring it." },
         "accusation_audit":       { "points": 6,  "source": "proposed", "description": "Voiced a likely objection or doubt before the doctor did." },
-        "used_but_contradiction": { "points": -5, "source": "proposed", "description": "Acknowledged the doctor's concern and then undid it with 'but'." }
+        "used_but_contradiction": { "points": -5, "source": "proposed", "description": "Acknowledged the doctor's concern and then undid it with 'but'." },
+        "objection_minimized":    { "points": 7,  "source": "user",     "description": "For a true objection (a real side effect or limit), put it in proportion honestly: how mild, short or uncommon it is, or how small it is next to the benefit for the patient. Dismissing it ('it is nothing') is not this." },
+        "objection_generalized":  { "points": 5,  "source": "user",     "description": "For a true objection, showed it is a known effect of the whole drug class, and the approved product information supports that." },
+        "unsupported_generalization": { "points": -6, "source": "proposed", "description": "Claimed a side effect or limit is shared by all similar drugs when the approved product information does not support that." }
       }
     },
     "value_communication": {
       "weight": 1.2,
       "behaviors": {
         "benefit_tied_to_need":   { "points": 8,  "source": "proposed", "description": "Linked the product to something this doctor said they care about." },
+        "feature_benefit_linked": { "points": 7,  "source": "user",     "description": "Named a product feature and the concrete benefit it gives the patient ('once daily, which means your patients...')." },
         "generic_claim":          { "points": -4, "source": "proposed", "description": "Made a broad claim not connected to the doctor's situation." },
         "unsupported_claim":      { "points": -6, "source": "proposed", "description": "Asserted a strong benefit with no reference to evidence." },
         "hedged_delivery":        { "points": -3, "source": "proposed", "description": "Weakened their own message with repeated hedges, fillers or intensifiers (for example 'maybe', 'sort of', 'I guess', 'um'). Respectful address such as 'doctor' is not a hedge, and honest uncertainty about medical information (for example 'let me check and come back to you') is not a weakness." }

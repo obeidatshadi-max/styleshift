@@ -11,7 +11,7 @@ const obs = (behavior: string, confidence = 0.9, quote = 'my words'): Observatio
 
 describe('shipped drill library', () => {
   it('has exactly one validated drill for each of the 15 types', () => {
-    expect(DRILL_TEMPLATES).toHaveLength(15)
+    expect(DRILL_TEMPLATES).toHaveLength(17)
     expect(drillRegistry.list().map(t => t.type).sort()).toEqual([...DRILL_TYPES].sort())
   })
 

@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createAssignmentReply } from '@/lib/assignments'
@@ -7,7 +8,7 @@ const VALID_KINDS = ['doctor_session', 'colleague_session', 'note'] as const
 /** Rep shares one roleplay session or a note against their active assignment. */
 export async function POST(req: Request) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json().catch(() => null)

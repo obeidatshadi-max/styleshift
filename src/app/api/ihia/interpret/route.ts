@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -7,7 +8,7 @@ import { approvedKnowledge, ihiaEnabled } from '@/lib/ihia/server'
 export async function POST(req: Request) {
   if (!ihiaEnabled()) return NextResponse.json({ error: 'not_found' }, { status: 404 })
   const db = await createClient()
-  const { data: { user } } = await db.auth.getUser()
+  const user = await getAuthUser(db)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   if (!(await checkRateLimit('ihia', user.id, 60, 3600))) return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
   const body = await req.json().catch(() => null)

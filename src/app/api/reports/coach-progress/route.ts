@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import type { ConversationReport } from '@/schemas/conversationReport'
@@ -6,7 +7,7 @@ import { REPLAY_DRILL_PREFIX, summarizeCoachProgress, type ProgressEntry } from 
 /** The signed-in rep's own progress across recorded conversations. Reads only their rows (rep_id filter + RLS). */
 export async function GET() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
 
   const [reports, attempts] = await Promise.all([

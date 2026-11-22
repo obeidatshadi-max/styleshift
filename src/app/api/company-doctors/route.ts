@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
@@ -5,7 +6,7 @@ import { doctorRowForRep, parseCompanyDoctorInput } from '@/lib/company-doctors'
 
 async function managerContext() {
   const db = await createClient()
-  const { data: { user } } = await db.auth.getUser()
+  const user = await getAuthUser(db)
   if (!user) return { response: NextResponse.json({ error: 'unauthorized' }, { status: 401 }) }
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles').select('company_id,role').eq('id', user.id).single()

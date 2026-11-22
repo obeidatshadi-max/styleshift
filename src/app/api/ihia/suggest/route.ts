@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -10,7 +11,7 @@ export const maxDuration = 60
 export async function POST(req: Request) {
   if (!ihiaEnabled()) return NextResponse.json({ error: 'not_found' }, { status: 404 })
   const db = await createClient()
-  const { data: { user } } = await db.auth.getUser()
+  const user = await getAuthUser(db)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => null)
   if (!body || typeof body !== 'object' || Array.isArray(body)

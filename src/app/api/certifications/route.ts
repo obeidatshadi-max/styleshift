@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
@@ -8,7 +9,7 @@ import { issue, overview, revoke } from '@/lib/certification-service'
 async function context() {
   if (!certificationEnabled()) return { response: NextResponse.json({ error: 'not_found' }, { status: 404 }) }
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) return { response: NextResponse.json({ error: 'unauthorized' }, { status: 401 }) }
   // Same gate as the manager dashboard: null unless this user manages a company.
   const stats = await getTeamStatsForUser(user.id)

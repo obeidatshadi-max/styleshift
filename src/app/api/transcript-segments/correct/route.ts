@@ -1,4 +1,5 @@
 // src/app/api/transcript-segments/correct/route.ts
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { isReportSessionType } from '@/schemas/conversationReport'
@@ -10,7 +11,7 @@ const MAX_PROPOSALS = 20
 
 export async function POST(request: Request) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
 
   const body = await request.json().catch(() => null) as {

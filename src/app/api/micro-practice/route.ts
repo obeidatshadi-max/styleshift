@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { drillRegistry } from '@/lib/drill-templates'
@@ -7,7 +8,7 @@ import { historyByDrill, listAttempts, microPracticeEnabled } from '@/lib/drill-
 export async function GET(req: Request) {
   if (!microPracticeEnabled()) return NextResponse.json({ error: 'not_found' }, { status: 404 })
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const requested = new URL(req.url).searchParams.get('lang') === 'ar' ? 'ar' : 'en'

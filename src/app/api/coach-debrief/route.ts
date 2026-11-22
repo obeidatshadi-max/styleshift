@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { randomUUID } from 'node:crypto'
 import { createClient } from '@/lib/supabase-server'
@@ -27,7 +28,7 @@ async function persist(db: DB, row: RecoverableDebrief) {
 }
 export async function GET(req: Request) {
   const db = await createClient()
-  const { data: { user } } = await db.auth.getUser()
+  const user = await getAuthUser(db)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const doctorId = new URL(req.url).searchParams.get('doctorId')
   if (doctorId && !uuid(doctorId)) return NextResponse.json({ error: 'invalid_doctor' }, { status: 400 })
@@ -38,7 +39,7 @@ export async function GET(req: Request) {
 }
 export async function POST(req: Request) {
   const db = await createClient()
-  const { data: { user } } = await db.auth.getUser()
+  const user = await getAuthUser(db)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => null)
   const input = parseDebriefInput(body)
@@ -72,7 +73,7 @@ export async function POST(req: Request) {
 }
 export async function PUT(req: Request) {
   const db = await createClient()
-  const { data: { user } } = await db.auth.getUser()
+  const user = await getAuthUser(db)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => null)
   const row = verifyDebrief(body?.recoveryToken, user.id)
@@ -84,7 +85,7 @@ export async function PUT(req: Request) {
 }
 export async function DELETE(req: Request) {
   const db = await createClient()
-  const { data: { user } } = await db.auth.getUser()
+  const user = await getAuthUser(db)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const id = new URL(req.url).searchParams.get('id')
   if (!uuid(id)) return NextResponse.json({ error: 'invalid_id' }, { status: 400 })

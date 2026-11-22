@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { getTeamStatsForUser } from '@/lib/team-stats'
@@ -12,7 +13,7 @@ function rankTitle(xp: number): string {
 // leaderboard), ready to download as an image and share company-wide.
 export default async function RecognitionPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) redirect('/login')
 
   const stats = await getTeamStatsForUser(user.id)

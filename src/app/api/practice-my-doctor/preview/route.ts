@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { loadRepData, practiceMyDoctorEnabled, prepare } from '@/lib/practice-my-doctor'
@@ -11,7 +12,7 @@ import { loadRepData, practiceMyDoctorEnabled, prepare } from '@/lib/practice-my
 export async function GET(req: Request) {
   if (!practiceMyDoctorEnabled()) return NextResponse.json({ error: 'not_found' }, { status: 404 })
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const url = new URL(req.url)

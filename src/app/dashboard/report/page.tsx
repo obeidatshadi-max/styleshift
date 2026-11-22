@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { getTeamStatsForUser } from '@/lib/team-stats'
@@ -9,7 +10,7 @@ import PrintButton from '@/components/dashboard/PrintButton'
 // dark interactive dashboard so it reads cleanly on paper.
 export default async function ReportPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) redirect('/login')
 
   const stats = await getTeamStatsForUser(user.id)

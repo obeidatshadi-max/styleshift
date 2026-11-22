@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { capabilityIqEnabled, loadCapabilityReport } from '@/lib/capability-load'
@@ -6,7 +7,7 @@ import { capabilityIqEnabled, loadCapabilityReport } from '@/lib/capability-load
 export async function GET() {
   if (!capabilityIqEnabled()) return NextResponse.json({ error: 'not_found' }, { status: 404 })
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   return NextResponse.json(await loadCapabilityReport(supabase, user.id))
 }

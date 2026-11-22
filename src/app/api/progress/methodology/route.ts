@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { loadChallengeData } from '@/lib/challenge-load'
@@ -12,7 +13,7 @@ import { stageCoverage, stageStatus } from '@/schemas/methodology'
 export async function GET() {
   if (!methodologyBuilderEnabled()) return NextResponse.json({ error: 'not_found' }, { status: 404 })
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const methodology = await activeMethodologyFor(user.id)

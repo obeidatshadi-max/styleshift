@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { createServerTimer } from '@/lib/server-timing'
 
 export async function proxy(request: NextRequest) {
   // This function checks its own Bearer token; do not turn JSON into login HTML.
@@ -7,6 +8,7 @@ export async function proxy(request: NextRequest) {
   if (request.nextUrl.pathname === '/.netlify/functions/assemblyai-proxy' || request.nextUrl.pathname === '/api/push/send') {
     return NextResponse.next({ request })
   }
+  const timer = createServerTimer()
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -29,7 +31,7 @@ export async function proxy(request: NextRequest) {
   // getClaims verifies the session JWT locally against the project's cached JWKS (ES256 signing keys), and
   // refreshes the session first when the token is about to expire. getUser made a round trip to the Auth
   // server on every page and API request, which added ~0.4 s to each one.
-  const { data: claimsData } = await supabase.auth.getClaims()
+  const { data: claimsData } = await timer.time('claims', () => supabase.auth.getClaims())
   const sub = claimsData?.claims?.sub
   const user = typeof sub === 'string' && sub ? { id: sub } : null
   const path = request.nextUrl.pathname
@@ -58,11 +60,11 @@ export async function proxy(request: NextRequest) {
 
   // Profile-based checks — skip for API routes, onboarding, and invite pages
   if (user && !path.startsWith('/onboarding') && !path.startsWith('/api') && !path.startsWith('/invite') && !path.startsWith('/join-group')) {
-    const { data: profile } = await supabase
+    const { data: profile } = await timer.time('profile', () => supabase
       .from('profiles')
       .select('company_id, role')
       .eq('id', user.id)
-      .single()
+      .single())
 
     // Manager without company → /onboarding
     if (profile?.role === 'manager' && !profile?.company_id) {
@@ -79,6 +81,9 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Durations only (see server-timing.ts). Own header name: a Server-Timing header set here
+  // replaces the route's Server-Timing header instead of joining it.
+  supabaseResponse.headers.set('X-Proxy-Timing', timer.header())
   return supabaseResponse
 }
 

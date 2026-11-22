@@ -1,3 +1,4 @@
+import { getAuthUser } from '@/lib/auth-user'
 import { createClient } from '@/lib/supabase-server'
 import { verifyBotToken, type BotTokenClaims } from '@/lib/voice-partner-bot-token'
 
@@ -18,7 +19,7 @@ export async function authenticateVoicePartnerRequest(req: Request): Promise<Voi
     return { userId: claims.userId, viaToken: true, claims }
   }
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser(supabase)
   if (!user) return null
   return { userId: user.id, viaToken: false }
 }

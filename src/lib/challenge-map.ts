@@ -48,6 +48,8 @@ export const CHALLENGE_MAP: Record<string, ChallengeTarget> = {
     objective: 'Tie what you say to what this doctor told you they care about.', concern: 'Stops listening to broad claims that are not about their patients' },
   unsupported_claim: { drillId: 'evidence-response-1', objectionType: 'doubt', defaultStyle: 'analytical', competency: 'value_communication',
     objective: 'Support claims with approved evidence, or say you will follow up.', concern: 'Challenges any claim that is not backed by evidence' },
+  unsupported_generalization: { drillId: 'true-objection-1', objectionType: 'true_objection', defaultStyle: 'analytical', competency: 'objection_handling',
+    objective: 'Say a side effect is shared by all similar drugs only when approved information says so.', concern: 'Has a real side-effect concern and checks every claim about it' },
   hedged_delivery: { drillId: 'resistant-driver-1', objectionType: 'indifference', defaultStyle: 'driver', competency: 'value_communication',
     objective: 'Say your key points clearly, without filler words like "maybe".', concern: 'Has no patience for vague or uncertain delivery' },
   no_next_step: { drillId: 'commitment-closing-1', objectionType: 'indifference', defaultStyle: 'expressive', competency: 'closing',

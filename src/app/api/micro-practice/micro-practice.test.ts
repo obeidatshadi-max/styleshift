@@ -42,13 +42,13 @@ describe('GET /api/micro-practice', () => {
     const row = { drill_id: 'precision-questioning-1', drill_version: 1, rep_id: 'rep-1', attempt_no: 1, created_at: '2026-10-08T01:00:00Z', observed_behaviors: [], score: 80, passed: true, lang: 'en' }
     vi.mocked(createClient).mockResolvedValue(supabase([row]).client as never)
     const en = await (await GET(new Request('http://localhost/api/micro-practice?lang=en'))).json()
-    expect(en.drills).toHaveLength(15)
+    expect(en.drills).toHaveLength(17)
     expect(en.drills.find((d: { id: string }) => d.id === 'precision-questioning-1').history).toMatchObject({ personalBest: 80, completions: 1 })
     expect(en.prompts['precision-questioning-1']).toMatch(/mixed/)
     const ar = await (await GET(new Request('http://localhost/api/micro-practice?lang=ar'))).json()
     expect(en.drillLang).toBe('en')
     // No Arabic drills exist yet: the Arabic rep gets the English library, tagged so the card can say so.
-    expect(ar.drills).toHaveLength(15)
+    expect(ar.drills).toHaveLength(17)
     expect(ar.drillLang).toBe('en')
     expect(ar.prompts['precision-questioning-1']).toMatch(/mixed/)
   })

@@ -7,6 +7,7 @@ import { countHedges } from '@/lib/hedging'
 import { knowledgeSectionFor } from '@/lib/knowledge-pack'
 import { findUnanchoredComparatives } from '@/lib/comparatives'
 import { isClarifyRequest, isParaphrase, reusedKeyWords } from '@/lib/listening-signals'
+import { buildsCommonGround, generalisesObjection, linksFeatureToBenefit, minimisesObjection } from '@/lib/value-signals'
 import { defaultScoringConfig, type ScoringConfig } from '@/scoring/config'
 import { SCORED_COMPETENCIES } from '@/schemas/scoring'
 import type { StyleKey } from '@/types/game'
@@ -108,6 +109,30 @@ export function listeningMeasurements(session: StyleShiftSession): string {
     : ''
 }
 
+/** Measured value and objection signals in REP turns (feature -> patient benefit, a true objection put in
+ * proportion or shown as a class effect, common ground). A class-effect claim is credited only when the
+ * approved product information says so; with no knowledge pack it is not scored either way. */
+export function valueMeasurements(session: StyleShiftSession): string {
+  const lines = session.transcript
+    .filter(t => t.role === 'rep')
+    .map(t => {
+      const found: string[] = []
+      if (linksFeatureToBenefit(t.text)) found.push('feature linked to a patient benefit')
+      if (minimisesObjection(t.text)) found.push('put a concern in proportion')
+      if (generalisesObjection(t.text)) found.push('said the issue is shared by the drug class')
+      if (buildsCommonGround(t.text)) found.push('named a shared goal or interest')
+      return found.length ? `- turn ${t.turnIndex}: ${found.join('; ')}` : ''
+    })
+    .filter(Boolean)
+  const pack = !!knowledgeSectionFor(session.knowledge, 'analyst', session.lang)
+  const classRule = pack
+    ? 'For a class-effect claim, report "objection_generalized" only when the approved product information above supports it; otherwise report "unsupported_generalization".'
+    : 'No approved product information is linked to this session, so do not report "objection_generalized" or "unsupported_generalization" at all.'
+  return lines.length
+    ? `\nMeasured value and objection signals in rep turns (text match only, a review indicator not a verdict). Check each in context: "feature_benefit_linked" only when a real product feature is tied to a concrete benefit for the patient; "objection_minimized" only for a true objection (a real side effect or limit) that the rep first accepted as real and then put in proportion honestly, never for "it is nothing" or a dismissal (that is "ignored_objection"); "common_ground" only when the shared goal or interest matches something the doctor actually said or showed. ${classRule}\n${lines.join('\n')}\n`
+    : ''
+}
+
 /** Keeps the new precision-questioning keys from being double-counted with older, broader ones. */
 const PRECISION_KEYS_NOTE = `Precision questioning (from The Structure of Magic): use "specifying_question" when the rep asked which/who/what exactly/how/compared with what about the doctor's OWN vague words; use "clarification" for a general request to say more. Use "what_stops_question" for "what stops you?" / "what would happen if…?" after a "can't" or a closed decision. Use "checked_interpretation" when the rep offered a tentative reading and invited the doctor to confirm or correct it. Use "accepted_vague_objection" only when the doctor voiced a vague objection and the rep's very next turn answered or moved on without asking what was meant. Never report two of these for the same rep turn.`
 
@@ -125,7 +150,7 @@ ${competencies}
 
 Transcript (each line is "[turn N | speaker] text"):
 ${session.transcript.length ? formatTranscript(session) : '(empty)'}
-${hedgeMeasurements(session)}${comparativeMeasurements(session)}${listeningMeasurements(session)}
+${hedgeMeasurements(session)}${comparativeMeasurements(session)}${listeningMeasurements(session)}${valueMeasurements(session)}
 ${knowledgeSectionFor(session.knowledge, 'analyst', session.lang) ? `\n${knowledgeSectionFor(session.knowledge, 'analyst', session.lang)}\n` : ''}
 ${PRECISION_KEYS_NOTE}
 

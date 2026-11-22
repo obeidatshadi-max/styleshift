@@ -1,7 +1,7 @@
 import { createDrillRegistry } from '@/lib/drill-registry'
 
 /**
- * The shipped micro-practice library: 15 drills as pure data, one per drill
+ * The shipped micro-practice library: 17 drills as pure data, one per drill
  * type. A new drill is a new entry here - no runner, route or UI change.
  *
  * ENGLISH ONLY (languages: ['en']). Doctor lines are deliberately generic: no
@@ -192,6 +192,31 @@ export const DRILL_TEMPLATES: unknown[] = [
       c('objection_acknowledged', 2, true, 'You owned the missed promise.', 'Acknowledge what went wrong before anything else.'),
       c('empathy_statement', 1, false, 'You recognised the impact on the doctor.', 'Recognise how this affected the doctor.'),
       c('next_step_proposed', 1, false, 'You committed to something specific.', 'Offer one concrete action you can keep.'),
+    ],
+  },
+  {
+    ...common, id: 'feature-benefit-1', type: 'feature_benefit', difficulty: 'standard', durationMin: 3,
+    physicianStyle: 'driver', expectedResponse: 'short_text', passMark: 0.6,
+    objective: { en: 'Turn a product feature into a benefit for the patient.' },
+    prompt: { en: 'The doctor says: "My patients already take many tablets. Why would yours make any difference?"' },
+    hint: { en: 'Name one feature, then say what it means for the patient: "It is taken once a day, which means your patients..."' },
+    criteria: [
+      c('feature_benefit_linked', 2, true, 'You linked a feature to a clear benefit for the patient.', 'Say what the feature means for the patient, not only what it is.'),
+      c('benefit_tied_to_need', 1, false, 'You tied it to the many tablets the doctor mentioned.', 'Link your answer to the problem the doctor just named: many tablets.'),
+      c('unsupported_claim', 1, false, 'You did not promise more than you can support.', 'You claimed a benefit without any evidence behind it.'),
+    ],
+  },
+  {
+    ...common, id: 'true-objection-1', type: 'true_objection', difficulty: 'hard', durationMin: 4,
+    physicianStyle: 'analytical', expectedResponse: 'short_text', passMark: 0.6,
+    objective: { en: 'Handle a real side effect honestly: acknowledge it, then put it in proportion.' },
+    prompt: { en: 'The doctor says: "Two of my patients had stomach upset in the first week. That is a real problem."' },
+    hint: { en: 'Accept it is real. Ask how bad it was. Put it in proportion only with approved information: how long it usually lasts, how common it is, or how it compares with the benefit for the patient.' },
+    criteria: [
+      c('objection_acknowledged', 2, true, 'You accepted the problem as real.', 'Accept the side effect as real before you say anything else.'),
+      c('objection_minimized', 2, true, 'You put the side effect in proportion for the patient.', 'Put it in proportion: how long it usually lasts, or how it compares with the benefit for the patient.'),
+      c('clarification', 1, false, 'You asked how serious it was for those patients.', 'Ask how bad it was and what happened next.'),
+      c('unsupported_generalization', 1, false, 'You did not claim it happens with every similar drug without support.', 'You said all similar drugs do this without approved information that says so.'),
     ],
   },
 ]

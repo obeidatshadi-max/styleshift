@@ -39,7 +39,7 @@ export const patternMemoryEnabled = () => process.env.PATTERN_MEMORY_ENABLED ===
 /** Which micro-practice drill suits a capability area (adaptation depends on the style). */
 const DIMENSION_DRILL: Record<CapabilityDimension, string> = {
   interaction: 'clarification-1', clinical: 'evidence-response-1', adaptation: 'difficult-analytical-1',
-  discovery: 'needs-discovery-1', commitment: 'commitment-closing-1',
+  discovery: 'needs-discovery-1', customer_focus: 'feature-benefit-1', commitment: 'commitment-closing-1',
 }
 
 function evidenceFor(events: readonly BehaviorEvent[], behavior: string, effect: 'helped' | 'hurt', sessionIdsNewestFirst: readonly string[]): EventEvidence[] {

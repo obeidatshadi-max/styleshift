@@ -57,7 +57,7 @@ function Row({ r, sessions }: { r: DimensionResult; sessions: number }) {
   )
 }
 
-/** Home card: five capability dimensions from the rep's own scored simulations.
+/** Home card: six capability dimensions from the rep's own scored simulations.
  * Each is shown only when there is enough evidence, as a rounded band with
  * confidence and trend, and can be opened to see the behaviors and the rep's
  * own words behind it. Silent when the feature is off or there is no history. */

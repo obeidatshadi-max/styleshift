@@ -14,6 +14,7 @@ export const DRILL_TYPES = [
   'opening_a_visit', 'needs_discovery', 'evidence_response', 'unsupported_comparison_correction',
   'price_objection', 'safety_concern', 'competitor_challenge', 'commitment_closing',
   'difficult_analytical_doctor', 'resistant_driver_doctor', 'trust_recovery',
+  'feature_benefit', 'true_objection',
 ] as const
 export type DrillType = typeof DRILL_TYPES[number]
 

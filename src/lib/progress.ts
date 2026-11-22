@@ -180,7 +180,7 @@ export function progressReport(input: ProgressInput): ProgressReport {
   cleanRuns.sort((a, b) => b.sessions - a.sessions || a.behavior.localeCompare(b.behavior))
 
   const improvingCapabilities = input.capability
-    ? CAPABILITY_DIMENSIONS.filter(d => { const r = input.capability!.dimensions[d]; return r.status === 'scored' && r.trend === 'improving' })
+    ? CAPABILITY_DIMENSIONS.filter(d => { const r = input.capability!.dimensions[d]; return !!r && r.status === 'scored' && r.trend === 'improving' })
     : []
 
   const passedDaysTotal = new Set(assessed.filter(a => a.passed).map(a => `${a.drillId}|${day(a.at)}`)).size

@@ -21,9 +21,9 @@ describe('user-specified point values', () => {
   it.each(cases)('%s / %s applies %i points from the 50 base', (competency, behavior, points) => {
     expect(score([obs(competency, behavior)]).competencies[competency as 'questioning'].score).toBe(50 + points)
   })
-  it('marks exactly those six as source=user', () => {
+  it('marks exactly the user-specified behaviors as source=user', () => {
     const user = [...behaviorIndex(defaultScoringConfig).entries()].filter(([, v]) => v.rule.source === 'user').map(([k]) => k).sort()
-    expect(user).toEqual(['clarification', 'ignored_objection', 'interruption', 'open_question', 'paraphrasing', 'premature_pitch'])
+    expect(user).toEqual(['clarification', 'common_ground', 'feature_benefit_linked', 'ignored_objection', 'interruption', 'objection_generalized', 'objection_minimized', 'open_question', 'paraphrasing', 'premature_pitch'])
   })
 })
 
@@ -99,7 +99,7 @@ describe('scoreSession', () => {
 
 describe('parseScoringConfig', () => {
   const clone = () => JSON.parse(JSON.stringify(defaultScoringConfig))
-  it('accepts the shipped config', () => expect(defaultScoringConfig.version).toBe('1.0.0'))
+  it('accepts the shipped config', () => expect(defaultScoringConfig.version).toBe('1.1.0'))
   it('rejects bad edits loudly', () => {
     expect(() => parseScoringConfig({ ...clone(), repeatDecay: 0 })).toThrow(/repeatDecay/)
     expect(() => parseScoringConfig({ ...clone(), baseScore: 500 })).toThrow(/baseScore/)

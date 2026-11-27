@@ -1,11 +1,11 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useProfile } from '@/hooks/useProfile'
-import { useGameData, useT } from '@/lib/i18n'
+import { useGameData, useLang, useT } from '@/lib/i18n'
 import { DAILY_TOTAL } from '@/lib/daily'
 import { L2_OBJECTION } from '@/lib/scenario-meta'
 import { shuffle } from '@/lib/scenario-engine'
-import { XP_VALUES } from '@/lib/game-data'
+import type { GameAnswer } from '@/lib/game-scoring'
 import GameHome from './GameHome'
 import AICoach from './AICoach'
 import LevelOne from './LevelOne'
@@ -41,7 +41,8 @@ interface LevelState {
 }
 
 export default function GameShell() {
-  const { profile, badges, completedLevels, loading, addXp, earnBadge, saveSession, recordDaily, updateAvatar, saveSpsAssessment } = useProfile()
+  const { profile, badges, completedLevels, loading, setXpTotal, completeLevel, recordDaily, updateAvatar, saveSpsAssessment } = useProfile()
+  const { lang } = useLang()
   const t = useT()
   const { L2 } = useGameData()
   const [screen, setScreen] = useState<Screen>('home')
@@ -83,7 +84,7 @@ export default function GameShell() {
   useEffect(() => { loadDaily(); loadStandings(); loadAssignment() }, [loadDaily, loadStandings, loadAssignment])
 
   // First-run routing, decided once per session-load (guarded by the ref below, not by
-  // [loading, profile] alone: playing a level changes `profile` via addXp/saveSession, and a
+  // [loading, profile] alone: playing a level changes `profile` via setXpTotal/completeLevel, and a
   // reactive effect would re-fire mid-playthrough).
   //
   // A brand-new rep sees the one-time intro carousel (localStorage, reopenable from the home
@@ -120,9 +121,10 @@ export default function GameShell() {
     setScreen('daily')
   }
 
-  async function handleDailyComplete(correct: boolean, reactionMs: number) {
+  async function handleDailyComplete(_correct: boolean, reactionMs: number, answer: number | string) {
     const pick = dailyQueue[dailyPos]
-    if (pick) await recordDaily(pick.level, pick.scenarioId, correct, reactionMs)
+    // The server re-checks the answer; the screen's own verdict is only for the feedback shown.
+    if (pick) await recordDaily(pick.level, pick.scenarioId, answer, lang, reactionMs)
     if (dailyPos + 1 < dailyQueue.length) {
       setDailyPos(dailyPos + 1) // next question in the set
     } else {
@@ -139,8 +141,11 @@ export default function GameShell() {
   const [assignPos, setAssignPos] = useState(0)
 
   async function markAssignmentDone() {
-    try { await fetch('/api/assignments', { method: 'PATCH' }) } catch { /* retried next load */ }
-    await addXp(XP_VALUES.levelComplete)
+    // The server adds the assignment XP once, on the first completion.
+    try {
+      const res = await fetch('/api/assignments', { method: 'PATCH' })
+      if (res.ok) setXpTotal((await res.json() as { totalXp?: number | null }).totalXp)
+    } catch { /* retried next load */ }
     await loadAssignment()
   }
 
@@ -206,23 +211,25 @@ export default function GameShell() {
     results: boolean[],
     xpEarned: number,
     avgMs: number,
-    badgesEarned: BadgeName[],
+    _badgesEarned: BadgeName[],
+    answers: GameAnswer[],
     meters?: { quota: number; morale: number; risk: number }
   ) {
+    // The server scores the picks, saves the session, adds XP and grants badges. Its score is
+    // the one shown; the screen's own tally is only a fallback if the save failed.
+    const saved = await completeLevel(activeLevel, lang, answers)
+    if (saved) {
+      results = saved.results
+      xpEarned = saved.xp
+      avgMs = saved.avgMs
+      meters = saved.meters ?? meters
+    }
     const got = results.filter(Boolean).length
     setDecisions(d => d + results.length)
     setCorrect(c => c + got)
     setTotalMs(t => t + avgMs * results.length)
     setReactionCount(r => r + results.length)
     setSessionEarnedLevels(e => [...new Set([...e, activeLevel])])
-
-    const acc = Math.round(got / results.length * 100)
-    await addXp(xpEarned)
-    await saveSession(activeLevel, acc, xpEarned, avgMs || undefined)
-    for (const badge of badgesEarned) await earnBadge(badge)
-
-    const newXp = (profile?.xp ?? 0) + xpEarned
-    if (newXp >= 2000) await earnBadge('Style Master')
 
     // A level run satisfies a matching level-type coach assignment.
     if (assignment && !assignment.completed &&
@@ -321,10 +328,10 @@ export default function GameShell() {
 
   if (screen === 'level') {
     const sharedProps = { onBack: () => setScreen('home') }
-    if (activeLevel === 1) return withNav(<LevelOne {...sharedProps} onComplete={(r,x,m,b) => handleLevelComplete(r,x,m,b)} />)
-    if (activeLevel === 2) return withNav(<LevelTwo {...sharedProps} onComplete={(r,x,m,b) => handleLevelComplete(r,x,m,b)} />)
-    if (activeLevel === 3) return withNav(<LevelThree {...sharedProps} onComplete={(r,x,m,b) => handleLevelComplete(r,x,m,b)} />)
-    if (activeLevel === 4) return withNav(<LevelFour {...sharedProps} onComplete={(r,x,m,b,meters) => handleLevelComplete(r,x,m,b,meters)} />)
+    if (activeLevel === 1) return withNav(<LevelOne {...sharedProps} onComplete={(r,x,m,b,a) => handleLevelComplete(r,x,m,b,a)} />)
+    if (activeLevel === 2) return withNav(<LevelTwo {...sharedProps} onComplete={(r,x,m,b,a) => handleLevelComplete(r,x,m,b,a)} />)
+    if (activeLevel === 3) return withNav(<LevelThree {...sharedProps} onComplete={(r,x,m,b,a) => handleLevelComplete(r,x,m,b,a)} />)
+    if (activeLevel === 4) return withNav(<LevelFour {...sharedProps} onComplete={(r,x,m,b,a,meters) => handleLevelComplete(r,x,m,b,a,meters)} />)
   }
 
   return withNav(

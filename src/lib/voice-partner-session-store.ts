@@ -1,5 +1,7 @@
 import type { createAdminClient } from '@/lib/supabase-admin'
 import { isClearStep, type ClearStep, type ObjectionType } from '@/lib/voice-partner-core'
+import { XP_VALUES } from '@/lib/game-data'
+import { awardXp } from '@/lib/xp-server'
 
 // AI-Doctor results are written by the server, never by the browser (validation audit
 // 2026-11-12, W5). The judge routes call these with the service-role client after they
@@ -67,7 +69,14 @@ export async function recordResolvedSession(admin: Admin, s: ResolvedSession): P
     outcome: s.outcome, clear_steps_hit: [...new Set(s.clearSteps)], turn_count: s.turnCount,
     ...(s.difficulty ? { difficulty: s.difficulty } : {}),
   })
-  if (!error) return 'saved'
+  if (!error) {
+    // A win earns XP once: only the first resolution of a session is ever saved.
+    if (s.outcome === 'won') {
+      try { await awardXp(admin, s.repId, XP_VALUES.voicePartnerWin, 'voice_win') }
+      catch (e) { console.warn('voice win XP failed:', e instanceof Error ? e.message : e) }
+    }
+    return 'saved'
+  }
   if ((error as { code?: string }).code === '23505') {
     // 'exists' only when the existing row is this rep's. A row with the same id owned by someone
     // else means this result was not stored, so say so instead of silently dropping it.

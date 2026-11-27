@@ -5,12 +5,13 @@ import { bestL4Index, clamp, sign } from '@/lib/game-logic'
 import { useGameData, useT } from '@/lib/i18n'
 import { pickScenarios, withShuffledOptions } from '@/lib/scenario-engine'
 import type { BadgeName } from '@/types/game'
+import type { GameAnswer } from '@/lib/game-scoring'
 import { Topline, OptBtn, Feedback, NextRow, Meter } from './helpers'
 
 const L4_COUNT = 4
 
 interface Props {
-  onComplete: (results: boolean[], xpEarned: number, avgReactionMs: number, badgesEarned: BadgeName[], meters: {quota:number;morale:number;risk:number}) => void
+  onComplete: (results: boolean[], xpEarned: number, avgReactionMs: number, badgesEarned: BadgeName[], answers: GameAnswer[], meters: {quota:number;morale:number;risk:number}) => void
   onBack: () => void
 }
 
@@ -28,6 +29,8 @@ export default function LevelFour({ onComplete, onBack }: Props) {
   const xpRef = useRef(0)
   const msRef = useRef<number[]>([])
   const badgesRef = useRef<BadgeName[]>([])
+  // What the rep picked, sent to the server for scoring (it re-checks every pick).
+  const answersRef = useRef<GameAnswer[]>([])
 
   const item = withShuffledOptions(scenarios[idx], `L4-${scenarios[idx].id}`)
   const best = bestL4Index(item.opts)
@@ -38,6 +41,7 @@ export default function LevelFour({ onComplete, onBack }: Props) {
     const opt = item.opts[i]
     const good = i === best
     const dt = Date.now() - stepShownAt.current
+    answersRef.current.push({ id: item.id, pick: i, ms: dt })
     if (good) {
       xpRef.current += XP_VALUES.correct
       if (dt > 0 && dt < 2100) xpRef.current += XP_VALUES.fastBonus
@@ -54,7 +58,7 @@ export default function LevelFour({ onComplete, onBack }: Props) {
       if (results.filter(Boolean).length === scenarios.length) xpRef.current += XP_VALUES.perfectLevel
       xpRef.current += XP_VALUES.levelComplete
       const avg = msRef.current.length ? Math.round(msRef.current.reduce((a,b)=>a+b,0)/msRef.current.length) : 0
-      onComplete(results, xpRef.current, avg, badgesRef.current, meters)
+      onComplete(results, xpRef.current, avg, badgesRef.current, answersRef.current, meters)
     } else {
       stepShownAt.current = Date.now()
       setIdx(i => i+1); setChosen(null)

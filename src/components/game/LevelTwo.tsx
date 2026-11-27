@@ -6,12 +6,13 @@ import { pickScenarios, withShuffledOptions } from '@/lib/scenario-engine'
 import { L2_OBJECTION } from '@/lib/scenario-meta'
 import { biasForCategory } from '@/lib/cognitive-biases'
 import type { BadgeName } from '@/types/game'
+import type { GameAnswer } from '@/lib/game-scoring'
 import { Topline, OptBtn, Feedback, NextRow, Meter, BiasCallout } from './helpers'
 
 const L2_COUNT = 4
 
 interface Props {
-  onComplete: (results: boolean[], xpEarned: number, avgReactionMs: number, badgesEarned: BadgeName[]) => void
+  onComplete: (results: boolean[], xpEarned: number, avgReactionMs: number, badgesEarned: BadgeName[], answers: GameAnswer[]) => void
   onBack: () => void
 }
 
@@ -31,6 +32,8 @@ export default function LevelTwo({ onComplete, onBack }: Props) {
   const xpRef = useRef(0)
   const msRef = useRef<number[]>([])
   const badgesRef = useRef<BadgeName[]>([])
+  // What the rep picked, sent to the server for scoring (it re-checks every pick).
+  const answersRef = useRef<GameAnswer[]>([])
 
   const item = withShuffledOptions(scenarios[idx], `L2-${scenarios[idx].id}`)
   const winIdx = item.opts.findIndex(o => o.r === 'win')
@@ -40,6 +43,7 @@ export default function LevelTwo({ onComplete, onBack }: Props) {
     setChosen(i)
     const win = item.opts[i].r === 'win'
     const dt = Date.now() - stepShownAt.current
+    answersRef.current.push({ id: item.id, pick: i, ms: dt })
     if (win) {
       xpRef.current += XP_VALUES.correct
       if (dt > 0 && dt < 2100) xpRef.current += XP_VALUES.fastBonus
@@ -55,7 +59,7 @@ export default function LevelTwo({ onComplete, onBack }: Props) {
       if (results.filter(Boolean).length === scenarios.length) xpRef.current += XP_VALUES.perfectLevel
       xpRef.current += XP_VALUES.levelComplete
       const avg = msRef.current.length ? Math.round(msRef.current.reduce((a,b)=>a+b,0)/msRef.current.length) : 0
-      onComplete(results, xpRef.current, avg, badgesRef.current)
+      onComplete(results, xpRef.current, avg, badgesRef.current, answersRef.current)
     } else {
       stepShownAt.current = Date.now()
       setIdx(i => i+1); setChosen(null)

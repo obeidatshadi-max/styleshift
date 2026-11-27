@@ -4,12 +4,13 @@ import { XP_VALUES } from '@/lib/game-data'
 import { useGameData, useT } from '@/lib/i18n'
 import { pickScenarios, withShuffledOptions } from '@/lib/scenario-engine'
 import type { BadgeName } from '@/types/game'
+import type { GameAnswer } from '@/lib/game-scoring'
 import { Topline, OptBtn, Feedback, NextRow } from './helpers'
 
 const L3_COUNT = 4
 
 interface Props {
-  onComplete: (results: boolean[], xpEarned: number, avgReactionMs: number, badgesEarned: BadgeName[]) => void
+  onComplete: (results: boolean[], xpEarned: number, avgReactionMs: number, badgesEarned: BadgeName[], answers: GameAnswer[]) => void
   onBack: () => void
 }
 
@@ -28,6 +29,8 @@ export default function LevelThree({ onComplete, onBack }: Props) {
   const xpRef = useRef(0)
   const msRef = useRef<number[]>([])
   const badgesRef = useRef<BadgeName[]>([])
+  // What the rep picked, sent to the server for scoring (it re-checks every pick).
+  const answersRef = useRef<GameAnswer[]>([])
 
   const item = withShuffledOptions(scenarios[idx], `L3-${scenarios[idx].id}`)
 
@@ -36,6 +39,7 @@ export default function LevelThree({ onComplete, onBack }: Props) {
     setChosen(i)
     const ok = item.opts[i].correct
     const dt = Date.now() - stepShownAt.current
+    answersRef.current.push({ id: item.id, pick: i, ms: dt })
     if (ok) {
       xpRef.current += XP_VALUES.correct
       if (dt > 0 && dt < 2100) xpRef.current += XP_VALUES.fastBonus
@@ -50,7 +54,7 @@ export default function LevelThree({ onComplete, onBack }: Props) {
       if (results.filter(Boolean).length === scenarios.length) xpRef.current += XP_VALUES.perfectLevel
       xpRef.current += XP_VALUES.levelComplete
       const avg = msRef.current.length ? Math.round(msRef.current.reduce((a,b)=>a+b,0)/msRef.current.length) : 0
-      onComplete(results, xpRef.current, avg, badgesRef.current)
+      onComplete(results, xpRef.current, avg, badgesRef.current, answersRef.current)
     } else {
       stepShownAt.current = Date.now()
       setIdx(i => i+1); setChosen(null)

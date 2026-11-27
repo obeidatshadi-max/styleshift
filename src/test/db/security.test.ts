@@ -10,6 +10,9 @@ import { createTestDb, type TestDb } from './supabaseTestDb'
  */
 
 const HARDENING = '20261106120000_security_hardening.sql'
+// Later migration that re-creates the same profile trigger; skipped with HARDENING so the
+// "without hardening" block still shows the old trigger body.
+const LOCK_SCORING = '20261127130000_lock_client_scoring.sql'
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
 const A = id(1), B = id(2)                       // companies
@@ -105,8 +108,12 @@ describe('database security: every migration applied', () => {
       await t.asService(`update public.profiles set group_id = null where id = '${repB1}'`)
     })
     it('ordinary self-service fields still work', async () => {
-      const r = await t.asUser(repA1, `update public.profiles set display_name = 'Rep A1 renamed', xp = 5 where id = '${repA1}' returning id`)
+      const r = await t.asUser(repA1, `update public.profiles set display_name = 'Rep A1 renamed' where id = '${repA1}' returning id`)
       expect(r).toHaveLength(1)
+    })
+    it('a rep cannot set their own XP or visit date (server-only since 20261127130000)', async () => {
+      await rejects(t.asUser(repA1, `update public.profiles set xp = 99999 where id = '${repA1}'`))
+      await rejects(t.asUser(repA1, `update public.profiles set last_visit = '2000-01-01' where id = '${repA1}'`))
     })
   })
 
@@ -168,6 +175,30 @@ describe('database security: every migration applied', () => {
     it('nobody from another company can read them', async () => {
       expect(await t.asUser(repB1, `select id from public.sessions`)).toEqual([])
       expect(await t.asUser(mgrB, `select id from public.sessions`)).toEqual([])
+    })
+  })
+
+  // Architecture review 2026-11-27, F1: scores, XP and badges come only from the server.
+  describe('game scores, XP and badges are server-only', () => {
+    it('a rep cannot write their own game session, XP ledger row, badge or daily answer', async () => {
+      await rejects(t.asUser(repA1, `insert into public.sessions (rep_id, level, accuracy, xp_earned) values ('${repA1}', 1, 100, 500)`))
+      await rejects(t.asUser(repA1, `insert into public.xp_events (rep_id, amount, source) values ('${repA1}', 500, 'session')`))
+      await rejects(t.asUser(repA1, `insert into public.badges (rep_id, badge_name) values ('${repA1}', 'Style Master')`))
+      await rejects(t.asUser(repA1, `insert into public.daily_challenges (rep_id, challenge_date, level, scenario_id, correct) values ('${repA1}', current_date, 1, 1, true)`))
+    })
+    it('the server adds XP in one statement, writes the ledger, and gives the visit bonus once a day', async () => {
+      const before = Number((await t.asService<{ xp: number }>(`select xp from public.profiles where id = '${repA2}'`))[0].xp)
+      const total = (await t.asService<{ award_xp: number }>(`select public.award_xp('${repA2}', 70, 'session')`))[0].award_xp
+      expect(Number(total)).toBe(before + 70)
+      expect(await t.asService(`select 1 from public.xp_events where rep_id = '${repA2}' and amount = 70 and source = 'session'`)).toHaveLength(1)
+      await t.asService(`update public.profiles set last_visit = current_date - 1 where id = '${repA2}'`)
+      expect(Number((await t.asService<{ v: number }>(`select public.record_visit('${repA2}', current_date, 30) as v`))[0].v)).toBe(30)
+      expect(Number((await t.asService<{ v: number }>(`select public.record_visit('${repA2}', current_date, 30) as v`))[0].v)).toBe(0)
+      await rejects(t.asService(`select public.award_xp('${repA2}', 5000, 'session')`))
+    })
+    it('a rep cannot call the XP functions', async () => {
+      await rejects(t.asUser(repA1, `select public.award_xp('${repA1}', 500, 'session')`))
+      await rejects(t.asUser(repA1, `select public.record_visit('${repA1}', current_date, 500)`))
     })
   })
 
@@ -261,7 +292,7 @@ describe('database security: every migration applied', () => {
 
 describe('production as it is today, WITHOUT the hardening migration (proves the tests can fail)', () => {
   let t: TestDb
-  beforeAll(async () => { t = await createTestDb({ skip: [HARDENING] }); await seed(t) }, 120000)
+  beforeAll(async () => { t = await createTestDb({ skip: [HARDENING, LOCK_SCORING] }); await seed(t) }, 120000)
 
   it('a rep could write progress against another company\'s assignment', async () => {
     expect(await t.asUser(repA1, `insert into public.assignment_progress (assignment_id, rep_id) values ('${asgB}','${repA1}') returning rep_id`)).toHaveLength(1)

@@ -217,10 +217,12 @@ export async function createAssignment(
  * Marks the rep's active assignment as completed (idempotent — the PK makes a
  * repeat insert a no-op). Returns true if the rep had an active assignment.
  */
-export async function completeAssignment(userId: string): Promise<boolean> {
+/** Marks the rep's active assignment done. 'completed' only the first time, so callers can
+ * award one-off rewards; 'already' when it was done before; null when there is none. */
+export async function completeAssignment(userId: string): Promise<'completed' | 'already' | null> {
   const current = await getAssignmentForRep(userId)
-  if (!current) return false
-  if (current.completed) return true
+  if (!current) return null
+  if (current.completed) return 'already'
 
   const admin = createAdminClient()
   await admin
@@ -229,5 +231,5 @@ export async function completeAssignment(userId: string): Promise<boolean> {
       { assignment_id: current.assignment.id, rep_id: userId },
       { onConflict: 'assignment_id,rep_id', ignoreDuplicates: true }
     )
-  return true
+  return 'completed'
 }

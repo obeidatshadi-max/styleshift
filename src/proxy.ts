@@ -97,5 +97,7 @@ export const config = {
   // arena.html is the standalone StyleShift Arena classroom quiz; workshop
   // participants open it without a StyleShift account. Its API, /api/arena,
   // authenticates every request itself (trainer key or participant token).
-  matcher: ['/((?!_next/static|_next/image|fonts/|favicon.ico|opengraph-image|twitter-image|icon|apple-icon|robots.txt|sitemap.xml|manifest.webmanifest|sw.js|offline|arena.html|api/arena).*)'],
+  // objections.html is the workshop's Iraqi Objection Bank, also used without an
+  // account. /api/objections lets anyone read and needs the workshop code to write.
+  matcher: ['/((?!_next/static|_next/image|fonts/|favicon.ico|opengraph-image|twitter-image|icon|apple-icon|robots.txt|sitemap.xml|manifest.webmanifest|sw.js|offline|arena.html|api/arena|objections.html|api/objections).*)'],
 }

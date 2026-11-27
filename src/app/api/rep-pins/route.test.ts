@@ -55,4 +55,16 @@ describe('/api/rep-pins', () => {
     vi.mocked(getTeamStatsForUser).mockResolvedValue({ companyId: 'co', reps: [] } as never)
     expect((await POST(new Request('http://localhost/api/rep-pins', { method: 'POST', body: 'nope' }))).status).toBe(400)
   })
+
+  it('refuses a PIN reset from a revoked session even though its token still verifies', async () => {
+    // Token signature still valid (getClaims), but the Auth server says the session is gone (getUser).
+    vi.mocked(createClient).mockResolvedValue({ auth: {
+      getClaims: async () => ({ data: { claims: { sub: 'mgr-1' } } }),
+      getUser: async () => ({ data: { user: null } }),
+    } } as never)
+    vi.mocked(getTeamStatsForUser).mockResolvedValue({ companyId: 'co', reps: [] } as never)
+    expect((await GET()).status).toBe(200)
+    expect((await POST(post({ repId: 'r1' }))).status).toBe(401)
+    expect(resetPin).not.toHaveBeenCalled()
+  })
 })

@@ -1550,6 +1550,9 @@ const EN: Dict = {
 
   // toggle (label shows the language you switch TO)
   'toggle.switchTo': 'عربي',
+  'feedbackDialect.msa': 'Feedback: standard Arabic',
+  'feedbackDialect.iraqi': 'Feedback: Iraqi',
+  'feedbackDialect.hint': 'Language of AI coaching feedback. Tap to switch.',
 }
 
 const AR: Dict = {
@@ -3067,6 +3070,9 @@ const AR: Dict = {
   'bias.negativity_bias.tactic': 'اذكر الخلل تحديدًا والحل الملموس له قبل العودة إلى مزايا المنتج — لا تتجاوز الموضوع بصمت.',
 
   'toggle.switchTo': 'EN',
+  'feedbackDialect.msa': 'الملاحظات: فصحى',
+  'feedbackDialect.iraqi': 'الملاحظات: عراقي',
+  'feedbackDialect.hint': 'لغة ملاحظات المدرب الذكي. اضغط للتبديل.',
 }
 
 const DICTS: Record<Lang, Dict> = { en: EN, ar: AR }

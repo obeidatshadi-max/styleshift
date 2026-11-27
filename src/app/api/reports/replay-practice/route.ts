@@ -1,4 +1,6 @@
 import { getAuthUser } from '@/lib/auth-user'
+import { feedbackDialectRule } from '@/lib/feedback-dialect'
+import { readFeedbackDialect } from '@/lib/feedback-dialect-server'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -50,7 +52,7 @@ export async function POST(request: Request) {
   const { system, prompt, maxTokens } = buildPracticePrompt({
     cue: moment?.cue.quote ?? null, successCriterion: priority.successCriterion, behavior: priority.behavior, attempt, lang,
   })
-  const raw = await complete({ system, prompt, maxTokens })
+  const raw = await complete({ system, prompt: prompt + feedbackDialectRule(lang, await readFeedbackDialect()), maxTokens })
   let parsed: unknown = null
   if (raw) {
     const start = raw.indexOf('{'), end = raw.lastIndexOf('}')

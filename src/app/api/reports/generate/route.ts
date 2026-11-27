@@ -1,5 +1,7 @@
 // src/app/api/reports/generate/route.ts
 import { getAuthUser } from '@/lib/auth-user'
+import { feedbackDialectRule } from '@/lib/feedback-dialect'
+import { readFeedbackDialect } from '@/lib/feedback-dialect-server'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -141,6 +143,12 @@ ${RECORDING_LANGUAGE_RULES}`
     coachPrompt.prompt += `
 
 ${languageContext}`
+  }
+  // Iraqi coaching feedback, when the rep chose it. Goes last so it overrides "standard Arabic".
+  const dialectRule = feedbackDialectRule(lang, await readFeedbackDialect())
+  if (dialectRule) {
+    for (const part of parts) built[part].prompt += dialectRule
+    if (coachPrompt) coachPrompt.prompt += dialectRule
   }
   let coachRaw: Record<string, unknown> | null = null
   const runCoach = async (attempt: number) => {

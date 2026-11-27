@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import { useGameData, useT, useBadgeLabel, useLang } from '@/lib/i18n'
 import LangToggle from '@/components/LangToggle'
+import FeedbackDialectToggle from '@/components/FeedbackDialectToggle'
 import ThemeToggle from '@/components/ThemeToggle'
 import AvatarUploader from './AvatarUploader'
 import PrivacyPanel from './PrivacyPanel'
@@ -158,7 +159,7 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
     <div style={{ position:'relative', zIndex:1, maxWidth:1040, margin:'0 auto', padding:14 }}>
       <div className="home-appbar">
         <div className="wordmark"><span aria-hidden="true">↗</span>StyleShift</div>
-        <div className="appearance-tools"><ThemeToggle /><LangToggle /></div>
+        <div className="appearance-tools"><ThemeToggle /><LangToggle /><FeedbackDialectToggle /></div>
       </div>
       <header className="home-intro">
         <p className="visual-eyebrow">{lang === 'ar' ? 'خطوتك لمحادثة أفضل' : 'Your next good conversation'}</p>

@@ -1,4 +1,6 @@
 import { getAuthUser } from '@/lib/auth-user'
+import { feedbackDialectRule } from '@/lib/feedback-dialect'
+import { readFeedbackDialect } from '@/lib/feedback-dialect-server'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -88,7 +90,7 @@ export async function POST(req: Request) {
 
   const signals = computeSessionSignals(turns, hasHiddenConcern)
   const pressureShift = computePressureShift(turns)
-  const prompt = buildEvaluatorPrompt(turns, signals, styleProfile, lang, pressureShift)
+  const prompt = buildEvaluatorPrompt(turns, signals, styleProfile, lang, pressureShift) + feedbackDialectRule(lang, await readFeedbackDialect())
 
   let text = await callEvaluator(anthropicKey, prompt)
   let raw = text ? parseEvaluatorResponse(text) : null

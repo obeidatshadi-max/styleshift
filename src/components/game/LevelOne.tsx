@@ -4,12 +4,13 @@ import { XP_VALUES } from '@/lib/game-data'
 import { useGameData, useT } from '@/lib/i18n'
 import { pickScenarios } from '@/lib/scenario-engine'
 import type { StyleKey, BadgeName } from '@/types/game'
+import type { GameAnswer } from '@/lib/game-scoring'
 import { Topline, OptBtn, Feedback, NextRow } from './helpers'
 
 const L1_COUNT = 6
 
 interface Props {
-  onComplete: (results: boolean[], xpEarned: number, avgReactionMs: number, badgesEarned: BadgeName[]) => void
+  onComplete: (results: boolean[], xpEarned: number, avgReactionMs: number, badgesEarned: BadgeName[], answers: GameAnswer[]) => void
   onBack: () => void
 }
 
@@ -29,6 +30,8 @@ export default function LevelOne({ onComplete, onBack }: Props) {
   const xpRef = useRef(0)
   const msRef = useRef<number[]>([])
   const badgesRef = useRef<BadgeName[]>([])
+  // What the rep picked, sent to the server for scoring (it re-checks every pick).
+  const answersRef = useRef<GameAnswer[]>([])
 
   const item = scenarios[idx]
 
@@ -36,6 +39,7 @@ export default function LevelOne({ onComplete, onBack }: Props) {
     if (chosen) return
     setChosen(k)
     const dt = Date.now() - stepShownAt.current
+    answersRef.current.push({ id: item.id, pick: k, ms: dt })
     const ok = k === item.style
     if (ok) {
       xpRef.current += XP_VALUES.correct
@@ -52,7 +56,7 @@ export default function LevelOne({ onComplete, onBack }: Props) {
       if (allResults.filter(Boolean).length === scenarios.length) xpRef.current += XP_VALUES.perfectLevel
       xpRef.current += XP_VALUES.levelComplete
       const avg = msRef.current.length ? Math.round(msRef.current.reduce((a,b)=>a+b,0)/msRef.current.length) : 0
-      onComplete(allResults, xpRef.current, avg, badgesRef.current)
+      onComplete(allResults, xpRef.current, avg, badgesRef.current, answersRef.current)
     } else {
       stepShownAt.current = Date.now()
       setIdx(i => i+1); setChosen(null)

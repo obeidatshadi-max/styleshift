@@ -8,7 +8,8 @@ import { withShuffledOptions } from '@/lib/scenario-engine'
 interface Props {
   level: number
   scenarioId: number
-  onComplete: (correct: boolean, reactionMs: number) => void
+  /** `pick` is the style key (level 1) or the option index as shown; the server re-checks it. */
+  onComplete: (correct: boolean, reactionMs: number, pick: number | string) => void
   title?: string
   onExit?: () => void
 }
@@ -45,7 +46,7 @@ export default function DailyChallenge({ level, scenarioId, onComplete, title, o
 
   const continueBtn = (
     <div style={{ marginTop:14 }}>
-      <button onClick={() => onComplete(correct, Date.now() - startedAt.current)}
+      <button onClick={() => onComplete(correct, Date.now() - startedAt.current, chosenStyle ?? chosenIdx ?? -1)}
         style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--cyan)', color:'var(--on-accent)', background:'var(--cyan)', borderRadius:10, padding:'12px 18px', boxShadow:'var(--glow-cyan)', touchAction:'manipulation' }}>
         {t('result.logContinue')}
       </button>

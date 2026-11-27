@@ -1,7 +1,5 @@
 'use client'
 import { useCallback, useState } from 'react'
-import { createClient } from '@/lib/supabase-browser'
-import { XP_VALUES } from '@/lib/game-data'
 import type { VoicePartnerTurn, TurnOutcome, ObjectionType, ClearStep, PhysicianState, Difficulty } from '@/lib/voice-partner-core'
 import { isObjectionType, isClearStep, isPhysicianState, isDifficulty } from '@/lib/voice-partner-core'
 import { logVoiceEvent } from '@/lib/voice-events'
@@ -14,7 +12,6 @@ export type VoicePartnerPhase =
   | 'idle' | 'opening' | 'recording' | 'review' | 'sending' | 'playing' | 'notconfigured' | 'ratelimited' | 'error'
 
 export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
-  const supabase = createClient()
   const [phase, setPhase] = useState<VoicePartnerPhase>('idle')
   const [errorKind, setErrorKind] = useState<VoiceErrorKind | null>(null)
   const [transcript, setTranscript] = useState<VoicePartnerTurn[]>([])
@@ -77,15 +74,6 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
     if (ok) { setPhase('recording'); setErrorKind(null) }
     else { setPhase('error'); setErrorKind('mic') }
   }, [recorder])
-
-  const awardXpOnWin = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    const { data: profile, error: profileError } = await supabase.from('profiles').select('xp').eq('id', user.id).single()
-    if (profileError || !profile) return
-    const { error: xpError } = await supabase.from('profiles').update({ xp: profile.xp + XP_VALUES.voicePartnerWin }).eq('id', user.id)
-    if (xpError) console.error('voice partner xp update failed:', xpError.message)
-  }, [supabase])
 
   const saveSessionResult = useCallback(async (
     finalOutcome: 'won' | 'escalated', finalTurnCount: number, finalClearSteps: ClearStep[], type: ObjectionType,
@@ -177,14 +165,14 @@ export function useVoicePartner(doctorId: string, lang: 'en' | 'ar') {
       setPhase('playing')
       if (audio) await playBase64Audio(audio)
 
-      if (data.outcome === 'won') await awardXpOnWin()
+      // Win XP is added by the server when it stores the judged result (voice-partner-session-store).
       setPhase('idle')
     } catch {
       setPhase('error')
       setErrorKind('network')
       logVoiceEvent('objection', lang, 'network_error', { endpoint: 'turn' })
     }
-  }, [doctorId, lang, transcript, turnCount, awardXpOnWin, objectionType, clearStepsHit, saveSessionResult, recorder, sessionId, physicianState, difficulty])
+  }, [doctorId, lang, transcript, turnCount, objectionType, clearStepsHit, saveSessionResult, recorder, sessionId, physicianState, difficulty])
 
   const reset = useCallback(() => {
     recorder.abort()

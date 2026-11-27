@@ -1,5 +1,8 @@
 // src/app/api/reports/generate/route.ts
 import { getAuthUser } from '@/lib/auth-user'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { XP_VALUES } from '@/lib/game-data'
+import { awardXp } from '@/lib/xp-server'
 import { feedbackDialectRule } from '@/lib/feedback-dialect'
 import { readFeedbackDialect } from '@/lib/feedback-dialect-server'
 import { NextResponse } from 'next/server'
@@ -84,6 +87,16 @@ async function loadSessionData(
     return { segments, context, transcriptVersion: 1 }
   }
   return null
+}
+
+async function isFirstReport(supabase: Awaited<ReturnType<typeof createClient>>, sessionId: string, repId: string): Promise<boolean> {
+  try {
+    const { count, error } = await supabase.from('conversation_reports')
+      .select('id', { count: 'exact', head: true }).eq('session_id', sessionId).eq('rep_id', repId)
+    return !error && count === 0
+  } catch {
+    return false
+  }
 }
 
 export async function POST(request: Request) {
@@ -191,8 +204,12 @@ ${languageContext}`
     })
   }
 
+  // Colleague role-play XP: once per session, on its first report (the browser used to add it).
+  // Best effort: a failed lookup only skips the XP, never the report.
+  const firstReport = body.sessionType === 'human_partner' && await isFirstReport(supabase, body.sessionId, user.id)
   const saved = await persistReport(supabase, report, body.sessionType, body.sessionId, user.id)
   if (!saved.ok) return NextResponse.json({ error: 'Report generated but could not be saved' }, { status: 500 })
+  if (firstReport) await awardXp(createAdminClient(), user.id, XP_VALUES.roleplayComplete, 'roleplay').catch(() => null)
 
   return NextResponse.json({ reportId: saved.id, report })
 }

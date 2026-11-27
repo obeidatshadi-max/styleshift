@@ -3,9 +3,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import type { Profile, BadgeName } from '@/types/game'
 import type { SpsResult } from '@/lib/sps-core'
-import { XP_VALUES } from '@/lib/game-data'
-import { todayKey, DAILY_TOTAL } from '@/lib/daily'
+import type { GameAnswer, LevelScore } from '@/lib/game-scoring'
 import { logInviteEvent } from '@/lib/invite-events'
+
+/** What the server returns for a finished level run. */
+export type LevelResult = LevelScore & { totalXp: number | null; newBadges: BadgeName[] }
 
 export function useProfile() {
   const supabase = createClient()
@@ -36,26 +38,20 @@ export function useProfile() {
     // The home screen can show now; the daily-visit bookkeeping below finishes in the background.
     setLoading(false)
 
-    const today = new Date().toISOString().slice(0, 10)
-    if (p && p.last_visit && p.last_visit !== today) {
-      await supabase
-        .from('profiles')
-        .update({ xp: (p.xp || 0) + XP_VALUES.dailyStreak, last_visit: today })
-        .eq('id', user.id)
-      setProfile(prev => prev ? { ...prev, xp: prev.xp + XP_VALUES.dailyStreak, last_visit: today } : prev)
-    } else if (p && !p.last_visit) {
-      await supabase.from('profiles').update({ last_visit: today }).eq('id', user.id)
+    // First visit of the day: the server stamps last_visit and adds the visit bonus once.
+    if (p && p.last_visit !== new Date().toISOString().slice(0, 10)) {
+      const res = await fetch('/api/game/visit', { method: 'POST' }).catch(() => null)
+      const out = res?.ok ? await res.json() as { xpAwarded: number; lastVisit: string } : null
+      if (out) setProfile(prev => prev ? { ...prev, xp: prev.xp + out.xpAwarded, last_visit: out.lastVisit } : prev)
     }
   }, [supabase])
 
   useEffect(() => { load() }, [load])
 
-  const addXp = useCallback(async (amount: number) => {
-    if (!profile) return
-    const newXp = profile.xp + amount
-    await supabase.from('profiles').update({ xp: newXp }).eq('id', profile.id)
-    setProfile(prev => prev ? { ...prev, xp: newXp } : prev)
-  }, [profile, supabase])
+  // XP is added by the server; this only updates what the screen shows.
+  const setXpTotal = useCallback((total: number | null | undefined) => {
+    if (typeof total === 'number') setProfile(prev => prev ? { ...prev, xp: total } : prev)
+  }, [])
 
   // Uploads a photo to the rep's own avatars folder and saves its public URL on
   // the profile. Returns the URL, or null on failure. A cache-busting query is
@@ -88,68 +84,44 @@ export function useProfile() {
     setProfile(prev => prev ? { ...prev, sps_top_key: result.topKey, sps_profile: result } : prev)
   }, [profile, supabase])
 
-  const earnBadge = useCallback(async (name: BadgeName) => {
-    if (!profile || badges.includes(name)) return
-    await supabase.from('badges').insert({ rep_id: profile.id, badge_name: name })
-    setBadges(prev => [...prev, name])
-  }, [profile, badges, supabase])
+  // Badges are granted by the server; this only adds them to what the screen shows.
+  const addBadges = useCallback((names: readonly BadgeName[]) => {
+    if (names.length) setBadges(prev => [...new Set([...prev, ...names])])
+  }, [])
 
-  const saveSession = useCallback(async (
-    level: number, accuracy: number, xpEarned: number, avgReactionMs?: number
-  ) => {
-    if (!profile) return
-    // Read before the write below changes it — this is the rep's first-ever
-    // completed level exactly when completedLevels was still empty.
+  /** Sends a finished level run (the picks only). The server scores it, saves the session,
+   * adds the XP and grants badges. Returns the server's score, or null if it was not saved. */
+  const completeLevel = useCallback(async (level: number, lang: 'en' | 'ar', answers: GameAnswer[]): Promise<LevelResult | null> => {
+    if (!profile) return null
+    // Read before the save: the rep's first-ever completed level is when completedLevels is still empty.
     const isFirstEverDrill = completedLevels.length === 0
-    await supabase.from('sessions').insert({
-      rep_id: profile.id, level, accuracy, xp_earned: xpEarned,
-      avg_reaction_ms: avgReactionMs ?? null,
-    })
-    if (xpEarned > 0) {
-      await supabase.from('xp_events').insert({
-        rep_id: profile.id, amount: xpEarned, source: 'session',
-      })
-    }
+    const res = await fetch('/api/game/level-complete', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ level, lang, answers }),
+    }).catch(() => null)
+    if (!res?.ok) return null
+    const out = await res.json() as LevelResult
+    setXpTotal(out.totalXp)
+    addBadges(out.newBadges ?? [])
     setCompletedLevels(prev => [...new Set([...prev, level])])
     if (isFirstEverDrill) logInviteEvent('first_drill_completed')
-  }, [profile, supabase, completedLevels])
+    return out
+  }, [profile, completedLevels, setXpTotal, addBadges])
 
-  // Records one of today's Daily Challenge questions (one row per UTC day per
-  // level; the unique constraint makes re-answering a level a no-op). Awards the
-  // correct-answer XP per question, plus the daily-streak bonus once — on the
-  // answer that completes today's full set of DAILY_TOTAL questions.
+  /** One of today's Daily Challenge answers. The server checks it and adds the XP (plus the
+   * streak bonus on the answer that completes the set). Returns false if it was not saved. */
   const recordDaily = useCallback(async (
-    level: number, scenarioId: number, correct: boolean, reactionMs?: number
+    level: number, scenarioId: number, pick: number | string, lang: 'en' | 'ar', reactionMs?: number
   ): Promise<boolean> => {
     if (!profile) return false
-    const today = todayKey()
-    const { error } = await supabase.from('daily_challenges').insert({
-      rep_id: profile.id, challenge_date: today, level, scenario_id: scenarioId,
-      correct, reaction_ms: reactionMs ?? null,
-    })
-    if (error) return false // already answered this level today (unique) or write failed
-    const base = correct ? XP_VALUES.correct : 0
-    const { count } = await supabase
-      .from('daily_challenges')
-      .select('id', { count: 'exact', head: true })
-      .eq('rep_id', profile.id)
-      .eq('challenge_date', today)
-    const bonus = count === DAILY_TOTAL ? XP_VALUES.dailyStreak : 0 // set just completed
+    const res = await fetch('/api/game/daily-answer', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ level, scenarioId, pick, lang, ms: reactionMs }),
+    }).catch(() => null)
+    if (!res?.ok) return false
+    const out = await res.json() as { saved: boolean; totalXp?: number | null }
+    setXpTotal(out.totalXp)
+    return out.saved
+  }, [profile, setXpTotal])
 
-    // Ledger rows are split by source so period (daily/weekly) XP is attributable.
-    if (base > 0) {
-      await supabase.from('xp_events').insert({
-        rep_id: profile.id, amount: base, source: 'daily',
-      })
-    }
-    if (bonus > 0) {
-      await supabase.from('xp_events').insert({
-        rep_id: profile.id, amount: bonus, source: 'daily_streak',
-      })
-    }
-    await addXp(base + bonus)
-    return true
-  }, [profile, supabase, addXp])
-
-  return { profile, badges, completedLevels, loading, addXp, earnBadge, saveSession, recordDaily, updateAvatar, saveSpsAssessment, reload: load }
+  return { profile, badges, completedLevels, loading, setXpTotal, completeLevel, recordDaily, updateAvatar, saveSpsAssessment, reload: load }
 }

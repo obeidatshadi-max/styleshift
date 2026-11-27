@@ -9,8 +9,6 @@ import {
   LIVE_DIFFICULTY_LEVELS, DEFAULT_LIVE_DIFFICULTY, persistableDifficulty,
   type LiveDifficulty, type LiveTranscriptTurn,
 } from '@/lib/voice-live-core'
-import { XP_VALUES } from '@/lib/game-data'
-import { createClient } from '@/lib/supabase-browser'
 
 export type LivePracticeOutcome = 'won' | 'escalated' | 'unscored' | 'interrupted'
 
@@ -59,20 +57,6 @@ export default function VoicePartnerLive({ doctor, onDone }: Props) {
   }, [state])
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight }, [transcript])
 
-  // Same inline pattern as useVoicePartner.ts's awardXpOnWin (not exported
-  // there, and only that one of the 5 turn-based modes awards XP directly —
-  // duplicated here rather than extracted, matching the codebase's existing
-  // choice not to share it across modes).
-  const awardXpOnWin = async () => {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    const { data: profile, error: profileError } = await supabase.from('profiles').select('xp').eq('id', user.id).single()
-    if (profileError || !profile) return
-    const { error: xpError } = await supabase.from('profiles').update({ xp: profile.xp + XP_VALUES.voicePartnerWin }).eq('id', user.id)
-    if (xpError) console.error('voice partner live xp update failed:', xpError.message)
-  }
-
   const finishCall = async () => {
     if (finishing.current) return
     finishing.current = true
@@ -100,7 +84,7 @@ export default function VoicePartnerLive({ doctor, onDone }: Props) {
           difficulty: persistableDifficulty(difficulty) }),
       }).then(r => r.ok).catch(() => false)
       setResult({ outcome: data.outcome, meta, sessionId, saved })
-      if (saved && data.outcome === 'won') void awardXpOnWin().catch(() => {})
+      // Win XP is added by the server when live-judge stores the result.
     } catch { setResult({ outcome: 'unscored', meta }) }
     finally { clearTimeout(timeout); setScoring(false) }
   }

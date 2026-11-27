@@ -6,7 +6,6 @@ import { buildTranscriptQuality } from '@/lib/conversation-coach/quality'
 import {
   buildRoleplayResult, type PitchSample, type SilencePeriod, type Utterance, type RoleplayResult,
 } from '@/lib/roleplay-core'
-import { XP_VALUES } from '@/lib/game-data'
 import { persistTranscriptSegments } from '@/lib/transcript-segments'
 import { buildSpeakerPreviews, type SpeakerPreview } from '@/lib/speaker-previews'
 import { effectiveLimitSec, MAX_RECORDING_SEC, RECORDING_BITS_PER_SECOND, RECORDING_SIZE_GUARD_BYTES } from '@/lib/roleplay-limits'
@@ -516,13 +515,7 @@ export function useRoleplayRecorder(doctorId: string | null, colleagueId: string
             })
             if (!segResult.ok) console.error('transcript segment save failed:', segResult.error)
 
-            const { data: profile, error: profileError } = await supabase.from('profiles').select('xp').eq('id', user.id).single()
-            if (profileError) {
-              console.error('profile xp read failed:', profileError.message)
-            } else if (profile) {
-              const { error: xpError } = await supabase.from('profiles').update({ xp: profile.xp + XP_VALUES.roleplayComplete }).eq('id', user.id)
-              if (xpError) console.error('profile xp update failed:', xpError.message)
-            }
+            // Role-play XP is added by the server with the session's first report (reports/generate).
           }
         }
       }

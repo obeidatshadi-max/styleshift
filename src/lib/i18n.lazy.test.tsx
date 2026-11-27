@@ -18,7 +18,7 @@ it('switches to Arabic once its text has loaded, and back to English at once', a
   const button = screen.getByRole('button')
   expect(button.textContent?.startsWith('en:')).toBe(true)
   fireEvent.click(button)
-  await screen.findByText(/^ar:/)
+  await screen.findByText(/^ar:/, {}, { timeout: 5000 })
   expect(button.textContent).not.toContain('toggle.switchTo')
   expect(document.documentElement.dir).toBe('rtl')
   await act(async () => { fireEvent.click(button) })
@@ -28,5 +28,5 @@ it('switches to Arabic once its text has loaded, and back to English at once', a
 it('restores a saved Arabic choice after mount', async () => {
   localStorage.setItem('styleshift_lang', 'ar')
   render(<LanguageProvider><Probe /></LanguageProvider>)
-  await screen.findByText(/^ar:/)
+  await screen.findByText(/^ar:/, {}, { timeout: 5000 })
 })

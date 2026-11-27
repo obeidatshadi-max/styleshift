@@ -1,10 +1,11 @@
 import type { ConversationTurn, Doctor, StyleKey } from '@/types/game'
 import { classifyQuestions, type Turn } from '@/lib/roleplay-core'
-import { isClearStep, isObjectionType, langName, styleWeights, type ClearStep, type ObjectionType } from '@/lib/voice-partner-core'
+import { isClearStep, isObjectionType, styleWeights, type ClearStep, type ObjectionType } from '@/lib/voice-partner-core'
 import { STYLES } from '@/lib/game-data'
 import type { PressureShiftResult } from '@/lib/pressure-shift'
 import { computeRealtimeSignals, type RealtimeSignals } from '@/lib/voice-partner-timing'
 import { CONTEXT_COACHING_RULES } from '@/lib/context-coaching'
+import { promptLanguage } from '@/lib/prompt-language'
 
 // ───────────────────────── Evaluator request ─────────────────────────
 // The exact request /api/voice-partner/session-analysis sends. Kept here, not in the
@@ -323,7 +324,7 @@ export function buildEvaluatorPrompt(
   const dims = COMPETENCY_DIMENSIONS.join(', ')
   const adaptationDims = ADAPTATION_DIMENSIONS.join(', ')
 
-  return `You are scoring a pharmaceutical sales rep's practice conversation with an AI-simulated doctor, AFTER the fact — you are not the doctor, you are an objective coaching evaluator. Write every text field in ${langName(lang)}.
+  return `You are scoring a pharmaceutical sales rep's practice conversation with an AI-simulated doctor, AFTER the fact — you are not the doctor, you are an objective coaching evaluator. ${promptLanguage(lang, 'evaluator')}
 
 Transcript (each line's number in brackets is its turn_index — you MUST refer to lines ONLY by these exact numbers, never invent a number that doesn't appear below):
 ${transcript}

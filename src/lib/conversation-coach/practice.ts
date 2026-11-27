@@ -1,6 +1,7 @@
 import { NO_CLAIMS_RULE, type ReportLang } from '@/lib/report/buildReportPrompt'
 import { normalizeForMatch } from '@/lib/arabic-normalize'
 import { REPLAY_DRILL_PREFIX } from './progress'
+import { promptLanguage } from '@/lib/prompt-language'
 
 // Replay practice: the rep says an improved reply to one doctor cue, and gets feedback ONLY against the
 // success criterion already stored in their report. It is a practice attempt, never a real doctor interaction.
@@ -36,7 +37,7 @@ Return exactly: { "result": "met"|"partly"|"not_met"|"unclear", "whatWorked": st
 - "quote" must be words copied exactly from the practice reply that show the result, or null.
 - "oneChange" is one short, concrete change for the next attempt (null when the criterion is fully met).
 - Do not say how a doctor would react. Do not score personality, confidence or tone; this is the transcribed words only.
-- ${args.lang === 'ar' ? 'Write whatWorked and oneChange in clear Arabic.' : 'Write whatWorked and oneChange in plain, simple English.'}
+- ${promptLanguage(args.lang, 'practice')}
 - ${NO_CLAIMS_RULE}`
   return { system, prompt, maxTokens: 600 }
 }

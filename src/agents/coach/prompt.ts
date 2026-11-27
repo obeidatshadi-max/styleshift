@@ -2,11 +2,11 @@ import type { StyleKey } from '@/types/game'
 import { CONTEXT_COACHING_RULES } from '@/lib/context-coaching'
 import { SPECIALTIES } from '@/lib/game-data'
 import { DRIVE } from '@/lib/doctor-context'
-import { IRAQI_DIALECT_LINE, langName } from '@/lib/voice-partner-core'
 import type { StyleShiftSession } from '@/schemas/session'
 import type { CoachCandidate } from './select'
 import { TECHNIQUE_NOTES } from '@/lib/precision-language'
 import { knowledgeSectionFor } from '@/lib/knowledge-pack'
+import { promptLanguage } from '@/lib/prompt-language'
 
 export const COACH_SYSTEM = `You are a supportive, practical sales coach for pharmaceutical representatives. You write coaching for a role-play that has ALREADY been observed and scored by other systems.
 
@@ -93,9 +93,7 @@ ${guidance.length ? `Stage guidance for these points: ${guidance.join('; ')}.` :
 }
 
 export function buildCoachPrompt(session: StyleShiftSession, candidates: CoachCandidate[]): string {
-  const languageLine = session.lang === 'ar'
-    ? `Write all coaching text in Arabic. For the "betterResponseExample", ${IRAQI_DIALECT_LINE}`
-    : `Write all text in ${langName(session.lang)}.`
+  const languageLine = promptLanguage(session.lang, 'coachAgent')
   return `${languageLine}
 
 Physician persona:

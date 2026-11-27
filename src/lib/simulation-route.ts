@@ -7,6 +7,7 @@ import { knowledgeForScenario, knowledgePacksEnabled } from '@/lib/knowledge-pac
 import { createDefaultOrchestrator } from '@/agents/orchestrator/default'
 import { createSupabasePersonaLoader, createSupabaseSessionStore } from '@/agents/orchestrator/supabase'
 import type { OrchestratorError } from '@/agents/orchestrator/types'
+import { readFeedbackDialect } from '@/lib/feedback-dialect-server'
 
 const STATUS: Record<OrchestratorError, number> = {
   not_found: 404, forbidden: 403, persona_not_found: 404, empty_message: 400, wrong_phase: 409,
@@ -39,6 +40,7 @@ export async function simulationContext() {
       ...(methodologyBuilderEnabled() ? { methodology: activeMethodologyFor } : {}),
       ...(knowledgePacksEnabled() ? { knowledge: knowledgeForScenario } : {}),
     },
+    await readFeedbackDialect(),
   )
   if (!orchestrator) return { response: NextResponse.json({ error: 'not_configured' }, { status: 503 }) } as const
   return { orchestrator, userId: user.id } as const

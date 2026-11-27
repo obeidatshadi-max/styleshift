@@ -2,7 +2,9 @@ import type { Doctor, StyleKey, Specialty } from '@/types/game'
 import type { VocalFeedback } from '@/lib/oruk'
 import { DRIVE } from '@/lib/doctor-context'
 import { SPECIALTIES, SPECIALTY_ORDER } from '@/lib/game-data'
-import { PLAIN_SPEECH_RULE } from '@/lib/plain-english'
+import { promptLanguage } from '@/lib/prompt-language'
+/** Moved to prompt-language; re-exported for existing imports. */
+export { IRAQI_DIALECT_LINE, langName } from '@/lib/prompt-language'
 
 export const TURN_CAP = 5
 
@@ -104,9 +106,6 @@ export function isSpecialty(value: unknown): value is Specialty {
   return typeof value === 'string' && (SPECIALTY_ORDER as readonly string[]).includes(value)
 }
 
-export function langName(lang: 'en' | 'ar'): string {
-  return lang === 'ar' ? 'Arabic' : 'English'
-}
 
 // ───────────────────────── Weighted persona (1.4) ─────────────────────────
 
@@ -250,11 +249,6 @@ export function stateInstructionBlock(state: PhysicianState): string {
  * doctor. Reads the Phase 1 weighted-persona/hidden-concern/scenario-context
  * columns straight off `d` when present; every existing call site keeps
  * working unchanged since the signature hasn't changed. */
-// Matches pipecat-agent/scenario.py's realtime dialect steering — the
-// turn-based persona previously just said "Write ALL text in Arabic" (bare
-// langName), which OpenAI TTS then rendered as generic MSA. Real Iraqi
-// vocabulary examples, same as scenario.py, keep both surfaces consistent.
-export const IRAQI_DIALECT_LINE = 'Write ALL text in natural spoken Iraqi Arabic (central/Baghdadi) — not Modern Standard Arabic, and not Gulf, Levantine, Egyptian or Maghrebi dialect. Prefer Iraqi forms: شنو (what), شلون (how), ليش (why), وين (where), هسه (now), أكو / ماكو (there is / there is not), كلش or هواية (very / a lot), أريد (I want), تعتقد or تحسب (you think). Never use Gulf أبي / أبغى / نبغي / وايد, Levantine بدي / بدّك / هلق / كتير / شو or the Levantine بـ verb prefix (say يسبب، يروحون، ياخذ — not بيسبب، بيروحون، بياخذ), Egyptian عايز / دلوقتي / أيوه / حاجة / إزاي / تفتكر, or Maghrebi ديال. Match this register: "شنو الفرق بينه وبين الدواء اللي أستخدمه هسه؟ كلش مشغول، اختصر." / "أكو عندي مرضى هواية ما يستجيبون زين، أريد شي أحسن مو أي شي." / "ماكو وقت اليوم، ارجع لي الخميس بعد العيادة."'
 
 /** The model keeps drifting to Gulf / Levantine / Egyptian forms even when told to write Iraqi
  * (measured: "ما أبي" and "الحين" in about one doctor reply in six). Prompting alone did not
@@ -292,7 +286,7 @@ export function personaLines(d: Doctor, style: StyleKey, lang: 'en' | 'ar'): str
   const phrases = d.key_phrases?.trim() ? `They often say things like: "${d.key_phrases.trim()}".` : ''
   const objections = d.objections?.length ? `Objection theme(s) they are likely to raise: ${d.objections.join(', ')}.` : ''
   const descriptor = styleDescriptor(styleWeights(d), style)
-  const languageLine = lang === 'ar' ? IRAQI_DIALECT_LINE : `Write ALL text in ${langName(lang)}. ${PLAIN_SPEECH_RULE}`
+  const languageLine = promptLanguage(lang, 'doctor')
   return `You are ${d.name}${specialty}, ${descriptor}. ${languageLine}
 ${domainFlavor}
 ${phrases}

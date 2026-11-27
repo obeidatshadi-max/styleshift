@@ -69,7 +69,7 @@ describe('summarizeReport', () => {
 
 describe('simulation i18n coverage', () => {
   const root = path.resolve(__dirname, '..')
-  const dict = fs.readFileSync(path.join(root, 'lib/i18n.tsx'), 'utf-8')
+  const dict = fs.readFileSync(path.join(root, 'lib/i18n.tsx'), 'utf-8') + fs.readFileSync(path.join(root, 'lib/i18n-ar.ts'), 'utf-8')
   const count = (key: string) => dict.split(`'${key}':`).length - 1
 
   it('every sim.* key the UI can request exists in both English and Arabic', () => {

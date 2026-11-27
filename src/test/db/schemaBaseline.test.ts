@@ -27,7 +27,8 @@ const map = JSON.parse(readFileSync(join(BASELINE_DIR, 'migration-history-map.js
 // 2026-11-06, and 20261112120000_voice_partner_sessions_server_only_insert on 2026-11-12, and the snapshot was re-captured. Add an entry here only for a difference waiting on the owner.
 // The 2026-11-27 server-scoring migrations (20261127120000 and 20261127130000) were applied the same day and
 // the affected tables and functions re-captured, so both lists are empty again.
-// 20261127140000_workshop_objections (Iraqi Objection Bank) waits for the owner to run it in the SQL editor.
+// workshop_objections (Iraqi Objection Bank): 20261127140000 is applied but the snapshot is not re-captured yet,
+// and 20261127150000 (owner_hash) waits for the owner to run it in the SQL editor.
 const KNOWN_TABLE_DRIFT: { table: string; parts: string[] }[] = [
   { table: 'workshop_objections', parts: ['missing on the right'] },
 ]
@@ -88,6 +89,6 @@ describe('migration history map', () => {
     const notApplied = Object.entries(map.files).filter(([, e]) => e.status === 'not-applied').map(([f]) => f)
     // validation migration applied 2026-11-06; server-only insert applied 2026-11-12.
     // Server scoring functions and lock applied 2026-11-27.
-    expect(notApplied).toEqual(['20261127140000_workshop_objections.sql'])
+    expect(notApplied).toEqual(['20261127150000_workshop_objections_owner.sql'])
   })
 })

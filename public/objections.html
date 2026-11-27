@@ -117,7 +117,7 @@ button.submit:disabled{opacity:.5;cursor:default}
   <header class="page">
     <a class="brand" href="/">StyleShift</a>
     <h1>Iraqi Objection Bank</h1>
-    <p class="sub">Live capture for the Social Style workshop. Write down real objections in Iraqi dialect, tag the style that raised them, note what worked back. Everyone with this link watches the board fill up.</p>
+    <p class="sub">Live capture for the Social Style workshop. Write down real objections in Iraqi dialect, tag the style that raised them, note what worked back. Only you see the objections you add from this phone or browser.</p>
     <div class="status-line"><span class="dot off" id="statusDot"></span><span id="statusText">Connecting…</span></div>
   </header>
 
@@ -171,11 +171,21 @@ const EXAMPLES = {
   analytical: {text_ar:"وين الدراسة الأصلية؟ هذا الملخص ما يكفي.", context:"evidence request", rebuttal:"Sent the primary study, not just the leave-behind."}
 };
 const API = "/api/objections";
-const POLL_MS = 5000;
+const KEY_STORE = "objection-bank-key";
 
 let selectedStyle = null;
 let liveDocs = [];
 const $ = id => document.getElementById(id);
+
+// No accounts: this browser keeps a random secret key, and the board shows only entries added with it.
+function newKey(){ return (crypto.randomUUID ? crypto.randomUUID() : Array.from(crypto.getRandomValues(new Uint8Array(24)), b=>b.toString(16).padStart(2,"0")).join("")); }
+const BOARD_KEY = (()=>{
+  try{
+    let k = localStorage.getItem(KEY_STORE);
+    if(!k || !/^[A-Za-z0-9-]{32,64}$/.test(k)){ k = newKey(); localStorage.setItem(KEY_STORE, k); }
+    return k;
+  }catch(e){ return newKey(); }
+})();
 
 
 function setActivePill(style){
@@ -234,7 +244,7 @@ function makeCard(d){
 
 async function send(body){
   try{
-    const r = await fetch(API, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+    const r = await fetch(API, {method:"POST", headers:{"Content-Type":"application/json","X-Board-Key":BOARD_KEY}, body:JSON.stringify(body)});
     const j = await r.json().catch(()=>({}));
     if(!r.ok) $("formErr").textContent = j.error || "Could not save — try again.";
     return {ok:r.ok, json:j};
@@ -246,16 +256,16 @@ async function send(body){
 
 async function load(){
   try{
-    const r = await fetch(API, {cache:"no-store"});
+    const r = await fetch(API, {cache:"no-store", headers:{"X-Board-Key":BOARD_KEY}});
     if(!r.ok) throw new Error(String(r.status));
     const j = await r.json();
     liveDocs = j.objections || [];
     $("statusDot").classList.remove("off");
-    $("statusText").textContent = "Live — the board refreshes every few seconds.";
+    $("statusText").textContent = "Connected — your entries are saved.";
     renderBoard();
   }catch(e){
     $("statusDot").classList.add("off");
-    $("statusText").textContent = "Can't reach the board — retrying…";
+    $("statusText").textContent = "Can't reach the board — refresh the page.";
   }
 }
 
@@ -282,8 +292,6 @@ $("addForm").addEventListener("submit", async e=>{
 
 renderBoard();
 load();
-setInterval(()=>{ if(document.visibilityState === "visible") load(); }, POLL_MS);
-document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "visible") load(); });
 </script>
 </body>
 </html>

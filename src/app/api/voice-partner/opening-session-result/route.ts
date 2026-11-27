@@ -1,7 +1,7 @@
 import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkVoiceRateLimit } from '@/lib/voice-rate-limits'
 import { isOpeningCriterion, type OpeningCriterion } from '@/lib/voice-partner-opening'
 import type { Doctor } from '@/types/game'
 
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   // Shared bucket with the rest of voice partner — this route makes no
   // upstream AI call, but one insert per attempt is a negligible addition
   // to that budget and keeps all voice-partner traffic under one limiter.
-  if (!(await checkRateLimit('voice-partner', user.id, 20, 3600)))
+  if (!(await checkVoiceRateLimit('result', user.id)))
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
 
   const body = await req.json().catch(() => null) as { doctorId?: string; criteriaHit?: unknown } | null

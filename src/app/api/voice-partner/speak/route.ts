@@ -1,7 +1,7 @@
 import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkVoiceRateLimit } from '@/lib/voice-rate-limits'
 
 // One fixed voice for both languages — the language is steered through the
 // per-request `instructions` field rather than by swapping voice names.
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   // Shared bucket with open/turn (see open/route.ts).
-  if (!(await checkRateLimit('voice-partner', user.id, 20, 3600)))
+  if (!(await checkVoiceRateLimit('reply', user.id)))
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
 
   const body = await req.json().catch(() => ({})) as { text?: string; lang?: 'en' | 'ar' }

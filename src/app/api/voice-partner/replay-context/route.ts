@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { createClient } from '@/lib/supabase-server'
 import { isPhysicianState } from '@/lib/voice-partner-core'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkVoiceRateLimit } from '@/lib/voice-rate-limits'
 import type { ConversationTurn } from '@/types/game'
 
 // Replay-This-Moment: given a source session + the turn_index of a detected
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   // Shared bucket with open/turn/pipecat-session — minting a replay session
   // leads straight into a new realtime call, the same billable-event
   // reasoning as pipecat-session's own limiter.
-  if (!(await checkRateLimit('voice-partner', user.id, 20, 3600)))
+  if (!(await checkVoiceRateLimit('result', user.id)))
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
 
   const body = await req.json().catch(() => null) as { sourceSessionId?: string; turnIndex?: number } | null

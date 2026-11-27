@@ -8,7 +8,7 @@ import {
   SYSTEM, TURN_CAP, buildJudgePrompt, parseJudgeResponse, resolveTurn, isObjectionType, transcribeAudio,
   applyStateDelta, isPhysicianState, isClearStep, isDifficulty, type VoicePartnerTurn, type ClearStep,
 } from '@/lib/voice-partner-core'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkVoiceRateLimit } from '@/lib/voice-rate-limits'
 import { validateAudioUpload } from '@/lib/audio-upload'
 import { analyzeVocalDelivery } from '@/lib/oruk'
 import { transcribeWithDeepgram } from '@/lib/deepgram'
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
   const supabase = auth.viaToken ? createAdminClient() : await createClient()
 
   // Shared bucket with open/turn/speak (see open/route.ts).
-  if (!(await checkRateLimit('voice-partner', user.id, 20, 3600)))
+  if (!(await checkVoiceRateLimit('reply', user.id)))
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
 
   const form = await req.formData().catch(() => null)

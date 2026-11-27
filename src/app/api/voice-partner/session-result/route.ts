@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkVoiceRateLimit } from '@/lib/voice-rate-limits'
 import { authenticateVoicePartnerRequest } from '@/lib/voice-partner-auth'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   if (!auth) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const supabase = auth.viaToken ? createAdminClient() : await createClient()
 
-  if (!(await checkRateLimit('voice-partner', auth.userId, 20, 3600)))
+  if (!(await checkVoiceRateLimit('result', auth.userId)))
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
 
   const body = await req.json().catch(() => null) as { sessionId?: unknown } | null

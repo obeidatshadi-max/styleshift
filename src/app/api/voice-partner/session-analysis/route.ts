@@ -3,7 +3,7 @@ import { feedbackDialectRule } from '@/lib/feedback-dialect'
 import { readFeedbackDialect } from '@/lib/feedback-dialect-server'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkVoiceRateLimit } from '@/lib/voice-rate-limits'
 import {
   computeSessionSignals, buildEvaluatorPrompt, parseEvaluatorResponse, groundEvaluatorResult,
   resolveDoctorStyleProfile, EVALUATOR_SYSTEM, EVALUATOR_MODEL, EVALUATOR_MAX_TOKENS, EVALUATOR_RETRY_NOTE, EVALUATOR_PROMPT_VERSION, EVALUATOR_TEMPERATURE,
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
   // Shared bucket with open/turn/speak/session-result (see open/route.ts) —
   // one extra evaluator call per analyzed session is a modest addition to
   // that same per-rep cost ceiling.
-  if (!(await checkRateLimit('voice-partner', user.id, 20, 3600)))
+  if (!(await checkVoiceRateLimit('result', user.id)))
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
 
   const body = await req.json().catch(() => null) as { sessionId?: string; lang?: string } | null

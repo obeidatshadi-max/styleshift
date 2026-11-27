@@ -2,7 +2,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { getTeamStatsForUser } from '@/lib/team-stats'
-import { RANKS } from '@/lib/game-data'
+import { RANKS } from '@/lib/game-core'
 import RecognitionCard from '@/components/dashboard/RecognitionCard'
 
 function rankTitle(xp: number): string {

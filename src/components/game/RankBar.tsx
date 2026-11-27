@@ -1,5 +1,6 @@
 'use client'
-import { useGameData, useT, useLang } from '@/lib/i18n'
+import { useT, useLang } from '@/lib/i18n'
+import { useGameData } from '@/lib/i18n-game'
 
 interface Props { xp: number }
 

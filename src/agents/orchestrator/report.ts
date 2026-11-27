@@ -1,4 +1,4 @@
-import { SPECIALTIES } from '@/lib/game-data'
+import { SPECIALTIES } from '@/lib/game-core'
 import type { Competency, Observation } from '@/schemas/observation'
 import type { CoachingStatus, SessionReport } from '@/schemas/report'
 import type { StyleShiftSession } from '@/schemas/session'

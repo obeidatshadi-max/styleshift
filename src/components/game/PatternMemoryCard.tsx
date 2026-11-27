@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useGameData, useLang, useT } from '@/lib/i18n'
+import { useLang, useT } from '@/lib/i18n'
+import { useGameData } from '@/lib/i18n-game'
 import { useBehaviorLabel, useDimensionLabel } from '@/lib/methodology-client'
 import { drillRegistry } from '@/lib/drill-templates'
 import type { PatternInsight } from '@/schemas/pattern'

@@ -1,7 +1,7 @@
 import type { Doctor, StyleKey, Specialty } from '@/types/game'
 import type { VocalFeedback } from '@/lib/oruk'
 import { DRIVE } from '@/lib/doctor-context'
-import { SPECIALTIES, SPECIALTY_ORDER } from '@/lib/game-data'
+import { SPECIALTIES, SPECIALTY_ORDER } from '@/lib/game-core'
 import { promptLanguage } from '@/lib/prompt-language'
 /** Moved to prompt-language; re-exported for existing imports. */
 export { IRAQI_DIALECT_LINE, langName } from '@/lib/prompt-language'

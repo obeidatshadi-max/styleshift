@@ -1,7 +1,7 @@
 import type { ConversationTurn, Doctor, StyleKey } from '@/types/game'
 import { classifyQuestions, type Turn } from '@/lib/roleplay-core'
 import { isClearStep, isObjectionType, styleWeights, type ClearStep, type ObjectionType } from '@/lib/voice-partner-core'
-import { STYLES } from '@/lib/game-data'
+import { STYLES } from '@/lib/game-core'
 import type { PressureShiftResult } from '@/lib/pressure-shift'
 import { computeRealtimeSignals, type RealtimeSignals } from '@/lib/voice-partner-timing'
 import { CONTEXT_COACHING_RULES } from '@/lib/context-coaching'

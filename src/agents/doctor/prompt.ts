@@ -1,5 +1,5 @@
 import type { StyleKey } from '@/types/game'
-import { SPECIALTIES } from '@/lib/game-data'
+import { SPECIALTIES } from '@/lib/game-core'
 import { DRIVE } from '@/lib/doctor-context'
 import { knowledgeSectionFor } from '@/lib/knowledge-pack'
 import {

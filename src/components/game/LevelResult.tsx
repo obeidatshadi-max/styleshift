@@ -1,7 +1,8 @@
 'use client'
 import { useState } from 'react'
 import { Meter } from './helpers'
-import { useT, useSpsData } from '@/lib/i18n'
+import { useT } from '@/lib/i18n'
+import { useSpsData } from '@/lib/i18n-game'
 import type { SpsKey } from '@/lib/sps-core'
 
 interface Props {

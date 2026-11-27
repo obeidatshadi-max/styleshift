@@ -1,5 +1,5 @@
 import type { Doctor, Profile, StyleKey } from '@/types/game'
-import { SPECIALTIES } from '@/lib/game-data'
+import { SPECIALTIES } from '@/lib/game-core'
 import { pickObjectionType, type ObjectionType } from '@/lib/voice-partner-core'
 import { personaFromDoctor } from '@/agents/orchestrator/persona'
 import type { PersonaData } from '@/agents/orchestrator/types'

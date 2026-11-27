@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { useT, useLang, useGameData } from '@/lib/i18n'
+import { useT, useLang } from '@/lib/i18n'
+import { useGameData } from '@/lib/i18n-game'
 import type { Doctor } from '@/types/game'
 import { useQuestionDrill } from '@/hooks/useQuestionDrill'
 import { LISTENING_CUES, type QuestionType, type ListeningCue } from '@/lib/voice-partner-questioning'

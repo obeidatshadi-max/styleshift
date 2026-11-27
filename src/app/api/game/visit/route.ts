@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-user'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { XP_VALUES } from '@/lib/game-data'
+import { XP_VALUES } from '@/lib/game-core'
 
 /** First app visit of the day: stamps last_visit and adds the visit bonus once, in one
  * database statement (it used to be a browser read-then-write). */

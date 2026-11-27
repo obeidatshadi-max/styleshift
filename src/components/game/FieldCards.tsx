@@ -1,5 +1,6 @@
 'use client'
-import { useT, useGameData } from '@/lib/i18n'
+import { useT } from '@/lib/i18n'
+import { useGameData } from '@/lib/i18n-game'
 import type { StyleKey } from '@/types/game'
 
 interface Props { onExit: () => void }

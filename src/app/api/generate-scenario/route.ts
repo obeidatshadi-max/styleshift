@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { DRIVE, buildHistoryContext } from '@/lib/doctor-context'
 import { isSpecialty } from '@/lib/voice-partner-core'
-import { SPECIALTIES } from '@/lib/game-data'
+import { SPECIALTIES } from '@/lib/game-core'
 import type { Doctor, DoctorVisit, GeneratedScenario, StyleKey } from '@/types/game'
 import { PLAIN_ENGLISH_RULE } from '@/lib/plain-english'
 

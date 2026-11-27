@@ -1,5 +1,5 @@
 import type { Rank } from '@/types/game'
-import { RANKS } from './game-data'
+import { RANKS } from './game-core'
 
 export function getRank(xp: number): Rank {
   for (let i = RANKS.length - 1; i >= 0; i--) {

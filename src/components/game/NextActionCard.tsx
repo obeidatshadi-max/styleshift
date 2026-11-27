@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { useT, useGameData } from '@/lib/i18n'
+import { useT } from '@/lib/i18n'
+import { useGameData } from '@/lib/i18n-game'
 import type { RepAssignment } from '@/types/game'
 import type { DailyLeaderboard } from '@/lib/daily-leaderboard'
 

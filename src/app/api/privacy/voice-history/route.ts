@@ -1,4 +1,4 @@
-import { getAuthUser } from '@/lib/auth-user'
+import { getAuthUser, getLiveAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { getVoiceHistoryCounts, deleteVoiceHistory } from '@/lib/privacy'
@@ -18,7 +18,8 @@ export async function GET() {
 
 /** Deletes all of the caller's own practice-history rows. */
 export async function DELETE() {
-  const user = await requireUser()
+  // Live check: deleting history cannot be undone, so a revoked session is refused at once.
+  const user = await getLiveAuthUser(await createClient())
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   await deleteVoiceHistory(user.id)
   return NextResponse.json({ ok: true })

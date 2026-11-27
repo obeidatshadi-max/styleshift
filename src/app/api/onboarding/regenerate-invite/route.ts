@@ -1,4 +1,4 @@
-import { getAuthUser } from '@/lib/auth-user'
+import { getLiveAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
@@ -6,7 +6,8 @@ import { createAdminClient } from '@/lib/supabase-admin'
 /** Lets a manager rotate their team's invite code — e.g. after sharing it too widely. */
 export async function POST() {
   const supabase = await createClient()
-  const user = await getAuthUser(supabase)
+  // Live check: a revoked manager session must not be able to rotate the team's invite code.
+  const user = await getLiveAuthUser(supabase)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = createAdminClient()

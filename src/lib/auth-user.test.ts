@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getAuthUser } from './auth-user'
+import { getAuthUser, getLiveAuthUser } from './auth-user'
 
 describe('getAuthUser', () => {
   it('reads the user from verified claims without calling the Auth server', async () => {
@@ -25,5 +25,18 @@ describe('getAuthUser', () => {
   it('falls back to getUser for clients without getClaims', async () => {
     expect(await getAuthUser({ auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'u3', email: null } } }) } })).toEqual({ id: 'u3' })
     expect(await getAuthUser({ auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) } })).toBeNull()
+  })
+})
+
+describe('getLiveAuthUser', () => {
+  it('asks the Auth server even when the token verifies locally, so a revoked session is refused', async () => {
+    const getClaims = vi.fn().mockResolvedValue({ data: { claims: { sub: 'u1' } } })
+    expect(await getLiveAuthUser({ auth: { getClaims, getUser: vi.fn().mockResolvedValue({ data: { user: null } }) } })).toBeNull()
+    expect(getClaims).not.toHaveBeenCalled()
+  })
+
+  it('returns the live user', async () => {
+    const getUser = vi.fn().mockResolvedValue({ data: { user: { id: 'u1', email: 'a@b.co' } } })
+    expect(await getLiveAuthUser({ auth: { getUser } })).toEqual({ id: 'u1', email: 'a@b.co' })
   })
 })

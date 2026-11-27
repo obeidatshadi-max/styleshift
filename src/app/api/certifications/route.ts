@@ -1,4 +1,4 @@
-import { getAuthUser } from '@/lib/auth-user'
+import { getAuthUser, getLiveAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
@@ -6,10 +6,11 @@ import { getTeamStatsForUser } from '@/lib/team-stats'
 import { certificationEnabled } from '@/lib/certification'
 import { issue, overview, revoke } from '@/lib/certification-service'
 
-async function context() {
+/** `live`: check the session with the Auth server (write actions). See getLiveAuthUser. */
+async function context(live = false) {
   if (!certificationEnabled()) return { response: NextResponse.json({ error: 'not_found' }, { status: 404 }) }
   const supabase = await createClient()
-  const user = await getAuthUser(supabase)
+  const user = live ? await getLiveAuthUser(supabase) : await getAuthUser(supabase)
   if (!user) return { response: NextResponse.json({ error: 'unauthorized' }, { status: 401 }) }
   // Same gate as the manager dashboard: null unless this user manages a company.
   const stats = await getTeamStatsForUser(user.id)
@@ -25,7 +26,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const ctx = await context()
+  const ctx = await context(true)
   if (ctx.response) return ctx.response
   const body = await req.json().catch(() => null)
   if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const ctx = await context()
+  const ctx = await context(true)
   if (ctx.response) return ctx.response
   const body = await req.json().catch(() => null)
   if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: 'bad_request' }, { status: 400 })

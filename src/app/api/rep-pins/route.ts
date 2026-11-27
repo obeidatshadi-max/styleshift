@@ -1,4 +1,4 @@
-import { getAuthUser } from '@/lib/auth-user'
+import { getAuthUser, getLiveAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
@@ -7,9 +7,10 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { generatePin } from '@/lib/rep-pin'
 import { listReps, resetPin } from '@/lib/rep-pin-service'
 
-async function context() {
+/** `live`: check the session with the Auth server (write actions). See getLiveAuthUser. */
+async function context(live = false) {
   const supabase = await createClient()
-  const user = await getAuthUser(supabase)
+  const user = live ? await getLiveAuthUser(supabase) : await getAuthUser(supabase)
   if (!user) return { response: NextResponse.json({ error: 'unauthorized' }, { status: 401 }) }
   // Same gate as the manager dashboard: null unless this user manages a company.
   const stats = await getTeamStatsForUser(user.id)
@@ -27,7 +28,7 @@ export async function GET() {
 
 /** Gives one rep a new random PIN and returns it once. */
 export async function POST(req: Request) {
-  const ctx = await context()
+  const ctx = await context(true)
   if (ctx.response) return ctx.response
   if (!(await checkRateLimit('rep-pin-reset', ctx.user!.id, 20, 3600)))
     return NextResponse.json({ error: 'Too many resets. Try again later.' }, { status: 429 })

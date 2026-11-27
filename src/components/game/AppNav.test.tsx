@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { useState } from 'react'
 import { afterEach, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { LanguageProvider } from '@/lib/i18n'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { LanguageProvider, preloadArabic } from '@/lib/i18n'
 import AppNav, { type Section } from './AppNav'
 
 afterEach(() => { cleanup(); localStorage.clear(); document.documentElement.dir = 'ltr' })
@@ -28,9 +28,11 @@ it('moves keyboard focus and selection between tabs', () => {
   expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'AI Coach' }))
 })
 
-it('reverses arrow navigation for Arabic', () => {
+it('reverses arrow navigation for Arabic', async () => {
   localStorage.setItem('styleshift_lang', 'ar')
+  await preloadArabic()
   render(<View />)
+  await act(async () => {})
   fireEvent.keyDown(screen.getByRole('tab', { name: 'التدريب' }), { key: 'ArrowLeft' })
   expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'الطبيب الذكي' }))
   expect(screen.getByRole('tab', { name: 'الطبيب الذكي' }).getAttribute('aria-selected')).toBe('true')

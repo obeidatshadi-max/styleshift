@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createElement } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { LanguageProvider } from '@/lib/i18n'
+import { LanguageProvider, preloadArabic } from '@/lib/i18n'
 import PracticeReport from './PracticeReport'
 
 vi.mock('@/components/report/ConversationReport', () => ({
@@ -55,6 +55,7 @@ describe('practice coaching report', () => {
 
   it('asks for the report in the selected language', async () => {
     localStorage.setItem('styleshift_lang', 'ar')
+    await preloadArabic()
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ report: { label: 'تقرير' } }))
     // The provider reads the saved language after its first mount; a report only ever appears later.
     const rendered = render(createElement(LanguageProvider, null, null))

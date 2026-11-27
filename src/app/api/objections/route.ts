@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server'
-import { createHash, timingSafeEqual } from 'node:crypto'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, clientIp } from '@/lib/rate-limit'
 
 /**
  * Iraqi Objection Bank (public/objections.html). Open without a StyleShift account:
- * anyone with the link can read the board; adding or rating needs the workshop code
- * set in OBJECTION_BANK_CODE. With no code set, the board is read-only.
+ * anyone with the link can read, add and rate. Writes are rate limited per connection.
  */
 
 const STYLES = ['driver', 'expressive', 'amiable', 'analytical'] as const
@@ -17,15 +15,6 @@ const LIMITS = { text_ar: 500, context: 120, rebuttal: 300 }
 const json = (body: unknown, status = 200) =>
   NextResponse.json(body, { status, headers: { 'Cache-Control': 'no-store' } })
 
-const digest = (s: string) => createHash('sha256').update(s.trim().toUpperCase()).digest()
-
-/** Constant-time compare, case- and space-insensitive. False when no code is configured. */
-function codeMatches(given: unknown): boolean {
-  const expected = process.env.OBJECTION_BANK_CODE?.trim()
-  if (!expected || typeof given !== 'string' || !given.trim()) return false
-  return timingSafeEqual(digest(given), digest(expected))
-}
-
 const text = (v: unknown) => (typeof v === 'string' ? v.trim() : '')
 
 export async function GET() {
@@ -35,7 +24,7 @@ export async function GET() {
     .order('created_at', { ascending: false })
     .limit(200)
   if (error) return json({ error: 'Could not load the board.' }, 500)
-  return json({ objections: data ?? [], writable: !!process.env.OBJECTION_BANK_CODE?.trim() })
+  return json({ objections: data ?? [] })
 }
 
 export async function POST(request: Request) {
@@ -47,16 +36,10 @@ export async function POST(request: Request) {
   }
   if (!body || typeof body !== 'object') return json({ error: 'Bad request' }, 400)
 
-  // One budget for code guesses and writes from one connection.
   if (!(await checkRateLimit('objections', clientIp(request), 60, 600)))
-    return json({ error: 'Too many attempts. Wait a few minutes.' }, 429)
-
-  if (!process.env.OBJECTION_BANK_CODE?.trim()) return json({ error: 'The board is closed for new entries.' }, 403)
-  if (!codeMatches(body.code)) return json({ error: 'Wrong workshop code.' }, 401)
+    return json({ error: 'Too many entries from this connection. Wait a few minutes.' }, 429)
 
   const admin = createAdminClient()
-
-  if (body.action === 'check') return json({ ok: true })
 
   if (body.action === 'add') {
     const style = body.style as (typeof STYLES)[number]

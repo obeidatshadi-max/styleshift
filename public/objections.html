@@ -68,7 +68,6 @@ textarea,input[type=text]{
 }
 textarea:focus,input:focus,button:focus-visible{outline:2px solid var(--analytical);outline-offset:1px}
 textarea.ar{min-height:76px;direction:rtl;text-align:right;font-size:1.05rem}
-input.code{max-width:200px;text-transform:uppercase;letter-spacing:.08em}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media (max-width:520px){.two-col{grid-template-columns:1fr}}
 .row-end{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
@@ -122,11 +121,7 @@ button.submit:disabled{opacity:.5;cursor:default}
     <div class="status-line"><span class="dot off" id="statusDot"></span><span id="statusText">Connecting…</span></div>
   </header>
 
-  <form class="add" id="addForm" hidden>
-    <label class="field">
-      Workshop code · رمز الورشة
-      <input type="text" class="code" id="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="from your trainer">
-    </label>
+  <form class="add" id="addForm">
 
     <div>
       <span class="hint" style="display:block;margin-bottom:6px;font-weight:600;color:var(--ink)">Social Style</span>
@@ -162,7 +157,6 @@ button.submit:disabled{opacity:.5;cursor:default}
       </div>
     </div>
   </form>
-  <p class="empty-note" id="closedNote" hidden>The board is read-only right now. · البورد للقراءة فقط حالياً.</p>
 
   <div class="board" id="board"></div>
 </div>
@@ -177,17 +171,12 @@ const EXAMPLES = {
   analytical: {text_ar:"وين الدراسة الأصلية؟ هذا الملخص ما يكفي.", context:"evidence request", rebuttal:"Sent the primary study, not just the leave-behind."}
 };
 const API = "/api/objections";
-const CODE_KEY = "objection-bank-code";
 const POLL_MS = 5000;
 
 let selectedStyle = null;
 let liveDocs = [];
-let writable = false;
 const $ = id => document.getElementById(id);
 
-function storedCode(){ try{ return localStorage.getItem(CODE_KEY) || ""; }catch(e){ return ""; } }
-function storeCode(v){ try{ v ? localStorage.setItem(CODE_KEY, v) : localStorage.removeItem(CODE_KEY); }catch(e){} }
-$("code").value = storedCode();
 
 function setActivePill(style){
   selectedStyle = style;
@@ -221,7 +210,7 @@ function renderBoard(){
 function makeCard(d){
   const card = document.createElement("div");
   card.className = "card " + d.style + (d.isExample ? " example" : "");
-  const canRate = !d.isExample && writable;
+  const canRate = !d.isExample;
   const stars = [1,2,3,4,5].map(n=>
     `<button type="button" class="star" data-on="${(d.realism||0) >= n}" data-n="${n}" aria-label="Realism ${n} of 5" ${canRate ? "" : "disabled"}>★</button>`
   ).join("");
@@ -236,9 +225,7 @@ function makeCard(d){
     ${d.rebuttal ? `<div class="rebuttal"><b>Worked:</b> ${escapeHtml(d.rebuttal)}</div>` : ""}`;
   if(canRate){
     card.querySelectorAll(".star").forEach(s=>s.addEventListener("click", async ()=>{
-      const code = $("code").value.trim();
-      if(!code){ $("formErr").textContent = "Enter the workshop code to rate."; $("code").focus(); return; }
-      const res = await send({action:"rate", code, id:d.id, realism:Number(s.dataset.n)});
+      const res = await send({action:"rate", id:d.id, realism:Number(s.dataset.n)});
       if(res.ok){ d.realism = Number(s.dataset.n); renderBoard(); }
     }));
   }
@@ -249,8 +236,7 @@ async function send(body){
   try{
     const r = await fetch(API, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
     const j = await r.json().catch(()=>({}));
-    if(r.status === 401){ storeCode(""); $("formErr").textContent = "Wrong workshop code. · الرمز غلط."; }
-    else if(!r.ok) $("formErr").textContent = j.error || "Could not save — try again.";
+    if(!r.ok) $("formErr").textContent = j.error || "Could not save — try again.";
     return {ok:r.ok, json:j};
   }catch(e){
     $("formErr").textContent = "No connection — try again.";
@@ -264,11 +250,8 @@ async function load(){
     if(!r.ok) throw new Error(String(r.status));
     const j = await r.json();
     liveDocs = j.objections || [];
-    writable = !!j.writable;
     $("statusDot").classList.remove("off");
     $("statusText").textContent = "Live — the board refreshes every few seconds.";
-    $("addForm").hidden = !writable;
-    $("closedNote").hidden = writable;
     renderBoard();
   }catch(e){
     $("statusDot").classList.add("off");
@@ -280,20 +263,17 @@ $("addForm").addEventListener("submit", async e=>{
   e.preventDefault();
   const errEl = $("formErr");
   errEl.textContent = "";
-  const code = $("code").value.trim();
-  if(!code){ errEl.textContent = "Enter the workshop code."; $("code").focus(); return; }
   if(!selectedStyle){ errEl.textContent = "Pick a Social Style first."; return; }
   const text_ar = $("objText").value.trim();
   if(!text_ar){ errEl.textContent = "Write the objection."; return; }
   const btn = $("submitBtn");
   btn.disabled = true;
   const res = await send({
-    action:"add", code, style:selectedStyle, text_ar,
+    action:"add", style:selectedStyle, text_ar,
     context:$("context").value.trim(), rebuttal:$("rebuttal").value.trim(), codeSwitch:$("codeSwitch").checked
   });
   btn.disabled = false;
   if(!res.ok) return;
-  storeCode(code);
   liveDocs.unshift(res.json.objection);
   renderBoard();
   $("objText").value = ""; $("context").value = ""; $("rebuttal").value = ""; $("codeSwitch").checked = false;

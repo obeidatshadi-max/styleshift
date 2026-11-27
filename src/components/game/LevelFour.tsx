@@ -1,6 +1,6 @@
 'use client'
 import { useState, useRef } from 'react'
-import { XP_VALUES } from '@/lib/game-data'
+import { XP_VALUES } from '@/lib/game-core'
 import { bestL4Index, clamp, sign } from '@/lib/game-logic'
 import { useT } from '@/lib/i18n'
 import { useGameData } from '@/lib/i18n-game'

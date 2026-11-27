@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import TextSimulation from '@/components/game/TextSimulation'
-import { SPECIALTIES, SPECIALTY_ORDER } from '@/lib/game-data'
+import { SPECIALTIES, SPECIALTY_ORDER } from '@/lib/game-core'
 import { previewScenario, doctorFromScenario } from '@/lib/scenario-persona'
 import { OBJECTION_TYPES, type ObjectionType } from '@/lib/voice-partner-core'
 import { COMPETENCIES, type Competency } from '@/schemas/observation'

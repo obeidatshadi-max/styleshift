@@ -1,5 +1,5 @@
 import type { Specialty } from '@/types/game'
-import { SPECIALTY_ORDER } from '@/lib/game-data'
+import { SPECIALTY_ORDER } from '@/lib/game-core'
 import { COMPETENCIES, type Competency } from '@/schemas/observation'
 import { OBJECTION_TYPES, type Difficulty, type ObjectionType } from '@/lib/voice-partner-core'
 import { behaviorIndex, defaultScoringConfig } from '@/scoring/config'

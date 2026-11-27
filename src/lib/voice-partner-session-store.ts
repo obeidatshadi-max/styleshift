@@ -1,6 +1,6 @@
 import type { createAdminClient } from '@/lib/supabase-admin'
 import { isClearStep, type ClearStep, type ObjectionType } from '@/lib/voice-partner-core'
-import { XP_VALUES } from '@/lib/game-data'
+import { XP_VALUES } from '@/lib/game-core'
 import { awardXp } from '@/lib/xp-server'
 
 // AI-Doctor results are written by the server, never by the browser (validation audit

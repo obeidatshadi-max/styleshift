@@ -1,27 +1,11 @@
-import type { StyleDef, StyleKey, Specialty, SpecialtyDef, L1Item, L2Item, L3Item, L4Item, Rank } from '@/types/game'
+import type { L1Item, L2Item, L3Item, L4Item } from '@/types/game'
+/** Small shared items live in game-core-ar.ts so light pages do not load the level text (review F9). */
+export { STYLES_AR, SPECIALTIES_AR, RANKS_AR } from '@/lib/game-core-ar'
 
 // Arabic mirror of game-data.ts (pharma sales context). Same ids, same order,
 // same correctness flags and numeric meter values — only display text differs —
 // so the scenario engine and all game logic work unchanged. Aligned with Wafi's
 // "Social Styles Framework for Medical Representatives" (MSA for cross-market use).
-
-export const STYLES_AR: Record<StyleKey, StyleDef> = {
-  driver:     { name:'المسيطر',   cls:'driver',     icon:'▲', drive:'التحكم والإنجاز',   blurb:'حازم ومباشر، يركز على النتائج. يقرر بسرعة ويكره إضاعة الوقت.' },
-  expressive: { name:'التعبيري',  cls:'expressive', icon:'✦', drive:'التقدير والأفكار',  blurb:'متحمس ومبدع ويحب التعاون. يحب الأفكار الكبيرة ويريد أن يُرى مميزاً.' },
-  amiable:    { name:'الودود',    cls:'amiable',    icon:'♥', drive:'الأمان والانسجام',  blurb:'دافئ وصبور، يهتم بالعلاقات. يتجنب المخاطرة ويبحث عن التوافق.' },
-  analytical: { name:'التحليلي',  cls:'analytical', icon:'◆', drive:'اليقين والدقة',     blurb:'دقيق ومنطقي، يعتمد على البيانات. يريد الأدلة ويأخذ وقته في التقييم.' },
-}
-
-export const SPECIALTIES_AR: Record<Specialty, SpecialtyDef> = {
-  cardiology:           { name:'أمراض القلب',            icon:'♡' },
-  endocrinology:        { name:'الغدد الصماء',            icon:'⚖' },
-  oncology:             { name:'الأورام',                 icon:'✚' },
-  pediatrics:           { name:'طب الأطفال',              icon:'★' },
-  general_practice:     { name:'الطب العام',              icon:'●' },
-  dermatology:          { name:'الأمراض الجلدية',         icon:'◐' },
-  respiratory:          { name:'أمراض الجهاز التنفسي',    icon:'≈' },
-  psychiatry_neurology: { name:'الطب النفسي والأعصاب',    icon:'◈' },
-}
 
 // ───────────────────────── المستوى 1 · قراءة الأسلوب ─────────────────────────
 export const L1_AR: L1Item[] = [
@@ -846,14 +830,6 @@ export const L4_AR: L4Item[] = [
       { t:'تدفع نحو تبنٍّ كامل وفوري في المستشفى كله.',                              quota:+8,  morale:-6,  risk:+10, why:'المبالغة تُقلق الأعضاء الحذرين.' },
       { t:'تنسحب وتطلب إعادة النظر الربع القادم.',                                   quota:-10, morale:+4,  risk:-4,  why:'يتجنّب الاحتكاك لكن يفرّط بكل الزخم.' },
     ]},
-]
-
-export const RANKS_AR: Rank[] = [
-  { name:'مبتدئ',         minXp:0 },
-  { name:'مندوب ميداني',  minXp:200 },
-  { name:'قارئ الأساليب', minXp:500 },
-  { name:'خبير الدوافع',  minXp:1000 },
-  { name:'سيد الأسلوب',   minXp:2000 },
 ]
 
 export const LEVELS_AR = [

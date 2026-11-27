@@ -1,7 +1,7 @@
 'use client'
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { STYLES, STYLE_ORDER } from '@/lib/game-data'
-import { STYLES_AR } from '@/lib/game-data-ar'
+import { STYLES, STYLE_ORDER } from '@/lib/game-core'
+import { STYLES_AR } from '@/lib/game-core-ar'
 import type { BadgeName } from '@/types/game'
 
 export type Lang = 'en' | 'ar'

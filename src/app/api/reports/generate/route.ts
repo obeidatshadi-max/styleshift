@@ -1,7 +1,7 @@
 // src/app/api/reports/generate/route.ts
 import { getAuthUser } from '@/lib/auth-user'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { XP_VALUES } from '@/lib/game-data'
+import { XP_VALUES } from '@/lib/game-core'
 import { awardXp } from '@/lib/xp-server'
 import { feedbackDialectRule } from '@/lib/feedback-dialect'
 import { readFeedbackDialect } from '@/lib/feedback-dialect-server'

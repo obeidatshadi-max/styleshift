@@ -1,6 +1,6 @@
 import type { StyleKey } from '@/types/game'
 import { CONTEXT_COACHING_RULES } from '@/lib/context-coaching'
-import { SPECIALTIES } from '@/lib/game-data'
+import { SPECIALTIES } from '@/lib/game-core'
 import { DRIVE } from '@/lib/doctor-context'
 import type { StyleShiftSession } from '@/schemas/session'
 import type { CoachCandidate } from './select'

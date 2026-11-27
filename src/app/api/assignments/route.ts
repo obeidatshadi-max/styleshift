@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { completeAssignment, createAssignment, getAssignmentForRep } from '@/lib/assignments'
 import { OBJECTION_CATEGORIES } from '@/lib/social-style'
-import { XP_VALUES } from '@/lib/game-data'
+import { XP_VALUES } from '@/lib/game-core'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { awardXp } from '@/lib/xp-server'
 

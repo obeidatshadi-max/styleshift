@@ -31,6 +31,8 @@ const KNOWN_TABLE_DRIFT: { table: string; parts: string[] }[] = [
   { table: 'badges', parts: ['policies'] },
   { table: 'daily_challenges', parts: ['policies'] },
   { table: 'sessions', parts: ['policies'] },
+  // 20261127140000_workshop_objections (Iraqi Objection Bank) waits for the owner to run it in the SQL editor.
+  { table: 'workshop_objections', parts: ['missing on the right'] },
   { table: 'xp_events', parts: ['constraints', 'policies'] },
 ]
 const KNOWN_FUNCTION_DRIFT: string[] = [
@@ -94,6 +96,6 @@ describe('migration history map', () => {
     const notApplied = Object.entries(map.files).filter(([, e]) => e.status === 'not-applied').map(([f]) => f)
     // validation migration applied 2026-11-06; server-only insert applied 2026-11-12.
     // Server scoring (2026-11-27) waits on the owner: functions before deploy, lock after.
-    expect(notApplied).toEqual(['20261127120000_server_xp_functions.sql', '20261127130000_lock_client_scoring.sql'])
+    expect(notApplied).toEqual(['20261127120000_server_xp_functions.sql', '20261127130000_lock_client_scoring.sql', '20261127140000_workshop_objections.sql'])
   })
 })

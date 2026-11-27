@@ -1,6 +1,7 @@
 import type { TranscriptSegment } from '@/schemas/conversationReport'
-import { LANGUAGE_RULE, NO_CLAIMS_RULE, SYSTEM, type ReportLang } from '@/lib/report/buildReportPrompt'
+import { NO_CLAIMS_RULE, SYSTEM, type ReportLang } from '@/lib/report/buildReportPrompt'
 import { ADDRESSED, CONFIDENCE_LABELS, COACH_DOMAINS, CUE_TYPES, STAGES } from './types'
+import { promptLanguage } from '@/lib/prompt-language'
 
 const oneOf = (values: readonly string[]) => values.map(v => `"${v}"`).join(' | ')
 const EV = '{ "segmentIndex": <number> }'
@@ -72,7 +73,7 @@ ${COACH_RULES}
 
 Keep every string to at most 2 short sentences. Never write segment numbers or [n] in text fields.
 
-${LANGUAGE_RULE[opts.lang]}
+${promptLanguage(opts.lang, 'report')}
 
 ${NO_CLAIMS_RULE}`
   return { system: SYSTEM, prompt, maxTokens: opts.lang === 'ar' ? 3200 : 2400 }

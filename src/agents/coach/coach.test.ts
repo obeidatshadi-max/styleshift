@@ -7,6 +7,7 @@ import { selectCoachingCandidates } from './select'
 import { buildCoachPrompt, COACH_SYSTEM } from './prompt'
 import { groundCoaching, mentionsScore } from './ground'
 import { createCoachAgent } from './index'
+import { IRAQI_FEEDBACK_RULE } from '@/lib/feedback-dialect'
 
 function turn(turnIndex: number, role: 'doctor' | 'rep', text: string): TranscriptTurn {
   return { turnIndex, role, text, objectionType: null, clearStepsHit: [], state: null, vocalFeedback: null, createdAt: null }
@@ -197,4 +198,19 @@ describe('coach agent', () => {
     expect(await createCoachAgent(vi.fn().mockResolvedValue(null)).coach(mixed())).toEqual({ error: 'upstream' })
     expect(await createCoachAgent(vi.fn().mockResolvedValue('garbage')).coach(mixed())).toEqual({ error: 'invalid' })
   })
+
+  it('writes Arabic coaching in Iraqi only when the rep chose Iraqi feedback', async () => {
+    const reply = JSON.stringify({ points: [goodText('c1'), goodText('c2')] })
+    const ar = { ...mixed(), lang: 'ar' as const }
+    const iraqi = vi.fn().mockResolvedValue(reply)
+    await createCoachAgent(iraqi, 'iraqi').coach(ar)
+    expect(iraqi.mock.calls[0][0].prompt).toContain(IRAQI_FEEDBACK_RULE)
+    const msa = vi.fn().mockResolvedValue(reply)
+    await createCoachAgent(msa).coach(ar)
+    expect(msa.mock.calls[0][0].prompt).not.toContain(IRAQI_FEEDBACK_RULE)
+    const en = vi.fn().mockResolvedValue(reply)
+    await createCoachAgent(en, 'iraqi').coach(mixed())
+    expect(en.mock.calls[0][0].prompt).not.toContain(IRAQI_FEEDBACK_RULE)
+  })
 })
+

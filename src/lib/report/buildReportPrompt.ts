@@ -1,3 +1,4 @@
+import { REPORT_LANGUAGE_RULE, promptLanguage, type Lang } from '@/lib/prompt-language'
 import {
   CERTAINTIES, COMMITMENT_STATUSES, OBJECTIVE_STATUSES, PERFORMANCE_DIMENSIONS, SIGNAL_CATEGORIES, SOCIAL_STYLES,
   type TranscriptSegment, type ReportContext, type SocialStyleSignal,
@@ -42,7 +43,7 @@ const SHAPE_FIELDS = {
  * cap. The parts are merged before grounding, so groundReport() still sees one object. */
 export const REPORT_PARTS = ['summary', 'moments', 'coaching', 'style'] as const
 export type ReportPart = typeof REPORT_PARTS[number] | 'all'
-export type ReportLang = 'en' | 'ar'
+export type ReportLang = Lang
 
 const PART_KEYS: Record<ReportPart, (keyof typeof SHAPE_FIELDS)[]> = {
   summary: ['visitSummary', 'customerUnderstanding', 'commitments'],
@@ -67,18 +68,8 @@ export function mergeReportParts(parsed: Partial<Record<ReportPart, Record<strin
 const SHAPES = Object.fromEntries((Object.keys(PART_KEYS) as ReportPart[]).map(part =>
   [part, '{\n' + PART_KEYS[part].map(key => SHAPE_FIELDS[key]).join(',\n') + '\n}'])) as Record<ReportPart, string>
 
-export const LANGUAGE_RULE: Record<ReportLang, string> = {
-  en: 'Write every free-text field in English. The reader is a sales rep who is NOT a native English speaker, so use plain, simple English: ' +
-    'short sentences (about 15 words or fewer), one idea per sentence, common everyday words, and active voice ("you asked", not "a question was asked"). ' +
-    'No idioms, metaphors, slang or phrasal verbs (write "find out", not "uncover"; "ask", not "probe"; "show", not "demonstrate"; "use", not "leverage"; "next step", not "way forward"). ' +
-    'Avoid psychology or sales jargon such as "rapport", "objection handling", "value proposition" or "pain point"; say what happened in simple words instead. ' +
-    'Talk to the rep as "you". Keep product names, medical terms, numbers and units exactly as given.',
-  ar: 'Write every free-text field in Arabic (clear Modern Standard Arabic, natural for a pharmaceutical sales rep in Iraq). ' +
-    'Keep drug and product names, numbers and units as given. JSON keys and enumerated values (such as "partial" or "inferred") stay in English exactly as listed below. ' +
-    'Every field typed "string" is free text and MUST be Arabic, including "behavior", "whatHappened", "whyItMattered", "improvement", "interpretation", ' +
-    '"practiceExercise", "successLooksLike", "mostUsefulAdjustment", "summary", "possibleMeanings", "missingContext", "clarifyingQuestion" and "precisionQuestion"; never answer a free-text field in English. ' +
-    'Example wording for a rep to say ("betterPhrase", "betterResponseExample", "suggestedWordingNextVisit", "clarifyingQuestion", "precisionQuestion") may use natural Iraqi dialect.',
-}
+/** Kept for existing imports; the text lives in prompt-language. */
+export const LANGUAGE_RULE = REPORT_LANGUAGE_RULE
 
 /** Suggested wording is the one place the model can put words in the rep's mouth. A rep who
  * repeats an invented efficacy claim to a doctor is a compliance problem, so no suggested
@@ -208,7 +199,7 @@ evidence itself; refer to moments in words ("when the doctor asked about interac
 word "segment". Call the other person "the doctor" (or by name); never guess their gender, so do not use
 "he", "she", "his" or "her" for them.
 
-${LANGUAGE_RULE[lang]}
+${promptLanguage(lang, 'report')}
 
 ${NO_CLAIMS_RULE}${knowledgeSection ? KNOWLEDGE_EXCEPTION : ''}
 

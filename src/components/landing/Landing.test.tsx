@@ -2,7 +2,7 @@
 import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { LanguageProvider } from '@/lib/i18n'
+import { LanguageProvider, preloadArabic } from '@/lib/i18n'
 
 const m = vi.hoisted(() => ({ params: new URLSearchParams() }))
 vi.mock('@/lib/supabase-browser', () => ({ createClient: () => ({ auth: { signInWithPassword: vi.fn(), resetPasswordForEmail: vi.fn() } }) }))
@@ -45,8 +45,9 @@ describe('Landing', () => {
 
   it('speaks Arabic when the app is Arabic', async () => {
     localStorage.setItem('styleshift_lang', 'ar')
+    await preloadArabic()
     wrap(<Landing />)
-    expect((await screen.findByRole('heading', { level: 1 })).textContent).toContain('ادخل كل زيارة وأنت مستعد')
+    expect((await screen.findByText(/ادخل كل زيارة وأنت مستعد/)).closest('h1')).toBeTruthy()
     expect(screen.getAllByText('تسجيل الدخول').length).toBe(2)
     expect(screen.getAllByText('إنشاء حساب').length).toBeGreaterThan(0)
   })

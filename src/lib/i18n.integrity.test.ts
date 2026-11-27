@@ -3,10 +3,13 @@ import { describe, expect, it } from 'vitest'
 
 // The dictionaries are module-private, so read the source. Arabic written through a
 // non-UTF-8 path silently becomes literal "?" characters (a shipped tab label once did).
+// English lives in i18n.tsx; Arabic is split into i18n-ar.ts so it loads only for Arabic users.
 const source = readFileSync('src/lib/i18n.tsx', 'utf8')
+const arSource = readFileSync('src/lib/i18n-ar.ts', 'utf8')
 const enStart = source.indexOf('const EN: Dict = {')
-const arStart = source.indexOf('const AR: Dict = {')
-const dictsStart = source.indexOf('const DICTS')
+const enEnd = source.indexOf('\n}\n', enStart)
+const arStart = arSource.indexOf('const AR: Dict = {')
+const arEnd = arSource.indexOf('export default AR')
 
 function entries(block: string): Map<string, string> {
   const out = new Map<string, string>()
@@ -16,8 +19,8 @@ function entries(block: string): Map<string, string> {
   }
   return out
 }
-const en = entries(source.slice(enStart, arStart))
-const ar = entries(source.slice(arStart, dictsStart))
+const en = entries(source.slice(enStart, enEnd))
+const ar = entries(arSource.slice(arStart, arEnd))
 
 describe('i18n dictionaries', () => {
   it('found both dictionaries', () => {

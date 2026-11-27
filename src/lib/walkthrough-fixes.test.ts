@@ -72,7 +72,7 @@ describe('visit plan reaches the AI Doctor report', () => {
 describe('level result and home', () => {
   it('has a lesson for every level and the new result labels in both languages', async () => {
     const { readFileSync } = await import('node:fs')
-    const src = readFileSync('src/lib/i18n.tsx', 'utf8')
+    const src = readFileSync('src/lib/i18n.tsx', 'utf8') + readFileSync('src/lib/i18n-ar.ts', 'utf8')
     for (const k of ['result.complete', 'result.nextOpen', 'result.allDone', 'result.lessonLabel', 'result.lesson.1', 'result.lesson.2', 'result.lesson.3', 'result.lesson.4', 'result.confidenceHint', 'sps.viewProfile'])
       expect(src.split(`'${k}':`).length - 1, k).toBe(2)
   })

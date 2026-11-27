@@ -130,7 +130,8 @@ describe('layers stay separate and safe', () => {
   })
 
   it('has hedged wording in English and Arabic for every reading, caveat and insight kind - and no trait language', () => {
-    const src = readFileSync('src/lib/i18n.tsx', 'utf8')
+    // English in i18n.tsx, Arabic in i18n-ar.ts (loaded on demand); read them as one text.
+    const src = readFileSync('src/lib/i18n.tsx', 'utf8') + readFileSync('src/lib/i18n-ar.ts', 'utf8')
     const entries = (from: string, to: string) => {
       const block = src.slice(src.indexOf(from), src.indexOf(to))
       const out = new Map<string, string>()
@@ -138,7 +139,7 @@ describe('layers stay separate and safe', () => {
       return out
     }
     const en = entries('const EN: Dict = {', 'const AR: Dict = {')
-    const ar = entries('const AR: Dict = {', 'const DICTS')
+    const ar = entries('const AR: Dict = {', 'export default AR')
     const codes = ['recurring_habit', 'habit_under_conditions', 'reliable_strength', 'varies_by_context', 'habit_changed']
     const kindList: InsightKind[] = ['recurring_hurt', 'recurring_strength', 'context_contrast', 'resolved_hurt']
     for (const code of codes) {

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { LanguageProvider } from '@/lib/i18n'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { LanguageProvider, preloadArabic } from '@/lib/i18n'
 import ThemeToggle from './ThemeToggle'
 
 afterEach(() => { cleanup(); localStorage.clear(); delete document.documentElement.dataset.theme; vi.restoreAllMocks() })
@@ -24,8 +24,10 @@ it('switches appearance when browser storage is unavailable', () => {
   expect(document.documentElement.dataset.theme).toBe('dark')
 })
 
-it('labels the appearance control in Arabic', () => {
+it('labels the appearance control in Arabic', async () => {
   localStorage.setItem('styleshift_lang', 'ar')
+  await preloadArabic()
   render(<LanguageProvider><ThemeToggle /></LanguageProvider>)
+  await act(async () => {})
   expect(screen.getByRole('button', { name: 'استخدام المظهر الداكن' })).toBeTruthy()
 })

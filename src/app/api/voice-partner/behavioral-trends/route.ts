@@ -15,7 +15,7 @@ import type { SessionSignals } from '@/lib/session-evaluator'
 // turn/open/speak/session-analysis routes, this makes no outbound LLM/STT/TTS
 // call and no write — it's a read over the caller's own already-persisted
 // rows, the same cost shape as /api/champions (unguarded) rather than the
-// shared 'voice-partner' bucket (guards against burning paid-API budget).
+// shared AI Doctor rate limit (guards against burning paid-API budget).
 //
 // Follows session-analysis/route.ts's own convention (query inline in the
 // route, hand plain data to pure lib functions) rather than introducing a

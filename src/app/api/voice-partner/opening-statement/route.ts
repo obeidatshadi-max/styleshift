@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase-server'
 import { buildHistoryContext } from '@/lib/doctor-context'
 import { SYSTEM, transcribeAudio } from '@/lib/voice-partner-core'
 import { buildOpeningJudgePrompt, parseOpeningJudgeResponse } from '@/lib/voice-partner-opening'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkVoiceRateLimit } from '@/lib/voice-rate-limits'
 import { validateAudioUpload } from '@/lib/audio-upload'
 import type { Doctor, DoctorVisit } from '@/types/game'
 
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   // Shared bucket with objection mode's open/turn/speak (see open/route.ts).
-  if (!(await checkRateLimit('voice-partner', user.id, 20, 3600)))
+  if (!(await checkVoiceRateLimit('start', user.id)))
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
 
   const form = await req.formData().catch(() => null)

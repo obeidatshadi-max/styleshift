@@ -1,7 +1,7 @@
 import { getAuthUser } from '@/lib/auth-user'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkVoiceRateLimit } from '@/lib/voice-rate-limits'
 import { signBotToken } from '@/lib/voice-partner-bot-token'
 import { isObjectionType, isPhysicianState, isDifficulty } from '@/lib/voice-partner-core'
 
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   // Shared bucket with open/turn/session-result — one Pipecat Cloud
   // session-start is itself a billable event, same reasoning as the
   // existing routes' shared limiter.
-  if (!(await checkRateLimit('voice-partner', user.id, 20, 3600)))
+  if (!(await checkVoiceRateLimit('start', user.id)))
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
 
   const body = await req.json().catch(() => null) as {

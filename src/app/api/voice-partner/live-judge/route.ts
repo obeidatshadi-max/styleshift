@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { recordResolvedSession } from '@/lib/voice-partner-session-store'
 import { createClient } from '@/lib/supabase-server'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkVoiceRateLimit } from '@/lib/voice-rate-limits'
 import { SYSTEM } from '@/lib/voice-partner-core'
 import { shouldSkipJudge, buildLiveJudgePrompt, parseLiveJudgeResponse, transcriptToConversationTurns, isLiveDifficulty, type LiveTranscriptTurn } from '@/lib/voice-live-core'
 import type { Doctor } from '@/types/game'
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   // Shared bucket with the rest of voice-partner traffic (see open/route.ts).
-  if (!(await checkRateLimit('voice-partner', user.id, 20, 3600)))
+  if (!(await checkVoiceRateLimit('reply', user.id)))
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
 
   const body = await req.json().catch(() => null) as { doctorId?: string; difficulty?: string; lang?: string; sessionId?: string; transcript?: unknown } | null

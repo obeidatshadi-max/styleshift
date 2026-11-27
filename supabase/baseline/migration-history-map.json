@@ -251,12 +251,12 @@
       "note": "applied by the owner in the SQL editor on 2026-11-19; not in the history table. Verified: storage.buckets row roleplay-audio, public=false, file_size_limit=26214400."
     },
     "20261127120000_server_xp_functions.sql": {
-      "status": "not-applied",
-      "note": "server XP functions (award_xp, record_visit) + xp_events amount check. Owner applies BEFORE deploying the server-scoring code."
+      "status": "unrecorded",
+      "note": "applied by the owner in the SQL editor on 2026-11-27 before the server-scoring deploy; not in the history table. Verified: award_xp and record_visit fingerprints re-captured from production match the files."
     },
     "20261127130000_lock_client_scoring.sql": {
-      "status": "not-applied",
-      "note": "drops rep insert policies on sessions/xp_events/badges/daily_challenges; trigger blocks rep xp/last_visit changes. Owner applies AFTER the server-scoring deploy works."
+      "status": "unrecorded",
+      "note": "applied by the owner in the SQL editor on 2026-11-27 after the server-scoring deploy was checked live (XP rose); not in the history table. Verified: policy fingerprints of badges, daily_challenges, sessions, xp_events and the protect_profile_authority hash re-captured from production match the files."
     }
   },
   "prodOnly": {

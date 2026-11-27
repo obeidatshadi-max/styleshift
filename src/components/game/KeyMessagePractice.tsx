@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
-import { useGameData, useT } from '@/lib/i18n'
+import { useT } from '@/lib/i18n'
+import { useGameData } from '@/lib/i18n-game'
 import { FEEDBACK_FIELDS, KM_MAX_MESSAGE, KM_STYLES, type Feedback, type KmStyle, type Versions } from '@/lib/key-message'
 import { bodyText, card, ghostBtn, primaryBtn, sectionLabel, smallLabel } from './TextSimulation'
 import VoiceRecorder from './VoiceRecorder'

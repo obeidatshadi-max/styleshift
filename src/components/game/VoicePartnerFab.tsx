@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { useT, useLang, useGameData } from '@/lib/i18n'
+import { useT, useLang } from '@/lib/i18n'
+import { useGameData } from '@/lib/i18n-game'
 import type { Doctor } from '@/types/game'
 import { useVoicePartnerFab } from '@/hooks/useVoicePartnerFab'
 import { FAB_CRITERIA, type FabCriterion } from '@/lib/voice-partner-fab'

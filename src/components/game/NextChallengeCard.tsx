@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useGameData, useLang, useT } from '@/lib/i18n'
+import { useLang, useT } from '@/lib/i18n'
+import { useGameData } from '@/lib/i18n-game'
 import type { Doctor, StyleKey } from '@/types/game'
 import type { ChallengeProgress, ChallengeRecommendation } from '@/lib/challenge-engine'
 import { useBehaviorLabel } from '@/lib/methodology-client'

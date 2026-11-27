@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useT, useGameData } from '@/lib/i18n'
+import { useT, useStyleData } from '@/lib/i18n'
 import LangToggle from '@/components/LangToggle'
 import ThemeToggle from '@/components/ThemeToggle'
 import ForgotPasswordForm from './ForgotPasswordForm'
@@ -15,7 +15,7 @@ export default function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const t = useT()
-  const { STYLES, STYLE_ORDER } = useGameData()
+  const { STYLES, STYLE_ORDER } = useStyleData()
 
   // The home page links straight to the right form: /login?tab=manager&mode=signup and so on.
   const startTab = searchParams.get('tab') === 'manager' ? 'manager' : 'rep'

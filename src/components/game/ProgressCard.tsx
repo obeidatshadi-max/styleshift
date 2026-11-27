@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useGameData, useT } from '@/lib/i18n'
+import { useT } from '@/lib/i18n'
+import { useGameData } from '@/lib/i18n-game'
 import { useBehaviorLabel, useDimensionLabel } from '@/lib/methodology-client'
 import type { ProgressReport } from '@/lib/progress'
 import { card, ghostBtn, sectionLabel, bodyText, smallLabel } from './TextSimulation'

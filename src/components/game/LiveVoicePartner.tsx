@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useT, useLang, useGameData } from '@/lib/i18n'
+import { useT, useLang } from '@/lib/i18n'
+import { useGameData } from '@/lib/i18n-game'
 import type { Doctor } from '@/types/game'
 import { useLiveVoicePartner } from '@/hooks/useLiveVoicePartner'
 import { useSessionAnalysis } from '@/hooks/useSessionAnalysis'

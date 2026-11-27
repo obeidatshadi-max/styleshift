@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { useLang, useT, useGameData } from '@/lib/i18n'
+import { useLang, useT } from '@/lib/i18n'
+import { useGameData } from '@/lib/i18n-game'
 import LangToggle from '@/components/LangToggle'
 
 interface Props { onDone: () => void }

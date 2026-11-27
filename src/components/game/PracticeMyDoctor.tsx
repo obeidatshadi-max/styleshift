@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useGameData, useLang, useT } from '@/lib/i18n'
+import { useLang, useT } from '@/lib/i18n'
+import { useGameData } from '@/lib/i18n-game'
 import type { Doctor } from '@/types/game'
 import type { HcpContext } from '@/lib/hcp-context'
 import type { NextVisitReason } from '@/lib/practice-my-doctor'

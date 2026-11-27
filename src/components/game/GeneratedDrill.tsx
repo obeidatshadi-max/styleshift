@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { useT, useGameData } from '@/lib/i18n'
+import { useT } from '@/lib/i18n'
+import { useGameData } from '@/lib/i18n-game'
 import type { GeneratedScenario } from '@/types/game'
 import { biasForCategory } from '@/lib/cognitive-biases'
 import { OptBtn, Feedback, BiasCallout } from './helpers'

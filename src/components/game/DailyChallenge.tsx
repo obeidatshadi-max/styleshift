@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
-import { useGameData, useT } from '@/lib/i18n'
+import { useT } from '@/lib/i18n'
+import { useGameData } from '@/lib/i18n-game'
 import type { StyleKey } from '@/types/game'
 import { OptBtn, Feedback } from './helpers'
 import { withShuffledOptions } from '@/lib/scenario-engine'

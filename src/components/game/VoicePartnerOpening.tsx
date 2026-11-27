@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { useT, useLang, useGameData } from '@/lib/i18n'
+import { useT, useLang } from '@/lib/i18n'
+import { useGameData } from '@/lib/i18n-game'
 import type { Doctor } from '@/types/game'
 import { useVoicePartnerOpening } from '@/hooks/useVoicePartnerOpening'
 import { OPENING_CRITERIA, type OpeningCriterion } from '@/lib/voice-partner-opening'

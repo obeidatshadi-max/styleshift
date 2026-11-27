@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { useLang, useT, useSpsData } from '@/lib/i18n'
+import { useLang, useT } from '@/lib/i18n'
+import { useSpsData } from '@/lib/i18n-game'
 import { SPS_QUESTIONS, SPS_OPPOSITE, scoreSps, type SpsResult, type SpsKey } from '@/lib/sps-core'
 import LangToggle from '@/components/LangToggle'
 

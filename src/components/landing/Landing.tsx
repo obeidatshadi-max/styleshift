@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { useT, useGameData } from '@/lib/i18n'
+import { useT, useStyleData } from '@/lib/i18n'
 import LangToggle from '@/components/LangToggle'
 import ThemeToggle from '@/components/ThemeToggle'
 
@@ -23,7 +23,7 @@ function Cta({ t }: { t: (k: string) => string }) {
 /** Front door: the promise, the visit loop, who it is for, then hand off to /login. */
 export default function Landing() {
   const t = useT()
-  const { STYLES, STYLE_ORDER } = useGameData()
+  const { STYLES, STYLE_ORDER } = useStyleData()
 
   const loop = [1, 2, 3, 4].map(n => ({ n, label: t(`landing.loop${n}`), body: t(`landing.loop${n}Body`) }))
   const repPoints = [t('landing.rep1'), t('landing.rep2'), t('landing.rep3')]

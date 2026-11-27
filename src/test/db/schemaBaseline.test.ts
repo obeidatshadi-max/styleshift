@@ -25,21 +25,13 @@ const map = JSON.parse(readFileSync(join(BASELINE_DIR, 'migration-history-map.js
 /** Differences from production that are known and waiting for the owner to run a file in the SQL editor. */
 // Empty since the owner applied 030_ai_doctor_realtime_timing and 20261106150000_sessions_manager_read_fix on
 // 2026-11-06, and 20261112120000_voice_partner_sessions_server_only_insert on 2026-11-12, and the snapshot was re-captured. Add an entry here only for a difference waiting on the owner.
-// Waiting on the owner (2026-11-27 server scoring): 20261127120000_server_xp_functions and
-// 20261127130000_lock_client_scoring. Empty these lists once both are applied and the snapshot is re-captured.
+// The 2026-11-27 server-scoring migrations (20261127120000 and 20261127130000) were applied the same day and
+// the affected tables and functions re-captured, so both lists are empty again.
+// 20261127140000_workshop_objections (Iraqi Objection Bank) waits for the owner to run it in the SQL editor.
 const KNOWN_TABLE_DRIFT: { table: string; parts: string[] }[] = [
-  { table: 'badges', parts: ['policies'] },
-  { table: 'daily_challenges', parts: ['policies'] },
-  { table: 'sessions', parts: ['policies'] },
-  // 20261127140000_workshop_objections (Iraqi Objection Bank) waits for the owner to run it in the SQL editor.
   { table: 'workshop_objections', parts: ['missing on the right'] },
-  { table: 'xp_events', parts: ['constraints', 'policies'] },
 ]
-const KNOWN_FUNCTION_DRIFT: string[] = [
-  'award_xp(p_rep uuid, p_amount integer, p_source text)',
-  'protect_profile_authority()',
-  'record_visit(p_rep uuid, p_today date, p_bonus integer)',
-]
+const KNOWN_FUNCTION_DRIFT: string[] = []
 
 describe('schema baseline: files vs production snapshot', () => {
   let t: TestDb
@@ -95,7 +87,7 @@ describe('migration history map', () => {
   it('no file marked recorded or unrecorded is a migration that changes production state without being applied', () => {
     const notApplied = Object.entries(map.files).filter(([, e]) => e.status === 'not-applied').map(([f]) => f)
     // validation migration applied 2026-11-06; server-only insert applied 2026-11-12.
-    // Server scoring (2026-11-27) waits on the owner: functions before deploy, lock after.
-    expect(notApplied).toEqual(['20261127120000_server_xp_functions.sql', '20261127130000_lock_client_scoring.sql', '20261127140000_workshop_objections.sql'])
+    // Server scoring functions and lock applied 2026-11-27.
+    expect(notApplied).toEqual(['20261127140000_workshop_objections.sql'])
   })
 })

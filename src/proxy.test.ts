@@ -33,6 +33,10 @@ it('serves the classroom arena page and its self-authenticating API without a se
   expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: '/api/assignments' })).toBe(true)
   expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: '/dashboard' })).toBe(true)
 })
+it('serves the workshop objection bank page and its API without a session', () => {
+  expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: '/objections.html' })).toBe(false)
+  expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: '/api/objections' })).toBe(false)
+})
 it('lets anyone open a certificate check page, while other pages still need a session', async () => {
   mocks.createServerClient.mockReturnValue({ auth: { getClaims: async () => ({ data: null }) } })
   const verify = await proxy(new NextRequest('https://style-shift.netlify.app/verify/ABCDEFGHJKMN'))

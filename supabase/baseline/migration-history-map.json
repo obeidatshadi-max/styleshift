@@ -257,6 +257,10 @@
     "20261127130000_lock_client_scoring.sql": {
       "status": "unrecorded",
       "note": "applied by the owner in the SQL editor on 2026-11-27 after the server-scoring deploy was checked live (XP rose); not in the history table. Verified: policy fingerprints of badges, daily_challenges, sessions, xp_events and the protect_profile_authority hash re-captured from production match the files."
+    },
+    "20261127140000_workshop_objections.sql": {
+      "status": "not-applied",
+      "note": "new workshop_objections table for the Iraqi Objection Bank (public/objections.html); waiting for the owner to run it in the SQL editor. Until then /api/objections returns 'Could not load the board.'"
     }
   },
   "prodOnly": {

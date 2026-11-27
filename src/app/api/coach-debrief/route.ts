@@ -1,4 +1,6 @@
 import { getAuthUser } from '@/lib/auth-user'
+import { feedbackDialectRule } from '@/lib/feedback-dialect'
+import { readFeedbackDialect } from '@/lib/feedback-dialect-server'
 import { NextResponse } from 'next/server'
 import { randomUUID } from 'node:crypto'
 import { createClient } from '@/lib/supabase-server'
@@ -57,7 +59,9 @@ export async function POST(req: Request) {
   if (!(await checkRateLimit('coach-debrief', user.id, 20, 3600))) return NextResponse.json({ error: 'rate_limit' }, { status: 429 })
   const key = process.env.ANTHROPIC_API_KEY
   if (!key) return NextResponse.json({ error: 'not_configured' }, { status: 503 })
-  const raw = await createAnthropicComplete(key)(debriefPrompt(input, doctor.name))
+  const built = debriefPrompt(input, doctor.name)
+  built.system += feedbackDialectRule(input.lang, await readFeedbackDialect())
+  const raw = await createAnthropicComplete(key)(built)
   const result = raw ? parseDebriefResult(raw) : null
   if (!result) return NextResponse.json({ error: 'coach_unavailable' }, { status: 502 })
   // Second pass: drop sentences that report events the rep never described. Fails open, so a checker

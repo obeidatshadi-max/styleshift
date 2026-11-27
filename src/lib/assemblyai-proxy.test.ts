@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import crypto from 'node:crypto'
 import { runInNewContext } from 'node:vm'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -14,10 +15,13 @@ function handler(user: object | null = { id: 'rep' }, fetchJson: object = { id: 
   runInNewContext(readFileSync('netlify/functions/assemblyai-proxy.js', 'utf8'), {
     exports, Buffer, console: { log: vi.fn(), error: vi.fn() }, fetch,
     process: { env: { ASSEMBLYAI_API_KEY: 'key', NEXT_PUBLIC_SUPABASE_URL: 'url', SUPABASE_SERVICE_ROLE_KEY: 'key' } },
-    require: () => ({ createClient: () => ({ auth: { getUser: async () => ({ data: { user }, error: null }) }, storage: { from: (b: string) => { storage.bucket = b; return storage } } }) }),
+    require: (m: string) => m === 'crypto' ? crypto : ({ createClient: () => ({ auth: { getUser: async () => ({ data: { user }, error: null }) }, storage: { from: (b: string) => { storage.bucket = b; return storage } } }) }),
   })
   return { run: exports.handler!, fetch, storage }
 }
+/** A transcript handle as the function signs it for `userId` (HMAC with the test API key 'key'). */
+const signed = (userId: string, id: string) =>
+  `${id}~${crypto.createHmac('sha256', 'key').update(`transcript-owner:v1:${userId}:${id}`).digest('base64url')}`
 const event = (body: object, authorization = 'Bearer token') => ({ httpMethod: 'POST', headers: { authorization }, body: JSON.stringify(body) })
 
 describe('roleplay transcription function', () => {
@@ -31,7 +35,7 @@ describe('roleplay transcription function', () => {
   })
   it('deletes a transcript with the DELETE method', async () => {
     const { run, fetch } = handler()
-    const res = await run(event({ action: 'delete', transcript_id: 'abc-123' }))
+    const res = await run(event({ action: 'delete', transcript_id: signed('rep', 'abc-123') }))
     expect(res.statusCode).toBe(200)
     expect(JSON.parse(res.body)).toEqual({ deleted: true })
     expect(fetch.mock.calls[0][0]).toBe('https://api.assemblyai.com/v2/transcript/abc-123')
@@ -45,7 +49,7 @@ describe('roleplay transcription function', () => {
   })
   it('requires a signed-in user to delete', async () => {
     const { run, fetch } = handler(null)
-    expect((await run(event({ action: 'delete', transcript_id: 'abc' }))).statusCode).toBe(401)
+    expect((await run(event({ action: 'delete', transcript_id: signed('rep', 'abc') }))).statusCode).toBe(401)
     expect(fetch).not.toHaveBeenCalled()
   })
   it('rejects unauthenticated requests independently of page middleware', async () => {
@@ -79,14 +83,27 @@ describe('roleplay transcription function', () => {
   it("removes the stored file once the transcript is finished, and only the caller's own", async () => {
     const own = `${UID}/abcdef0123456789.m4a`
     const done = handler({ id: UID }, { status: 'completed', utterances: [] })
-    await done.run(event({ action: 'poll', transcript_id: 'tx-1', storage_path: own }))
+    await done.run(event({ action: 'poll', transcript_id: signed(UID, 'tx-1'), storage_path: own }))
     expect(done.storage.remove).toHaveBeenCalledWith([own])
     const busy = handler({ id: UID }, { status: 'processing' })
-    await busy.run(event({ action: 'poll', transcript_id: 'tx-1', storage_path: own }))
+    await busy.run(event({ action: 'poll', transcript_id: signed(UID, 'tx-1'), storage_path: own }))
     expect(busy.storage.remove).not.toHaveBeenCalled()
     const foreign = handler({ id: UID }, { status: 'completed', utterances: [] })
-    await foreign.run(event({ action: 'poll', transcript_id: 'tx-1', storage_path: '99999999-2222-3333-4444-555555555555/abcdef0123456789.m4a' }))
+    await foreign.run(event({ action: 'poll', transcript_id: signed(UID, 'tx-1'), storage_path: '99999999-2222-3333-4444-555555555555/abcdef0123456789.m4a' }))
     expect(foreign.storage.remove).not.toHaveBeenCalled()
+  })
+  it('returns a handle signed for the submitting user', async () => {
+    const { run } = handler({ id: UID }, { id: 'tx-9', status: 'queued' })
+    const res = await run(event({ action: 'submit', audio_url: 'https://cdn.assemblyai.com/upload/audio' }))
+    expect(JSON.parse(res.body).id).toBe(signed(UID, 'tx-9'))
+  })
+  it("refuses to read or delete another user's transcript, or an unsigned id", async () => {
+    const { run, fetch } = handler({ id: UID }, { status: 'completed', utterances: [] })
+    for (const transcript_id of [signed('someone-else', 'tx-1'), 'tx-1', 'tx-1~forged', `${signed(UID, 'tx-1')}~x`]) {
+      expect((await run(event({ action: 'poll', transcript_id }))).statusCode, transcript_id).toBe(400)
+      expect((await run(event({ action: 'delete', transcript_id }))).statusCode, transcript_id).toBe(400)
+    }
+    expect(fetch).not.toHaveBeenCalled()
   })
   it('rejects third-party audio URLs', async () => {
     const { run, fetch } = handler()

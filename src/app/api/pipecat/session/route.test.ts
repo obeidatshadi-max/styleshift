@@ -69,7 +69,7 @@ describe('shared Pipecat session endpoint', () => {
     mocks.checkRateLimit.mockResolvedValue(false)
     const res = await POST(request({ doctorId: 'doctor' }))
     expect(res.status).toBe(429)
-    expect(mocks.checkRateLimit).toHaveBeenCalledWith('voice-partner', 'rep', 20, 3600)
+    expect(mocks.checkRateLimit).toHaveBeenCalledWith('vp-start', 'rep', 30, 3600)
     expect(fetchMock).not.toHaveBeenCalled()
   })
   it('requires authentication', async () => {

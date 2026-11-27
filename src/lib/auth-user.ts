@@ -4,8 +4,8 @@
  * Uses auth.getClaims(): it verifies the session token's signature locally against the
  * project's cached signing keys (ES256) and refreshes the session first when the token is
  * about to expire. auth.getUser() instead asked the Supabase Auth server on every call,
- * one ~290 ms round trip from Netlify (us-east-2) to Supabase (ap-south-1), measured with
- * /api/timing-probe on 2026-11-22. getClaims takes ~2 ms.
+ * one ~290 ms round trip from Netlify (us-east-2) to Supabase (ap-south-1), measured
+ * with a temporary timing probe on 2026-11-22 (since removed). getClaims takes ~2 ms.
  *
  * Trade-off: a session revoked on the Auth server (sign-out elsewhere, user deleted) stays
  * usable here until its access token expires (default 1 hour). The proxy already worked

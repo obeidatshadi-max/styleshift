@@ -1,7 +1,7 @@
 ﻿import { NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-user'
 import { createClient } from '@/lib/supabase-server'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkVoiceRateLimit } from '@/lib/voice-rate-limits'
 import { isLiveDifficulty, type LiveDifficulty } from '@/lib/voice-live-core'
 import type { Doctor } from '@/types/game'
 import { voiceVocabulary } from '@/lib/ihia/server'
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   // session-result, live-judge). This one starts a real, billed Pipecat Cloud
   // agent plus a Daily room, so it was the most expensive route in the family
   // to leave unlimited.
-  if (!(await checkRateLimit('voice-partner', user.id, 20, 3600)))
+  if (!(await checkVoiceRateLimit('start', user.id)))
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
 
   const body = await req.json().catch(() => ({})) as { doctorId?: string; lang?: 'ar' | 'en'; difficulty?: LiveDifficulty; provider?: 'gemini' | 'openai' }

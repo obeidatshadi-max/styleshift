@@ -36,7 +36,8 @@ export async function sessionState(admin: Admin, sessionId: string, repId: strin
   const [turns, result] = await Promise.all([
     admin.from('conversation_turns').select('turn_index, role, clear_steps_hit, doctor_id')
       .eq('session_id', sessionId).eq('rep_id', repId),
-    admin.from('voice_partner_sessions').select('id').eq('id', sessionId).maybeSingle(),
+    // Scoped to the rep: another rep's row with the same id must never mark this session resolved.
+    admin.from('voice_partner_sessions').select('id').eq('id', sessionId).eq('rep_id', repId).maybeSingle(),
   ])
   const rows = ((turns.data ?? []) as { turn_index: number; role: string; clear_steps_hit: unknown; doctor_id: string | null }[])
     .sort((a, b) => a.turn_index - b.turn_index)
@@ -76,7 +77,14 @@ export async function recordResolvedSession(admin: Admin, s: ResolvedSession): P
     }
     return 'saved'
   }
-  if ((error as { code?: string }).code === '23505') return 'exists'
+  if ((error as { code?: string }).code === '23505') {
+    // 'exists' only when the existing row is this rep's. A row with the same id owned by someone
+    // else means this result was not stored, so say so instead of silently dropping it.
+    const { data } = await admin.from('voice_partner_sessions').select('rep_id').eq('id', s.id).maybeSingle()
+    if ((data as { rep_id?: string } | null)?.rep_id === s.repId) return 'exists'
+    console.warn('voice_partner_sessions: session id already used by another rep; result not stored')
+    return 'failed'
+  }
   console.warn('voice_partner_sessions insert failed:', error.message)
   return 'failed'
 }

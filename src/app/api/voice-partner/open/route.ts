@@ -7,7 +7,7 @@ import {
   SYSTEM, buildOpeningPrompt, parseOpeningResponse, pickObjectionType,
   seedPhysicianState, isDifficulty, DEFAULT_DIFFICULTY, type ObjectionOutcome, type ObjectionType,
 } from '@/lib/voice-partner-core'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkVoiceRateLimit } from '@/lib/voice-rate-limits'
 import type { Doctor, DoctorVisit } from '@/types/game'
 
 export async function POST(req: Request) {
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   // Shared bucket across open/turn/speak: each is an upstream AI call, so the
   // 20/hour ceiling bounds total Anthropic+OpenAI cost exposure per rep, not
   // just this one route.
-  if (!(await checkRateLimit('voice-partner', user.id, 20, 3600)))
+  if (!(await checkVoiceRateLimit('start', user.id)))
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
 
   const body = await req.json().catch(() => ({})) as { doctorId?: string; lang?: 'en' | 'ar'; difficulty?: string }

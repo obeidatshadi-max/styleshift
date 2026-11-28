@@ -113,8 +113,9 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
   // A rep with no XP yet gets the first-day guide; empty score panels wait under "More".
   const isNew = xp === 0
   // Today's challenge: up top once it is done (score, streak, team), in "More" while the next-action card still offers it.
-  const dailyPanel = (
-    daily && panel(t('daily.title'),
+  // playButton=false when the top card already offers "play today's challenge", so it is not shown twice.
+  const dailyPanelView = (playButton: boolean) => (
+    daily && panel(playButton ? t('daily.title') : t('daily.leaderboard'),
       <>
         <div style={{ color:'var(--ink-dim)', fontSize:14, lineHeight:1.5, marginBottom:12 }}>{t('daily.subtitle')}</div>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap', marginBottom:14 }}>
@@ -123,7 +124,7 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
           </div>
           {daily.todayLevelsDone.length >= daily.picks.length ? (
             <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', color:'var(--green)' }}>{t('daily.doneToday')}</div>
-          ) : (
+          ) : playButton && (
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
               <span style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', color:'var(--ink-dim)' }}>
                 {t('daily.todayProgress', { done: daily.todayLevelsDone.length, total: daily.picks.length })}
@@ -140,7 +141,7 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
             {t('daily.streakRisk', { n: daily.self!.streak })}
           </div>
         )}
-        <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--ink-dim)', marginBottom:8 }}>{t('daily.leaderboard')}</div>
+        {playButton && <div style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color:'var(--ink-dim)', marginBottom:8 }}>{t('daily.leaderboard')}</div>}
         {daily.standings.length === 0 ? (
           <div style={{ color:'var(--ink-dim)', fontSize:14 }}>{t('daily.empty')}</div>
         ) : (
@@ -184,7 +185,7 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
           onShowPrep={onShowPrep}
         />}
 
-        {dailyDone && dailyPanel}
+        {dailyDone && dailyPanelView(true)}
 
         {spsPending && !isNew && panel(t('sps.title'),
           <>
@@ -309,7 +310,8 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
         </>}
 
-        {!dailyDone && !isNew && dailyPanel}
+        {/* The top card shows today's challenge unless an open assignment takes its place. */}
+        {!dailyDone && !isNew && dailyPanelView(!!assignment && !assignment.completed)}
 
         <NextChallengeCard />
 

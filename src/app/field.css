@@ -23,9 +23,11 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{box-shadow:none;
 .game-shell{padding-bottom:calc(150px + env(safe-area-inset-bottom))}
 .game-shell>div:not(.app-nav){max-width:760px!important}
 .home-appbar{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 4px 28px}
-.wordmark{display:flex;align-items:center;gap:8px;font-size:21px;font-weight:800;letter-spacing:-.8px}
+.wordmark{display:flex;align-items:center;gap:8px;font-size:21px;font-weight:800;letter-spacing:-.8px;white-space:nowrap;flex-shrink:0}
 .wordmark>span{display:grid;place-items:center;width:32px;height:32px;border-radius:11px;background:var(--cyan);color:var(--on-accent);font-size:23px}
-.appearance-tools{display:flex;align-items:center;gap:8px}
+.appearance-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+.appearance-tools>button{white-space:nowrap}
+@media(max-width:420px){.appearance-tools>button{padding:6px 10px!important;font-size:13px!important}.wordmark{font-size:19px}}
 .theme-toggle{display:inline-grid;place-items:center;flex-shrink:0;width:48px;height:48px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:15px}
 .home-intro{padding:0 4px 28px}
 .home-intro .visual-eyebrow{color:var(--cyan);font-size:12px;text-transform:uppercase;letter-spacing:.07em;font-weight:800}

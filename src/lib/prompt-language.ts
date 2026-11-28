@@ -34,7 +34,9 @@ export const REPORT_LANGUAGE_RULE: Record<Lang, string> = {
     'Keep drug and product names, numbers and units as given. JSON keys and enumerated values (such as "partial" or "inferred") stay in English exactly as listed below. ' +
     'Every field typed "string" is free text and MUST be Arabic, including "behavior", "whatHappened", "whyItMattered", "improvement", "interpretation", ' +
     '"practiceExercise", "successLooksLike", "mostUsefulAdjustment", "summary", "possibleMeanings", "missingContext", "clarifyingQuestion" and "precisionQuestion"; never answer a free-text field in English. ' +
-    'Example wording for a rep to say ("betterPhrase", "betterResponseExample", "suggestedWordingNextVisit", "clarifyingQuestion", "precisionQuestion") may use natural Iraqi dialect.',
+    'Example wording for a rep to say ("betterPhrase", "betterResponseExample", "suggestedWordingNextVisit", "clarifyingQuestion", "precisionQuestion") may use natural Iraqi dialect. ' +
+    'Talk to the rep directly as "أنت" (for example "سألتَ"، "عرضتَ"); never call the rep "الممثل" or refer to them in the third person. ' +
+    'Call the session "المحادثة" or "الزيارة", never "المكالمة".',
 }
 
 /** Who the prompt is for. Each role keeps the exact wording it had before this module existed. */

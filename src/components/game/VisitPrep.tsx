@@ -321,7 +321,8 @@ export default function VisitPrep({ onExit, initialDoctorId = '' }: Props) {
       onCancel={() => setView({ mode: 'list' })}
       onStart={async (input) => {
         const saved = await saveDoctor(input)
-        if (saved) setView({ mode: 'detail', doctor: saved })
+        // "Just start practising": open the text conversation straight away; ending it lands on the doctor page.
+        if (saved) setView({ mode: 'textSim', doctor: saved })
         else setView({ mode: 'list' })
       }}
     />
@@ -519,7 +520,9 @@ function QuickPractice({ specialties, styles, existingNames, onStart, onCancel }
   const t = useT()
   const [specialty, setSpecialty] = useState<Specialty | null>(null)
   const [style, setStyle] = useState<StyleKey | null>(null)
+  const [surprise, setSurprise] = useState(false)
   const [busy, setBusy] = useState(false)
+  const styleReady = style !== null || surprise
 
   const chip = (active: boolean): React.CSSProperties => ({
     cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', borderRadius:20, padding:'8px 12px',
@@ -528,14 +531,16 @@ function QuickPractice({ specialties, styles, existingNames, onStart, onCancel }
   })
 
   async function start() {
-    if (!specialty || !style || busy) return
+    if (!specialty || !styleReady || busy) return
     setBusy(true)
+    // "Pick for me": a random style the rep has to read from how the doctor talks.
+    const chosen: StyleKey = surprise || !style ? STYLE_KEYS[Math.floor(Math.random() * STYLE_KEYS.length)] : style
     const base = `${specialties[specialty].name} ${t('prep.quickPracticeNameSuffix')}`
     let name = base
     let n = 2
     while (existingNames.includes(name)) { name = `${base} ${n}`; n++ }
     await onStart({
-      name, specialty, workplace: null, style,
+      name, specialty, workplace: null, style: chosen,
       assertiveness: null, responsiveness: null,
       key_phrases: null, objections: [], objection_notes: null, notes: null,
     })
@@ -558,12 +563,13 @@ function QuickPractice({ specialties, styles, existingNames, onStart, onCancel }
             <span style={labelStyle}>{t('prep.style')}</span>
             <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
               {STYLE_KEYS.map(k => (
-                <button key={k} onClick={() => setStyle(k)} style={chip(style === k)}>{styles[k].icon} {styles[k].name}</button>
+                <button key={k} onClick={() => { setStyle(k); setSurprise(false) }} style={chip(!surprise && style === k)}>{styles[k].icon} {styles[k].name}</button>
               ))}
+              <button onClick={() => { setSurprise(true); setStyle(null) }} style={chip(surprise)}>{t('prep.quickPracticeSurprise')}</button>
             </div>
           </div>
           <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
-            <button onClick={start} disabled={!specialty || !style || busy} style={{ ...primaryBtn, flex:1, opacity: (specialty && style && !busy) ? 1 : .5 }}>{t('prep.quickPracticeStart')}</button>
+            <button onClick={start} disabled={!specialty || !styleReady || busy} style={{ ...primaryBtn, flex:1, opacity: (specialty && styleReady && !busy) ? 1 : .5 }}>{busy ? t('prep.quickPracticeOpening') : t('prep.quickPracticeStart')}</button>
             <button onClick={onCancel} style={ghostBtn}>{t('prep.cancel')}</button>
           </div>
         </div>,

@@ -17,13 +17,13 @@ import AICoach from './AICoach'
 const report = { summary: 'Based on your account, price was raised.', strength: 'You listened.', priority: 'Clarify first.', hypothesis: 'The comparison may matter.', betterResponse: 'Compared with what?', objectiveReview: 'No date was agreed.', nextAction: 'Ask one question.', practiceFocus: 'Clarify the price comparison.' }
 const fetchMock = vi.fn()
 const answers = {
-  'Which doctor was the call with?': '00000000-0000-4000-8000-000000000001',
-  'What was your call objective? (optional)': 'Agree a follow-up visit',
+  'Which doctor was the visit with?': '00000000-0000-4000-8000-000000000001',
+  'What was your visit objective? (optional)': 'Agree a follow-up visit',
   'How would you measure success? (optional)': 'A date is agreed',
   'What happened? Review or edit before coaching.': 'The doctor said the price was high. I repeated the benefits.',
   '1. What good things did you do? (optional)': 'I listened before responding.',
   '2. What would you change or what did you miss? (optional)': 'I would ask what the comparison was.',
-  '3. Did you achieve your call objective? What evidence shows it? (optional)': 'No. We did not agree on a date.',
+  '3. Did you achieve your visit objective? What evidence shows it? (optional)': 'No. We did not agree on a date.',
 }
 function fillForm() { for (const [label, value] of Object.entries(answers)) fireEvent.change(screen.getByLabelText(label), { target: { value } }) }
 
@@ -44,9 +44,9 @@ describe('AI Coach doctor-linked reflection flow', () => {
     await screen.findByText('Clarify first.')
     const payload = JSON.parse(fetchMock.mock.calls.find(c => c[1]?.method === 'POST')![1].body)
     expect(payload).toMatchObject({
-      doctorId: answers['Which doctor was the call with?'],
-      objective: answers['What was your call objective? (optional)'], successMeasure: answers['How would you measure success? (optional)'],
-      reflections: { wentWell: answers['1. What good things did you do? (optional)'], changeNextTime: answers['2. What would you change or what did you miss? (optional)'], objectiveReview: answers['3. Did you achieve your call objective? What evidence shows it? (optional)'] },
+      doctorId: answers['Which doctor was the visit with?'],
+      objective: answers['What was your visit objective? (optional)'], successMeasure: answers['How would you measure success? (optional)'],
+      reflections: { wentWell: answers['1. What good things did you do? (optional)'], changeNextTime: answers['2. What would you change or what did you miss? (optional)'], objectiveReview: answers['3. Did you achieve your visit objective? What evidence shows it? (optional)'] },
     })
     expect(screen.getByText('Objective and evidence')).toBeTruthy()
     fireEvent.click(screen.getByText('Practice this moment'))
@@ -92,7 +92,7 @@ describe('AI Coach doctor-linked reflection flow', () => {
     render(React.createElement(AICoach))
     const button = screen.getByText('Get coaching') as HTMLButtonElement
     expect(button.disabled).toBe(true)
-    fireEvent.change(screen.getByLabelText('Which doctor was the call with?'), { target: { value: answers['Which doctor was the call with?'] } })
+    fireEvent.change(screen.getByLabelText('Which doctor was the visit with?'), { target: { value: answers['Which doctor was the visit with?'] } })
     fireEvent.change(screen.getByLabelText('What happened? Review or edit before coaching.'), { target: { value: answers['What happened? Review or edit before coaching.'] } })
     expect(button.disabled).toBe(false)
     fireEvent.click(button)
@@ -105,8 +105,8 @@ describe('AI Coach doctor-linked reflection flow', () => {
     doctorsState.doctors = [{ id, name: 'Dr. Practice', plan_objective: 'Agree a trial on 2 patients', plan_success_measure: 'Patient type and date agreed' }]
     try {
       render(React.createElement(AICoach))
-      fireEvent.change(screen.getByLabelText('Which doctor was the call with?'), { target: { value: id } })
-      expect((screen.getByLabelText('What was your call objective? (optional)') as HTMLInputElement).value).toBe('Agree a trial on 2 patients')
+      fireEvent.change(screen.getByLabelText('Which doctor was the visit with?'), { target: { value: id } })
+      expect((screen.getByLabelText('What was your visit objective? (optional)') as HTMLInputElement).value).toBe('Agree a trial on 2 patients')
       expect((screen.getByLabelText('How would you measure success? (optional)') as HTMLInputElement).value).toBe('Patient type and date agreed')
       fireEvent.change(screen.getByLabelText('What happened? Review or edit before coaching.'), { target: { value: answers['What happened? Review or edit before coaching.'] } })
       fireEvent.click(screen.getByText('Get coaching'))
@@ -128,7 +128,7 @@ describe('AI Coach doctor-linked reflection flow', () => {
   it('opens on the doctor a Home nudge pointed at', async () => {
     const id = '00000000-0000-4000-8000-000000000001'
     render(React.createElement(AICoach as React.ComponentType<{ initialDoctorId?: string }>, { initialDoctorId: id }))
-    await waitFor(() => expect((screen.getByLabelText('Which doctor was the call with?') as HTMLSelectElement).value).toBe(id))
+    await waitFor(() => expect((screen.getByLabelText('Which doctor was the visit with?') as HTMLSelectElement).value).toBe(id))
   })
   it('lets the rep approve a promise the coach spotted into the tracker', async () => {
     fetchMock.mockImplementation(async (_url, init) => init?.method === 'POST'
@@ -166,7 +166,7 @@ describe('AI Coach doctor-linked reflection flow', () => {
 describe('field reliability regressions', () => {
   const a = '00000000-0000-4000-8000-000000000001'
   const b = '00000000-0000-4000-8000-000000000002'
-  const doctorSelect = () => screen.getByLabelText('Which doctor was the call with?')
+  const doctorSelect = () => screen.getByLabelText('Which doctor was the visit with?')
   const accountBox = () => screen.getByLabelText('What happened? Review or edit before coaching.') as HTMLTextAreaElement
   it('keeps the plan, narrative and reflections with their doctor when switching A → B → A', async () => {
     doctorsState.doctors = [{ id: a, name: 'A', plan_objective: 'Plan A' }, { id: b, name: 'B', plan_objective: 'Plan B' }]
@@ -176,10 +176,10 @@ describe('field reliability regressions', () => {
       fireEvent.change(accountBox(), { target: { value: 'A-specific narrative' } })
       fireEvent.change(doctorSelect(), { target: { value: b } })
       expect(accountBox().value).toBe('')
-      expect((screen.getByLabelText('What was your call objective? (optional)') as HTMLInputElement).value).toBe('Plan B')
+      expect((screen.getByLabelText('What was your visit objective? (optional)') as HTMLInputElement).value).toBe('Plan B')
       fireEvent.change(doctorSelect(), { target: { value: a } })
       expect(accountBox().value).toBe('A-specific narrative')
-      expect((screen.getByLabelText('What was your call objective? (optional)') as HTMLInputElement).value).toBe('Plan A')
+      expect((screen.getByLabelText('What was your visit objective? (optional)') as HTMLInputElement).value).toBe('Plan A')
     } finally { doctorsState.doctors = [{ id: a, name: 'Dr. Practice' }] }
   })
   it('retains failed reflection audio and retries into the same reflection field', async () => {

@@ -34,6 +34,7 @@ export default function MicroPractice({ focusDrillId, onClose }: { focusDrillId?
   const [drills, setDrills] = useState<DrillSummary[]>([])
   const [prompts, setPrompts] = useState<Record<string, string>>({})
   const [drillLang, setDrillLang] = useState<'en' | 'ar'>(lang)
+  const [showForeign, setShowForeign] = useState(false)
   const [active,setActive] = useState<DrillSummary | null>(null)
   const [phase, setPhase] = useState<Phase>('compose')
   const [reply, setReply] = useState('')
@@ -125,7 +126,10 @@ export default function MicroPractice({ focusDrillId, onClose }: { focusDrillId?
     <div style={card}>
       <div style={sectionLabel}>{t('mp.title')}</div>
       {drillLang !== lang && <p style={{ ...bodyText, color: 'var(--ink-dim)', marginBottom: 10 }}>{t('mp.englishOnly')}</p>}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* Drills in another language stay folded so they don't fill the Arabic home screen. */}
+      {drillLang !== lang && !showForeign
+        ? <button onClick={() => setShowForeign(true)} style={{ ...ghostBtn, width: '100%' }}>{t('mp.showEnglish', { n: drills.length })}</button>
+        : <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {drills.map(d => (
           <button key={d.id} onClick={() => open(d)} style={{ ...ghostBtn, textAlign: 'start', textTransform: 'none', letterSpacing: 0, display: 'block', width: '100%' }}>
             <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--ink)' }}>{t(`mp.type.${d.type}`)}</div>
@@ -136,7 +140,7 @@ export default function MicroPractice({ focusDrillId, onClose }: { focusDrillId?
             </div>
           </button>
         ))}
-      </div>
+      </div>}
     </div>
   )
 }

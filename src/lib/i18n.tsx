@@ -734,6 +734,7 @@ const EN: Dict = {
   'home.start.step3': "Play today's challenge (3 quick questions)",
   'home.start.go': 'Start',
   'home.start.done': 'Done',
+  'sim.guessStyle': 'The app picked this doctor’s style for you. Read it from how they talk; the style shows after the conversation.',
   'mp.showEnglish': 'Show the {n} English drills',
   'mp.englishOnly': 'These drills are only in English for now. Practise your reply in English.',
   'mp.type.precision_questioning': 'Precision questioning',

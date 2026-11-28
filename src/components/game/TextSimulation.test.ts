@@ -103,6 +103,14 @@ describe('TextSimulation flow', () => {
     expect(screen.getByText('Hello.')).toBeTruthy()
   })
 
+  it('keeps the style secret in "pick for me" mode and asks the rep to read it', async () => {
+    mockApi({ '/api/simulation/start': () => ({ body: { sessionId: 's-2', doctorText: 'What is new?' } }) })
+    render(wrap(createElement(TextSimulation, { doctor, hideStyle: true, onDone: vi.fn() })))
+    await screen.findByText('What is new?')
+    expect(screen.getByText(/Read it from how they talk/)).toBeTruthy()
+    expect(screen.queryByText('◆')).toBeNull() // the analytical icon is not shown
+  })
+
   it('shows a clear message when the feature is not configured', async () => {
     mockApi({ '/api/simulation/start': () => ({ status: 503, body: { error: 'not_configured' } }) })
     render(wrap(createElement(TextSimulation, { doctor, onDone: vi.fn() })))

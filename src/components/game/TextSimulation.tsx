@@ -23,6 +23,8 @@ interface Props {
   /** Start from a doctor's recorded history ("Practice my doctor"). */
   hcp?: HcpStart
   initialPracticeFocus?: string
+  /** "Pick for me" practice: keep the doctor's style secret so the rep reads it from the conversation. */
+  hideStyle?: boolean
   onDone: () => void
 }
 
@@ -35,7 +37,7 @@ const shell = (children: React.ReactNode) => (
 /** Text role-play against the AI Doctor, then the multi-agent report. The
  * conversation and analysis are driven server-side by the orchestrator; this
  * component only collects input and shows results. */
-export default function TextSimulation({ doctor, scenarioId, challenge, hcp, onDone, initialPracticeFocus = '' }: Props) {
+export default function TextSimulation({ doctor, scenarioId, challenge, hcp, onDone, initialPracticeFocus = '', hideStyle = false }: Props) {
   const t = useT()
   const { lang } = useLang()
   const { STYLES } = useGameData()
@@ -108,7 +110,7 @@ export default function TextSimulation({ doctor, scenarioId, challenge, hcp, onD
   }
 
   const speaker = (role: 'doctor' | 'rep') => (role === 'doctor' ? t('sim.doctor') : t('sim.you'))
-  const style = doctor.style
+  const style = hideStyle ? null : doctor.style
   const s = style ? STYLES[style] : null
   const c = style ? COLOR[style] : 'var(--ink-dim)'
   const busy = phase === 'sending'
@@ -118,6 +120,7 @@ export default function TextSimulation({ doctor, scenarioId, challenge, hcp, onD
   return shell(
     <div style={card}>
       <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 14 }}>
+        {hideStyle && <div aria-hidden="true" style={{ width: 46, height: 46, flexShrink: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, border: '2px dashed var(--ink-dim)', color: 'var(--ink-dim)' }}>?</div>}
         {s && <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, border: `2px solid ${c}`, boxShadow: 'none', color: c }}>{s.icon}</div>}
         <div>
           <div style={{ fontSize: 16, fontWeight: 700 }}>{doctor.name}</div>
@@ -125,6 +128,7 @@ export default function TextSimulation({ doctor, scenarioId, challenge, hcp, onD
         </div>
       </div>
 
+      {hideStyle && <p style={{ ...bodyText, color: 'var(--ink-dim)', marginBottom: 14 }}>{t('sim.guessStyle')}</p>}
       {practiceFocus && <div style={{ border: '1px solid var(--cyan)', borderRadius: 10, padding: 12, marginBottom: 14 }}><strong>{t('practice.focus')}</strong><p style={bodyText}>{practiceFocus}</p></div>}
       <div ref={logRef} role="log" aria-live="polite" style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14, maxHeight: 340, overflowY: 'auto' }}>
         {messages.map((m, i) => (

@@ -62,7 +62,7 @@ type View =
   | { mode: 'voiceFab'; doctor: Doctor }
   | { mode: 'voiceClosing'; doctor: Doctor }
   | { mode: 'voiceLive'; doctor: Doctor }
-  | { mode: 'textSim'; doctor: Doctor; practiceFocus?: string }
+  | { mode: 'textSim'; doctor: Doctor; practiceFocus?: string; hideStyle?: boolean }
 
 const inputStyle: React.CSSProperties = {
   background:'var(--surface-subtle)', border:'1px solid var(--line)', borderRadius:10,
@@ -169,7 +169,7 @@ export default function VisitPrep({ onExit, initialDoctorId = '' }: Props) {
 
   // ───────────────────────── MULTI-AGENT TEXT SIMULATION ─────────────────────────
   if (view.mode === 'textSim') {
-    return <TextSimulation doctor={view.doctor} initialPracticeFocus={view.practiceFocus} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
+    return <TextSimulation doctor={view.doctor} initialPracticeFocus={view.practiceFocus} hideStyle={view.hideStyle} onDone={() => setView({ mode: 'detail', doctor: view.doctor })} />
   }
 
   // ───────────────────────── DETAIL / PREP ─────────────────────────
@@ -319,10 +319,10 @@ export default function VisitPrep({ onExit, initialDoctorId = '' }: Props) {
       styles={STYLES}
       existingNames={doctors.map(d => d.name)}
       onCancel={() => setView({ mode: 'list' })}
-      onStart={async (input) => {
+      onStart={async (input, hideStyle) => {
         const saved = await saveDoctor(input)
         // "Just start practising": open the text conversation straight away; ending it lands on the doctor page.
-        if (saved) setView({ mode: 'textSim', doctor: saved })
+        if (saved) setView({ mode: 'textSim', doctor: saved, hideStyle })
         else setView({ mode: 'list' })
       }}
     />
@@ -514,7 +514,7 @@ function QuickPractice({ specialties, styles, existingNames, onStart, onCancel }
   specialties: Record<Specialty, { name: string; icon: string }>
   styles: Record<StyleKey, { name: string; icon: string }>
   existingNames: string[]
-  onStart: (input: DoctorInput) => Promise<void>
+  onStart: (input: DoctorInput, hideStyle: boolean) => Promise<void>
   onCancel: () => void
 }) {
   const t = useT()
@@ -543,7 +543,7 @@ function QuickPractice({ specialties, styles, existingNames, onStart, onCancel }
       name, specialty, workplace: null, style: chosen,
       assertiveness: null, responsiveness: null,
       key_phrases: null, objections: [], objection_notes: null, notes: null,
-    })
+    }, surprise || !style)
   }
 
   return (

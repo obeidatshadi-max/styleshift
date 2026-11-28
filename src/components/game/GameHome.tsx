@@ -12,6 +12,7 @@ import { useT, useBadgeLabel, useLang } from '@/lib/i18n'
 import { useGameData } from '@/lib/i18n-game'
 import LangToggle from '@/components/LangToggle'
 import FeedbackDialectToggle from '@/components/FeedbackDialectToggle'
+import StartHereCard from '@/components/game/StartHereCard'
 import ThemeToggle from '@/components/ThemeToggle'
 import AvatarUploader from './AvatarUploader'
 import PrivacyPanel from './PrivacyPanel'
@@ -109,6 +110,8 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
   )
 
   const dailyDone = !!daily && daily.todayLevelsDone.length >= daily.picks.length
+  // A rep with no XP yet gets the first-day guide; empty score panels wait under "More".
+  const isNew = xp === 0
   // Today's challenge: up top once it is done (score, streak, team), in "More" while the next-action card still offers it.
   const dailyPanel = (
     daily && panel(t('daily.title'),
@@ -172,16 +175,18 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
         {tab === 'train' && <>
 
-        <NextActionCard
+        {isNew && <StartHereCard spsPending={spsPending} dailyDone={dailyDone} onTakeSps={onTakeSps} onShowPrep={onShowPrep} onStartDaily={onStartDaily} />}
+
+        {(!isNew || assignment) && <NextActionCard
           assignment={assignment} onStartAssignment={onStartAssignment} onAssignmentShared={onAssignmentShared}
           daily={daily} onStartDaily={onStartDaily}
           unlocked={unlocked} earnedLevels={earnedLevels} onStartLevel={onStartLevel}
           onShowPrep={onShowPrep}
-        />
+        />}
 
         {dailyDone && dailyPanel}
 
-        {spsPending && panel(t('sps.title'),
+        {spsPending && !isNew && panel(t('sps.title'),
           <>
             <div style={{ color:'var(--ink-dim)', fontSize:16, lineHeight:1.55, marginBottom:12 }}>{t('sps.intro')}</div>
             <button onClick={onTakeSps} style={{ cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent', borderRadius:10, padding:'10px 16px', touchAction:'manipulation' }}>{t('sps.start')}</button>
@@ -199,6 +204,7 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
         <ProgressCard />
 
+        {!isNew && <>
         {panel(t('home.mastery'),
           <>
             <RankBar xp={xp} />
@@ -241,6 +247,8 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
           </div>
         )}
 
+        </>}
+
         <CapabilityCard />
 
         <MyImprovementPlan />
@@ -256,7 +264,52 @@ export default function GameHome({ xp, badges, earnedLevels, decisions, correct,
 
         {moreOpen && <>
 
-        {!dailyDone && dailyPanel}
+        {isNew && <>
+        {panel(t('home.mastery'),
+          <>
+            <RankBar xp={xp} />
+            {onViewSps && (
+              <button onClick={onViewSps} style={{ cursor:'pointer', fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:'1px solid var(--cyan)', color:'var(--cyan)', background:'transparent', borderRadius:10, padding:'9px 14px', marginBottom:14, touchAction:'manipulation' }}>
+                {t('sps.viewProfile')}
+              </button>
+            )}
+            <KpiPanel decisions={decisions} correct={correct} totalReactionMs={totalReactionMs} reactionCount={reactionCount} confidence={confidence} />
+            <div style={{ marginTop:14 }}>
+              {ALL_BADGES.map(name => (
+                <span key={name} style={{ display:'inline-flex', alignItems:'center', gap:7, fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', border:`1px solid ${badges.includes(name) ? 'var(--green)' : 'var(--line)'}`, color: badges.includes(name) ? 'var(--green)' : 'var(--ink-dim)', borderRadius:20, padding:'5px 11px', background: badges.includes(name) ? 'rgba(62,224,143,.08)' : 'transparent', margin:'4px 4px 0 0' }}>
+                  {badges.includes(name) ? '★' : '☆'} {badgeLabel(name)}
+                </span>
+              ))}
+            </div>
+            <AvatarUploader avatarUrl={avatarUrl} name={displayName} onUpload={onUploadAvatar} />
+          </>
+        )}
+
+        {panel(t('home.ladder'),
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            {LEVELS.map(l => {
+              const isUnlocked = unlocked.includes(l.n)
+              const isDone = earnedLevels.includes(l.n)
+              return (
+                <button key={l.n} disabled={!isUnlocked} onClick={() => onStartLevel(l.n)}
+                  style={{ display:'flex', alignItems:'center', gap:14, textAlign:'start', width:'100%', cursor: isUnlocked ? 'pointer' : 'not-allowed', background:'linear-gradient(90deg,var(--accent-soft),var(--surface-subtle))', border:'1px solid var(--line)', borderRadius:12, padding:14, color:'var(--ink)', fontFamily:'var(--sans)', opacity: isUnlocked ? 1 : .4, touchAction:'manipulation' }}>
+                  <span style={{ fontFamily:'var(--mono)', fontSize:18, fontWeight:700, width:42, height:42, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:10, border:'1px solid var(--line)', background:'var(--surface-subtle)', color:'var(--cyan)' }}>{l.n}</span>
+                  <span style={{ flex:1 }}>
+                    <b style={{ display:'block', fontSize:16, letterSpacing: 'normal' }}>{l.title}</b>
+                    <span style={{ fontSize:14, color:'var(--ink-dim)' }}>{l.sub}</span>
+                  </span>
+                  <span style={{ fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', textTransform:'none', color: isDone ? 'var(--green)' : isUnlocked ? 'var(--cyan)' : 'var(--ink-dim)', marginInlineStart:'auto' }}>
+                    {isDone ? t('status.cleared') : isUnlocked ? t('status.ready') : t('status.locked')}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        </>}
+
+        {!dailyDone && !isNew && dailyPanel}
 
         <NextChallengeCard />
 

@@ -12,7 +12,7 @@ const LEVEL_COLORS = ['var(--cyan)', 'var(--amber)', 'var(--green)', 'var(--purp
 export default function HowItWorks({ onDone }: Props) {
   const t = useT()
   const { dir } = useLang()
-  const { STYLES, STYLE_ORDER, LEVELS } = useGameData()
+  const { STYLES, STYLE_ORDER, LEVELS, RANKS } = useGameData()
   const [i, setI] = useState(0)
   const fwd = dir === 'rtl' ? '←' : '→'
   const back = dir === 'rtl' ? '→' : '←'
@@ -92,11 +92,12 @@ export default function HowItWorks({ onDone }: Props) {
       {eyebrow('03 / 04')}
       {heading(t('how.s4.title'))}
       <div style={{ display:'flex', alignItems:'center', gap:10, fontFamily:'var(--mono)', fontSize:14, letterSpacing: 'normal', color:'var(--ink-dim)', flexWrap:'wrap', marginBottom:16 }}>
-        <span style={{ color:'var(--ink-dim)' }}>Rookie</span><span>{fwd}</span>
-        <span>Field Rep</span><span>{fwd}</span>
-        <span>Style Reader</span><span>{fwd}</span>
-        <span>Drive Expert</span><span>{fwd}</span>
-        <span style={{ color:'var(--amber)' }}>Style Master</span>
+        {RANKS.map((r, n) => (
+          <span key={r.name} style={{ display:'contents' }}>
+            <span style={{ color: n === RANKS.length - 1 ? 'var(--amber)' : n === 0 ? 'var(--ink-dim)' : undefined }}>{r.name}</span>
+            {n < RANKS.length - 1 && <span>{fwd}</span>}
+          </span>
+        ))}
       </div>
       {body(t('how.s4.xp'))}
       <div style={{ border:'1px solid var(--amber)', borderRadius:12, padding:'13px 14px', background:'rgba(255,206,77,.07)' }}>

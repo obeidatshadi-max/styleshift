@@ -228,11 +228,11 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
 
   const reflectionsFields = [
     ['wentWell', copy('1. What good things did you do? (optional)', '١. ما الأشياء الجيدة التي قمت بها؟ (اختياري)'), copy('What did you do that helped the conversation?', 'ما الذي قمت به وساعد في الحوار؟')],
-    ['changeNextTime', copy('2. What would you change or what did you miss? (optional)', '٢. ما الذي ستغيّره أو ما الذي فاتك؟ (اختياري)'), copy('What could you improve in the next call?', 'ما الذي يمكنك تحسينه في المكالمة القادمة؟')],
-    ['objectiveReview', copy('3. Did you achieve your call objective? What evidence shows it? (optional)', '٣. هل حققت هدف المكالمة؟ ما الدليل؟ (اختياري)'), copy('State what happened that supports your answer. It is okay if the evidence is unclear.', 'اذكر ما حدث ويدعم إجابتك. لا بأس إن لم يكن الدليل واضحاً.'),],
+    ['changeNextTime', copy('2. What would you change or what did you miss? (optional)', '٢. ما الذي ستغيّره أو ما الذي فاتك؟ (اختياري)'), copy('What could you improve in the next visit?', 'ما الذي يمكنك تحسينه في الزيارة القادمة؟')],
+    ['objectiveReview', copy('3. Did you achieve your visit objective? What evidence shows it? (optional)', '٣. هل حققت هدف الزيارة؟ ما الدليل؟ (اختياري)'), copy('State what happened that supports your answer. It is okay if the evidence is unclear.', 'اذكر ما حدث ويدعم إجابتك. لا بأس إن لم يكن الدليل واضحاً.'),],
   ] as const
   const fields = [
-    ['summary', copy('Your call, in brief', 'ملخص مكالمتك')],
+    ['summary', copy('Your visit, in brief', 'ملخص زيارتك')],
     ['strength', copy('What to build on', 'ما يمكنك البناء عليه')],
     ['priority', copy('One thing to improve', 'نقطة واحدة للتحسين')],
     ['hypothesis', copy('A possible interpretation', 'تفسير محتمل')],
@@ -245,13 +245,13 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
     <header>
       <p style={{ color: 'var(--cyan)', fontFamily: 'var(--mono)', fontSize: 14 }}>{copy('REFLECT · LEARN · TRY AGAIN', 'راجِع · تعلّم · جرّب مجدداً')}</p>
       <h1 style={{ margin: '8px 0', fontSize: 32 }}>{copy('AI Coach', 'المدرب الذكي')}</h1>
-      <p style={{ color: 'var(--ink-dim)', lineHeight: 1.6 }}>{copy('Reflect on a call with a specific doctor, then practice one improvement with the same AI Doctor.', 'راجع مكالمتك مع طبيب محدد، ثم تدرب على تحسين واحد مع الطبيب الذكي نفسه.')}</p>
+      <p style={{ color: 'var(--ink-dim)', lineHeight: 1.6 }}>{copy('Reflect on a visit with a specific doctor, then practice one improvement with the same AI Doctor.', 'راجع زيارتك مع طبيب محدد، ثم تدرب على تحسين واحد مع الطبيب الذكي نفسه.')}</p>
     </header>
     {!doctors.length && <section style={card}>
       <p>{copy('No doctor profiles yet. Ask your manager to assign a doctor profile, or add one in Visit Prep before starting a debrief.', 'لا توجد ملفات أطباء بعد. اطلب من مديرك تعيين ملف طبيب، أو أضف ملفاً من التحضير للزيارة قبل البدء.')}</p>
     </section>}
-    <section style={card} aria-label={copy('Call debrief', 'مراجعة المكالمة')}>
-      <label style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{copy('Which doctor was the call with?', 'مع أي طبيب كانت المكالمة؟')}
+    <section style={card} aria-label={copy('Visit debrief', 'مراجعة الزيارة')}>
+      <label style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{copy('Which doctor was the visit with?', 'مع أي طبيب كانت الزيارة؟')}
         <select aria-label={copy('Choose a doctor', 'اختر طبيباً')} value={doctorId} disabled={locked || !!result || !!recorder.previewUrl} onChange={e => chooseDoctor(e.target.value)} style={inputStyle}>
           <option value="">{copy('Select a doctor', 'اختر طبيباً')}</option>{doctors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
@@ -275,20 +275,20 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
             onClick={() => setFocus(focus === value ? null : value)}>{FOCUS_LABEL[value](copy)}</button>)}
         </div>
       </div>}
-      <label style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{copy('What was your call objective? (optional)', 'ما هدف المكالمة؟ (اختياري)')}
+      <label style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{copy('What was your visit objective? (optional)', 'ما هدف الزيارة؟ (اختياري)')}
         <input value={objective} maxLength={500} disabled={locked || !!result} onChange={e => setObjective(e.target.value)} style={inputStyle} />
       </label>
       <label style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{copy('How would you measure success? (optional)', 'كيف ستقيس النجاح؟ (اختياري)')}
         <input value={successMeasure} maxLength={500} disabled={locked || !!result} onChange={e => setSuccessMeasure(e.target.value)} style={inputStyle} placeholder={copy('e.g. a specific next step is agreed', 'مثل: الاتفاق على خطوة تالية محددة')} />
       </label>
-      <p style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--ink-dim)' }}>{copy('Record your own recollection after the call, up to 3 minutes. Audio is sent for transcription; review the text before coaching. Unsaved drafts stay in this browser tab on this device. Saved debriefs are private to your account.', 'سجّل ما تتذكره بعد المكالمة لمدة تصل إلى ٣ دقائق. يُرسل الصوت للتفريغ؛ راجع النص قبل التدريب. تبقى المسودات غير المحفوظة في علامة التبويب على هذا الجهاز. المراجعات المحفوظة خاصة بحسابك.')}</p>
+      <p style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--ink-dim)' }}>{copy('Record your own recollection after the visit, up to 3 minutes. Audio is sent for transcription; review the text before coaching. Unsaved drafts stay in this browser tab on this device. Saved debriefs are private to your account.', 'سجّل ما تتذكره بعد الزيارة لمدة تصل إلى ٣ دقائق. يُرسل الصوت للتفريغ؛ راجع النص قبل التدريب. تبقى المسودات غير المحفوظة في علامة التبويب على هذا الجهاز. المراجعات المحفوظة خاصة بحسابك.')}</p>
       {!result && <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
         <button style={ghostBtn} disabled={busy || micStarting || !!recorder.previewUrl || (recording && micTarget !== 'account')} onClick={recording ? () => void stopRecording() : () => void startRecording('account')}>
           {recording && micTarget === 'account' ? copy('Stop recording', 'إيقاف التسجيل') : micStarting && micTarget === 'account' ? copy('Opening microphone…', 'جارٍ فتح الميكروفون…') : copy('Record my recollection', 'سجّل ما تتذكره')}
         </button>
         {recording && micTarget === 'account' && <span role="status">{copy('Recording…', 'جارٍ التسجيل…')}</span>}
         {recorder.previewUrl && <>
-          <audio controls src={recorder.previewUrl} aria-label={copy('Review call recollection', 'استمع إلى ملخص المكالمة')} style={{ width: '100%' }} />
+          <audio controls src={recorder.previewUrl} aria-label={copy('Review visit recollection', 'استمع إلى ملخص الزيارة')} style={{ width: '100%' }} />
           <button disabled={busy} style={ghostBtn} onClick={() => void transcribe()}>{copy('Transcribe recording', 'فرّغ التسجيل')}</button>
           <button disabled={busy} style={ghostBtn} onClick={() => { recorder.discard(); targetRef.current = null; setMicTarget(null) }}>{copy('Discard recording', 'إلغاء التسجيل')}</button>
         </>}
@@ -319,7 +319,7 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
     {busy && <p role="status">{copy('Working on your debrief…', 'جارٍ إعداد مراجعتك…')}</p>}
     {error && <p role="alert">{error}</p>}
     {result?.report && <section style={{ display: 'grid', gap: 12 }} aria-label={copy('Your coaching', 'تدريبك')}>
-      <p>{copy(`Based on your account with ${selectedDoctor?.name ?? 'this doctor'} — interpretations are possibilities to explore.`, `بناءً على روايتك للمكالمة مع ${selectedDoctor?.name ?? 'هذا الطبيب'} — التفسيرات احتمالات للنقاش.`)}</p>
+      <p>{copy(`Based on your account with ${selectedDoctor?.name ?? 'this doctor'} — interpretations are possibilities to explore.`, `بناءً على روايتك للزيارة مع ${selectedDoctor?.name ?? 'هذا الطبيب'} — التفسيرات احتمالات للنقاش.`)}</p>
       {fields.map(([key, title]) => <article key={key} style={card}><h2 style={{ fontSize: 17, color: key === 'priority' ? 'var(--cyan)' : 'var(--ink)' }}>{title}</h2><p style={{ lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{(result.report as unknown as Record<string, string>)[key] ?? copy('Not included in this older saved debrief.', 'لم تُسجّل في هذه المراجعة القديمة.')}</p></article>)}
       {!!result.promises?.length && <article style={card} aria-label={copy('Promises I spotted', 'وعود لاحظتُها')}>
         <h2 style={{ fontSize: 17 }}>{copy('Promises I spotted', 'وعود لاحظتُها')}</h2>
@@ -342,7 +342,7 @@ export default function AICoach({ initialDoctorId = '' }: { initialDoctorId?: st
         <label style={{ display: 'grid', gap: 8 }}>{copy('Practice with this doctor', 'تدرّب مع هذا الطبيب')}<select style={inputStyle} value={practiceDoctorId || doctorId} onChange={e => setPracticeDoctorId(e.target.value)}><option value="">{copy('Select a doctor', 'اختر طبيباً')}</option>{doctors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</select></label>
         <button style={{ ...primaryBtn, marginTop: 12 }} disabled={!doctorId || locked} onClick={() => setPractice(doctors.find(d => d.id === (practiceDoctorId || doctorId)) ?? null)}>{copy('Practice this moment', 'تدرّب على هذا الموقف')}</button>
       </div>
-      <button disabled={locked} style={ghostBtn} onClick={() => { delete drafts.current[doctorId]; revise(); setDoctorId(''); setAccount(''); setObjective(''); setSuccessMeasure(''); setVisitDate(''); setReflections(emptyReflections) }}>{copy('Debrief another call', 'راجع مكالمة أخرى')}</button>
+      <button disabled={locked} style={ghostBtn} onClick={() => { delete drafts.current[doctorId]; revise(); setDoctorId(''); setAccount(''); setObjective(''); setSuccessMeasure(''); setVisitDate(''); setReflections(emptyReflections) }}>{copy('Debrief another visit', 'راجع زيارة أخرى')}</button>
     </section>}
     <section style={card}>
       <h2 style={{ fontSize: 19 }}>{copy('Recent debriefs', 'المراجعات الأخيرة')}</h2>

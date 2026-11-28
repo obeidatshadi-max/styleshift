@@ -244,7 +244,7 @@ export default function LoginForm() {
                   <p style={{ color: 'var(--red)', fontSize: 16, fontFamily: 'var(--mono)' }}>{error}</p>
                 )}
                 <button type="submit" disabled={loading} style={btnPrimary}>
-                  {loading ? '…' : t('login.mobileSignIn')}
+                  {loading ? t('login.signingIn') : t('login.mobileSignIn')}
                 </button>
                 <p style={{ color: 'var(--ink-dim)', fontSize: 14, lineHeight: 1.5, margin: 0 }}>
                   {t('login.mobileHint')}
@@ -267,7 +267,7 @@ export default function LoginForm() {
                 )}
                 {error && <p style={{ color: 'var(--red)', fontSize: 16, fontFamily: 'var(--mono)' }}>{error}</p>}
                 <button type="submit" disabled={loading} style={btnPrimary}>
-                  {loading ? '...' : mode === 'login' ? t('login.signIn') : t('login.createAccount')}
+                  {loading ? t('login.signingIn') : mode === 'login' ? t('login.signIn') : t('login.createAccount')}
                 </button>
                 <button type="button" onClick={() => { setMode(m => m === 'login' ? 'signup' : 'login'); setError(null) }}
                   style={{ background: 'transparent', border: 'none', color: 'var(--ink-dim)', fontSize: 16, cursor: 'pointer', fontFamily: 'var(--sans)' }}>
@@ -293,7 +293,7 @@ export default function LoginForm() {
             )}
             {error && <p style={{ color: error === t('login.checkEmail') ? 'var(--green)' : 'var(--red)', fontSize: 16, fontFamily: 'var(--mono)' }}>{error}</p>}
             <button type="submit" disabled={loading} style={btnPrimary}>
-              {loading ? '...' : mode === 'login' ? t('login.signIn') : t('login.createAccount')}
+              {loading ? t('login.signingIn') : mode === 'login' ? t('login.signIn') : t('login.createAccount')}
             </button>
             <button type="button" onClick={() => { setMode(m => m === 'login' ? 'signup' : 'login'); setError(null) }}
               style={{ background: 'transparent', border: 'none', color: 'var(--ink-dim)', fontSize: 16, cursor: 'pointer', fontFamily: 'var(--sans)' }}>
